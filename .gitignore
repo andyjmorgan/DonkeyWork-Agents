@@ -111,3 +111,6 @@ secrets.json
 *.bak
 *.swp
 *~
+
+# Local data (docker volumes)
+/data/

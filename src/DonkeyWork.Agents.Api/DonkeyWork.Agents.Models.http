@@ -1,0 +1,6 @@
+@DonkeyWork.Agents.Models_HostAddress = http://localhost:5247
+
+GET {{DonkeyWork.Agents.Models_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

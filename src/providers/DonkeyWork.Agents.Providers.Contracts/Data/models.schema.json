@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://donkeywork.agents/schemas/models.json",
+  "title": "Model Catalog",
+  "description": "Schema for LLM provider model definitions",
+  "type": "object",
+  "required": ["models"],
+  "properties": {
+    "models": {
+      "type": "array",
+      "description": "Array of model definitions",
+      "items": {
+        "$ref": "#/$defs/modelDefinition"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "modelDefinition": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "provider",
+        "mode",
+        "max_input_tokens",
+        "max_output_tokens",
+        "input_cost_per_million_tokens",
+        "output_cost_per_million_tokens",
+        "supports",
+        "client_types"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique model identifier",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the model",
+          "minLength": 1
+        },
+        "provider": {
+          "type": "string",
+          "description": "LLM provider",
+          "enum": ["OpenAI", "Anthropic", "Google"]
+        },
+        "mode": {
+          "type": "string",
+          "description": "Model operation mode",
+          "enum": ["Chat", "Embedding", "ImageGeneration", "AudioGeneration", "AudioTranscription", "VideoGeneration"]
+        },
+        "max_input_tokens": {
+          "type": "integer",
+          "description": "Maximum input context window in tokens",
+          "minimum": 0
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "description": "Maximum output tokens",
+          "minimum": 0
+        },
+        "input_cost_per_million_tokens": {
+          "type": "number",
+          "description": "Cost per million input tokens in USD",
+          "minimum": 0
+        },
+        "output_cost_per_million_tokens": {
+          "type": "number",
+          "description": "Cost per million output tokens in USD",
+          "minimum": 0
+        },
+        "supports": {
+          "$ref": "#/$defs/modelSupports"
+        },
+        "client_types": {
+          "type": "array",
+          "description": "Applicable provider client types",
+          "items": {
+            "type": "string",
+            "enum": ["MultimodalInput", "MultimodalDuplex", "ImageOutput", "AudioOutput", "VideoOutput"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "modelSupports": {
+      "type": "object",
+      "required": [
+        "vision",
+        "audio_input",
+        "audio_output",
+        "function_calling",
+        "tool_choice",
+        "prompt_caching",
+        "reasoning",
+        "image_output",
+        "streaming"
+      ],
+      "properties": {
+        "vision": {
+          "type": "boolean",
+          "description": "Supports image input"
+        },
+        "audio_input": {
+          "type": "boolean",
+          "description": "Supports audio input"
+        },
+        "audio_output": {
+          "type": "boolean",
+          "description": "Supports audio generation"
+        },
+        "function_calling": {
+          "type": "boolean",
+          "description": "Supports function/tool calling"
+        },
+        "tool_choice": {
+          "type": "boolean",
+          "description": "Supports tool choice control"
+        },
+        "prompt_caching": {
+          "type": "boolean",
+          "description": "Supports prompt caching"
+        },
+        "reasoning": {
+          "type": "boolean",
+          "description": "Supports extended reasoning"
+        },
+        "image_output": {
+          "type": "boolean",
+          "description": "Supports image generation"
+        },
+        "streaming": {
+          "type": "boolean",
+          "description": "Supports streaming responses"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

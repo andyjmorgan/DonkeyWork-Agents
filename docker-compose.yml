@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: donkeywork-postgres
+    environment:
+      POSTGRES_USER: donkeywork
+      POSTGRES_PASSWORD: donkeywork_dev
+      POSTGRES_DB: donkeywork_agents
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U donkeywork -d donkeywork_agents"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: donkeywork-seaweedfs
+    command: "server -s3 -dir=/data"
+    ports:
+      - "8333:8333"  # S3 API
+      - "9333:9333"  # Master
+    volumes:
+      - ./data/seaweedfs:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9333/cluster/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: donkeywork-api
+    ports:
+      - "5050:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Persistence__ConnectionString: "Host=postgres;Port=5432;Database=donkeywork_agents;Username=donkeywork;Password=donkeywork_dev"
+      Persistence__EncryptionKey: "dev-encryption-key-change-in-production"
+      Storage__ServiceUrl: "http://seaweedfs:8333"
+      Storage__AccessKey: "admin"
+      Storage__SecretKey: "admin"
+      Storage__DefaultBucket: "files"
+      Storage__UsePathStyleAddressing: "true"
+      Keycloak__FrontendUrl: "http://localhost:5174"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy

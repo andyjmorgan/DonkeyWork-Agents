@@ -1,0 +1,312 @@
+{
+  "models": [
+    {
+      "id": "gpt-5",
+      "name": "GPT-5",
+      "provider": "OpenAI",
+      "mode": "Chat",
+      "max_input_tokens": 400000,
+      "max_output_tokens": 32768,
+      "input_cost_per_million_tokens": 1.25,
+      "output_cost_per_million_tokens": 10.00,
+      "supports": {
+        "vision": true,
+        "audio_input": true,
+        "audio_output": false,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": false,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput"]
+    },
+    {
+      "id": "gpt-5-mini",
+      "name": "GPT-5 mini",
+      "provider": "OpenAI",
+      "mode": "Chat",
+      "max_input_tokens": 400000,
+      "max_output_tokens": 32768,
+      "input_cost_per_million_tokens": 0.25,
+      "output_cost_per_million_tokens": 2.00,
+      "supports": {
+        "vision": true,
+        "audio_input": true,
+        "audio_output": false,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": false,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput"]
+    },
+    {
+      "id": "gpt-5-nano",
+      "name": "GPT-5 nano",
+      "provider": "OpenAI",
+      "mode": "Chat",
+      "max_input_tokens": 400000,
+      "max_output_tokens": 32768,
+      "input_cost_per_million_tokens": 0.05,
+      "output_cost_per_million_tokens": 0.40,
+      "supports": {
+        "vision": true,
+        "audio_input": false,
+        "audio_output": false,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": false,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput"]
+    },
+    {
+      "id": "gpt-image-1.5",
+      "name": "GPT Image 1.5",
+      "provider": "OpenAI",
+      "mode": "ImageGeneration",
+      "max_input_tokens": 4000,
+      "max_output_tokens": 0,
+      "input_cost_per_million_tokens": 5.00,
+      "output_cost_per_million_tokens": 40.00,
+      "supports": {
+        "vision": true,
+        "audio_input": false,
+        "audio_output": false,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": true,
+        "streaming": false
+      },
+      "client_types": ["ImageOutput"]
+    },
+    {
+      "id": "gpt-4o-mini-tts",
+      "name": "GPT-4o mini TTS",
+      "provider": "OpenAI",
+      "mode": "AudioGeneration",
+      "max_input_tokens": 2000,
+      "max_output_tokens": 0,
+      "input_cost_per_million_tokens": 0.60,
+      "output_cost_per_million_tokens": 12.00,
+      "supports": {
+        "vision": false,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": true
+      },
+      "client_types": ["AudioOutput"]
+    },
+    {
+      "id": "sora-2",
+      "name": "Sora 2",
+      "provider": "OpenAI",
+      "mode": "VideoGeneration",
+      "max_input_tokens": 4000,
+      "max_output_tokens": 0,
+      "input_cost_per_million_tokens": 0,
+      "output_cost_per_million_tokens": 0,
+      "supports": {
+        "vision": true,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": false
+      },
+      "client_types": ["VideoOutput"]
+    },
+    {
+      "id": "claude-opus-4-5",
+      "name": "Claude Opus 4.5",
+      "provider": "Anthropic",
+      "mode": "Chat",
+      "max_input_tokens": 200000,
+      "max_output_tokens": 64000,
+      "input_cost_per_million_tokens": 5.00,
+      "output_cost_per_million_tokens": 25.00,
+      "supports": {
+        "vision": true,
+        "audio_input": false,
+        "audio_output": false,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": false,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput"]
+    },
+    {
+      "id": "claude-sonnet-4-5",
+      "name": "Claude Sonnet 4.5",
+      "provider": "Anthropic",
+      "mode": "Chat",
+      "max_input_tokens": 200000,
+      "max_output_tokens": 64000,
+      "input_cost_per_million_tokens": 3.00,
+      "output_cost_per_million_tokens": 15.00,
+      "supports": {
+        "vision": true,
+        "audio_input": false,
+        "audio_output": false,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": false,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput"]
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "name": "Claude Haiku 4.5",
+      "provider": "Anthropic",
+      "mode": "Chat",
+      "max_input_tokens": 200000,
+      "max_output_tokens": 64000,
+      "input_cost_per_million_tokens": 1.00,
+      "output_cost_per_million_tokens": 5.00,
+      "supports": {
+        "vision": true,
+        "audio_input": false,
+        "audio_output": false,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput"]
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "name": "Gemini 2.5 Pro",
+      "provider": "Google",
+      "mode": "Chat",
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 65536,
+      "input_cost_per_million_tokens": 1.25,
+      "output_cost_per_million_tokens": 10.00,
+      "supports": {
+        "vision": true,
+        "audio_input": true,
+        "audio_output": true,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": true,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "name": "Gemini 2.5 Flash",
+      "provider": "Google",
+      "mode": "Chat",
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 65536,
+      "input_cost_per_million_tokens": 0.15,
+      "output_cost_per_million_tokens": 0.60,
+      "supports": {
+        "vision": true,
+        "audio_input": true,
+        "audio_output": true,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": true,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
+    },
+    {
+      "id": "gemini-3-pro",
+      "name": "Gemini 3 Pro",
+      "provider": "Google",
+      "mode": "Chat",
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 64000,
+      "input_cost_per_million_tokens": 2.00,
+      "output_cost_per_million_tokens": 12.00,
+      "supports": {
+        "vision": true,
+        "audio_input": true,
+        "audio_output": true,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": true,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
+    },
+    {
+      "id": "gemini-3-flash",
+      "name": "Gemini 3 Flash",
+      "provider": "Google",
+      "mode": "Chat",
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 64000,
+      "input_cost_per_million_tokens": 0.50,
+      "output_cost_per_million_tokens": 3.00,
+      "supports": {
+        "vision": true,
+        "audio_input": true,
+        "audio_output": true,
+        "function_calling": true,
+        "tool_choice": true,
+        "prompt_caching": true,
+        "reasoning": true,
+        "image_output": true,
+        "streaming": true
+      },
+      "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
+    },
+    {
+      "id": "veo-3.1",
+      "name": "Veo 3.1",
+      "provider": "Google",
+      "mode": "VideoGeneration",
+      "max_input_tokens": 4000,
+      "max_output_tokens": 0,
+      "input_cost_per_million_tokens": 0,
+      "output_cost_per_million_tokens": 0,
+      "supports": {
+        "vision": true,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": false
+      },
+      "client_types": ["VideoOutput"]
+    }
+  ]
+}

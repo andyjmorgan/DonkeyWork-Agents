@@ -1,0 +1,82 @@
+using Asp.Versioning;
+using DonkeyWork.Agents.Credentials.Api;
+using DonkeyWork.Agents.Identity.Api;
+using DonkeyWork.Agents.Persistence;
+using DonkeyWork.Agents.Persistence.Services;
+using DonkeyWork.Agents.Storage.Api;
+using Scalar.AspNetCore;
+using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console(
+        outputTemplate:
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}")
+    .CreateBootstrapLogger();
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(
+        outputTemplate:
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}"));
+
+// Add API versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1.0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = new UrlSegmentApiVersionReader();
+}).AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
+// Add controllers
+builder.Services.AddControllers();
+
+// Add OpenAPI
+builder.Services.AddOpenApi();
+
+// Add Persistence module (provides DbContext)
+builder.Services.AddPersistence(builder.Configuration);
+
+// Add Credentials module
+builder.Services.AddCredentialsApi();
+
+// Add Identity module
+builder.Services.AddIdentityApi(builder.Configuration);
+
+// Add Storage module
+builder.Services.AddStorageApi(builder.Configuration);
+
+var app = builder.Build();
+
+// Add Serilog request logging
+app.UseSerilogRequestLogging();
+
+// Configure the HTTP request pipeline
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+
+using(var scope = app.Services.CreateScope())
+{
+    var migrationService = scope.ServiceProvider.GetRequiredService<IMigrationService>();
+    await migrationService.MigrateAsync();
+}
+
+await app.RunAsync();
