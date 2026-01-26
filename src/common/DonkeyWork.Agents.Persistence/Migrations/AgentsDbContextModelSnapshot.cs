@@ -22,6 +22,429 @@ namespace DonkeyWork.Agents.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CurrentVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("current_version_id");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_agents_created_at");
+
+                    b.HasIndex("CurrentVersionId");
+
+                    b.HasIndex("Name")
+                        .HasDatabaseName("ix_agents_name");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_agents_user_id");
+
+                    b.ToTable("agents", "agents");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentExecutionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_id");
+
+                    b.Property<Guid>("AgentVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_version_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("Input")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("input");
+
+                    b.Property<string>("Output")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("output");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StreamName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("stream_name");
+
+                    b.Property<int?>("TotalTokensUsed")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_tokens_used");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("ix_agent_executions_agent_id");
+
+                    b.HasIndex("AgentVersionId")
+                        .HasDatabaseName("ix_agent_executions_agent_version_id");
+
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("ix_agent_executions_started_at");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_agent_executions_status");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_agent_executions_user_id");
+
+                    b.HasIndex("AgentId", "StartedAt")
+                        .HasDatabaseName("ix_agent_executions_agent_id_started_at");
+
+                    b.ToTable("agent_executions", "agents");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentExecutionLogEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("details");
+
+                    b.Property<Guid>("ExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("execution_id");
+
+                    b.Property<string>("LogLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("log_level");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("message");
+
+                    b.Property<string>("NodeId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("node_id");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_agent_execution_logs_created_at");
+
+                    b.HasIndex("ExecutionId")
+                        .HasDatabaseName("ix_agent_execution_logs_execution_id");
+
+                    b.HasIndex("LogLevel")
+                        .HasDatabaseName("ix_agent_execution_logs_log_level");
+
+                    b.HasIndex("ExecutionId", "CreatedAt")
+                        .HasDatabaseName("ix_agent_execution_logs_execution_id_created_at");
+
+                    b.ToTable("agent_execution_logs", "agents");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentNodeExecutionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AgentExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_execution_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_ms");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("FullResponse")
+                        .HasColumnType("text")
+                        .HasColumnName("full_response");
+
+                    b.Property<string>("Input")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("input");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("node_id");
+
+                    b.Property<string>("NodeType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("node_type");
+
+                    b.Property<string>("Output")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("output");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<int?>("TokensUsed")
+                        .HasColumnType("integer")
+                        .HasColumnName("tokens_used");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentExecutionId")
+                        .HasDatabaseName("ix_agent_node_executions_agent_execution_id");
+
+                    b.HasIndex("NodeType")
+                        .HasDatabaseName("ix_agent_node_executions_node_type");
+
+                    b.HasIndex("StartedAt")
+                        .HasDatabaseName("ix_agent_node_executions_started_at");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_agent_node_executions_status");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_agent_node_executions_user_id");
+
+                    b.ToTable("agent_node_executions", "agents");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionCredentialMappingEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AgentVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_version_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CredentialId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("credential_id");
+
+                    b.Property<string>("NodeId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("node_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentVersionId")
+                        .HasDatabaseName("ix_agent_version_credential_mappings_agent_version_id");
+
+                    b.HasIndex("CredentialId")
+                        .HasDatabaseName("ix_agent_version_credential_mappings_credential_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_agent_version_credential_mappings_user_id");
+
+                    b.HasIndex("AgentVersionId", "NodeId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agent_version_credential_mappings_version_node");
+
+                    b.ToTable("agent_version_credential_mappings", "agents");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("InputSchema")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("input_schema");
+
+                    b.Property<bool>("IsDraft")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_draft");
+
+                    b.Property<string>("NodeConfigurations")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("node_configurations");
+
+                    b.Property<string>("OutputSchema")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("output_schema");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("ReactFlowData")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("react_flow_data");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_number");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("ix_agent_versions_agent_id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_agent_versions_created_at");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_agent_versions_user_id");
+
+                    b.HasIndex("AgentId", "IsDraft")
+                        .HasDatabaseName("ix_agent_versions_agent_id_is_draft");
+
+                    b.ToTable("agent_versions", "agents");
+                });
+
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Credentials.ExternalApiKeyEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -331,6 +754,79 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.ToTable("stored_files", "storage");
                 });
 
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionEntity", "CurrentVersion")
+                        .WithMany()
+                        .HasForeignKey("CurrentVersionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CurrentVersion");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentExecutionEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Agents.AgentEntity", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionEntity", "AgentVersion")
+                        .WithMany("Executions")
+                        .HasForeignKey("AgentVersionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("AgentVersion");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentExecutionLogEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Agents.AgentExecutionEntity", "Execution")
+                        .WithMany()
+                        .HasForeignKey("ExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Execution");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentNodeExecutionEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Agents.AgentExecutionEntity", "AgentExecution")
+                        .WithMany("NodeExecutions")
+                        .HasForeignKey("AgentExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AgentExecution");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionCredentialMappingEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionEntity", "AgentVersion")
+                        .WithMany("CredentialMappings")
+                        .HasForeignKey("AgentVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AgentVersion");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Agents.AgentEntity", "Agent")
+                        .WithMany("Versions")
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
+                });
+
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Storage.FileShareEntity", b =>
                 {
                     b.HasOne("DonkeyWork.Agents.Persistence.Entities.Storage.StoredFileEntity", "File")
@@ -340,6 +836,23 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("File");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentEntity", b =>
+                {
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentExecutionEntity", b =>
+                {
+                    b.Navigation("NodeExecutions");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Agents.AgentVersionEntity", b =>
+                {
+                    b.Navigation("CredentialMappings");
+
+                    b.Navigation("Executions");
                 });
 
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Storage.StoredFileEntity", b =>

@@ -371,34 +371,34 @@ VITE_KEYCLOAK_CLIENT_ID=donkeywork-frontend
 
 ## Milestones
 
-### Phase 1: Scaffold
-- [ ] Vite + React + TypeScript project setup
-- [ ] Tailwind + shadcn/ui setup
-- [ ] Theme (CSS variables, dark mode, ThemeToggle)
-- [ ] Layout (AppLayout, Sidebar, Header)
-- [ ] Routing (react-router-dom)
-- [ ] Auth placeholder (no Keycloak yet, mock user)
+### Phase 1: Scaffold ✅
+- [x] Vite + React + TypeScript project setup
+- [x] Tailwind + shadcn/ui setup
+- [x] Theme (CSS variables, dark mode, ThemeToggle)
+- [x] Layout (AppLayout, Sidebar, Header)
+- [x] Routing (react-router-dom)
+- [x] Auth placeholder (no Keycloak yet, mock user)
 
-### Phase 2: Agent List & CRUD
-- [ ] AgentList page with mock data
-- [ ] AgentCard component
-- [ ] CreateAgentDialog
-- [ ] Delete confirmation
+### Phase 2: Agent List & CRUD ✅
+- [x] AgentList page with mock data
+- [x] AgentCard component
+- [x] CreateAgentDialog
+- [x] Delete confirmation
 
-### Phase 3: Workflow Editor
-- [ ] ReactFlow canvas setup
-- [ ] Custom nodes (Start, Model, End)
-- [ ] Node palette (drag to canvas)
-- [ ] Edge connections
-- [ ] Properties panel
-- [ ] Editor Zustand store
-- [ ] Save to localStorage (mock persistence)
+### Phase 3: Workflow Editor ✅
+- [x] ReactFlow canvas setup (upgraded to @xyflow/react v12)
+- [x] Custom nodes (Start, Model, End)
+- [x] Node palette (drag to canvas)
+- [x] Edge connections
+- [x] Properties panel (with Monaco Editor for schemas)
+- [x] Editor Zustand store
+- [ ] Save to localStorage (mock persistence) **← NEXT**
 
-### Phase 4: Node Configuration
-- [ ] StartNode panel (name, InputSchema editor)
-- [ ] ModelNode panel (provider, model, credential, prompts)
-- [ ] EndNode panel (name)
-- [ ] Form validation
+### Phase 4: Node Configuration ✅
+- [x] StartNode panel (name, InputSchema editor)
+- [x] ModelNode panel (provider, model, credential, prompts)
+- [x] EndNode panel (name, OutputSchema editor)
+- [ ] Form validation **← TODO**
 
 ### Phase 5: Execution UI
 - [ ] TestPanel with dynamic input form

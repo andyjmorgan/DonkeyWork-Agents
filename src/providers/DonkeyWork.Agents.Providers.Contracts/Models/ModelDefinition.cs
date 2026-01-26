@@ -35,4 +35,7 @@ public sealed class ModelDefinition
 
     [JsonPropertyName("client_types")]
     public required IReadOnlyList<ProviderClientType> ClientTypes { get; init; }
+
+    [JsonPropertyName("config_overrides")]
+    public IReadOnlyDictionary<string, FieldOverride>? ConfigOverrides { get; init; }
 }

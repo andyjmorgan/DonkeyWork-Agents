@@ -13,12 +13,12 @@ public class OAuthTokenEntity : BaseEntity
     /// <summary>
     /// Encrypted access token.
     /// </summary>
-    public string AccessTokenEncrypted { get; set; } = string.Empty;
+    public byte[] AccessTokenEncrypted { get; set; } = [];
 
     /// <summary>
     /// Encrypted refresh token.
     /// </summary>
-    public string RefreshTokenEncrypted { get; set; } = string.Empty;
+    public byte[] RefreshTokenEncrypted { get; set; } = [];
 
     /// <summary>
     /// JSON array of granted scopes.

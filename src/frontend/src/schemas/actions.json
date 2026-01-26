@@ -1,0 +1,147 @@
+[
+  {
+    "actionType": "http_request",
+    "displayName": "HTTP Request",
+    "category": "Communication",
+    "group": "HTTP",
+    "icon": "globe",
+    "description": "Make HTTP requests to external APIs",
+    "maxInputs": -1,
+    "maxOutputs": -1,
+    "enabled": true,
+    "parameters": [
+      {
+        "name": "Method",
+        "displayName": "Method",
+        "description": "HTTP method to use",
+        "type": "enum",
+        "required": true,
+        "defaultValue": "GET",
+        "supportsVariables": false,
+        "editorType": null,
+        "controlType": "dropdown",
+        "options": [
+          {
+            "label": "GET",
+            "value": "GET"
+          },
+          {
+            "label": "POST",
+            "value": "POST"
+          },
+          {
+            "label": "PUT",
+            "value": "PUT"
+          },
+          {
+            "label": "DELETE",
+            "value": "DELETE"
+          },
+          {
+            "label": "PATCH",
+            "value": "PATCH"
+          },
+          {
+            "label": "HEAD",
+            "value": "HEAD"
+          },
+          {
+            "label": "OPTIONS",
+            "value": "OPTIONS"
+          }
+        ],
+        "validation": null,
+        "resolvable": false,
+        "credentialTypes": null,
+        "dependency": null
+      },
+      {
+        "name": "Url",
+        "displayName": "URL",
+        "description": "Target URL for the request",
+        "type": "string",
+        "required": true,
+        "defaultValue": null,
+        "supportsVariables": true,
+        "editorType": null,
+        "controlType": "text",
+        "options": null,
+        "validation": null,
+        "resolvable": false,
+        "credentialTypes": null,
+        "dependency": null
+      },
+      {
+        "name": "Headers",
+        "displayName": "Headers",
+        "description": "HTTP headers (one per line: Key: Value)",
+        "type": "string",
+        "required": false,
+        "defaultValue": null,
+        "supportsVariables": true,
+        "editorType": "TextArea",
+        "controlType": "textarea",
+        "options": null,
+        "validation": null,
+        "resolvable": false,
+        "credentialTypes": null,
+        "dependency": null
+      },
+      {
+        "name": "Body",
+        "displayName": "Body",
+        "description": "Request body (for POST/PUT/PATCH)",
+        "type": "string",
+        "required": false,
+        "defaultValue": null,
+        "supportsVariables": true,
+        "editorType": "Code",
+        "controlType": "code",
+        "options": null,
+        "validation": null,
+        "resolvable": false,
+        "credentialTypes": null,
+        "dependency": null
+      },
+      {
+        "name": "TimeoutSeconds",
+        "displayName": "Timeout (seconds)",
+        "description": "Request timeout in seconds",
+        "type": "number",
+        "required": false,
+        "defaultValue": "30",
+        "supportsVariables": false,
+        "editorType": null,
+        "controlType": "slider",
+        "options": null,
+        "validation": {
+          "min": 1,
+          "max": 300,
+          "minLength": null,
+          "maxLength": null,
+          "pattern": null,
+          "step": 1
+        },
+        "resolvable": true,
+        "credentialTypes": null,
+        "dependency": null
+      },
+      {
+        "name": "FollowRedirects",
+        "displayName": "Follow Redirects",
+        "description": "Automatically follow HTTP redirects",
+        "type": "boolean",
+        "required": false,
+        "defaultValue": "True",
+        "supportsVariables": false,
+        "editorType": null,
+        "controlType": "checkbox",
+        "options": null,
+        "validation": null,
+        "resolvable": false,
+        "credentialTypes": null,
+        "dependency": null
+      }
+    ]
+  }
+]

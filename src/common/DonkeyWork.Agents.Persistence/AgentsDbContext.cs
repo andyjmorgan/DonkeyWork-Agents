@@ -1,5 +1,6 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence.Entities;
+using DonkeyWork.Agents.Persistence.Entities.Agents;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,14 @@ public class AgentsDbContext : DbContext
     // Storage module
     public DbSet<StoredFileEntity> StoredFiles => Set<StoredFileEntity>();
     public DbSet<FileShareEntity> FileShares => Set<FileShareEntity>();
+
+    // Agents module
+    public DbSet<AgentEntity> Agents => Set<AgentEntity>();
+    public DbSet<AgentVersionEntity> AgentVersions => Set<AgentVersionEntity>();
+    public DbSet<AgentVersionCredentialMappingEntity> AgentVersionCredentialMappings => Set<AgentVersionCredentialMappingEntity>();
+    public DbSet<AgentExecutionEntity> AgentExecutions => Set<AgentExecutionEntity>();
+    public DbSet<AgentNodeExecutionEntity> AgentNodeExecutions => Set<AgentNodeExecutionEntity>();
+    public DbSet<AgentExecutionLogEntity> AgentExecutionLogs => Set<AgentExecutionLogEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

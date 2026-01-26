@@ -6,5 +6,6 @@ namespace DonkeyWork.Agents.Common.Contracts.Enums;
 public enum OAuthProvider
 {
     Google,
-    Microsoft
+    Microsoft,
+    GitHub
 }

@@ -12,6 +12,7 @@ public static class DependencyInjection
     {
         // Existing services
         services.AddSingleton<IModelCatalogService, ModelCatalogService>();
+        services.AddSingleton<IModelConfigSchemaService, ModelConfigSchemaService>();
 
         // Model Pipeline (public interface, transient for fresh instances per request)
         services.AddTransient<IModelPipeline, ModelPipeline>();

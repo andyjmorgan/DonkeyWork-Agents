@@ -1,8 +1,11 @@
 using Asp.Versioning;
+using DonkeyWork.Agents.Actions.Api;
+using DonkeyWork.Agents.Agents.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Services;
+using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
 using Scalar.AspNetCore;
 using Serilog;
@@ -39,7 +42,11 @@ builder.Services.AddApiVersioning(options =>
 });
 
 // Add controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 // Add OpenAPI
 builder.Services.AddOpenApi();
@@ -47,11 +54,20 @@ builder.Services.AddOpenApi();
 // Add Persistence module (provides DbContext)
 builder.Services.AddPersistence(builder.Configuration);
 
+// Add Actions module
+builder.Services.AddActionsApi();
+
+// Add Agents module
+builder.Services.AddAgentsApi();
+
 // Add Credentials module
 builder.Services.AddCredentialsApi();
 
 // Add Identity module
 builder.Services.AddIdentityApi(builder.Configuration);
+
+// Add Providers module
+builder.Services.AddProvidersApi();
 
 // Add Storage module
 builder.Services.AddStorageApi(builder.Configuration);
@@ -68,7 +84,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
+// No HTTPS redirection - API is always behind a traffic shaper/load balancer that handles TLS
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

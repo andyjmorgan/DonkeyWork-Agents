@@ -9,12 +9,12 @@ public class OAuthProviderConfigEntity : BaseEntity
     /// <summary>
     /// Encrypted client ID.
     /// </summary>
-    public string ClientIdEncrypted { get; set; } = string.Empty;
+    public byte[] ClientIdEncrypted { get; set; } = [];
 
     /// <summary>
     /// Encrypted client secret.
     /// </summary>
-    public string ClientSecretEncrypted { get; set; } = string.Empty;
+    public byte[] ClientSecretEncrypted { get; set; } = [];
 
     public string RedirectUri { get; set; } = string.Empty;
 }

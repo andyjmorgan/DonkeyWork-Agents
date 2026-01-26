@@ -83,6 +83,19 @@
           },
           "minItems": 1,
           "uniqueItems": true
+        },
+        "config_overrides": {
+          "type": "object",
+          "description": "Model-specific configuration overrides",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "min": { "type": "number" },
+              "max": { "type": "number" },
+              "default": { "type": ["number", "string", "boolean", "null"] }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

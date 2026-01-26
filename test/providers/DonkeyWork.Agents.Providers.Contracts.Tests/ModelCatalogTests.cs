@@ -39,7 +39,9 @@ public class ModelCatalogTests
         var result = schema.Evaluate(modelsDocument.RootElement);
 
         // Assert
-        Assert.True(result.IsValid, $"Schema validation failed: {string.Join(", ", GetValidationErrors(result))}");
+        var errors = GetValidationErrors(result).ToList();
+        var errorMessage = errors.Any() ? string.Join("\n", errors) : "";
+        Assert.True(result.IsValid, $"Schema validation failed:\n{errorMessage}");
     }
 
     [Fact]
@@ -178,23 +180,37 @@ public class ModelCatalogTests
         }
     }
 
-    private static IEnumerable<string> GetValidationErrors(EvaluationResults result)
+    private static IEnumerable<string> GetValidationErrors(EvaluationResults result, string indent = "")
     {
-        if (!result.IsValid && result.Errors != null)
+        if (!result.IsValid)
         {
-            foreach (var error in result.Errors)
-            {
-                yield return $"{error.Key}: {error.Value}";
-            }
-        }
+            // Output instance location and evaluation path
+            var location = result.InstanceLocation?.ToString() ?? "";
+            var path = result.EvaluationPath?.ToString() ?? "";
 
-        if (result.Details != null)
-        {
-            foreach (var detail in result.Details)
+            if (!string.IsNullOrEmpty(location) || !string.IsNullOrEmpty(path))
             {
-                foreach (var error in GetValidationErrors(detail))
+                yield return $"{indent}At '{location}' (schema path: '{path}')";
+            }
+
+            // Output errors dictionary
+            if (result.Errors != null && result.Errors.Count > 0)
+            {
+                foreach (var error in result.Errors)
                 {
-                    yield return error;
+                    yield return $"{indent}  Error: {error.Key} = {error.Value}";
+                }
+            }
+
+            // Recursively get errors from nested details
+            if (result.Details != null)
+            {
+                foreach (var detail in result.Details)
+                {
+                    foreach (var error in GetValidationErrors(detail, indent + "  "))
+                    {
+                        yield return error;
+                    }
                 }
             }
         }

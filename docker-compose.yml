@@ -32,6 +32,26 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: donkeywork-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # AMQP
+      - "5552:5552"    # Stream protocol
+      - "15672:15672"  # Management UI
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    command: >
+      bash -c "rabbitmq-plugins enable rabbitmq_stream && rabbitmq-server"
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -48,9 +68,15 @@ services:
       Storage__SecretKey: "admin"
       Storage__DefaultBucket: "files"
       Storage__UsePathStyleAddressing: "true"
-      Keycloak__FrontendUrl: "http://localhost:5174"
+      Keycloak__FrontendUrl: "http://localhost:5173"
+      RabbitMqStream__Host: "rabbitmq"
+      RabbitMqStream__Port: "5552"
+      RabbitMqStream__Username: "guest"
+      RabbitMqStream__Password: "guest"
     depends_on:
       postgres:
         condition: service_healthy
       seaweedfs:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
