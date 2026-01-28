@@ -14,8 +14,8 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddProvidersCore(this IServiceCollection services)
     {
-        // AI Client Factory (internal, placeholder for now)
-        services.AddSingleton<IAiClientFactory, PlaceholderAiClientFactory>();
+        // AI Client Factory (routes to OpenAI, Anthropic, Google providers)
+        services.AddSingleton<IAiClientFactory, AiClientFactory>();
 
         // Internal middleware (transient - resolved by pipeline)
         services.AddTransient<BaseExceptionMiddleware>();
