@@ -9,4 +9,5 @@ internal class InternalModelConfig
 {
     public required LlmProvider Provider { get; set; }
     public required string ModelId { get; set; }
+    public required string ApiKey { get; set; }
 }

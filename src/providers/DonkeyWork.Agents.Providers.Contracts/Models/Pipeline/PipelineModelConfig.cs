@@ -16,4 +16,9 @@ public class PipelineModelConfig
     /// The model identifier.
     /// </summary>
     public required string ModelId { get; set; }
+
+    /// <summary>
+    /// The decrypted API key for the provider.
+    /// </summary>
+    public required string ApiKey { get; set; }
 }

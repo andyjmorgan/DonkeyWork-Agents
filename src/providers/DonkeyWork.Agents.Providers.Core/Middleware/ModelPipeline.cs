@@ -66,7 +66,8 @@ public class ModelPipeline : IModelPipeline
             Model = new InternalModelConfig
             {
                 Provider = request.Model.Provider,
-                ModelId = request.Model.ModelId
+                ModelId = request.Model.ModelId,
+                ApiKey = request.Model.ApiKey
             },
             ToolContext = request.Tools != null
                 ? new InternalToolContext

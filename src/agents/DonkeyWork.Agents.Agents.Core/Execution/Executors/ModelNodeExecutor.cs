@@ -136,7 +136,8 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
             Model = new PipelineModelConfig
             {
                 Provider = config.Provider,
-                ModelId = config.ModelId
+                ModelId = config.ModelId,
+                ApiKey = credential.Fields[CredentialFieldType.ApiKey]
             },
             Options = options.Count > 0 ? options : null
         };
