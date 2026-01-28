@@ -1,4 +1,3 @@
-using System.ClientModel;
 using System.Runtime.CompilerServices;
 using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
