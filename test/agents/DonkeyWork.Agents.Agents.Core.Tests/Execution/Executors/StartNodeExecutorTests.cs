@@ -1,8 +1,11 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
+using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution;
 using DonkeyWork.Agents.Agents.Core.Execution.Executors;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace DonkeyWork.Agents.Agents.Core.Tests.Execution.Executors;
 
@@ -13,34 +16,48 @@ namespace DonkeyWork.Agents.Agents.Core.Tests.Execution.Executors;
 public class StartNodeExecutorTests
 {
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private readonly Guid _testExecutionId = Guid.NewGuid();
+    private readonly Mock<ILogger<StartNodeExecutor>> _loggerMock;
+    private readonly Mock<IExecutionStreamWriter> _streamWriterMock;
+    private readonly Mock<IExecutionContext> _contextMock;
+    private readonly StartNodeExecutor _executor;
+
+    public StartNodeExecutorTests()
+    {
+        _loggerMock = new Mock<ILogger<StartNodeExecutor>>();
+        _streamWriterMock = new Mock<IExecutionStreamWriter>();
+        _contextMock = new Mock<IExecutionContext>();
+        _contextMock.Setup(c => c.ExecutionId).Returns(_testExecutionId);
+        _contextMock.Setup(c => c.UserId).Returns(_testUserId);
+        _executor = new StartNodeExecutor(_streamWriterMock.Object, _contextMock.Object, _loggerMock.Object);
+    }
 
     #region Successful Execution Tests
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithValidInput_ReturnsInput()
+    public async Task ExecuteAsync_WithValidInput_ReturnsInput()
     {
         // Arrange
         var inputSchema = CreateBasicInputSchema();
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { input = "test value" };
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.Input);
         Assert.IsType<StartNodeOutput>(result);
+        var startOutput = (StartNodeOutput)result;
+        Assert.NotNull(startOutput.Input);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithComplexValidInput_ReturnsInput()
+    public async Task ExecuteAsync_WithComplexValidInput_ReturnsInput()
     {
         // Arrange
         var inputSchema = CreateComplexInputSchema();
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new
         {
@@ -48,32 +65,32 @@ public class StartNodeExecutorTests
             age = 30,
             tags = new[] { "developer", "tester" }
         };
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.Input);
+        Assert.IsType<StartNodeOutput>(result);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_ValidInput_OutputMatchesInput()
+    public async Task ExecuteAsync_ValidInput_OutputMatchesInput()
     {
         // Arrange
         var inputSchema = CreateBasicInputSchema();
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { input = "test value" };
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
 
         // Assert
+        var startOutput = (StartNodeOutput)result;
         var inputJson = JsonSerializer.Serialize(input);
-        var outputJson = JsonSerializer.Serialize(result.Input);
+        var outputJson = JsonSerializer.Serialize(startOutput.Input);
         Assert.Equal(inputJson, outputJson);
     }
 
@@ -82,75 +99,71 @@ public class StartNodeExecutorTests
     #region Validation Failure Tests
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithMissingRequiredField_ThrowsException()
+    public async Task ExecuteAsync_WithMissingRequiredField_ThrowsException()
     {
         // Arrange
         var inputSchema = CreateBasicInputSchema(); // Requires "input" field
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { wrongField = "test" }; // Missing required field
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteInternalAsync(config, context, CancellationToken.None)
+            async () => await _executor.ExecuteAsync("start_1", config, CancellationToken.None)
         );
 
-        Assert.Contains("Input validation failed", exception.Message);
+        Assert.Contains("Input validation failed", exception.InnerException?.Message ?? exception.Message);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithWrongDataType_ThrowsException()
+    public async Task ExecuteAsync_WithWrongDataType_ThrowsException()
     {
         // Arrange
         var inputSchema = CreateBasicInputSchema(); // Expects "input" as string
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { input = 123 }; // Wrong type (number instead of string)
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteInternalAsync(config, context, CancellationToken.None)
+            async () => await _executor.ExecuteAsync("start_1", config, CancellationToken.None)
         );
 
-        Assert.Contains("Input validation failed", exception.Message);
+        Assert.Contains("Input validation failed", exception.InnerException?.Message ?? exception.Message);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithEmptyInput_ThrowsException()
+    public async Task ExecuteAsync_WithEmptyInput_ThrowsException()
     {
         // Arrange
         var inputSchema = CreateBasicInputSchema(); // Requires "input" field
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { }; // Empty object
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteInternalAsync(config, context, CancellationToken.None)
+            async () => await _executor.ExecuteAsync("start_1", config, CancellationToken.None)
         );
 
-        Assert.Contains("Input validation failed", exception.Message);
+        Assert.Contains("Input validation failed", exception.InnerException?.Message ?? exception.Message);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithAdditionalProperties_ValidatesSuccessfully()
+    public async Task ExecuteAsync_WithAdditionalProperties_ValidatesSuccessfully()
     {
         // Arrange - schema doesn't specify additionalProperties: false
         var inputSchema = CreateBasicInputSchema();
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new
         {
             input = "test value",
             extraField = "extra" // Additional property
         };
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
 
         // Assert - should not throw
         Assert.NotNull(result);
@@ -161,23 +174,22 @@ public class StartNodeExecutorTests
     #region Schema Tests
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithInvalidJsonSchema_ThrowsException()
+    public async Task ExecuteAsync_WithInvalidJsonSchema_ThrowsException()
     {
         // Arrange
         var invalidSchema = "{ invalid json }";
-        var executor = new StartNodeExecutor(invalidSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { input = "test" };
-        var context = CreateContext(input);
+        SetupContext(input, invalidSchema);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(
-            async () => await executor.ExecuteInternalAsync(config, context, CancellationToken.None)
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _executor.ExecuteAsync("start_1", config, CancellationToken.None)
         );
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithMinimumConstraint_ValidatesCorrectly()
+    public async Task ExecuteAsync_WithMinimumConstraint_ValidInput_Succeeds()
     {
         // Arrange
         var inputSchema = @"{
@@ -187,20 +199,35 @@ public class StartNodeExecutorTests
             },
             ""required"": [""age""]
         }";
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
-
-        // Act & Assert - valid input
         var validInput = new { age = 25 };
-        var validContext = CreateContext(validInput);
-        var result = await executor.ExecuteInternalAsync(config, validContext, CancellationToken.None);
-        Assert.NotNull(result);
+        SetupContext(validInput, inputSchema);
 
-        // Act & Assert - invalid input
+        // Act
+        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithMinimumConstraint_InvalidInput_ThrowsException()
+    {
+        // Arrange
+        var inputSchema = @"{
+            ""type"": ""object"",
+            ""properties"": {
+                ""age"": { ""type"": ""integer"", ""minimum"": 18 }
+            },
+            ""required"": [""age""]
+        }";
+        var config = new StartNodeConfiguration { Name = "start_1" };
         var invalidInput = new { age = 15 };
-        var invalidContext = CreateContext(invalidInput);
+        SetupContext(invalidInput, inputSchema);
+
+        // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteInternalAsync(config, invalidContext, CancellationToken.None)
+            async () => await _executor.ExecuteAsync("start_1", config, CancellationToken.None)
         );
     }
 
@@ -209,39 +236,39 @@ public class StartNodeExecutorTests
     #region Output Tests
 
     [Fact]
-    public async Task ExecuteInternalAsync_Output_CanBeSerializedToJson()
+    public async Task ExecuteAsync_Output_CanBeSerializedToJson()
     {
         // Arrange
         var inputSchema = CreateBasicInputSchema();
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { input = "test value" };
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
 
         // Assert
-        var json = result.ToMessageOutput();
+        var startOutput = (StartNodeOutput)result;
+        var json = startOutput.ToMessageOutput();
         Assert.NotNull(json);
         Assert.False(string.IsNullOrWhiteSpace(json));
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_Output_ToStringReturnsJsonRepresentation()
+    public async Task ExecuteAsync_Output_ToStringReturnsJsonRepresentation()
     {
         // Arrange
         var inputSchema = CreateBasicInputSchema();
-        var executor = new StartNodeExecutor(inputSchema);
         var config = new StartNodeConfiguration { Name = "start_1" };
         var input = new { input = "test value" };
-        var context = CreateContext(input);
+        SetupContext(input, inputSchema);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
 
         // Assert
-        var stringOutput = result.ToString();
+        var startOutput = (StartNodeOutput)result;
+        var stringOutput = startOutput.ToString();
         Assert.NotNull(stringOutput);
         Assert.Contains("input", stringOutput);
         Assert.Contains("test value", stringOutput);
@@ -251,14 +278,10 @@ public class StartNodeExecutorTests
 
     #region Helper Methods
 
-    private DonkeyWork.Agents.Agents.Core.Execution.ExecutionContext CreateContext(object input)
+    private void SetupContext(object input, string inputSchema)
     {
-        return new DonkeyWork.Agents.Agents.Core.Execution.ExecutionContext
-        {
-            ExecutionId = Guid.NewGuid(),
-            Input = input,
-            UserId = _testUserId
-        };
+        _contextMock.Setup(c => c.Input).Returns(input);
+        _contextMock.Setup(c => c.InputSchema).Returns(inputSchema);
     }
 
     private string CreateBasicInputSchema()

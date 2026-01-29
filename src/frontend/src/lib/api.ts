@@ -234,7 +234,7 @@ export interface ExecutionEvent {
 export interface AgentExecution {
   id: string
   agentId: string
-  agentVersionId: string
+  versionId: string
   status: 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
   input: any
   output?: any
@@ -255,6 +255,23 @@ export interface ExecutionLog {
   createdAt: string
 }
 
+export interface NodeExecution {
+  id: string
+  nodeId: string
+  nodeType: string
+  nodeName: string
+  actionType?: string
+  status: string
+  input?: string
+  output?: string
+  errorMessage?: string
+  startedAt: string
+  completedAt?: string
+  durationMs?: number
+  tokensUsed?: number
+  fullResponse?: string
+}
+
 // Execution API functions
 export const executions = {
   // Execute agent (production)
@@ -272,7 +289,7 @@ export const executions = {
   list: (agentId?: string, offset = 0, limit = 20) => {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
     if (agentId) params.append('agentId', agentId)
-    return api.get<{ items: AgentExecution[], offset: number, limit: number, totalCount: number }>(
+    return api.get<{ executions: AgentExecution[], totalCount: number }>(
       `/api/v1/agents/executions?${params}`
     )
   },
@@ -282,6 +299,14 @@ export const executions = {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
     return api.get<{ logs: ExecutionLog[], totalCount: number }>(
       `/api/v1/agents/executions/${executionId}/logs?${params}`
+    )
+  },
+
+  // Get node executions (execution trace)
+  getNodeExecutions: (executionId: string, offset = 0, limit = 100) => {
+    const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
+    return api.get<{ nodeExecutions: NodeExecution[], totalCount: number }>(
+      `/api/v1/agents/executions/${executionId}/nodes?${params}`
     )
   },
 }

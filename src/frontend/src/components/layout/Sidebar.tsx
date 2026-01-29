@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, Lock, X } from 'lucide-react'
+import { Bot, Key, Lock, X, PlayCircle, List } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/branding/Logo'
@@ -9,8 +9,30 @@ interface SidebarProps {
   onClose: () => void
 }
 
-const navigation = [
-  { name: 'Agents', href: '/agents', icon: Bot },
+interface NavItem {
+  name: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+interface NavGroup {
+  name: string
+  icon: React.ComponentType<{ className?: string }>
+  items: NavItem[]
+}
+
+const navigationGroups: NavGroup[] = [
+  {
+    name: 'Agents',
+    icon: Bot,
+    items: [
+      { name: 'All Agents', href: '/agents', icon: List },
+      { name: 'Executions', href: '/executions', icon: PlayCircle },
+    ],
+  },
+]
+
+const standaloneNavigation: NavItem[] = [
   { name: 'API Keys', href: '/api-keys', icon: Key },
   { name: 'Secrets', href: '/secrets', icon: Lock },
 ]
@@ -48,25 +70,58 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-4">
-            {navigation.map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )
-                }
-              >
-                <item.icon className="h-5 w-5" />
-                {item.name}
-              </NavLink>
+          <nav className="flex-1 space-y-4 p-4">
+            {/* Grouped navigation */}
+            {navigationGroups.map((group) => (
+              <div key={group.name}>
+                <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
+                  <group.icon className="h-4 w-4" />
+                  {group.name}
+                </div>
+                <div className="mt-1 space-y-1">
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.name}
+                      to={item.href}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                            : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
             ))}
+
+            {/* Standalone navigation */}
+            <div className="space-y-1">
+              {standaloneNavigation.map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )
+                  }
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </NavLink>
+              ))}
+            </div>
           </nav>
 
           {/* Footer */}

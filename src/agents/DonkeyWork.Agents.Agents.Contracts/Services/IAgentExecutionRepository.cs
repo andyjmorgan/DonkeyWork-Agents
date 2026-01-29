@@ -57,4 +57,14 @@ public interface IAgentExecutionRepository
         int limit,
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets node executions for a specific execution.
+    /// </summary>
+    Task<(IReadOnlyList<NodeExecutionV1> NodeExecutions, int TotalCount)> GetNodeExecutionsAsync(
+        Guid executionId,
+        int offset,
+        int limit,
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }

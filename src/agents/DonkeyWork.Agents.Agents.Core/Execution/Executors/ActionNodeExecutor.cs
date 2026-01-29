@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Actions.Contracts.Services;
 using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
+using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
 using Microsoft.Extensions.Logging;
 
@@ -16,8 +17,11 @@ public class ActionNodeExecutor : NodeExecutor<ActionNodeConfiguration, ActionNo
     private readonly ILogger<ActionNodeExecutor> _logger;
 
     public ActionNodeExecutor(
+        IExecutionStreamWriter streamWriter,
+        IExecutionContext context,
         IActionExecutor actionExecutor,
         ILogger<ActionNodeExecutor> logger)
+        : base(streamWriter, context)
     {
         _actionExecutor = actionExecutor;
         _logger = logger;
@@ -25,7 +29,6 @@ public class ActionNodeExecutor : NodeExecutor<ActionNodeConfiguration, ActionNo
 
     protected override async Task<ActionNodeOutput> ExecuteInternalAsync(
         ActionNodeConfiguration config,
-        ExecutionContext context,
         CancellationToken cancellationToken)
     {
         _logger.LogDebug(
@@ -44,7 +47,7 @@ public class ActionNodeExecutor : NodeExecutor<ActionNodeConfiguration, ActionNo
         try
         {
             // Convert ExecutionContext to Scriban context for expression resolution
-            var scribanContext = context.ToScribanContext();
+            var scribanContext = Context.ToScribanContext();
 
             // Deserialize parameters to object (the executor will handle conversion to the correct type)
             var parameters = JsonSerializer.Deserialize<Dictionary<string, object>>(config.Parameters.GetRawText());

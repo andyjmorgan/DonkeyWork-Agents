@@ -117,10 +117,14 @@ public class ActionExecutorServiceTests
         services.AddScoped<DonkeyWork.Agents.Actions.Contracts.Services.IParameterResolver, ParameterResolverService>();
         services.AddScoped<DonkeyWork.Agents.Actions.Contracts.Services.IExpressionEngine, ScribanExpressionEngine>();
 
+        // Register the singleton registry and scoped executor
+        services.AddSingleton<IActionRegistry, ActionRegistry>();
+        services.AddScoped<ActionExecutorService>();
+
         var serviceProvider = services.BuildServiceProvider();
 
-        return new ActionExecutorService(
-            serviceProvider,
-            serviceProvider.GetRequiredService<ILogger<ActionExecutorService>>());
+        // Create a scope and resolve the executor from it (simulates request scope)
+        var scope = serviceProvider.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<ActionExecutorService>();
     }
 }

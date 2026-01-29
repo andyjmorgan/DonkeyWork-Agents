@@ -16,9 +16,19 @@ public class AgentNodeExecutionEntity : BaseEntity
     public string NodeId { get; set; } = string.Empty;
 
     /// <summary>
-    /// Node type (start, model, end).
+    /// Node type (start, model, end, action).
     /// </summary>
     public string NodeType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Node name from configuration (user-friendly name).
+    /// </summary>
+    public string NodeName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// For action nodes, the specific action type (e.g., "http_request", "sleep").
+    /// </summary>
+    public string? ActionType { get; set; }
 
     /// <summary>
     /// Node execution status.

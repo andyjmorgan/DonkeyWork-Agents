@@ -34,6 +34,7 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
         var startSchema = JsonSchema.FromType<StartNodeConfiguration>(settings);
         var modelSchema = JsonSchema.FromType<ModelNodeConfiguration>(settings);
         var endSchema = JsonSchema.FromType<EndNodeConfiguration>(settings);
+        var messageFormatterSchema = JsonSchema.FromType<MessageFormatterNodeConfiguration>(settings);
 
         return new List<NodeTypeInfo>
         {
@@ -57,6 +58,13 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                 DisplayName = "End",
                 Description = "Output and completion",
                 ConfigSchema = JsonSerializer.Deserialize<JsonElement>(endSchema.ToJson())
+            },
+            new NodeTypeInfo
+            {
+                Type = "messageFormatter",
+                DisplayName = "Message Formatter",
+                Description = "Format messages using Scriban templates",
+                ConfigSchema = JsonSerializer.Deserialize<JsonElement>(messageFormatterSchema.ToJson())
             }
         };
     }

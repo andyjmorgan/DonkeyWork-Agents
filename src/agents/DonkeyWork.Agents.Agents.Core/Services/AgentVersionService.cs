@@ -32,8 +32,8 @@ public class AgentVersionService : IAgentVersionService
             throw new InvalidOperationException($"Agent {agentId} not found");
         }
 
-        // Validate graph structure before saving
-        ValidateGraphStructure(request);
+        // Validate graph structure and get enriched node configurations (with type discriminators)
+        var enrichedNodeConfigurations = ValidateAndEnrichNodeConfigurations(request);
 
         // Check if a draft already exists
         var existingDraft = await _dbContext.AgentVersions
@@ -47,7 +47,7 @@ public class AgentVersionService : IAgentVersionService
             existingDraft.InputSchema = request.InputSchema.GetRawText();
             existingDraft.OutputSchema = request.OutputSchema?.GetRawText();
             existingDraft.ReactFlowData = request.ReactFlowData.GetRawText();
-            existingDraft.NodeConfigurations = request.NodeConfigurations.GetRawText();
+            existingDraft.NodeConfigurations = enrichedNodeConfigurations;
             existingDraft.UpdatedAt = DateTimeOffset.UtcNow;
 
             version = existingDraft;
@@ -74,7 +74,7 @@ public class AgentVersionService : IAgentVersionService
                 InputSchema = request.InputSchema.GetRawText(),
                 OutputSchema = request.OutputSchema?.GetRawText(),
                 ReactFlowData = request.ReactFlowData.GetRawText(),
-                NodeConfigurations = request.NodeConfigurations.GetRawText(),
+                NodeConfigurations = enrichedNodeConfigurations,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -169,7 +169,11 @@ public class AgentVersionService : IAgentVersionService
         return versions.Select(MapToResponse).ToList();
     }
 
-    private void ValidateGraphStructure(SaveAgentVersionRequestV1 request)
+    /// <summary>
+    /// Validates the graph structure and returns enriched node configurations JSON
+    /// with type discriminators injected for polymorphic deserialization.
+    /// </summary>
+    private string ValidateAndEnrichNodeConfigurations(SaveAgentVersionRequestV1 request)
     {
         // Parse ReactFlow data
         var nodes = request.ReactFlowData.GetProperty("nodes").EnumerateArray().ToList();
@@ -189,25 +193,13 @@ public class AgentVersionService : IAgentVersionService
             throw new InvalidOperationException($"Graph must have exactly one End node. Found: {endNodes}");
         }
 
-        // Parse node configurations
-        var nodeConfigurations = new Dictionary<string, NodeConfiguration>();
-        foreach (var property in request.NodeConfigurations.EnumerateObject())
-        {
-            var nodeId = property.Name;
-            var configJson = property.Value.GetRawText();
+        // Build node type map from ReactFlow data
+        var nodeTypeMap = nodes.ToDictionary(
+            n => n.GetProperty("id").GetString()!,
+            n => n.GetProperty("type").GetString()!);
 
-            // Deserialize based on type
-            var type = property.Value.GetProperty("type").GetString();
-            NodeConfiguration config = type switch
-            {
-                "start" => JsonSerializer.Deserialize<StartNodeConfiguration>(configJson)!,
-                "model" => JsonSerializer.Deserialize<ModelNodeConfiguration>(configJson)!,
-                "end" => JsonSerializer.Deserialize<EndNodeConfiguration>(configJson)!,
-                _ => throw new InvalidOperationException($"Unknown node type: {type}")
-            };
-
-            nodeConfigurations[nodeId] = config;
-        }
+        // Merge types into node configurations, deserialize, and get enriched JSON
+        var (nodeConfigurations, enrichedJson) = DeserializeAndEnrichNodeConfigurations(request.NodeConfigurations, nodeTypeMap);
 
         // 3. Validate node name uniqueness
         var nodeNames = nodeConfigurations.Values.Select(c => c.Name).ToList();
@@ -264,6 +256,14 @@ public class AgentVersionService : IAgentVersionService
                     throw new InvalidOperationException($"Model node {nodeId} missing required field: userMessage");
                 }
             }
+
+            if (config is ActionNodeConfiguration actionConfig)
+            {
+                if (string.IsNullOrWhiteSpace(actionConfig.ActionType))
+                {
+                    throw new InvalidOperationException($"Action node {nodeId} missing required field: actionType");
+                }
+            }
         }
 
         // 6. Every ReactFlow node has configuration
@@ -309,6 +309,8 @@ public class AgentVersionService : IAgentVersionService
                 throw new InvalidOperationException($"Edge {edgeId} references non-existent target node: {target}");
             }
         }
+
+        return enrichedJson;
     }
 
     private static GetAgentVersionResponseV1 MapToResponse(AgentVersionEntity version)
@@ -326,5 +328,49 @@ public class AgentVersionService : IAgentVersionService
             CreatedAt = version.CreatedAt,
             PublishedAt = version.PublishedAt
         };
+    }
+
+    /// <summary>
+    /// Deserializes node configurations by injecting the type discriminator from ReactFlow node data.
+    /// This allows the frontend to omit the redundant "type" property in nodeConfigurations.
+    /// Returns both the deserialized configurations and the enriched JSON string for storage.
+    /// </summary>
+    private static (Dictionary<string, NodeConfiguration> Configurations, string EnrichedJson) DeserializeAndEnrichNodeConfigurations(
+        JsonElement nodeConfigurationsElement,
+        Dictionary<string, string> nodeTypeMap)
+    {
+        var result = new Dictionary<string, NodeConfiguration>();
+        var enrichedConfigs = new Dictionary<string, object>();
+
+        foreach (var property in nodeConfigurationsElement.EnumerateObject())
+        {
+            var nodeId = property.Name;
+
+            if (!nodeTypeMap.TryGetValue(nodeId, out var nodeType))
+            {
+                throw new InvalidOperationException($"Node configuration for '{nodeId}' has no corresponding ReactFlow node");
+            }
+
+            // Create a new JSON object with the type discriminator injected
+            var configWithType = new Dictionary<string, object>();
+            configWithType["type"] = nodeType;
+
+            foreach (var configProperty in property.Value.EnumerateObject())
+            {
+                // Skip if frontend already sent type (use ReactFlow type as source of truth)
+                if (configProperty.Name == "type") continue;
+                configWithType[configProperty.Name] = configProperty.Value;
+            }
+
+            var configJson = JsonSerializer.Serialize(configWithType);
+            var config = JsonSerializer.Deserialize<NodeConfiguration>(configJson)
+                ?? throw new InvalidOperationException($"Failed to deserialize configuration for node '{nodeId}'");
+
+            result[nodeId] = config;
+            enrichedConfigs[nodeId] = configWithType;
+        }
+
+        var enrichedJson = JsonSerializer.Serialize(enrichedConfigs);
+        return (result, enrichedJson);
     }
 }

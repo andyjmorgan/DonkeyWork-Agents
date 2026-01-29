@@ -4,12 +4,15 @@ using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models.Events;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using RabbitMQ.Stream.Client;
 using RabbitMQ.Stream.Client.Reliable;
 
 namespace DonkeyWork.Agents.Agents.Core.Services;
 
+/// <summary>
+/// Singleton service for managing execution streams.
+/// Handles stream lifecycle and reading events.
+/// </summary>
 public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
 {
     private readonly ILogger<ExecutionStreamService> _logger;
@@ -50,43 +53,12 @@ public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
         }
     }
 
-    public async Task WriteEventAsync(Guid executionId, ExecutionEvent evt)
-    {
-        var streamName = GetStreamName(executionId);
-
-        // Set execution ID and timestamp on the event
-        evt.ExecutionId = executionId;
-        evt.Timestamp = DateTime.UtcNow;
-
-        try
-        {
-            var producer = await Producer.Create(
-                new ProducerConfig(_streamSystem, streamName)
-                {
-                    ClientProvidedName = $"producer-{executionId}"
-                });
-
-            var json = JsonSerializer.Serialize<ExecutionEvent>(evt, _jsonOptions);
-            var message = new Message(Encoding.UTF8.GetBytes(json));
-
-            await producer.Send(message);
-
-            _logger.LogDebug("Wrote event {EventType} to stream {StreamName}", evt.GetType().Name, streamName);
-
-            await producer.Close();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to write event to stream {StreamName}", streamName);
-            throw;
-        }
-    }
-
     public async IAsyncEnumerable<ExecutionEvent> ReadEventsAsync(Guid executionId, long offset = 0)
     {
         var streamName = GetStreamName(executionId);
         var eventQueue = new System.Collections.Concurrent.ConcurrentQueue<ExecutionEvent>();
         var completionSource = new TaskCompletionSource<bool>();
+        var newEventSignal = new SemaphoreSlim(0);
 
         _logger.LogInformation("Starting to read events from stream {StreamName} with offset {Offset}", streamName, offset);
 
@@ -112,6 +84,7 @@ public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
                             {
                                 _logger.LogDebug("Enqueuing event {EventType} to queue", evt.GetType().Name);
                                 eventQueue.Enqueue(evt);
+                                newEventSignal.Release(); // Signal that a new event is available
 
                                 // Signal completion if we received a terminal event
                                 if (evt is ExecutionCompletedEvent or ExecutionFailedEvent)
@@ -153,7 +126,8 @@ public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
                     break;
                 }
 
-                await Task.Delay(50); // Poll interval
+                // Wait for new event signal or short timeout
+                await newEventSignal.WaitAsync(TimeSpan.FromMilliseconds(100));
             }
 
             // Yield any remaining events

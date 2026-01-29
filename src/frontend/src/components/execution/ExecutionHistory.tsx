@@ -19,7 +19,7 @@ export function ExecutionHistory({ agentId }: ExecutionHistoryProps) {
     try {
       setLoading(true)
       const response = await executions.list(agentId)
-      setItems(response.items)
+      setItems(response.executions)
     } catch (error) {
       console.error('Failed to load executions:', error)
     } finally {

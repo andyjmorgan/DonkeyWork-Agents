@@ -20,7 +20,11 @@ public static class DependencyInjection
         services.AddScoped<IActionSchemaService, ActionSchemaService>();
         services.AddScoped<IExpressionEngine, ScribanExpressionEngine>();
         services.AddScoped<IParameterResolver, ParameterResolverService>();
-        services.AddSingleton<IActionExecutor, ActionExecutorService>();
+
+        // Registry is singleton (discovery happens once at startup)
+        // Executor is scoped (can resolve scoped action providers)
+        services.AddSingleton<IActionRegistry, ActionRegistry>();
+        services.AddScoped<IActionExecutor, ActionExecutorService>();
 
         // Register HTTP client for HTTP action provider
         services.AddHttpClient();

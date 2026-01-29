@@ -10,6 +10,7 @@ using System.Text.Encodings.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
+using MainProgram = DonkeyWork.Agents.Api.Program;
 
 namespace DonkeyWork.Agents.Agents.Api.Tests.Helpers;
 
@@ -49,7 +50,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 /// <summary>
 /// Custom WebApplicationFactory for integration testing the Agents API.
 /// </summary>
-public class AgentsApiFactory : WebApplicationFactory<Program>
+public class AgentsApiFactory : WebApplicationFactory<MainProgram>
 {
     public static readonly Guid TestUserId = Guid.NewGuid();
 

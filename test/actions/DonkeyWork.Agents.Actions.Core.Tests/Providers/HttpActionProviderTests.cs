@@ -30,6 +30,11 @@ public class HttpActionProviderTests
             .Setup(r => r.Resolve(It.IsAny<Resolvable<int>>(), It.IsAny<object?>()))
             .Returns((Resolvable<int> r, object? _) => int.Parse(r.RawValue));
 
+        // Setup ResolveString to return the input string (no variable substitution in tests)
+        _parameterResolverMock
+            .Setup(r => r.ResolveString(It.IsAny<string>(), It.IsAny<object?>()))
+            .Returns((string s, object? _) => s);
+
         _provider = new HttpActionProvider(
             _httpClientFactoryMock.Object,
             _parameterResolverMock.Object);
@@ -89,7 +94,11 @@ public class HttpActionProviderTests
         {
             Method = DonkeyWork.Agents.Actions.Core.Providers.HttpMethod.GET,
             Url = "https://api.example.com/test",
-            Headers = "Authorization: Bearer token123\nX-Custom-Header: value"
+            Headers = KeyValueCollection.FromItems(new[]
+            {
+                new KeyValueItem { Key = "Authorization", Value = "Bearer token123" },
+                new KeyValueItem { Key = "X-Custom-Header", Value = "value" }
+            })
         };
 
         HttpRequestMessage? capturedRequest = null;
@@ -126,7 +135,7 @@ public class HttpActionProviderTests
         {
             Method = DonkeyWork.Agents.Actions.Core.Providers.HttpMethod.POST,
             Url = "https://api.example.com/create",
-            Body = requestBody
+            Body = new Resolvable<string>(requestBody)
         };
 
         HttpRequestMessage? capturedRequest = null;

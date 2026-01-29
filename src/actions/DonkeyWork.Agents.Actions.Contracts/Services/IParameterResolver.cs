@@ -23,4 +23,12 @@ public interface IParameterResolver
     /// <param name="context">Evaluation context</param>
     /// <returns>Resolved string</returns>
     string ResolveString(string value, object? context = null);
+
+    /// <summary>
+    /// Resolve a variable expression to a dictionary of headers
+    /// </summary>
+    /// <param name="variable">Variable expression (e.g., "{{headers}}")</param>
+    /// <param name="context">Evaluation context</param>
+    /// <returns>Dictionary of header key-value pairs</returns>
+    Dictionary<string, string> ResolveHeaders(string variable, object? context = null);
 }

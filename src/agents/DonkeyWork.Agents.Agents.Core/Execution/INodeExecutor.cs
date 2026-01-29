@@ -1,5 +1,3 @@
-using DonkeyWork.Agents.Agents.Contracts.Services;
-
 namespace DonkeyWork.Agents.Agents.Core.Execution;
 
 /// <summary>
@@ -8,16 +6,16 @@ namespace DonkeyWork.Agents.Agents.Core.Execution;
 public interface INodeExecutor
 {
     /// <summary>
-    /// Executes a node with the given configuration and context.
+    /// Executes a node with the given configuration.
+    /// The execution context is injected via DI.
+    /// Emits NodeStarted and NodeCompleted events.
     /// </summary>
+    /// <param name="nodeId">The node ID.</param>
     /// <param name="config">The node configuration.</param>
-    /// <param name="context">The execution context.</param>
-    /// <param name="streamService">Service for emitting stream events.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The node output.</returns>
     Task<NodeOutput> ExecuteAsync(
+        string nodeId,
         object config,
-        ExecutionContext context,
-        IExecutionStreamService streamService,
         CancellationToken cancellationToken);
 }

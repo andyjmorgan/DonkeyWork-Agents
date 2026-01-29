@@ -48,7 +48,12 @@ public enum EditorType
     /// <summary>
     /// JSON editor
     /// </summary>
-    Json
+    Json,
+
+    /// <summary>
+    /// Key-value list editor (supports variable or manual entries)
+    /// </summary>
+    KeyValueList
 }
 
 /// <summary>

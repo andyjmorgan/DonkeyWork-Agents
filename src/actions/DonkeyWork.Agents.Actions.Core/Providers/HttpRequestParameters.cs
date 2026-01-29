@@ -42,15 +42,14 @@ public class HttpRequestParameters : BaseActionParameters
     [SupportVariables]
     public string Url { get; set; } = string.Empty;
 
-    [Display(Name = "Headers", Description = "HTTP headers (one per line: Key: Value)")]
-    [EditorType(EditorType.TextArea)]
-    [SupportVariables]
-    public string? Headers { get; set; }
+    [Display(Name = "Headers", Description = "HTTP headers as key-value pairs or a variable reference")]
+    [EditorType(EditorType.KeyValueList)]
+    public KeyValueCollection? Headers { get; set; }
 
-    [Display(Name = "Body", Description = "Request body (for POST/PUT/PATCH)")]
+    [Display(Name = "Body", Description = "Request body (for POST/PUT/PATCH). Use {{variable}} for dynamic content.")]
     [EditorType(EditorType.Code)]
     [SupportVariables]
-    public string? Body { get; set; }
+    public Resolvable<string>? Body { get; set; }
 
     [Display(Name = "Timeout (seconds)", Description = "Request timeout in seconds")]
     [Range(1, 300)]

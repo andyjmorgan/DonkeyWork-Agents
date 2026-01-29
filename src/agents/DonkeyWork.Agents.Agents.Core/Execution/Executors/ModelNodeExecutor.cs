@@ -22,31 +22,34 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
 {
     private readonly IModelPipeline _modelPipeline;
     private readonly IExternalApiKeyService _credentialService;
-    private readonly IExecutionStreamService _streamService;
+    private readonly IExecutionStreamWriter _streamWriter;
     private readonly ILogger<ModelNodeExecutor> _logger;
 
     public ModelNodeExecutor(
         IModelPipeline modelPipeline,
         IExternalApiKeyService credentialService,
-        IExecutionStreamService streamService,
+        IExecutionStreamWriter streamWriter,
+        IExecutionContext context,
         ILogger<ModelNodeExecutor> logger)
+        : base(streamWriter, context)
     {
         _modelPipeline = modelPipeline;
         _credentialService = credentialService;
-        _streamService = streamService;
+        _streamWriter = streamWriter;
         _logger = logger;
     }
 
     protected override async Task<ModelNodeOutput> ExecuteInternalAsync(
         ModelNodeConfiguration config,
-        ExecutionContext context,
         CancellationToken cancellationToken)
     {
-        // Prepare template variables
+        // Prepare template variables (Pascal case with lowercase aliases)
         var templateContext = new
         {
-            input = context.Input,
-            steps = context.NodeOutputs
+            Input = Context.Input,
+            input = Context.Input,
+            Steps = Context.NodeOutputs,
+            steps = Context.NodeOutputs
         };
 
         // Render templates
@@ -88,7 +91,7 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
         };
 
         var credential = await _credentialService.GetByIdAsync(
-            context.UserId,
+            Context.UserId,
             config.CredentialId,
             cancellationToken);
 
@@ -156,8 +159,7 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
                     responseBuilder.Append(textDelta.Text);
 
                     // Emit TokenDelta event to execution stream
-                    await _streamService.WriteEventAsync(
-                        context.ExecutionId,
+                    await _streamWriter.WriteEventAsync(
                         new TokenDeltaEvent
                         {
                             Delta = textDelta.Text

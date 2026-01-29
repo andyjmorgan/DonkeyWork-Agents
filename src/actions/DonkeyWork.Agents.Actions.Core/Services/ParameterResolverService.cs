@@ -56,6 +56,22 @@ public class ParameterResolverService : IParameterResolver
         return value;
     }
 
+    public Dictionary<string, string> ResolveHeaders(string variable, object? context = null)
+    {
+        if (string.IsNullOrEmpty(variable))
+            return new Dictionary<string, string>();
+
+        if (context == null)
+        {
+            throw new InvalidOperationException(
+                $"Cannot resolve headers expression '{variable}' without context");
+        }
+
+        // Evaluate the expression to get a dictionary
+        var result = _expressionEngine.Evaluate<Dictionary<string, string>>(variable, context);
+        return result ?? new Dictionary<string, string>();
+    }
+
     private static T ParseLiteral<T>(string value)
     {
         var targetType = typeof(T);

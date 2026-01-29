@@ -74,13 +74,13 @@
       {
         "name": "Headers",
         "displayName": "Headers",
-        "description": "HTTP headers (one per line: Key: Value)",
-        "type": "string",
+        "description": "HTTP headers as key-value pairs or a variable reference",
+        "type": "keyValueCollection",
         "required": false,
         "defaultValue": null,
-        "supportsVariables": true,
-        "editorType": "TextArea",
-        "controlType": "textarea",
+        "supportsVariables": false,
+        "editorType": "KeyValueList",
+        "controlType": "keyValueList",
         "options": null,
         "validation": null,
         "resolvable": false,
@@ -90,7 +90,7 @@
       {
         "name": "Body",
         "displayName": "Body",
-        "description": "Request body (for POST/PUT/PATCH)",
+        "description": "Request body (for POST/PUT/PATCH). Use {{variable}} for dynamic content.",
         "type": "string",
         "required": false,
         "defaultValue": null,
@@ -99,7 +99,7 @@
         "controlType": "code",
         "options": null,
         "validation": null,
-        "resolvable": false,
+        "resolvable": true,
         "credentialTypes": null,
         "dependency": null
       },
@@ -139,6 +139,42 @@
         "options": null,
         "validation": null,
         "resolvable": false,
+        "credentialTypes": null,
+        "dependency": null
+      }
+    ]
+  },
+  {
+    "actionType": "sleep",
+    "displayName": "Sleep",
+    "category": "Utilities",
+    "group": "Flow Control",
+    "icon": "clock",
+    "description": "Pause execution for a specified duration",
+    "maxInputs": -1,
+    "maxOutputs": -1,
+    "enabled": true,
+    "parameters": [
+      {
+        "name": "Seconds",
+        "displayName": "Duration (seconds)",
+        "description": "Number of seconds to sleep",
+        "type": "number",
+        "required": true,
+        "defaultValue": "1",
+        "supportsVariables": false,
+        "editorType": null,
+        "controlType": "number",
+        "options": null,
+        "validation": {
+          "min": 1,
+          "max": 300,
+          "minLength": null,
+          "maxLength": null,
+          "pattern": null,
+          "step": null
+        },
+        "resolvable": true,
         "credentialTypes": null,
         "dependency": null
       }

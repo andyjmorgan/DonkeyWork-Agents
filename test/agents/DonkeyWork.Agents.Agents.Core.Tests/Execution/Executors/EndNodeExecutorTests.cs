@@ -1,8 +1,10 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
+using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution;
 using DonkeyWork.Agents.Agents.Core.Execution.Executors;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
+using Moq;
 
 namespace DonkeyWork.Agents.Agents.Core.Tests.Execution.Executors;
 
@@ -13,90 +15,94 @@ namespace DonkeyWork.Agents.Agents.Core.Tests.Execution.Executors;
 public class EndNodeExecutorTests
 {
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private readonly Guid _testExecutionId = Guid.NewGuid();
+    private readonly Mock<IExecutionStreamWriter> _streamWriterMock;
+    private readonly Mock<IExecutionContext> _contextMock;
+    private readonly EndNodeExecutor _executor;
+
+    public EndNodeExecutorTests()
+    {
+        _streamWriterMock = new Mock<IExecutionStreamWriter>();
+        _contextMock = new Mock<IExecutionContext>();
+        _contextMock.Setup(c => c.ExecutionId).Returns(_testExecutionId);
+        _contextMock.Setup(c => c.UserId).Returns(_testUserId);
+        _executor = new EndNodeExecutor(_streamWriterMock.Object, _contextMock.Object);
+    }
 
     #region Successful Execution Tests
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithUpstreamNodeOutput_ReturnsFinalOutput()
+    public async Task ExecuteAsync_WithUpstreamNodeOutput_ReturnsFinalOutput()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
         var upstreamOutput = new TestNodeOutput { Data = "test output" };
-        context.NodeOutputs[upstreamNodeName] = upstreamOutput;
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = upstreamOutput };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotNull(result.FinalOutput);
         Assert.IsType<EndNodeOutput>(result);
+        var endOutput = (EndNodeOutput)result;
+        Assert.NotNull(endOutput.FinalOutput);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithStringUpstreamOutput_ReturnsString()
+    public async Task ExecuteAsync_WithStringUpstreamOutput_ReturnsString()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
-        var upstreamOutput = "simple string output";
-        context.NodeOutputs[upstreamNodeName] = upstreamOutput;
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = "simple string output" };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(upstreamOutput, result.FinalOutput);
+        var endOutput = (EndNodeOutput)result;
+        Assert.Equal("simple string output", endOutput.FinalOutput);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithNodeOutputType_CallsToMessageOutput()
+    public async Task ExecuteAsync_WithNodeOutputType_CallsToMessageOutput()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
         var upstreamOutput = new TestNodeOutput { Data = "test data" };
-        context.NodeOutputs[upstreamNodeName] = upstreamOutput;
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = upstreamOutput };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        var finalOutputString = result.FinalOutput as string;
+        var endOutput = (EndNodeOutput)result;
+        var finalOutputString = endOutput.FinalOutput as string;
         Assert.NotNull(finalOutputString);
         Assert.Contains("test data", finalOutputString);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithComplexObject_SerializesToJson()
+    public async Task ExecuteAsync_WithComplexObject_SerializesToJson()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
         var complexObject = new { property = "value", number = 42 };
-        context.NodeOutputs[upstreamNodeName] = complexObject;
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = complexObject };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        var finalOutputString = result.FinalOutput as string;
+        var endOutput = (EndNodeOutput)result;
+        var finalOutputString = endOutput.FinalOutput as string;
         Assert.NotNull(finalOutputString);
         Assert.Contains("property", finalOutputString);
         Assert.Contains("value", finalOutputString);
@@ -107,57 +113,31 @@ public class EndNodeExecutorTests
     #region Error Handling Tests
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithMissingUpstreamNode_ThrowsException()
+    public async Task ExecuteAsync_WithNoUpstreamNodes_ThrowsException()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-        // Note: No upstream output added to context
+        var nodeOutputs = new Dictionary<string, object>(); // Empty
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteInternalAsync(config, context, CancellationToken.None)
+            async () => await _executor.ExecuteAsync("end_1", config, CancellationToken.None)
         );
 
-        Assert.Contains("could not find output from upstream node", exception.Message);
-        Assert.Contains(upstreamNodeName, exception.Message);
+        Assert.Contains("no upstream outputs", exception.InnerException?.Message ?? exception.Message);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithWrongUpstreamNodeName_ThrowsException()
+    public async Task ExecuteAsync_WithNullUpstreamOutput_HandlesGracefully()
     {
         // Arrange
-        var expectedUpstreamName = "model_1";
-        var actualUpstreamName = "model_2";
-        var executor = new EndNodeExecutor(expectedUpstreamName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
-        context.NodeOutputs[actualUpstreamName] = "output"; // Wrong node name
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteInternalAsync(config, context, CancellationToken.None)
-        );
-
-        Assert.Contains("could not find output from upstream node", exception.Message);
-    }
-
-    [Fact]
-    public async Task ExecuteInternalAsync_WithNullUpstreamOutput_ThrowsException()
-    {
-        // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
-        var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
-        context.NodeOutputs[upstreamNodeName] = null!; // Null output
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = null! };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert - should handle null gracefully (serializes to "null" string)
         Assert.NotNull(result);
@@ -168,62 +148,56 @@ public class EndNodeExecutorTests
     #region Output Format Tests
 
     [Fact]
-    public async Task ExecuteInternalAsync_OutputToMessageOutput_ReturnsString()
+    public async Task ExecuteAsync_OutputToMessageOutput_ReturnsString()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
-        context.NodeOutputs[upstreamNodeName] = "test output";
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = "test output" };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
-        var messageOutput = result.ToMessageOutput();
+        var endOutput = (EndNodeOutput)result;
+        var messageOutput = endOutput.ToMessageOutput();
         Assert.IsType<string>(messageOutput);
         Assert.Equal("test output", messageOutput);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_OutputToString_ReturnsReadableFormat()
+    public async Task ExecuteAsync_OutputToString_ReturnsReadableFormat()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
-        context.NodeOutputs[upstreamNodeName] = "test output";
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = "test output" };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
-        var stringOutput = result.ToString();
+        var endOutput = (EndNodeOutput)result;
+        var stringOutput = endOutput.ToString();
         Assert.NotNull(stringOutput);
         Assert.Equal("test output", stringOutput);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithJsonObject_OutputToStringReturnsJson()
+    public async Task ExecuteAsync_WithJsonObject_OutputToStringReturnsJson()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
         var jsonObject = new { result = "success", count = 5 };
-        context.NodeOutputs[upstreamNodeName] = jsonObject;
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = jsonObject };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
-        var stringOutput = result.ToString();
+        var endOutput = (EndNodeOutput)result;
+        var stringOutput = endOutput.ToString();
         Assert.NotNull(stringOutput);
         Assert.Contains("result", stringOutput);
         Assert.Contains("success", stringOutput);
@@ -234,24 +208,26 @@ public class EndNodeExecutorTests
     #region Multiple Upstream Scenarios
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithMultipleNodeOutputsInContext_UsesSpecifiedUpstream()
+    public async Task ExecuteAsync_WithMultipleNodeOutputsInContext_UsesLastOutput()
     {
         // Arrange
-        var upstreamNodeName = "model_2";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
-        context.NodeOutputs["model_1"] = "first output";
-        context.NodeOutputs["model_2"] = "second output";
-        context.NodeOutputs["model_3"] = "third output";
+        // Use OrderedDictionary behavior - Dictionary preserves insertion order in .NET
+        var nodeOutputs = new Dictionary<string, object>
+        {
+            ["model_1"] = "first output",
+            ["model_2"] = "second output",
+            ["model_3"] = "third output"
+        };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("second output", result.FinalOutput);
+        var endOutput = (EndNodeOutput)result;
+        Assert.Equal("third output", endOutput.FinalOutput);
     }
 
     #endregion
@@ -259,62 +235,56 @@ public class EndNodeExecutorTests
     #region Edge Cases
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithEmptyString_ReturnsEmptyString()
+    public async Task ExecuteAsync_WithEmptyString_ReturnsEmptyString()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
-        context.NodeOutputs[upstreamNodeName] = "";
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = "" };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("", result.FinalOutput);
+        var endOutput = (EndNodeOutput)result;
+        Assert.Equal("", endOutput.FinalOutput);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithWhitespaceString_PreservesWhitespace()
+    public async Task ExecuteAsync_WithWhitespaceString_PreservesWhitespace()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
         var whitespace = "   ";
-        context.NodeOutputs[upstreamNodeName] = whitespace;
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = whitespace };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(whitespace, result.FinalOutput);
+        var endOutput = (EndNodeOutput)result;
+        Assert.Equal(whitespace, endOutput.FinalOutput);
     }
 
     [Fact]
-    public async Task ExecuteInternalAsync_WithArrayOutput_SerializesCorrectly()
+    public async Task ExecuteAsync_WithArrayOutput_SerializesCorrectly()
     {
         // Arrange
-        var upstreamNodeName = "model_1";
-        var executor = new EndNodeExecutor(upstreamNodeName);
         var config = new EndNodeConfiguration { Name = "end_1" };
-        var context = CreateContext();
-
         var arrayOutput = new[] { "item1", "item2", "item3" };
-        context.NodeOutputs[upstreamNodeName] = arrayOutput;
+        var nodeOutputs = new Dictionary<string, object> { ["model_1"] = arrayOutput };
+        _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await executor.ExecuteInternalAsync(config, context, CancellationToken.None);
+        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        var finalOutputString = result.FinalOutput as string;
+        var endOutput = (EndNodeOutput)result;
+        var finalOutputString = endOutput.FinalOutput as string;
         Assert.NotNull(finalOutputString);
         Assert.Contains("item1", finalOutputString);
         Assert.Contains("item2", finalOutputString);
@@ -322,17 +292,7 @@ public class EndNodeExecutorTests
 
     #endregion
 
-    #region Helper Methods
-
-    private DonkeyWork.Agents.Agents.Core.Execution.ExecutionContext CreateContext()
-    {
-        return new DonkeyWork.Agents.Agents.Core.Execution.ExecutionContext
-        {
-            ExecutionId = Guid.NewGuid(),
-            Input = new { },
-            UserId = _testUserId
-        };
-    }
+    #region Helper Classes
 
     /// <summary>
     /// Test implementation of NodeOutput for testing purposes.

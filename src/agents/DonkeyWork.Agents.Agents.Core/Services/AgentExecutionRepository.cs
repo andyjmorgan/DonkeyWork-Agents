@@ -168,4 +168,56 @@ public class AgentExecutionRepository : IAgentExecutionRepository
             CreatedAt = log.CreatedAt.UtcDateTime
         };
     }
+
+    public async Task<(IReadOnlyList<NodeExecutionV1> NodeExecutions, int TotalCount)> GetNodeExecutionsAsync(
+        Guid executionId,
+        int offset,
+        int limit,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        // Verify user owns this execution
+        var executionExists = await _dbContext.AgentExecutions
+            .AnyAsync(e => e.Id == executionId, cancellationToken);
+
+        if (!executionExists)
+        {
+            return (Array.Empty<NodeExecutionV1>(), 0);
+        }
+
+        var query = _dbContext.AgentNodeExecutions
+            .AsNoTracking()
+            .Where(n => n.AgentExecutionId == executionId);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var nodeExecutions = await query
+            .OrderBy(n => n.StartedAt)
+            .Skip(offset)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return (nodeExecutions.Select(MapNodeExecutionToResponse).ToList(), totalCount);
+    }
+
+    private static NodeExecutionV1 MapNodeExecutionToResponse(AgentNodeExecutionEntity entity)
+    {
+        return new NodeExecutionV1
+        {
+            Id = entity.Id,
+            NodeId = entity.NodeId,
+            NodeType = entity.NodeType,
+            NodeName = entity.NodeName,
+            ActionType = entity.ActionType,
+            Status = entity.Status,
+            Input = entity.Input,
+            Output = entity.Output,
+            ErrorMessage = entity.ErrorMessage,
+            StartedAt = entity.StartedAt,
+            CompletedAt = entity.CompletedAt,
+            DurationMs = entity.DurationMs,
+            TokensUsed = entity.TokensUsed,
+            FullResponse = entity.FullResponse
+        };
+    }
 }

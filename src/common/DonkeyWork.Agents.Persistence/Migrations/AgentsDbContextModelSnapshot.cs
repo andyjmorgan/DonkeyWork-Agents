@@ -235,6 +235,9 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<string>("ActionType")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("AgentExecutionId")
                         .HasColumnType("uuid")
                         .HasColumnName("agent_execution_id");
@@ -268,6 +271,10 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("node_id");
+
+                    b.Property<string>("NodeName")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("NodeType")
                         .IsRequired()

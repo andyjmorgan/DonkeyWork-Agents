@@ -50,9 +50,6 @@ public class AgentVersionsControllerTests
         Assert.Equal(1, version.VersionNumber);
         Assert.True(version.IsDraft);
         Assert.Null(version.PublishedAt);
-        Assert.NotNull(version.ReactFlowData);
-        Assert.NotNull(version.NodeConfigurations);
-        Assert.NotNull(version.InputSchema);
     }
 
     [Fact]
@@ -285,7 +282,6 @@ public class AgentVersionsControllerTests
         // Assert
         var version = await response.Content.ReadFromJsonAsync<GetAgentVersionResponseV1>();
         Assert.NotNull(version);
-        Assert.NotNull(version.ReactFlowData);
 
         // Verify ReactFlowData structure is preserved
         var reactFlowData = version.ReactFlowData;
@@ -311,7 +307,6 @@ public class AgentVersionsControllerTests
         // Assert
         var version = await response.Content.ReadFromJsonAsync<GetAgentVersionResponseV1>();
         Assert.NotNull(version);
-        Assert.NotNull(version.NodeConfigurations);
 
         var nodeConfigs = version.NodeConfigurations;
         Assert.Equal(System.Text.Json.JsonValueKind.Object, nodeConfigs.ValueKind);
@@ -334,7 +329,6 @@ public class AgentVersionsControllerTests
         // Assert
         var version = await response.Content.ReadFromJsonAsync<GetAgentVersionResponseV1>();
         Assert.NotNull(version);
-        Assert.NotNull(version.InputSchema);
 
         var inputSchema = version.InputSchema;
         Assert.True(inputSchema.TryGetProperty("type", out var typeProperty));

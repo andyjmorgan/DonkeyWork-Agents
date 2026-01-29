@@ -96,3 +96,11 @@ using(var scope = app.Services.CreateScope())
 }
 
 await app.RunAsync();
+
+namespace DonkeyWork.Agents.Api
+{
+    /// <summary>
+    /// Partial Program class for testing purposes.
+    /// </summary>
+    public partial class Program { }
+}

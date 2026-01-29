@@ -42,28 +42,44 @@ public class HttpActionProvider
             var request = new HttpRequestMessage(httpMethod, parameters.Url);
 
             // Add headers
-            if (!string.IsNullOrEmpty(parameters.Headers))
+            if (parameters.Headers != null && !parameters.Headers.IsEmpty)
             {
-                foreach (var headerLine in parameters.Headers.Split('\n'))
+                if (parameters.Headers.UseVariable && !string.IsNullOrEmpty(parameters.Headers.Variable))
                 {
-                    var parts = headerLine.Split(':', 2);
-                    if (parts.Length == 2)
+                    // Resolve the variable to a dictionary
+                    var resolvedHeaders = _parameterResolver.ResolveHeaders(parameters.Headers.Variable, context);
+                    foreach (var header in resolvedHeaders)
                     {
-                        request.Headers.TryAddWithoutValidation(
-                            parts[0].Trim(),
-                            parts[1].Trim());
+                        request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                    }
+                }
+                else
+                {
+                    // Use manual items, resolving any variables in keys/values
+                    foreach (var item in parameters.Headers.Items)
+                    {
+                        var key = _parameterResolver.ResolveString(item.Key, context);
+                        var value = _parameterResolver.ResolveString(item.Value, context);
+                        if (!string.IsNullOrEmpty(key))
+                        {
+                            request.Headers.TryAddWithoutValidation(key, value);
+                        }
                     }
                 }
             }
 
             // Add body for POST/PUT/PATCH
-            if (!string.IsNullOrEmpty(parameters.Body) &&
+            var bodyContent = parameters.Body.HasValue
+                ? _parameterResolver.ResolveString(parameters.Body.Value.RawValue, context)
+                : null;
+
+            if (!string.IsNullOrEmpty(bodyContent) &&
                 (parameters.Method == HttpMethod.POST ||
                  parameters.Method == HttpMethod.PUT ||
                  parameters.Method == HttpMethod.PATCH))
             {
                 request.Content = new StringContent(
-                    parameters.Body,
+                    bodyContent,
                     System.Text.Encoding.UTF8,
                     "application/json");
             }

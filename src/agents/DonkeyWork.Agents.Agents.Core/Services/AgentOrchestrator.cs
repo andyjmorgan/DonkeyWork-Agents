@@ -12,7 +12,6 @@ using DonkeyWork.Agents.Persistence.Entities.Agents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ExecutionContext = DonkeyWork.Agents.Agents.Core.Execution.ExecutionContext;
 
 namespace DonkeyWork.Agents.Agents.Core.Services;
 
@@ -23,7 +22,8 @@ public class AgentOrchestrator : IAgentOrchestrator
 {
     private readonly AgentsDbContext _dbContext;
     private readonly INodeExecutorRegistry _executorRegistry;
-    private readonly IExecutionStreamService _streamService;
+    private readonly IExecutionStreamWriter _streamWriter;
+    private readonly IExecutionContext _executionContext;
     private readonly GraphAnalyzer _graphAnalyzer;
     private readonly IOptions<AgentsOptions> _options;
     private readonly ILogger<AgentOrchestrator> _logger;
@@ -31,20 +31,23 @@ public class AgentOrchestrator : IAgentOrchestrator
     public AgentOrchestrator(
         AgentsDbContext dbContext,
         INodeExecutorRegistry executorRegistry,
-        IExecutionStreamService streamService,
+        IExecutionStreamWriter streamWriter,
+        IExecutionContext executionContext,
         GraphAnalyzer graphAnalyzer,
         IOptions<AgentsOptions> options,
         ILogger<AgentOrchestrator> logger)
     {
         _dbContext = dbContext;
         _executorRegistry = executorRegistry;
-        _streamService = streamService;
+        _streamWriter = streamWriter;
+        _executionContext = executionContext;
         _graphAnalyzer = graphAnalyzer;
         _options = options;
         _logger = logger;
     }
 
-    public async Task<Guid> ExecuteAsync(
+    public async Task ExecuteAsync(
+        Guid executionId,
         Guid userId,
         Guid versionId,
         object input,
@@ -53,8 +56,6 @@ public class AgentOrchestrator : IAgentOrchestrator
         // Create timeout token source
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(_options.Value.ExecutionTimeout);
-
-        Guid executionId = Guid.NewGuid();
 
         try
         {
@@ -84,19 +85,15 @@ public class AgentOrchestrator : IAgentOrchestrator
             _dbContext.AgentExecutions.Add(execution);
             await _dbContext.SaveChangesAsync(timeoutCts.Token);
 
-            // 2. Create RabbitMQ Stream
-            await _streamService.CreateStreamAsync(executionId);
+            // 2. Initialize the stream writer and emit ExecutionStarted event
+            await _streamWriter.InitializeAsync(executionId);
+            await _streamWriter.WriteEventAsync(new ExecutionStartedEvent());
 
-            // 3. Emit ExecutionStarted event
-            await _streamService.WriteEventAsync(
-                executionId,
-                new ExecutionStartedEvent());
-
-            // 4. Set Status: Running
+            // 3. Set Status: Running
             execution.Status = ExecutionStatus.Running.ToString();
             await _dbContext.SaveChangesAsync(timeoutCts.Token);
 
-            // 5. Analyze graph (topological sort)
+            // 4. Analyze graph (topological sort)
             var reactFlowData = JsonSerializer.Deserialize<JsonElement>(version.ReactFlowData);
             var analysisResult = _graphAnalyzer.Analyze(reactFlowData);
 
@@ -115,16 +112,10 @@ public class AgentOrchestrator : IAgentOrchestrator
                 throw new InvalidOperationException("Failed to parse node configurations");
             }
 
-            // 6. Create ExecutionContext
-            var context = new ExecutionContext
-            {
-                ExecutionId = executionId,
-                UserId = userId,
-                Input = input,
-                InputSchema = version.InputSchema
-            };
+            // 5. Hydrate execution context
+            _executionContext.Hydrate(executionId, userId, input, version.InputSchema);
 
-            // 7. For each node in execution order
+            // 6. For each node in execution order
             var executionStopwatch = Stopwatch.StartNew();
 
             foreach (var nodeId in analysisResult.ExecutionOrder)
@@ -150,26 +141,43 @@ public class AgentOrchestrator : IAgentOrchestrator
                     throw new InvalidOperationException($"Node configuration not found: {nodeId}");
                 }
 
-                // Deserialize node configuration based on type
-                object nodeConfig = nodeType switch
-                {
-                    "start" => JsonSerializer.Deserialize<StartNodeConfiguration>(nodeConfigElement.GetRawText())
-                        ?? throw new InvalidOperationException($"Failed to parse start node config: {nodeId}"),
-                    "model" => JsonSerializer.Deserialize<ModelNodeConfiguration>(nodeConfigElement.GetRawText())
-                        ?? throw new InvalidOperationException($"Failed to parse model node config: {nodeId}"),
-                    "end" => JsonSerializer.Deserialize<EndNodeConfiguration>(nodeConfigElement.GetRawText())
-                        ?? throw new InvalidOperationException($"Failed to parse end node config: {nodeId}"),
-                    _ => throw new InvalidOperationException($"Unsupported node type: {nodeType}")
-                };
+                // Log the raw config for debugging
+                _logger.LogDebug(
+                    "Node {NodeId} config JSON: {ConfigJson}",
+                    nodeId,
+                    nodeConfigElement.GetRawText());
 
-                // Get node name from configuration
-                var nodeName = nodeConfig switch
+                // Deserialize node configuration using polymorphic deserialization
+                // Inject type discriminator from ReactFlow to support both old data (without discriminator) and new data
+                var nodeConfig = DeserializeNodeConfiguration(nodeConfigElement, nodeType, _logger)
+                    ?? throw new InvalidOperationException($"Failed to parse node config: {nodeId}");
+
+                // Get node name from configuration (all NodeConfiguration subclasses have Name)
+                var nodeName = nodeConfig.Name;
+
+                // Determine action type for action nodes
+                string? actionType = null;
+                if (nodeConfig is ActionNodeConfiguration actionConfig)
                 {
-                    StartNodeConfiguration startConfig => startConfig.Name,
-                    ModelNodeConfiguration modelConfig => modelConfig.Name,
-                    EndNodeConfiguration endConfig => endConfig.Name,
-                    _ => throw new InvalidOperationException($"Unknown config type for node: {nodeId}")
-                };
+                    actionType = actionConfig.ActionType;
+                }
+
+                // Determine input for this node
+                string? nodeInput = null;
+                if (nodeType == "start")
+                {
+                    // Start node input is the execution input
+                    nodeInput = JsonSerializer.Serialize(input);
+                }
+                else
+                {
+                    // Other nodes get their input from upstream node outputs
+                    var upstreamOutputs = _executionContext.NodeOutputs;
+                    if (upstreamOutputs.Count > 0)
+                    {
+                        nodeInput = JsonSerializer.Serialize(upstreamOutputs);
+                    }
+                }
 
                 // Create NodeExecution record
                 var nodeExecution = new AgentNodeExecutionEntity
@@ -179,20 +187,15 @@ public class AgentOrchestrator : IAgentOrchestrator
                     AgentExecutionId = executionId,
                     NodeId = nodeId,
                     NodeType = nodeType,
+                    NodeName = nodeName,
+                    ActionType = actionType,
                     Status = ExecutionStatus.Running.ToString(),
+                    Input = nodeInput,
                     StartedAt = DateTimeOffset.UtcNow
                 };
 
                 _dbContext.AgentNodeExecutions.Add(nodeExecution);
                 await _dbContext.SaveChangesAsync(timeoutCts.Token);
-
-                // Emit NodeStarted event
-                await _streamService.WriteEventAsync(
-                    executionId,
-                    new NodeStartedEvent
-                    {
-                        NodeId = nodeId
-                    });
 
                 try
                 {
@@ -203,17 +206,16 @@ public class AgentOrchestrator : IAgentOrchestrator
                         throw new InvalidOperationException($"Executor not found for node type: {nodeType}");
                     }
 
-                    // Execute node (timed)
+                    // Execute node (timed) - executor emits NodeStarted/NodeCompleted events
                     var nodeStopwatch = Stopwatch.StartNew();
                     var output = await executor.ExecuteAsync(
+                        nodeId,
                         nodeConfig,
-                        context,
-                        _streamService,
                         timeoutCts.Token);
                     nodeStopwatch.Stop();
 
                     // Store output in context using node name
-                    context.NodeOutputs[nodeName] = output;
+                    _executionContext.SetNodeOutput(nodeName, output);
 
                     // Update NodeExecution record
                     nodeExecution.Status = ExecutionStatus.Completed.ToString();
@@ -229,15 +231,6 @@ public class AgentOrchestrator : IAgentOrchestrator
                     }
 
                     await _dbContext.SaveChangesAsync(timeoutCts.Token);
-
-                    // Emit NodeCompleted event
-                    await _streamService.WriteEventAsync(
-                        executionId,
-                        new NodeCompletedEvent
-                        {
-                            NodeId = nodeId,
-                            Output = nodeExecution.Output ?? string.Empty
-                        });
                 }
                 catch (Exception ex)
                 {
@@ -256,9 +249,9 @@ public class AgentOrchestrator : IAgentOrchestrator
 
             executionStopwatch.Stop();
 
-            // 8. Write final output to AgentExecution
+            // 7. Write final output to AgentExecution
             // The final output is from the end node
-            var endNodeOutput = context.NodeOutputs.Values
+            var endNodeOutput = _executionContext.NodeOutputs.Values
                 .OfType<EndNodeOutput>()
                 .FirstOrDefault();
 
@@ -268,26 +261,23 @@ public class AgentOrchestrator : IAgentOrchestrator
             }
 
             // Calculate total tokens
-            var totalTokens = context.NodeOutputs.Values
+            var totalTokens = _executionContext.NodeOutputs.Values
                 .OfType<ModelNodeOutput>()
                 .Sum(o => o.TotalTokens ?? 0);
 
             execution.TotalTokensUsed = totalTokens > 0 ? totalTokens : null;
 
-            // 9. Set Status: Completed
+            // 8. Set Status: Completed
             execution.Status = ExecutionStatus.Completed.ToString();
             execution.CompletedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(CancellationToken.None);
 
-            // 10. Emit ExecutionCompleted event
-            await _streamService.WriteEventAsync(
-                executionId,
+            // 9. Emit ExecutionCompleted event
+            await _streamWriter.WriteEventAsync(
                 new ExecutionCompletedEvent
                 {
                     Output = execution.Output ?? string.Empty
                 });
-
-            return executionId;
         }
         catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
@@ -309,9 +299,6 @@ public class AgentOrchestrator : IAgentOrchestrator
                 executionId,
                 ex.Message,
                 CancellationToken.None);
-
-            // Never throw - always return execution ID
-            return executionId;
         }
     }
 
@@ -333,8 +320,7 @@ public class AgentOrchestrator : IAgentOrchestrator
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
 
-            await _streamService.WriteEventAsync(
-                executionId,
+            await _streamWriter.WriteEventAsync(
                 new ExecutionFailedEvent
                 {
                     ErrorMessage = errorMessage
@@ -344,5 +330,54 @@ public class AgentOrchestrator : IAgentOrchestrator
         {
             _logger.LogError(ex, "Failed to handle execution failure for {ExecutionId}", executionId);
         }
+    }
+
+    /// <summary>
+    /// JSON serializer options configured for polymorphic deserialization.
+    /// AllowOutOfOrderMetadataProperties allows the type discriminator to appear anywhere in the JSON.
+    /// </summary>
+    private static readonly JsonSerializerOptions PolymorphicOptions = new()
+    {
+        AllowOutOfOrderMetadataProperties = true
+    };
+
+    /// <summary>
+    /// Deserializes a node configuration by injecting the type discriminator from ReactFlow.
+    /// This handles both old data (without discriminator) and new data (with discriminator).
+    /// </summary>
+    private static NodeConfiguration? DeserializeNodeConfiguration(
+        JsonElement configElement,
+        string nodeType,
+        ILogger logger)
+    {
+        // Check if type discriminator is already present
+        if (configElement.TryGetProperty("type", out var existingType))
+        {
+            logger.LogDebug(
+                "Type discriminator already present: {Type}",
+                existingType.GetString());
+            // Type already present, deserialize with out-of-order metadata support
+            return JsonSerializer.Deserialize<NodeConfiguration>(configElement.GetRawText(), PolymorphicOptions);
+        }
+
+        logger.LogDebug(
+            "Injecting type discriminator '{NodeType}' for backwards compatibility",
+            nodeType);
+
+        // Inject type discriminator for backwards compatibility with old data
+        var configWithType = new Dictionary<string, object>
+        {
+            ["type"] = nodeType
+        };
+
+        foreach (var property in configElement.EnumerateObject())
+        {
+            configWithType[property.Name] = property.Value;
+        }
+
+        var configJson = JsonSerializer.Serialize(configWithType);
+        logger.LogDebug("Enriched config JSON: {ConfigJson}", configJson);
+
+        return JsonSerializer.Deserialize<NodeConfiguration>(configJson, PolymorphicOptions);
     }
 }

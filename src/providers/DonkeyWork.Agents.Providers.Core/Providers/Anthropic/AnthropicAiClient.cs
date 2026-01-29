@@ -32,101 +32,107 @@ internal sealed class AnthropicAiClient : IAiClient
     {
         var (systemPrompt, messageParams) = MapMessages(messages);
 
-        var maxTokens = 4096;
+        var maxTokens = 4096L;
         if (providerParameters?.TryGetValue("max_tokens", out var mt) == true)
-            maxTokens = Convert.ToInt32(mt);
+            maxTokens = Convert.ToInt64(mt);
+
+        double? temperature = null;
+        double? topP = null;
+
+        if (providerParameters is not null)
+        {
+            if (providerParameters.TryGetValue("temperature", out var temp))
+                temperature = Convert.ToDouble(temp);
+
+            if (providerParameters.TryGetValue("top_p", out var tp))
+                topP = Convert.ToDouble(tp);
+        }
 
         var parameters = new MessageCreateParams
         {
             Model = _modelId,
             MaxTokens = maxTokens,
-            Messages = messageParams
+            Messages = messageParams,
+            System = !string.IsNullOrEmpty(systemPrompt) ? systemPrompt : null,
+            Temperature = temperature,
+            TopP = topP
         };
-
-        if (!string.IsNullOrEmpty(systemPrompt))
-        {
-            parameters.System = systemPrompt;
-        }
-
-        if (providerParameters is not null)
-        {
-            if (providerParameters.TryGetValue("temperature", out var temp))
-                parameters.Temperature = Convert.ToDouble(temp);
-
-            if (providerParameters.TryGetValue("top_p", out var topP))
-                parameters.TopP = Convert.ToDouble(topP);
-        }
 
         var blockIndex = 0;
         var textBlockStarted = false;
 
-        await foreach (var streamEvent in _client.Messages.CreateStreaming(parameters)
+        await foreach (var streamEvent in _client.Messages.CreateStreaming(parameters, cancellationToken)
             .WithCancellation(cancellationToken))
         {
             if (streamEvent is null) continue;
 
-            switch (streamEvent)
+            // Content block start
+            if (streamEvent.TryPickContentBlockStart(out var blockStart))
             {
-                case RawContentBlockStartEvent blockStart:
-                    if (blockStart.ContentBlock is TextBlock)
+                // Check if it's a text block
+                if (blockStart.ContentBlock.Type.ToString().Contains("text"))
+                {
+                    yield return new ModelResponseBlockStart
                     {
-                        yield return new ModelResponseBlockStart
-                        {
-                            BlockIndex = blockIndex,
-                            Type = InternalContentBlockType.Text
-                        };
-                        textBlockStarted = true;
-                    }
-                    break;
-
-                case RawContentBlockDeltaEvent blockDelta:
-                    if (blockDelta.Delta is TextDelta textDelta)
-                    {
-                        yield return new ModelResponseTextContent { Content = textDelta.Text };
-                    }
-                    break;
-
-                case RawContentBlockStopEvent:
-                    if (textBlockStarted)
-                    {
-                        yield return new ModelResponseBlockEnd { BlockIndex = blockIndex };
-                        blockIndex++;
-                        textBlockStarted = false;
-                    }
-                    break;
-
-                case RawMessageDeltaEvent messageDelta:
-                    if (messageDelta.Usage is not null)
-                    {
-                        yield return new ModelResponseUsage
-                        {
-                            InputTokens = 0, // Input tokens come from message_start
-                            OutputTokens = messageDelta.Usage.OutputTokens
-                        };
-                    }
-                    break;
-
-                case RawMessageStartEvent messageStart:
-                    if (messageStart.Message?.Usage is not null)
-                    {
-                        yield return new ModelResponseUsage
-                        {
-                            InputTokens = messageStart.Message.Usage.InputTokens,
-                            OutputTokens = 0
-                        };
-                    }
-                    break;
-
-                case RawMessageStopEvent:
-                    yield return new ModelResponseStreamEnd
-                    {
-                        Reason = InternalStopReason.EndTurn,
-                        Metadata = new Dictionary<string, object>
-                        {
-                            ["provider"] = "anthropic"
-                        }
+                        BlockIndex = blockIndex,
+                        Type = InternalContentBlockType.Text
                     };
-                    break;
+                    textBlockStarted = true;
+                }
+            }
+            // Content block delta (text streaming)
+            else if (streamEvent.TryPickContentBlockDelta(out var blockDelta))
+            {
+                if (blockDelta.Delta.TryPickText(out var textDelta))
+                {
+                    yield return new ModelResponseTextContent { Content = textDelta.Text };
+                }
+            }
+            // Content block stop
+            else if (streamEvent.TryPickContentBlockStop(out _))
+            {
+                if (textBlockStarted)
+                {
+                    yield return new ModelResponseBlockEnd { BlockIndex = blockIndex };
+                    blockIndex++;
+                    textBlockStarted = false;
+                }
+            }
+            // Message delta (usage info)
+            else if (streamEvent.TryPickDelta(out var messageDelta))
+            {
+                if (messageDelta.Usage is not null)
+                {
+                    yield return new ModelResponseUsage
+                    {
+                        InputTokens = 0, // Input tokens come from message_start
+                        OutputTokens = (int)messageDelta.Usage.OutputTokens
+                    };
+                }
+            }
+            // Message start (initial usage)
+            else if (streamEvent.TryPickStart(out var messageStart))
+            {
+                if (messageStart.Message?.Usage is not null)
+                {
+                    yield return new ModelResponseUsage
+                    {
+                        InputTokens = (int)messageStart.Message.Usage.InputTokens,
+                        OutputTokens = 0
+                    };
+                }
+            }
+            // Message stop
+            else if (streamEvent.TryPickStop(out _))
+            {
+                yield return new ModelResponseStreamEnd
+                {
+                    Reason = InternalStopReason.EndTurn,
+                    Metadata = new Dictionary<string, object>
+                    {
+                        ["provider"] = "anthropic"
+                    }
+                };
             }
         }
     }

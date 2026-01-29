@@ -3,6 +3,7 @@ using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
 using GenerativeAI;
+using GenerativeAI.Types;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Providers.Core.Providers.Google;
@@ -57,16 +58,17 @@ internal sealed class GoogleAiClient : IAiClient
             {
                 yield return new ModelResponseUsage
                 {
-                    InputTokens = response.UsageMetadata.PromptTokenCount ?? 0,
-                    OutputTokens = response.UsageMetadata.CandidatesTokenCount ?? 0
+                    InputTokens = response.UsageMetadata.PromptTokenCount,
+                    OutputTokens = response.UsageMetadata.CandidatesTokenCount
                 };
             }
 
             // Check finish reason
-            if (response?.Candidates is { Count: > 0 })
+            if (response?.Candidates is { Length: > 0 })
             {
                 var candidate = response.Candidates[0];
-                if (candidate.FinishReason is not null && candidate.FinishReason != FinishReason.Unspecified)
+                if (candidate.FinishReason is not null &&
+                    candidate.FinishReason != FinishReason.FINISH_REASON_UNSPECIFIED)
                 {
                     if (blockStarted)
                     {
@@ -106,17 +108,22 @@ internal sealed class GoogleAiClient : IAiClient
     {
         if (providerParameters is null) return;
 
+        // Configure via GenerationConfig
+        var config = _model.Config ?? new GenerationConfig();
+
         if (providerParameters.TryGetValue("temperature", out var temp))
-            _model.Temperature = Convert.ToSingle(temp);
+            config.Temperature = Convert.ToSingle(temp);
 
         if (providerParameters.TryGetValue("max_tokens", out var maxTokens))
-            _model.MaxOutputTokens = Convert.ToInt32(maxTokens);
+            config.MaxOutputTokens = Convert.ToInt32(maxTokens);
 
         if (providerParameters.TryGetValue("top_p", out var topP))
-            _model.TopP = Convert.ToSingle(topP);
+            config.TopP = Convert.ToSingle(topP);
 
         if (providerParameters.TryGetValue("top_k", out var topK))
-            _model.TopK = Convert.ToInt32(topK);
+            config.TopK = Convert.ToInt32(topK);
+
+        _model.Config = config;
     }
 
     private static GenerateContentRequest BuildRequest(IReadOnlyList<InternalMessage> messages)
@@ -154,10 +161,10 @@ internal sealed class GoogleAiClient : IAiClient
     {
         return reason switch
         {
-            FinishReason.Stop => InternalStopReason.EndTurn,
-            FinishReason.MaxTokens => InternalStopReason.MaxTokens,
-            FinishReason.Safety => InternalStopReason.SafetyStop,
-            FinishReason.Recitation => InternalStopReason.Recitation,
+            FinishReason.STOP => InternalStopReason.EndTurn,
+            FinishReason.MAX_TOKENS => InternalStopReason.MaxTokens,
+            FinishReason.SAFETY => InternalStopReason.SafetyStop,
+            FinishReason.RECITATION => InternalStopReason.Recitation,
             _ => InternalStopReason.EndTurn
         };
     }

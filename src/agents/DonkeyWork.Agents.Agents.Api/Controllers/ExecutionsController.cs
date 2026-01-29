@@ -279,20 +279,68 @@ public class ExecutionsController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Get node executions for a specific execution.
+    /// Returns the execution trace showing each node that was executed.
+    /// </summary>
+    /// <param name="executionId">The execution ID.</param>
+    /// <param name="offset">Number of items to skip (default: 0).</param>
+    /// <param name="limit">Maximum number of items to return (default: 100, max: 1000).</param>
+    /// <response code="200">Returns paginated list of node executions.</response>
+    /// <response code="404">Execution not found.</response>
+    [HttpGet("executions/{executionId:guid}/nodes")]
+    [ProducesResponseType<GetNodeExecutionsResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetNodeExecutions(
+        Guid executionId,
+        [FromQuery] int offset = 0,
+        [FromQuery] int limit = 100)
+    {
+        // Enforce max limit
+        limit = Math.Min(limit, 1000);
+
+        var (nodeExecutions, totalCount) = await _executionRepository.GetNodeExecutionsAsync(
+            executionId,
+            offset,
+            limit,
+            _identityContext.UserId);
+
+        if (totalCount == 0 && nodeExecutions.Count == 0)
+        {
+            // Verify execution exists
+            var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
+            if (execution == null)
+                return NotFound(new { message = "Execution not found" });
+        }
+
+        return Ok(new GetNodeExecutionsResponseV1
+        {
+            NodeExecutions = nodeExecutions,
+            TotalCount = totalCount
+        });
+    }
+
     private async Task<IActionResult> StreamExecutionAsync(Guid versionId, JsonElement input)
     {
         Response.Headers["Content-Type"] = "text/event-stream";
         Response.Headers["Cache-Control"] = "no-cache";
         Response.Headers["Connection"] = "keep-alive";
 
-        // Start orchestrator
-        var executionId = await _orchestrator.ExecuteAsync(
+        // Generate execution ID here - we control it
+        var executionId = Guid.NewGuid();
+
+        // Create the stream first so we can start reading immediately
+        await _streamService.CreateStreamAsync(executionId);
+
+        // Fire-and-forget execution - RabbitMQ handles the buffering
+        _ = _orchestrator.ExecuteAsync(
+            executionId,
             _identityContext.UserId,
             versionId,
             input,
             HttpContext.RequestAborted);
 
-        // Stream events from RabbitMQ
+        // Stream events from RabbitMQ in real-time
         await foreach (var evt in _streamService.ReadEventsAsync(executionId))
         {
             var json = JsonSerializer.Serialize(evt, _jsonOptions);
@@ -309,8 +357,12 @@ public class ExecutionsController : ControllerBase
 
     private async Task<IActionResult> ExecuteAndWaitAsync(Guid versionId, JsonElement input)
     {
-        // Execute agent (blocks until completion)
-        var executionId = await _orchestrator.ExecuteAsync(
+        var executionId = Guid.NewGuid();
+
+        // Create stream and execute agent (blocks until completion)
+        await _streamService.CreateStreamAsync(executionId);
+        await _orchestrator.ExecuteAsync(
+            executionId,
             _identityContext.UserId,
             versionId,
             input,

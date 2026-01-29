@@ -48,6 +48,12 @@ public static class DependencyInjection
         services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
         services.AddSingleton<INodeTypeSchemaService, NodeTypeSchemaService>();
 
+        // Register execution context as scoped (hydrated by orchestrator)
+        services.AddScoped<IExecutionContext, Core.Execution.ExecutionContext>();
+
+        // Register stream writer as scoped (one producer per execution)
+        services.AddScoped<IExecutionStreamWriter, ExecutionStreamWriter>();
+
         // Register repositories
         services.AddScoped<IAgentExecutionRepository, AgentExecutionRepository>();
 
@@ -60,6 +66,7 @@ public static class DependencyInjection
             registry.Register("model", typeof(ModelNodeExecutor));
             registry.Register("end", typeof(EndNodeExecutor));
             registry.Register("action", typeof(ActionNodeExecutor));
+            registry.Register("messageFormatter", typeof(MessageFormatterNodeExecutor));
             return registry;
         });
 
@@ -68,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<ModelNodeExecutor>();
         services.AddScoped<EndNodeExecutor>();
         services.AddScoped<ActionNodeExecutor>();
+        services.AddScoped<MessageFormatterNodeExecutor>();
 
         // Register background service
         services.AddHostedService<StreamCleanupBackgroundService>();

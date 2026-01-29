@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
+using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;
@@ -14,29 +15,32 @@ public class StartNodeExecutor : NodeExecutor<StartNodeConfiguration, StartNodeO
 {
     private readonly ILogger<StartNodeExecutor> _logger;
 
-    public StartNodeExecutor(ILogger<StartNodeExecutor> logger)
+    public StartNodeExecutor(
+        IExecutionStreamWriter streamWriter,
+        IExecutionContext context,
+        ILogger<StartNodeExecutor> logger)
+        : base(streamWriter, context)
     {
         _logger = logger;
     }
 
     protected override async Task<StartNodeOutput> ExecuteInternalAsync(
         StartNodeConfiguration config,
-        ExecutionContext context,
         CancellationToken cancellationToken)
     {
         // Parse the schema from context
-        var schema = await JsonSchema.FromJsonAsync(context.InputSchema, cancellationToken);
+        var schema = await JsonSchema.FromJsonAsync(Context.InputSchema, cancellationToken);
 
         // Serialize the input to JSON for validation
         // If it's a JsonElement, use its raw text; otherwise serialize it
         string inputJson;
-        if (context.Input is JsonElement jsonElement)
+        if (Context.Input is JsonElement jsonElement)
         {
             inputJson = jsonElement.GetRawText();
         }
         else
         {
-            inputJson = JsonSerializer.Serialize(context.Input);
+            inputJson = JsonSerializer.Serialize(Context.Input);
         }
 
         // Validate the input
@@ -45,13 +49,13 @@ public class StartNodeExecutor : NodeExecutor<StartNodeConfiguration, StartNodeO
         if (errors.Count > 0)
         {
             var errorMessages = string.Join("; ", errors.Select(e => $"{e.Path}: {e.Kind}"));
-            throw new InvalidOperationException($"Input validation failed: {errorMessages}. Schema: {context.InputSchema}. Input: {inputJson}");
+            throw new InvalidOperationException($"Input validation failed: {errorMessages}. Schema: {Context.InputSchema}. Input: {inputJson}");
         }
 
         // Return the validated input
         return new StartNodeOutput
         {
-            Input = context.Input
+            Input = Context.Input
         };
     }
 }

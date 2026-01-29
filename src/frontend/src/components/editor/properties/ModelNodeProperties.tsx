@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { useEditorStore, type ModelNodeConfig } from '@/store/editor'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { FormField } from '@/components/ui/form-field'
 import {
   Select,
   SelectContent,
@@ -15,7 +15,7 @@ import { Slider } from '@/components/ui/slider'
 import { models, credentials } from '@/lib/api'
 import type { ModelDefinition, CredentialSummary } from '@/lib/api'
 import { CreateCredentialDialog } from '@/components/credentials/CreateCredentialDialog'
-import { Plus } from 'lucide-react'
+import { Plus, Pencil, Check } from 'lucide-react'
 
 interface ModelNodePropertiesProps {
   nodeId: string
@@ -29,6 +29,8 @@ export function ModelNodeProperties({ nodeId }: ModelNodePropertiesProps) {
   const [allCredentials, setAllCredentials] = useState<CredentialSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editedName, setEditedName] = useState('')
 
   // Fetch models and credentials
   useEffect(() => {
@@ -59,8 +61,24 @@ export function ModelNodeProperties({ nodeId }: ModelNodePropertiesProps) {
   // Filter credentials by provider
   const availableCredentials = allCredentials.filter(c => c.provider === config.provider)
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateNodeConfig(nodeId, { name: e.target.value })
+  const handleStartEdit = () => {
+    setEditedName(config.name)
+    setIsEditingName(true)
+  }
+
+  const handleSaveName = () => {
+    if (editedName.trim()) {
+      updateNodeConfig(nodeId, { name: editedName.trim() })
+    }
+    setIsEditingName(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveName()
+    } else if (e.key === 'Escape') {
+      setIsEditingName(false)
+    }
   }
 
   const handleCredentialChange = (value: string) => {
@@ -107,54 +125,74 @@ export function ModelNodeProperties({ nodeId }: ModelNodePropertiesProps) {
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Model Node</h3>
+        {/* Editable title */}
+        <div className="flex items-center gap-2">
+          {isEditingName ? (
+            <>
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleSaveName}
+                autoFocus
+                className="flex-1 bg-transparent text-sm font-semibold outline-none border-b border-primary"
+              />
+              <button
+                onClick={handleSaveName}
+                className="p-1 hover:bg-muted rounded"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-sm font-semibold">{config.name}</h3>
+              <button
+                onClick={handleStartEdit}
+                className="p-1 hover:bg-muted rounded opacity-50 hover:opacity-100 transition-opacity"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            </>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
-          Calls an LLM with the provided configuration
+          Model Node - Calls an LLM with the provided configuration
         </p>
       </div>
 
       <div className="space-y-4">
-        {/* Name field */}
-        <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
-          <Input
-            id="name"
-            value={config.name}
-            onChange={handleNameChange}
-            placeholder="model"
-          />
-        </div>
-
         {/* Provider (read-only) */}
-        <div className="space-y-2">
-          <Label>Provider</Label>
-          <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
+        <FormField
+          label="Provider"
+          description="Set when dragging from palette"
+        >
+          <div className="rounded-md border border-input bg-background px-3 py-2 text-sm">
             {config.provider}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Set when dragging from palette
-          </p>
-        </div>
+        </FormField>
 
         {/* Model (read-only) */}
-        <div className="space-y-2">
-          <Label>Model</Label>
-          <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
+        <FormField
+          label="Model"
+          description="Set when dragging from palette"
+        >
+          <div className="rounded-md border border-input bg-background px-3 py-2 text-sm">
             {availableModels.find(m => m.id === config.modelId)?.name || config.modelId || 'Not set'}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Set when dragging from palette
-          </p>
-        </div>
+        </FormField>
 
         {/* Credential dropdown */}
-        <div className="space-y-2">
-          <Label>Credential</Label>
+        <FormField
+          label="Credential"
+          description={availableCredentials.length === 0 ? `No credentials found for ${config.provider}. Add one to get started.` : undefined}
+        >
           <Select
             value={config.credentialId || ''}
             onValueChange={handleCredentialChange}
           >
-            <SelectTrigger>
+            <SelectTrigger className="bg-background">
               <SelectValue placeholder="Select credential" />
             </SelectTrigger>
             <SelectContent>
@@ -171,42 +209,42 @@ export function ModelNodeProperties({ nodeId }: ModelNodePropertiesProps) {
               </SelectItem>
             </SelectContent>
           </Select>
-          {availableCredentials.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No credentials found for {config.provider}. Add one to get started.
-            </p>
-          )}
-        </div>
+        </FormField>
 
         {/* System Prompt */}
-        <div className="space-y-2">
-          <Label htmlFor="systemPrompt">System Prompt</Label>
+        <FormField
+          label="System Prompt"
+          htmlFor="systemPrompt"
+          description="Instructions that define the AI's behavior and role"
+        >
           <Textarea
             id="systemPrompt"
             value={config.systemPrompt || ''}
             onChange={handleSystemPromptChange}
             placeholder="You are a helpful assistant..."
             rows={4}
+            className="bg-background"
           />
-        </div>
+        </FormField>
 
         {/* User Message */}
-        <div className="space-y-2">
-          <Label htmlFor="userMessage">User Message Template</Label>
+        <FormField
+          label="User Message Template"
+          htmlFor="userMessage"
+          description="Use {{...}} for variables (e.g., {{Input.message}})"
+        >
           <Textarea
             id="userMessage"
             value={config.userMessage || ''}
             onChange={handleUserMessageChange}
-            placeholder="{{input}}"
+            placeholder="{{Input}}"
             rows={4}
+            className="bg-background"
           />
-          <p className="text-xs text-muted-foreground">
-            Use {'{{'}...{'}'} for variables (e.g., {'{{input}}'})
-          </p>
-        </div>
+        </FormField>
 
         {/* Advanced Settings */}
-        <div className="space-y-4 rounded-lg border border-border p-4">
+        <div className="space-y-4 rounded-lg border border-border/50 bg-muted/30 p-4">
           <h4 className="text-sm font-medium">Advanced Settings</h4>
 
           {/* Temperature */}
@@ -224,6 +262,9 @@ export function ModelNodeProperties({ nodeId }: ModelNodePropertiesProps) {
               max={2}
               step={0.01}
             />
+            <p className="text-xs text-muted-foreground">
+              Controls randomness. Lower is more focused, higher is more creative.
+            </p>
           </div>
 
           {/* Max Tokens */}
@@ -235,7 +276,11 @@ export function ModelNodeProperties({ nodeId }: ModelNodePropertiesProps) {
               value={config.maxTokens || ''}
               onChange={handleMaxTokensChange}
               placeholder="Auto"
+              className="bg-background"
             />
+            <p className="text-xs text-muted-foreground">
+              Maximum length of the response. Leave empty for model default.
+            </p>
           </div>
 
           {/* Top P */}
@@ -253,6 +298,9 @@ export function ModelNodeProperties({ nodeId }: ModelNodePropertiesProps) {
               max={1}
               step={0.01}
             />
+            <p className="text-xs text-muted-foreground">
+              Nucleus sampling. Consider tokens with top_p probability mass.
+            </p>
           </div>
         </div>
       </div>

@@ -452,4 +452,113 @@ public class TestDataBuilder
             CredentialId = credentialId ?? Guid.NewGuid()
         };
     }
+
+    /// <summary>
+    /// Creates a SaveAgentVersionRequestV1 with an action node (Start -> Action -> End).
+    /// </summary>
+    public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithActionNode(string actionType = "http_request")
+    {
+        var startNodeId = "start-1";
+        var actionNodeId = "action-1";
+        var endNodeId = "end-1";
+
+        var reactFlowData = new
+        {
+            nodes = new[]
+            {
+                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
+                new { id = actionNodeId, type = "action", position = new { x = 100, y = 200 }, data = new { label = "action" } },
+                new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
+            },
+            edges = new[]
+            {
+                new { id = "e1", source = startNodeId, target = actionNodeId },
+                new { id = "e2", source = actionNodeId, target = endNodeId }
+            },
+            viewport = new { x = 0, y = 0, zoom = 1 }
+        };
+
+        var nodeConfigurations = new Dictionary<string, object>
+        {
+            [startNodeId] = new { name = "start_1" },
+            [actionNodeId] = new
+            {
+                name = "action_1",
+                actionType = actionType,
+                displayName = "Test HTTP Request",
+                parameters = new { url = "https://example.com", method = "GET" }
+            },
+            [endNodeId] = new { name = "end_1" }
+        };
+
+        var inputSchema = new
+        {
+            type = "object",
+            properties = new { input = new { type = "string" } },
+            required = new[] { "input" }
+        };
+
+        return new SaveAgentVersionRequestV1
+        {
+            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
+            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
+            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            OutputSchema = null,
+            CredentialMappings = new List<CredentialMappingV1>()
+        };
+    }
+
+    /// <summary>
+    /// Creates a SaveAgentVersionRequestV1 with an action node that has missing actionType.
+    /// </summary>
+    public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithInvalidActionNode()
+    {
+        var startNodeId = "start-1";
+        var actionNodeId = "action-1";
+        var endNodeId = "end-1";
+
+        var reactFlowData = new
+        {
+            nodes = new[]
+            {
+                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
+                new { id = actionNodeId, type = "action", position = new { x = 100, y = 200 }, data = new { label = "action" } },
+                new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
+            },
+            edges = new[]
+            {
+                new { id = "e1", source = startNodeId, target = actionNodeId },
+                new { id = "e2", source = actionNodeId, target = endNodeId }
+            },
+            viewport = new { x = 0, y = 0, zoom = 1 }
+        };
+
+        var nodeConfigurations = new Dictionary<string, object>
+        {
+            [startNodeId] = new { name = "start_1" },
+            [actionNodeId] = new
+            {
+                name = "action_1",
+                // Missing actionType
+                parameters = new { url = "https://example.com" }
+            },
+            [endNodeId] = new { name = "end_1" }
+        };
+
+        var inputSchema = new
+        {
+            type = "object",
+            properties = new { input = new { type = "string" } },
+            required = new[] { "input" }
+        };
+
+        return new SaveAgentVersionRequestV1
+        {
+            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
+            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
+            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            OutputSchema = null,
+            CredentialMappings = new List<CredentialMappingV1>()
+        };
+    }
 }

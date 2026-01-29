@@ -1,34 +1,53 @@
+using DonkeyWork.Agents.Agents.Contracts.Services;
+
 namespace DonkeyWork.Agents.Agents.Core.Execution;
 
 /// <summary>
-/// Context that maintains state during agent execution.
+/// Scoped context that maintains state during agent execution.
 /// </summary>
-public class ExecutionContext
+public class ExecutionContext : IExecutionContext
 {
-    /// <summary>
-    /// Unique identifier for this execution.
-    /// </summary>
-    public required Guid ExecutionId { get; init; }
+    private readonly Dictionary<string, object> _nodeOutputs = new();
+    private bool _isHydrated;
 
-    /// <summary>
-    /// Dictionary of node outputs keyed by node name.
-    /// Used for template variable resolution (accessible as 'steps' in Scriban).
-    /// </summary>
-    public Dictionary<string, object> NodeOutputs { get; } = new();
+    /// <inheritdoc />
+    public Guid ExecutionId { get; private set; }
 
-    /// <summary>
-    /// The input provided to the execution.
-    /// Validated against the agent version's InputSchema.
-    /// </summary>
-    public required object Input { get; init; }
+    /// <inheritdoc />
+    public Guid UserId { get; private set; }
 
-    /// <summary>
-    /// The user ID that owns this execution.
-    /// </summary>
-    public required Guid UserId { get; init; }
+    /// <inheritdoc />
+    public object Input { get; private set; } = null!;
 
-    /// <summary>
-    /// The JSON Schema for input validation.
-    /// </summary>
-    public required string InputSchema { get; init; }
+    /// <inheritdoc />
+    public string InputSchema { get; private set; } = null!;
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, object> NodeOutputs => _nodeOutputs;
+
+    /// <inheritdoc />
+    public void Hydrate(Guid executionId, Guid userId, object input, string inputSchema)
+    {
+        if (_isHydrated)
+        {
+            throw new InvalidOperationException("ExecutionContext has already been hydrated");
+        }
+
+        ExecutionId = executionId;
+        UserId = userId;
+        Input = input;
+        InputSchema = inputSchema;
+        _isHydrated = true;
+    }
+
+    /// <inheritdoc />
+    public void SetNodeOutput(string nodeName, object output)
+    {
+        if (!_isHydrated)
+        {
+            throw new InvalidOperationException("ExecutionContext must be hydrated before setting node outputs");
+        }
+
+        _nodeOutputs[nodeName] = output;
+    }
 }

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { AgentsPage, AgentEditorPage, ApiKeysPage, SecretsPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage } from '@/pages'
+import { AgentsPage, AgentEditorPage, ApiKeysPage, SecretsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage } from '@/pages'
 import { useAuthStore } from '@/store/auth'
 
 export default function App() {
@@ -24,6 +24,8 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/agents" replace />} />
               <Route path="/agents" element={<AgentsPage />} />
+              <Route path="/executions" element={<ExecutionsPage />} />
+              <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
               <Route path="/api-keys" element={<ApiKeysPage />} />
               <Route path="/secrets" element={<SecretsPage />} />
               <Route path="/profile" element={<ProfilePage />} />

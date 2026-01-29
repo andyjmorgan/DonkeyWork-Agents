@@ -206,7 +206,6 @@ public class AgentVersionServiceTests : IDisposable
         var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
 
         // Assert
-        Assert.NotNull(result.ReactFlowData);
         Assert.True(result.ReactFlowData.TryGetProperty("nodes", out var nodes));
         Assert.True(result.ReactFlowData.TryGetProperty("edges", out var edges));
         Assert.True(result.ReactFlowData.TryGetProperty("viewport", out var viewport));
@@ -226,8 +225,33 @@ public class AgentVersionServiceTests : IDisposable
         var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
 
         // Assert
-        Assert.NotNull(result.NodeConfigurations);
         Assert.Equal(System.Text.Json.JsonValueKind.Object, result.NodeConfigurations.ValueKind);
+    }
+
+    [Fact]
+    public async Task SaveDraftAsync_EnrichesNodeConfigurationsWithTypeDiscriminator()
+    {
+        // Arrange
+        var agent = _builder.CreateAgentEntity();
+        _dbContext.Agents.Add(agent);
+        await _dbContext.SaveChangesAsync();
+
+        var request = TestDataBuilder.CreateSaveVersionRequest();
+
+        // Act
+        var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
+
+        // Assert - Verify stored JSON includes type discriminator for each node
+        var versionInDb = await _dbContext.AgentVersions.FindAsync(result.Id);
+        Assert.NotNull(versionInDb);
+
+        var nodeConfigs = System.Text.Json.JsonDocument.Parse(versionInDb.NodeConfigurations);
+        foreach (var nodeConfig in nodeConfigs.RootElement.EnumerateObject())
+        {
+            Assert.True(nodeConfig.Value.TryGetProperty("type", out var typeProperty),
+                $"Node configuration for '{nodeConfig.Name}' should have type discriminator");
+            Assert.NotNull(typeProperty.GetString());
+        }
     }
 
     [Fact]
@@ -244,7 +268,6 @@ public class AgentVersionServiceTests : IDisposable
         var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
 
         // Assert
-        Assert.NotNull(result.InputSchema);
         Assert.True(result.InputSchema.TryGetProperty("type", out var typeProperty));
         Assert.Equal("object", typeProperty.GetString());
     }
@@ -593,6 +616,58 @@ public class AgentVersionServiceTests : IDisposable
         // Verify only one version exists
         var allVersions = await _service.GetVersionsAsync(agent.Id, _testUserId);
         Assert.Single(allVersions);
+    }
+
+    #endregion
+
+    #region Action Node Tests
+
+    [Fact]
+    public async Task SaveDraftAsync_WithValidActionNode_SavesActionConfiguration()
+    {
+        // Arrange
+        var agent = _builder.CreateAgentEntity();
+        _dbContext.Agents.Add(agent);
+        await _dbContext.SaveChangesAsync();
+
+        var request = TestDataBuilder.CreateSaveVersionRequestWithActionNode("http_request");
+
+        // Act
+        var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.IsDraft);
+
+        // Verify action node configuration was stored with type discriminator
+        var versionInDb = await _dbContext.AgentVersions.FindAsync(result.Id);
+        Assert.NotNull(versionInDb);
+
+        var nodeConfigs = System.Text.Json.JsonDocument.Parse(versionInDb.NodeConfigurations);
+        Assert.True(nodeConfigs.RootElement.TryGetProperty("action-1", out var actionConfig));
+        Assert.True(actionConfig.TryGetProperty("type", out var typeProperty));
+        Assert.Equal("action", typeProperty.GetString());
+        Assert.True(actionConfig.TryGetProperty("actionType", out var actionTypeProperty));
+        Assert.Equal("http_request", actionTypeProperty.GetString());
+    }
+
+    [Fact]
+    public async Task SaveDraftAsync_WithMissingActionType_ThrowsException()
+    {
+        // Arrange
+        var agent = _builder.CreateAgentEntity();
+        _dbContext.Agents.Add(agent);
+        await _dbContext.SaveChangesAsync();
+
+        var request = TestDataBuilder.CreateSaveVersionRequestWithInvalidActionNode();
+
+        // Act & Assert
+        // JsonException is thrown during deserialization because actionType is a required property
+        var exception = await Assert.ThrowsAsync<System.Text.Json.JsonException>(
+            async () => await _service.SaveDraftAsync(agent.Id, request, _testUserId)
+        );
+
+        Assert.Contains("actionType", exception.Message);
     }
 
     #endregion

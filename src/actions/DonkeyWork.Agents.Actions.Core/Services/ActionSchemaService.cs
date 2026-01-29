@@ -92,7 +92,7 @@ public class ActionSchemaService : IActionSchemaService
             SupportsVariables = HasAttribute<SupportVariablesAttribute>(property),
             EditorType = GetEditorType(property),
             ControlType = GetControlType(property),
-            Resolvable = IsResolvableType(property.PropertyType),
+            Resolvable = IsResolvableProperty(property),
             CredentialTypes = GetCredentialTypes(property),
             Dependency = GetDependency(property),
             Validation = GetValidation(property),
@@ -118,18 +118,18 @@ public class ActionSchemaService : IActionSchemaService
     {
         var type = property.PropertyType;
 
+        // Handle nullable types first (e.g., Resolvable<T>? -> Resolvable<T>)
+        var underlyingType = Nullable.GetUnderlyingType(type);
+        if (underlyingType != null)
+        {
+            type = underlyingType;
+        }
+
         // Handle Resolvable<T>
         if (IsResolvableType(type))
         {
             var innerType = type.GetGenericArguments()[0];
             return GetSimpleTypeName(innerType);
-        }
-
-        // Handle nullable types
-        var underlyingType = Nullable.GetUnderlyingType(type);
-        if (underlyingType != null)
-        {
-            return GetSimpleTypeName(underlyingType);
         }
 
         return GetSimpleTypeName(type);
@@ -139,6 +139,9 @@ public class ActionSchemaService : IActionSchemaService
     {
         if (type.IsEnum)
             return "enum";
+
+        if (type == typeof(KeyValueCollection))
+            return "keyValueCollection";
 
         return Type.GetTypeCode(type) switch
         {
@@ -186,12 +189,19 @@ public class ActionSchemaService : IActionSchemaService
                 EditorType.Slider => "slider",
                 EditorType.DateTime => "datetime",
                 EditorType.Json => "json",
+                EditorType.KeyValueList => "keyValueList",
                 _ => null
             };
         }
 
         // Auto-detect from type
         var type = property.PropertyType;
+
+        // Handle nullable types first
+        var underlyingType = Nullable.GetUnderlyingType(type);
+        if (underlyingType != null)
+            type = underlyingType;
+
         if (IsResolvableType(type))
             type = type.GetGenericArguments()[0];
 
@@ -208,6 +218,20 @@ public class ActionSchemaService : IActionSchemaService
     private bool IsResolvableType(Type type)
     {
         return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Resolvable<>);
+    }
+
+    private bool IsResolvableProperty(PropertyInfo property)
+    {
+        var type = property.PropertyType;
+
+        // Handle nullable types (e.g., Resolvable<T>?)
+        var underlyingType = Nullable.GetUnderlyingType(type);
+        if (underlyingType != null)
+        {
+            type = underlyingType;
+        }
+
+        return IsResolvableType(type);
     }
 
     private bool IsNumericType(Type type)

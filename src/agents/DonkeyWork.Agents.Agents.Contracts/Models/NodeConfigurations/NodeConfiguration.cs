@@ -10,6 +10,7 @@ namespace DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 [JsonDerivedType(typeof(ModelNodeConfiguration), "model")]
 [JsonDerivedType(typeof(EndNodeConfiguration), "end")]
 [JsonDerivedType(typeof(ActionNodeConfiguration), "action")]
+[JsonDerivedType(typeof(MessageFormatterNodeConfiguration), "messageFormatter")]
 public abstract class NodeConfiguration
 {
     /// <summary>

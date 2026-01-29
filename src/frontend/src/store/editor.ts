@@ -38,7 +38,12 @@ export interface ActionNodeConfig {
   parameters?: Record<string, any>
 }
 
-export type NodeConfig = StartNodeConfig | ModelNodeConfig | EndNodeConfig | ActionNodeConfig
+export interface MessageFormatterNodeConfig {
+  name: string
+  template: string
+}
+
+export type NodeConfig = StartNodeConfig | ModelNodeConfig | EndNodeConfig | ActionNodeConfig | MessageFormatterNodeConfig
 
 export interface ValidationError {
   nodeId?: string
@@ -111,6 +116,12 @@ interface EditorState {
 
   // Helpers
   generateNodeName: (type: string) => string
+
+  // Layout
+  tidyUpNodes: () => void
+
+  // Graph helpers
+  getReachablePredecessors: (nodeId: string) => Array<{ nodeId: string; nodeName: string; nodeType: string }>
 }
 
 // Default input schema
@@ -294,18 +305,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         modelName: (config as any).modelName
       }
     } else if (type === 'action') {
+      // Use displayName as the base for the node name (e.g., "http_request", "sleep")
+      const actionDisplayName = (config as any).displayName || ''
+      const actionBaseName = actionDisplayName
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '') || 'action'
+      const actionNodeName = generateNodeName(actionBaseName)
+
       defaultConfig = {
-        name: nodeName,
+        name: actionNodeName,
         actionType: (config as any).actionType || '',
-        displayName: (config as any).displayName || '',
+        displayName: actionDisplayName,
         parameters: {},
         ...config
       } as ActionNodeConfig
       nodeData = {
+        label: actionNodeName,
         actionType: (config as any).actionType,
-        displayName: (config as any).displayName,
+        displayName: actionDisplayName,
         icon: (config as any).icon,
         parameters: {}
+      }
+    } else if (type === 'messageFormatter') {
+      defaultConfig = {
+        name: nodeName,
+        template: '',
+        ...config
+      } as MessageFormatterNodeConfig
+      nodeData = {
+        label: nodeName
       }
     } else {
       return
@@ -589,6 +618,135 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     return name
+  },
+
+  tidyUpNodes: () => {
+    const { nodes, edges } = get()
+    if (nodes.length === 0) return
+
+    // Build adjacency list for topological sort
+    const inDegree: Record<string, number> = {}
+    const children: Record<string, string[]> = {}
+
+    // Initialize
+    nodes.forEach(node => {
+      inDegree[node.id] = 0
+      children[node.id] = []
+    })
+
+    // Build graph
+    edges.forEach(edge => {
+      if (inDegree[edge.target] !== undefined) {
+        inDegree[edge.target]++
+      }
+      if (children[edge.source]) {
+        children[edge.source].push(edge.target)
+      }
+    })
+
+    // Topological sort using Kahn's algorithm to get levels
+    const levels: string[][] = []
+    let currentLevel = nodes.filter(n => inDegree[n.id] === 0).map(n => n.id)
+
+    while (currentLevel.length > 0) {
+      levels.push(currentLevel)
+      const nextLevel: string[] = []
+
+      currentLevel.forEach(nodeId => {
+        children[nodeId]?.forEach(childId => {
+          inDegree[childId]--
+          if (inDegree[childId] === 0) {
+            nextLevel.push(childId)
+          }
+        })
+      })
+
+      currentLevel = nextLevel
+    }
+
+    // Handle any remaining nodes (disconnected or in cycles)
+    const placedNodes = new Set(levels.flat())
+    const remainingNodes = nodes.filter(n => !placedNodes.has(n.id)).map(n => n.id)
+    if (remainingNodes.length > 0) {
+      levels.push(remainingNodes)
+    }
+
+    // Calculate positions
+    const NODE_WIDTH = 200
+    const VERTICAL_SPACING = 120
+    const HORIZONTAL_SPACING = 50
+    const START_Y = 50
+
+    // Find the widest level to center everything
+    const maxNodesInLevel = Math.max(...levels.map(level => level.length))
+    const totalWidth = maxNodesInLevel * NODE_WIDTH + (maxNodesInLevel - 1) * HORIZONTAL_SPACING
+    const centerX = totalWidth / 2
+
+    const updatedNodes = nodes.map(node => {
+      // Find which level this node is in
+      const levelIndex = levels.findIndex(level => level.includes(node.id))
+      if (levelIndex === -1) return node
+
+      const level = levels[levelIndex]
+      const indexInLevel = level.indexOf(node.id)
+
+      // Calculate position
+      const levelWidth = level.length * NODE_WIDTH + (level.length - 1) * HORIZONTAL_SPACING
+      const levelStartX = centerX - levelWidth / 2
+
+      const x = levelStartX + indexInLevel * (NODE_WIDTH + HORIZONTAL_SPACING)
+      const y = START_Y + levelIndex * VERTICAL_SPACING
+
+      return {
+        ...node,
+        position: { x, y }
+      }
+    })
+
+    set({ nodes: updatedNodes })
+  },
+
+  getReachablePredecessors: (nodeId: string) => {
+    const { nodes, edges, nodeConfigurations } = get()
+
+    // Build reverse adjacency list (target -> sources)
+    const predecessors: Record<string, string[]> = {}
+    nodes.forEach(node => {
+      predecessors[node.id] = []
+    })
+    edges.forEach(edge => {
+      if (predecessors[edge.target]) {
+        predecessors[edge.target].push(edge.source)
+      }
+    })
+
+    // BFS to find all reachable predecessors
+    const visited = new Set<string>()
+    const queue = [...(predecessors[nodeId] || [])]
+    const result: Array<{ nodeId: string; nodeName: string; nodeType: string }> = []
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!
+      if (visited.has(currentId)) continue
+      visited.add(currentId)
+
+      const node = nodes.find(n => n.id === currentId)
+      const config = nodeConfigurations[currentId]
+
+      if (node && config) {
+        result.push({
+          nodeId: currentId,
+          nodeName: config.name,
+          nodeType: node.type || 'unknown'
+        })
+      }
+
+      // Add predecessors of current node to queue
+      const preds = predecessors[currentId] || []
+      queue.push(...preds.filter(p => !visited.has(p)))
+    }
+
+    return result
   },
 
   extractCredentialMappings: () => {

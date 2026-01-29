@@ -11,9 +11,11 @@ import {
   useNodesInitialized
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { AlignVerticalSpaceAround } from 'lucide-react'
 
-import { StartNode, ModelNode, EndNode, ActionNode } from './nodes'
+import { StartNode, ModelNode, EndNode, ActionNode, MessageFormatterNode } from './nodes'
 import { useEditorStore } from '@/store/editor'
+import { Button } from '@/components/ui/button'
 
 export function CanvasInner() {
   const { screenToFlowPosition, fitView } = useReactFlow()
@@ -27,6 +29,7 @@ export function CanvasInner() {
   const selectNode = useEditorStore((state) => state.selectNode)
   const setViewport = useEditorStore((state) => state.setViewport)
   const addNode = useEditorStore((state) => state.addNode)
+  const tidyUpNodes = useEditorStore((state) => state.tidyUpNodes)
 
   // Fit view when nodes are initialized
   useEffect(() => {
@@ -41,7 +44,8 @@ export function CanvasInner() {
       start: StartNode,
       model: ModelNode,
       end: EndNode,
-      action: ActionNode
+      action: ActionNode,
+      messageFormatter: MessageFormatterNode
     }),
     []
   )
@@ -64,6 +68,13 @@ export function CanvasInner() {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
   }, [])
+
+  // Handle format/tidy up
+  const handleTidyUp = useCallback(() => {
+    tidyUpNodes()
+    // Fit view after layout to show all nodes
+    setTimeout(() => fitView({ padding: 0.2 }), 50)
+  }, [tidyUpNodes, fitView])
 
   // Handle drop
   const handleDrop = useCallback(
@@ -137,6 +148,18 @@ export function CanvasInner() {
           <div className="text-xs text-muted-foreground">
             Drag to move • Shift + drag to select multiple • Delete to remove
           </div>
+        </Panel>
+
+        <Panel position="bottom-right" className="mb-2 mr-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleTidyUp}
+            title="Format layout"
+            className="bg-card/80 backdrop-blur-sm shadow-lg"
+          >
+            <AlignVerticalSpaceAround className="h-4 w-4" />
+          </Button>
         </Panel>
       </ReactFlow>
     </div>

@@ -26,4 +26,13 @@ public sealed class ActionNodeConfiguration : NodeConfiguration
     /// </summary>
     [JsonPropertyName("parameters")]
     public required JsonElement Parameters { get; init; }
+
+    /// <summary>
+    /// Deserializes the parameters to a strongly-typed object.
+    /// </summary>
+    /// <typeparam name="T">The type to deserialize to.</typeparam>
+    /// <returns>The deserialized parameters.</returns>
+    public T GetParameters<T>() where T : class
+        => JsonSerializer.Deserialize<T>(Parameters.GetRawText())
+           ?? throw new InvalidOperationException($"Failed to deserialize parameters to {typeof(T).Name}");
 }
