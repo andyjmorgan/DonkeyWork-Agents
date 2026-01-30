@@ -8,6 +8,53 @@ interface UseExecutionStreamOptions {
   onError?: (error: string) => void
 }
 
+async function fetchWithTokenRefresh(
+  url: string,
+  options: RequestInit,
+  retryOnUnauthorized = true
+): Promise<Response> {
+  const state = useAuthStore.getState()
+  const { shouldRefreshToken, refreshTokens, logout } = state
+
+  // Proactively refresh token if it's about to expire
+  if (shouldRefreshToken() && retryOnUnauthorized) {
+    const refreshed = await refreshTokens()
+    if (!refreshed) {
+      logout()
+      window.location.href = '/login'
+      throw new Error('Session expired')
+    }
+  }
+
+  // Get potentially updated token after refresh
+  const currentToken = useAuthStore.getState().accessToken
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${currentToken}`,
+    },
+  })
+
+  if (response.status === 401 && retryOnUnauthorized) {
+    // Try to refresh the token
+    const refreshed = await refreshTokens()
+
+    if (refreshed) {
+      // Retry the request with the new token (don't retry again on 401)
+      return fetchWithTokenRefresh(url, options, false)
+    }
+
+    // Refresh failed - logout and redirect
+    logout()
+    window.location.href = '/login'
+    throw new Error('Session expired')
+  }
+
+  return response
+}
+
 export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
   const [events, setEvents] = useState<ExecutionEvent[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
@@ -33,19 +80,20 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
     abortControllerRef.current = abortController
 
     try {
-      const { accessToken } = useAuthStore.getState()
       const endpoint = isTest ? 'test' : 'execute'
 
-      const response = await fetch(`/api/v1/agents/${agentId}/${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
-        },
-        body: JSON.stringify({ input }),
-        signal: abortController.signal
-      })
+      const response = await fetchWithTokenRefresh(
+        `/api/v1/agents/${agentId}/${endpoint}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+          },
+          body: JSON.stringify({ input }),
+          signal: abortController.signal
+        }
+      )
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

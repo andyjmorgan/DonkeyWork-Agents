@@ -8,17 +8,28 @@ export interface User {
   username?: string
 }
 
+interface RefreshTokenResponse {
+  accessToken: string
+  refreshToken: string | null
+  expiresIn: number
+  tokenType: string
+}
+
 interface AuthState {
   accessToken: string | null
   refreshToken: string | null
   expiresAt: number | null
   user: User | null
   isAuthenticated: boolean
+  isRefreshing: boolean
+  refreshPromise: Promise<boolean> | null
 
   setTokens: (accessToken: string, refreshToken: string | null, expiresIn: number) => void
   setUser: (user: User) => void
   logout: () => void
   isTokenExpired: () => boolean
+  shouldRefreshToken: () => boolean
+  refreshTokens: () => Promise<boolean>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -29,6 +40,8 @@ export const useAuthStore = create<AuthState>()(
       expiresAt: null,
       user: null,
       isAuthenticated: false,
+      isRefreshing: false,
+      refreshPromise: null,
 
       setTokens: (accessToken, refreshToken, expiresIn) => {
         const expiresAt = Date.now() + expiresIn * 1000
@@ -51,6 +64,8 @@ export const useAuthStore = create<AuthState>()(
           expiresAt: null,
           user: null,
           isAuthenticated: false,
+          isRefreshing: false,
+          refreshPromise: null,
         })
       },
 
@@ -59,6 +74,68 @@ export const useAuthStore = create<AuthState>()(
         if (!expiresAt) return true
         // Consider expired if less than 30 seconds remaining
         return Date.now() > expiresAt - 30000
+      },
+
+      shouldRefreshToken: () => {
+        const { expiresAt, refreshToken } = get()
+        if (!expiresAt || !refreshToken) return false
+        // Refresh if less than 2 minutes remaining
+        return Date.now() > expiresAt - 120000
+      },
+
+      refreshTokens: async () => {
+        const state = get()
+
+        // If already refreshing, return the existing promise
+        if (state.isRefreshing && state.refreshPromise) {
+          return state.refreshPromise
+        }
+
+        const { refreshToken } = state
+        if (!refreshToken) {
+          return false
+        }
+
+        // Create the refresh promise
+        const refreshPromise = (async () => {
+          set({ isRefreshing: true })
+
+          try {
+            const response = await fetch('/api/v1/auth/refresh', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ refreshToken }),
+            })
+
+            if (!response.ok) {
+              // Refresh failed - logout
+              get().logout()
+              return false
+            }
+
+            const data: RefreshTokenResponse = await response.json()
+
+            // Update tokens
+            const expiresAt = Date.now() + data.expiresIn * 1000
+            set({
+              accessToken: data.accessToken,
+              refreshToken: data.refreshToken ?? refreshToken,
+              expiresAt,
+              isRefreshing: false,
+              refreshPromise: null,
+            })
+
+            return true
+          } catch {
+            set({ isRefreshing: false, refreshPromise: null })
+            return false
+          }
+        })()
+
+        set({ refreshPromise })
+        return refreshPromise
       },
     }),
     {
