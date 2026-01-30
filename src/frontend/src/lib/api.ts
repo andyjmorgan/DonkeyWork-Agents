@@ -2,19 +2,41 @@ import { useAuthStore } from '@/store/auth'
 
 const BASE_URL = ''
 
-async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  const { accessToken, logout } = useAuthStore.getState()
+async function fetchWithAuth(url: string, options: RequestInit = {}, retryOnUnauthorized = true): Promise<Response> {
+  const { logout, refreshTokens, shouldRefreshToken } = useAuthStore.getState()
+
+  // Proactively refresh token if it's about to expire
+  if (shouldRefreshToken() && retryOnUnauthorized) {
+    const refreshed = await refreshTokens()
+    if (!refreshed) {
+      logout()
+      window.location.href = '/login'
+      throw new Error('Session expired')
+    }
+  }
+
+  // Get potentially updated token after refresh
+  const currentToken = useAuthStore.getState().accessToken
 
   const response = await fetch(`${BASE_URL}${url}`, {
     ...options,
     headers: {
       ...options.headers,
-      'Authorization': `Bearer ${accessToken}`,
+      'Authorization': `Bearer ${currentToken}`,
       'Content-Type': 'application/json',
     },
   })
 
-  if (response.status === 401) {
+  if (response.status === 401 && retryOnUnauthorized) {
+    // Try to refresh the token
+    const refreshed = await refreshTokens()
+
+    if (refreshed) {
+      // Retry the request with the new token (don't retry again on 401)
+      return fetchWithAuth(url, options, false)
+    }
+
+    // Refresh failed - logout and redirect
     logout()
     window.location.href = '/login'
     throw new Error('Session expired')

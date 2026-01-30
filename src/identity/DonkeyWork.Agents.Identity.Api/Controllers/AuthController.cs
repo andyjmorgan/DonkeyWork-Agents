@@ -160,6 +160,58 @@ public class AuthController : ControllerBase
         return Redirect($"{frontendCallbackUrl}#{string.Join("&", fragmentParams)}");
     }
 
+    /// <summary>
+    /// Refreshes the access token using a refresh token.
+    /// </summary>
+    /// <param name="request">The refresh token request.</param>
+    /// <returns>New access and refresh tokens.</returns>
+    /// <response code="200">Returns new tokens.</response>
+    /// <response code="400">If the refresh token is invalid or expired.</response>
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(RefreshTokenResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+    {
+        if (string.IsNullOrEmpty(request.RefreshToken))
+        {
+            return BadRequest(new { error = "refresh_token_required", error_description = "Refresh token is required." });
+        }
+
+        var tokenEndpoint = $"{_keycloakOptions.Authority}/protocol/openid-connect/token";
+
+        var tokenRequest = new Dictionary<string, string>
+        {
+            ["grant_type"] = "refresh_token",
+            ["client_id"] = _keycloakOptions.Audience,
+            ["refresh_token"] = request.RefreshToken
+        };
+
+        var httpClient = _httpClientFactory.CreateClient();
+        var tokenResponse = await httpClient.PostAsync(tokenEndpoint, new FormUrlEncodedContent(tokenRequest));
+
+        if (!tokenResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await tokenResponse.Content.ReadAsStringAsync();
+            return BadRequest(new { error = "refresh_failed", error_description = errorContent });
+        }
+
+        var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+        var tokens = JsonSerializer.Deserialize<TokenResponse>(tokenJson);
+
+        if (tokens == null || string.IsNullOrEmpty(tokens.AccessToken))
+        {
+            return BadRequest(new { error = "invalid_response", error_description = "Failed to parse token response." });
+        }
+
+        return Ok(new RefreshTokenResponse
+        {
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            ExpiresIn = tokens.ExpiresIn,
+            TokenType = tokens.TokenType ?? "Bearer"
+        });
+    }
+
     private static string GenerateCodeVerifier()
     {
         var bytes = new byte[32];
@@ -211,5 +263,47 @@ public class AuthController : ControllerBase
 
         [JsonPropertyName("preferred_username")]
         public string? PreferredUsername { get; set; }
+    }
+
+    /// <summary>
+    /// Request to refresh access token.
+    /// </summary>
+    public sealed class RefreshTokenRequest
+    {
+        /// <summary>
+        /// The refresh token.
+        /// </summary>
+        [JsonPropertyName("refreshToken")]
+        public string? RefreshToken { get; set; }
+    }
+
+    /// <summary>
+    /// Response containing new tokens after refresh.
+    /// </summary>
+    public sealed class RefreshTokenResponse
+    {
+        /// <summary>
+        /// The new access token.
+        /// </summary>
+        [JsonPropertyName("accessToken")]
+        public string? AccessToken { get; set; }
+
+        /// <summary>
+        /// The new refresh token (if provided).
+        /// </summary>
+        [JsonPropertyName("refreshToken")]
+        public string? RefreshToken { get; set; }
+
+        /// <summary>
+        /// Token expiration time in seconds.
+        /// </summary>
+        [JsonPropertyName("expiresIn")]
+        public int ExpiresIn { get; set; }
+
+        /// <summary>
+        /// The token type (typically "Bearer").
+        /// </summary>
+        [JsonPropertyName("tokenType")]
+        public string? TokenType { get; set; }
     }
 }
