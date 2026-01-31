@@ -41,6 +41,11 @@ COPY src/actions/DonkeyWork.Agents.Actions.Api/*.csproj src/actions/DonkeyWork.A
 COPY src/actions/DonkeyWork.Agents.Actions.Contracts/*.csproj src/actions/DonkeyWork.Agents.Actions.Contracts/
 COPY src/actions/DonkeyWork.Agents.Actions.Core/*.csproj src/actions/DonkeyWork.Agents.Actions.Core/
 
+# Projects
+COPY src/projects/DonkeyWork.Agents.Projects.Api/*.csproj src/projects/DonkeyWork.Agents.Projects.Api/
+COPY src/projects/DonkeyWork.Agents.Projects.Contracts/*.csproj src/projects/DonkeyWork.Agents.Projects.Contracts/
+COPY src/projects/DonkeyWork.Agents.Projects.Core/*.csproj src/projects/DonkeyWork.Agents.Projects.Core/
+
 # Restore dependencies
 RUN dotnet restore src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj
 
