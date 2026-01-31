@@ -36,6 +36,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Credentials", "test-Cr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Actions", "test-Actions", "{B1B2C3D4-0001-0001-0001-000000000006}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Projects", "test-Projects", "{B1B2C3D4-0001-0001-0001-000000000007}"
+EndProject
 
 # Main API
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Api", "src\DonkeyWork.Agents.Api\DonkeyWork.Agents.Api.csproj", "{00000001-0001-0001-0001-000000000001}"
@@ -123,6 +125,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Core.Tests", "test\credentials\DonkeyWork.Agents.Credentials.Core.Tests\DonkeyWork.Agents.Credentials.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000006}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actions.Core.Tests", "test\actions\DonkeyWork.Agents.Actions.Core.Tests\DonkeyWork.Agents.Actions.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000007}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Projects.Core.Tests", "test\projects\DonkeyWork.Agents.Projects.Core.Tests\DonkeyWork.Agents.Projects.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000008}"
 EndProject
 
 Global
@@ -267,6 +271,10 @@ Global
 		{00000003-0001-0001-0001-000000000007}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00000003-0001-0001-0001-000000000007}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{00000003-0001-0001-0001-000000000007}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00000003-0001-0001-0001-000000000008}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00000003-0001-0001-0001-000000000008}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00000003-0001-0001-0001-000000000008}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00000003-0001-0001-0001-000000000008}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -288,6 +296,7 @@ Global
 		{B1B2C3D4-0001-0001-0001-000000000004} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000005} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000006} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
+		{B1B2C3D4-0001-0001-0001-000000000007} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		# Main API under source
 		{00000001-0001-0001-0001-000000000001} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
 		# Common projects under Common
@@ -332,5 +341,6 @@ Global
 		{00000003-0001-0001-0001-000000000005} = {B1B2C3D4-0001-0001-0001-000000000005}
 		{00000003-0001-0001-0001-000000000006} = {B1B2C3D4-0001-0001-0001-000000000005}
 		{00000003-0001-0001-0001-000000000007} = {B1B2C3D4-0001-0001-0001-000000000006}
+		{00000003-0001-0001-0001-000000000008} = {B1B2C3D4-0001-0001-0001-000000000007}
 	EndGlobalSection
 EndGlobal
