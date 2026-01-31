@@ -1,0 +1,10 @@
+# Runtime-only Dockerfile - uses pre-built artifacts from CI
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview
+
+WORKDIR /app
+EXPOSE 8080
+
+# Copy pre-built publish output
+COPY publish/ .
+
+ENTRYPOINT ["dotnet", "DonkeyWork.Agents.Api.dll"]

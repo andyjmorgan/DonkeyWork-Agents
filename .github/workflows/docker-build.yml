@@ -66,6 +66,16 @@ jobs:
       - name: Test
         run: dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
 
+      - name: Publish
+        run: dotnet publish src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj -c Release -o ./publish --no-build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-publish
+          path: ./publish
+          retention-days: 1
+
   test-frontend:
     name: Test Frontend
     needs: [changes]
@@ -100,7 +110,7 @@ jobs:
     if: |
       always() &&
       needs.changes.outputs.backend == 'true' &&
-      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
+      needs.test-backend.result == 'success'
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
@@ -110,6 +120,12 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-publish
+          path: ./publish
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -142,7 +158,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.runtime
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
