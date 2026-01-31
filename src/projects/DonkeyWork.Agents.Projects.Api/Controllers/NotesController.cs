@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,14 +18,10 @@ namespace DonkeyWork.Agents.Projects.Api.Controllers;
 public class NotesController : ControllerBase
 {
     private readonly INoteService _noteService;
-    private readonly IIdentityContext _identityContext;
 
-    public NotesController(
-        INoteService noteService,
-        IIdentityContext identityContext)
+    public NotesController(INoteService noteService)
     {
         _noteService = noteService;
-        _identityContext = identityContext;
     }
 
     /// <summary>
@@ -40,7 +35,7 @@ public class NotesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateNoteRequestV1 request)
     {
-        var note = await _noteService.CreateAsync(request, _identityContext.UserId);
+        var note = await _noteService.CreateAsync(request);
         return CreatedAtAction(nameof(Get), new { id = note.Id }, note);
     }
 
@@ -55,7 +50,7 @@ public class NotesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var note = await _noteService.GetByIdAsync(id, _identityContext.UserId);
+        var note = await _noteService.GetByIdAsync(id);
 
         if (note == null)
             return NotFound();
@@ -71,7 +66,7 @@ public class NotesController : ControllerBase
     [ProducesResponseType<IReadOnlyList<NoteV1>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ListStandalone()
     {
-        var notes = await _noteService.GetStandaloneAsync(_identityContext.UserId);
+        var notes = await _noteService.GetStandaloneAsync();
         return Ok(notes);
     }
 
@@ -83,7 +78,7 @@ public class NotesController : ControllerBase
     [ProducesResponseType<IReadOnlyList<NoteV1>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List()
     {
-        var notes = await _noteService.GetByUserIdAsync(_identityContext.UserId);
+        var notes = await _noteService.ListAsync();
         return Ok(notes);
     }
 
@@ -101,7 +96,7 @@ public class NotesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateNoteRequestV1 request)
     {
-        var note = await _noteService.UpdateAsync(id, request, _identityContext.UserId);
+        var note = await _noteService.UpdateAsync(id, request);
 
         if (note == null)
             return NotFound();
@@ -120,7 +115,7 @@ public class NotesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var deleted = await _noteService.DeleteAsync(id, _identityContext.UserId);
+        var deleted = await _noteService.DeleteAsync(id);
 
         if (!deleted)
             return NotFound();

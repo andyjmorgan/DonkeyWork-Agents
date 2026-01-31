@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,14 +18,10 @@ namespace DonkeyWork.Agents.Projects.Api.Controllers;
 public class TodosController : ControllerBase
 {
     private readonly ITodoService _todoService;
-    private readonly IIdentityContext _identityContext;
 
-    public TodosController(
-        ITodoService todoService,
-        IIdentityContext identityContext)
+    public TodosController(ITodoService todoService)
     {
         _todoService = todoService;
-        _identityContext = identityContext;
     }
 
     /// <summary>
@@ -40,7 +35,7 @@ public class TodosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateTodoRequestV1 request)
     {
-        var todo = await _todoService.CreateAsync(request, _identityContext.UserId);
+        var todo = await _todoService.CreateAsync(request);
         return CreatedAtAction(nameof(Get), new { id = todo.Id }, todo);
     }
 
@@ -55,7 +50,7 @@ public class TodosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var todo = await _todoService.GetByIdAsync(id, _identityContext.UserId);
+        var todo = await _todoService.GetByIdAsync(id);
 
         if (todo == null)
             return NotFound();
@@ -71,7 +66,7 @@ public class TodosController : ControllerBase
     [ProducesResponseType<IReadOnlyList<TodoV1>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ListStandalone()
     {
-        var todos = await _todoService.GetStandaloneAsync(_identityContext.UserId);
+        var todos = await _todoService.GetStandaloneAsync();
         return Ok(todos);
     }
 
@@ -83,7 +78,7 @@ public class TodosController : ControllerBase
     [ProducesResponseType<IReadOnlyList<TodoV1>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List()
     {
-        var todos = await _todoService.GetByUserIdAsync(_identityContext.UserId);
+        var todos = await _todoService.ListAsync();
         return Ok(todos);
     }
 
@@ -101,7 +96,7 @@ public class TodosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTodoRequestV1 request)
     {
-        var todo = await _todoService.UpdateAsync(id, request, _identityContext.UserId);
+        var todo = await _todoService.UpdateAsync(id, request);
 
         if (todo == null)
             return NotFound();
@@ -120,7 +115,7 @@ public class TodosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var deleted = await _todoService.DeleteAsync(id, _identityContext.UserId);
+        var deleted = await _todoService.DeleteAsync(id);
 
         if (!deleted)
             return NotFound();

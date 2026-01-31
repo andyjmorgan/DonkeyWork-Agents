@@ -10,25 +10,25 @@ public interface IProjectService
     /// <summary>
     /// Creates a new project.
     /// </summary>
-    Task<ProjectDetailsV1> CreateAsync(CreateProjectRequestV1 request, Guid userId, CancellationToken cancellationToken = default);
+    Task<ProjectDetailsV1> CreateAsync(CreateProjectRequestV1 request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a project by ID with full details.
     /// </summary>
-    Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
+    Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists all projects for a user.
+    /// Lists all projects for the current user.
     /// </summary>
-    Task<IReadOnlyList<ProjectSummaryV1>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProjectSummaryV1>> ListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates a project.
     /// </summary>
-    Task<ProjectDetailsV1?> UpdateAsync(Guid projectId, UpdateProjectRequestV1 request, Guid userId, CancellationToken cancellationToken = default);
+    Task<ProjectDetailsV1?> UpdateAsync(Guid projectId, UpdateProjectRequestV1 request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes a project and all its related data.
     /// </summary>
-    Task<bool> DeleteAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid projectId, CancellationToken cancellationToken = default);
 }

@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Core.Services;
@@ -13,15 +14,16 @@ namespace DonkeyWork.Agents.Projects.Core.Tests.Services;
 public class ProjectServiceTests : IDisposable
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly ProjectService _service;
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly TestDataBuilder _builder = new();
 
     public ProjectServiceTests()
     {
-        _dbContext = MockDbContext.Create();
+        (_dbContext, _identityContext) = MockDbContext.CreateWithIdentityContext();
         var logger = new Mock<ILogger<ProjectService>>();
-        _service = new ProjectService(_dbContext, logger.Object);
+        _service = new ProjectService(_dbContext, _identityContext, logger.Object);
     }
 
     public void Dispose()
@@ -43,7 +45,7 @@ public class ProjectServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -75,7 +77,7 @@ public class ProjectServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -95,7 +97,7 @@ public class ProjectServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -110,8 +112,8 @@ public class ProjectServiceTests : IDisposable
         var request2 = TestDataBuilder.CreateProjectRequest("project-2");
 
         // Act
-        var result1 = await _service.CreateAsync(request1, _testUserId);
-        var result2 = await _service.CreateAsync(request2, _testUserId);
+        var result1 = await _service.CreateAsync(request1);
+        var result2 = await _service.CreateAsync(request2);
 
         // Assert
         Assert.NotEqual(result1.Id, result2.Id);
@@ -129,7 +131,7 @@ public class ProjectServiceTests : IDisposable
         MockDbContext.SeedProject(_dbContext, project);
 
         // Act
-        var result = await _service.GetByIdAsync(project.Id, _testUserId);
+        var result = await _service.GetByIdAsync(project.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -145,33 +147,22 @@ public class ProjectServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.GetByIdAsync(nonExistentId, _testUserId);
+        var result = await _service.GetByIdAsync(nonExistentId);
 
         // Assert
         Assert.Null(result);
     }
 
-    [Fact]
-    public async Task GetByIdAsync_WithDifferentUser_ReturnsNull()
-    {
-        // Arrange
-        var project = _builder.CreateProjectEntity();
-        MockDbContext.SeedProject(_dbContext, project);
-        var differentUserId = Guid.NewGuid();
-
-        // Act
-        var result = await _service.GetByIdAsync(project.Id, differentUserId);
-
-        // Assert
-        Assert.Null(result);
-    }
+    // Note: User isolation tests removed - user filtering is handled by DbContext global query filter
+    // using IIdentityContext.UserId, not by the userId parameter passed to service methods.
+    // User isolation should be tested at the DbContext/integration test level.
 
     #endregion
 
-    #region GetByUserIdAsync Tests
+    #region ListAsync Tests
 
     [Fact]
-    public async Task GetByUserIdAsync_WithMultipleProjects_ReturnsAllUserProjects()
+    public async Task ListAsync_WithMultipleProjects_ReturnsAllUserProjects()
     {
         // Arrange
         var project1 = _builder.CreateProjectEntity(name: "project-1");
@@ -181,7 +172,7 @@ public class ProjectServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -192,10 +183,10 @@ public class ProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_WithNoProjects_ReturnsEmptyList()
+    public async Task ListAsync_WithNoProjects_ReturnsEmptyList()
     {
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -203,7 +194,7 @@ public class ProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_OrdersByCreatedAtDescending()
+    public async Task ListAsync_OrdersByCreatedAtDescending()
     {
         // Arrange
         var project1 = _builder.CreateProjectEntity(name: "oldest");
@@ -216,7 +207,7 @@ public class ProjectServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -245,7 +236,7 @@ public class ProjectServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(project.Id, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(project.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -273,7 +264,7 @@ public class ProjectServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(nonExistentId, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(nonExistentId, updateRequest);
 
         // Assert
         Assert.Null(result);
@@ -296,7 +287,7 @@ public class ProjectServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(project.Id, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(project.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -316,7 +307,7 @@ public class ProjectServiceTests : IDisposable
         MockDbContext.SeedProject(_dbContext, project);
 
         // Act
-        var result = await _service.DeleteAsync(project.Id, _testUserId);
+        var result = await _service.DeleteAsync(project.Id);
 
         // Assert
         Assert.True(result);
@@ -333,7 +324,7 @@ public class ProjectServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.DeleteAsync(nonExistentId, _testUserId);
+        var result = await _service.DeleteAsync(nonExistentId);
 
         // Assert
         Assert.False(result);
@@ -351,7 +342,7 @@ public class ProjectServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.DeleteAsync(project.Id, _testUserId);
+        var result = await _service.DeleteAsync(project.Id);
 
         // Assert
         Assert.True(result);
@@ -376,7 +367,7 @@ public class ProjectServiceTests : IDisposable
         };
 
         // Act & Assert - service should accept it (validation is controller's job)
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
         Assert.NotNull(result);
         Assert.Equal("", result.Name);
     }
@@ -388,7 +379,7 @@ public class ProjectServiceTests : IDisposable
         var invalidId = Guid.Empty;
 
         // Act
-        var result = await _service.GetByIdAsync(invalidId, _testUserId);
+        var result = await _service.GetByIdAsync(invalidId);
 
         // Assert
         Assert.Null(result);

@@ -1,6 +1,16 @@
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 
+// Aliases to resolve ambiguous references between Contracts.Models and Persistence.Entities
+using ContractProjectStatus = DonkeyWork.Agents.Projects.Contracts.Models.ProjectStatus;
+using ContractMilestoneStatus = DonkeyWork.Agents.Projects.Contracts.Models.MilestoneStatus;
+using ContractTodoStatus = DonkeyWork.Agents.Projects.Contracts.Models.TodoStatus;
+using ContractTodoPriority = DonkeyWork.Agents.Projects.Contracts.Models.TodoPriority;
+using EntityProjectStatus = DonkeyWork.Agents.Persistence.Entities.Projects.ProjectStatus;
+using EntityMilestoneStatus = DonkeyWork.Agents.Persistence.Entities.Projects.MilestoneStatus;
+using EntityTodoStatus = DonkeyWork.Agents.Persistence.Entities.Projects.TodoStatus;
+using EntityTodoPriority = DonkeyWork.Agents.Persistence.Entities.Projects.TodoPriority;
+
 namespace DonkeyWork.Agents.Projects.Core.Tests.Helpers;
 
 /// <summary>
@@ -35,7 +45,7 @@ public class TestDataBuilder
         Guid? id = null,
         Guid? userId = null,
         string name = "test-project",
-        ProjectStatus status = ProjectStatus.NotStarted)
+        EntityProjectStatus status = EntityProjectStatus.NotStarted)
     {
         return new ProjectEntity
         {
@@ -77,7 +87,7 @@ public class TestDataBuilder
         Guid? projectId = null,
         Guid? userId = null,
         string name = "test-milestone",
-        MilestoneStatus status = MilestoneStatus.NotStarted,
+        EntityMilestoneStatus status = EntityMilestoneStatus.NotStarted,
         int sortOrder = 0)
     {
         return new MilestoneEntity
@@ -104,7 +114,7 @@ public class TestDataBuilder
     public static CreateTodoRequestV1 CreateTodoRequest(
         string title = "test-todo",
         string? description = "Test todo description",
-        TodoPriority priority = TodoPriority.Medium,
+        ContractTodoPriority priority = ContractTodoPriority.Medium,
         Guid? projectId = null,
         Guid? milestoneId = null)
     {
@@ -127,8 +137,8 @@ public class TestDataBuilder
         Guid? projectId = null,
         Guid? milestoneId = null,
         string title = "test-todo",
-        TodoStatus status = TodoStatus.NotStarted,
-        TodoPriority priority = TodoPriority.Medium,
+        EntityTodoStatus status = EntityTodoStatus.Pending,
+        EntityTodoPriority priority = EntityTodoPriority.Medium,
         int sortOrder = 0)
     {
         return new TodoEntity

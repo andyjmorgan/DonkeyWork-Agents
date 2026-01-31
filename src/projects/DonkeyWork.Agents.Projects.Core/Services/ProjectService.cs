@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -10,16 +11,22 @@ namespace DonkeyWork.Agents.Projects.Core.Services;
 public class ProjectService : IProjectService
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly ILogger<ProjectService> _logger;
 
-    public ProjectService(AgentsDbContext dbContext, ILogger<ProjectService> logger)
+    public ProjectService(
+        AgentsDbContext dbContext,
+        IIdentityContext identityContext,
+        ILogger<ProjectService> logger)
     {
         _dbContext = dbContext;
+        _identityContext = identityContext;
         _logger = logger;
     }
 
-    public async Task<ProjectDetailsV1> CreateAsync(CreateProjectRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<ProjectDetailsV1> CreateAsync(CreateProjectRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         _logger.LogInformation("Creating project for user {UserId} with name {Name}", userId, request.Name);
 
         var projectId = Guid.NewGuid();
@@ -81,10 +88,10 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Created project {ProjectId}", projectId);
 
-        return (await GetByIdAsync(projectId, userId, cancellationToken))!;
+        return (await GetByIdAsync(projectId, cancellationToken))!;
     }
 
-    public async Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var project = await _dbContext.Projects
             .AsNoTracking()
@@ -101,7 +108,7 @@ public class ProjectService : IProjectService
         return project == null ? null : MapToDetails(project);
     }
 
-    public async Task<IReadOnlyList<ProjectSummaryV1>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ProjectSummaryV1>> ListAsync(CancellationToken cancellationToken = default)
     {
         var projects = await _dbContext.Projects
             .AsNoTracking()
@@ -114,8 +121,9 @@ public class ProjectService : IProjectService
         return projects.Select(MapToSummary).ToList();
     }
 
-    public async Task<ProjectDetailsV1?> UpdateAsync(Guid projectId, UpdateProjectRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<ProjectDetailsV1?> UpdateAsync(Guid projectId, UpdateProjectRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var project = await _dbContext.Projects
             .Include(p => p.Tags)
             .Include(p => p.FileReferences)
@@ -178,10 +186,10 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Updated project {ProjectId}", projectId);
 
-        return await GetByIdAsync(projectId, userId, cancellationToken);
+        return await GetByIdAsync(projectId, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var project = await _dbContext.Projects
             .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);

@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -10,16 +11,22 @@ namespace DonkeyWork.Agents.Projects.Core.Services;
 public class NoteService : INoteService
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly ILogger<NoteService> _logger;
 
-    public NoteService(AgentsDbContext dbContext, ILogger<NoteService> logger)
+    public NoteService(
+        AgentsDbContext dbContext,
+        IIdentityContext identityContext,
+        ILogger<NoteService> logger)
     {
         _dbContext = dbContext;
+        _identityContext = identityContext;
         _logger = logger;
     }
 
-    public async Task<NoteV1> CreateAsync(CreateNoteRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<NoteV1> CreateAsync(CreateNoteRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         _logger.LogInformation("Creating note for user {UserId} with title {Title}", userId, request.Title);
 
         var noteId = Guid.NewGuid();
@@ -62,10 +69,10 @@ public class NoteService : INoteService
 
         _logger.LogInformation("Created note {NoteId}", noteId);
 
-        return (await GetByIdAsync(noteId, userId, cancellationToken))!;
+        return (await GetByIdAsync(noteId, cancellationToken))!;
     }
 
-    public async Task<NoteV1?> GetByIdAsync(Guid noteId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<NoteV1?> GetByIdAsync(Guid noteId, CancellationToken cancellationToken = default)
     {
         var note = await _dbContext.Notes
             .AsNoTracking()
@@ -75,7 +82,7 @@ public class NoteService : INoteService
         return note == null ? null : MapToDto(note);
     }
 
-    public async Task<IReadOnlyList<NoteV1>> GetStandaloneAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -88,7 +95,7 @@ public class NoteService : INoteService
         return notes.Select(MapToDto).ToList();
     }
 
-    public async Task<IReadOnlyList<NoteV1>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteV1>> ListAsync(CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -100,7 +107,7 @@ public class NoteService : INoteService
         return notes.Select(MapToDto).ToList();
     }
 
-    public async Task<IReadOnlyList<NoteV1>> GetByProjectIdAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -113,7 +120,7 @@ public class NoteService : INoteService
         return notes.Select(MapToDto).ToList();
     }
 
-    public async Task<IReadOnlyList<NoteV1>> GetByMilestoneIdAsync(Guid milestoneId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -126,8 +133,9 @@ public class NoteService : INoteService
         return notes.Select(MapToDto).ToList();
     }
 
-    public async Task<NoteV1?> UpdateAsync(Guid noteId, UpdateNoteRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<NoteV1?> UpdateAsync(Guid noteId, UpdateNoteRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var note = await _dbContext.Notes
             .Include(n => n.Tags)
             .FirstOrDefaultAsync(n => n.Id == noteId, cancellationToken);
@@ -169,10 +177,10 @@ public class NoteService : INoteService
 
         _logger.LogInformation("Updated note {NoteId}", noteId);
 
-        return await GetByIdAsync(noteId, userId, cancellationToken);
+        return await GetByIdAsync(noteId, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(Guid noteId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(Guid noteId, CancellationToken cancellationToken = default)
     {
         var note = await _dbContext.Notes
             .FirstOrDefaultAsync(n => n.Id == noteId, cancellationToken);

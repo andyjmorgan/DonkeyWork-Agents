@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Core.Services;
@@ -13,15 +14,16 @@ namespace DonkeyWork.Agents.Projects.Core.Tests.Services;
 public class TodoServiceTests : IDisposable
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly TodoService _service;
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly TestDataBuilder _builder = new();
 
     public TodoServiceTests()
     {
-        _dbContext = MockDbContext.Create();
+        (_dbContext, _identityContext) = MockDbContext.CreateWithIdentityContext();
         var logger = new Mock<ILogger<TodoService>>();
-        _service = new TodoService(_dbContext, logger.Object);
+        _service = new TodoService(_dbContext, _identityContext, logger.Object);
     }
 
     public void Dispose()
@@ -43,7 +45,7 @@ public class TodoServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -51,7 +53,7 @@ public class TodoServiceTests : IDisposable
         Assert.Equal(request.Title, result.Title);
         Assert.Equal(request.Description, result.Description);
         Assert.Equal(request.Priority, result.Priority);
-        Assert.Equal(TodoStatus.NotStarted, result.Status);
+        Assert.Equal(TodoStatus.Pending, result.Status);
 
         // Verify todo was created in database
         var todoInDb = await _dbContext.Todos.FindAsync(result.Id);
@@ -66,7 +68,7 @@ public class TodoServiceTests : IDisposable
         var request = TestDataBuilder.CreateTodoRequest();
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -88,7 +90,7 @@ public class TodoServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -112,7 +114,7 @@ public class TodoServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -134,7 +136,7 @@ public class TodoServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -155,7 +157,7 @@ public class TodoServiceTests : IDisposable
                 Priority = priority
             };
 
-            var result = await _service.CreateAsync(request, _testUserId);
+            var result = await _service.CreateAsync(request);
 
             Assert.NotNull(result);
             Assert.Equal(priority, result.Priority);
@@ -174,7 +176,7 @@ public class TodoServiceTests : IDisposable
         MockDbContext.SeedTodo(_dbContext, todo);
 
         // Act
-        var result = await _service.GetByIdAsync(todo.Id, _testUserId);
+        var result = await _service.GetByIdAsync(todo.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -189,7 +191,7 @@ public class TodoServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.GetByIdAsync(nonExistentId, _testUserId);
+        var result = await _service.GetByIdAsync(nonExistentId);
 
         // Assert
         Assert.Null(result);
@@ -197,10 +199,10 @@ public class TodoServiceTests : IDisposable
 
     #endregion
 
-    #region GetByUserIdAsync Tests
+    #region ListAsync Tests
 
     [Fact]
-    public async Task GetByUserIdAsync_WithMultipleTodos_ReturnsAllUserTodos()
+    public async Task ListAsync_WithMultipleTodos_ReturnsAllUserTodos()
     {
         // Arrange
         var todo1 = _builder.CreateTodoEntity(title: "todo-1");
@@ -210,7 +212,7 @@ public class TodoServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -218,10 +220,10 @@ public class TodoServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_WithNoTodos_ReturnsEmptyList()
+    public async Task ListAsync_WithNoTodos_ReturnsEmptyList()
     {
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -246,7 +248,7 @@ public class TodoServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetStandaloneAsync(_testUserId);
+        var results = await _service.GetStandaloneAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -275,7 +277,7 @@ public class TodoServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(todo.Id, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(todo.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -297,13 +299,13 @@ public class TodoServiceTests : IDisposable
         {
             Title = todo.Title,
             Status = TodoStatus.Completed,
-            Priority = todo.Priority,
+            Priority = (TodoPriority)todo.Priority,
             CompletionNotes = "Done!",
             SortOrder = todo.SortOrder
         };
 
         // Act
-        var result = await _service.UpdateAsync(todo.Id, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(todo.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -326,7 +328,7 @@ public class TodoServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(nonExistentId, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(nonExistentId, updateRequest);
 
         // Assert
         Assert.Null(result);
@@ -344,7 +346,7 @@ public class TodoServiceTests : IDisposable
         MockDbContext.SeedTodo(_dbContext, todo);
 
         // Act
-        var result = await _service.DeleteAsync(todo.Id, _testUserId);
+        var result = await _service.DeleteAsync(todo.Id);
 
         // Assert
         Assert.True(result);
@@ -361,7 +363,7 @@ public class TodoServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.DeleteAsync(nonExistentId, _testUserId);
+        var result = await _service.DeleteAsync(nonExistentId);
 
         // Assert
         Assert.False(result);
@@ -381,7 +383,7 @@ public class TodoServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -389,17 +391,17 @@ public class TodoServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_DefaultStatusIsNotStarted()
+    public async Task CreateAsync_DefaultStatusIsPending()
     {
         // Arrange
         var request = TestDataBuilder.CreateTodoRequest();
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(TodoStatus.NotStarted, result.Status);
+        Assert.Equal(TodoStatus.Pending, result.Status);
     }
 
     #endregion

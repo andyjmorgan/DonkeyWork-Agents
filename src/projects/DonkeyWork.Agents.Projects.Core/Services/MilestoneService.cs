@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -10,16 +11,23 @@ namespace DonkeyWork.Agents.Projects.Core.Services;
 public class MilestoneService : IMilestoneService
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly ILogger<MilestoneService> _logger;
 
-    public MilestoneService(AgentsDbContext dbContext, ILogger<MilestoneService> logger)
+    public MilestoneService(
+        AgentsDbContext dbContext,
+        IIdentityContext identityContext,
+        ILogger<MilestoneService> logger)
     {
         _dbContext = dbContext;
+        _identityContext = identityContext;
         _logger = logger;
     }
 
-    public async Task<MilestoneDetailsV1?> CreateAsync(Guid projectId, CreateMilestoneRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<MilestoneDetailsV1?> CreateAsync(Guid projectId, CreateMilestoneRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
+
         // Verify project exists
         var projectExists = await _dbContext.Projects.AnyAsync(p => p.Id == projectId, cancellationToken);
         if (!projectExists)
@@ -91,10 +99,10 @@ public class MilestoneService : IMilestoneService
 
         _logger.LogInformation("Created milestone {MilestoneId}", milestoneId);
 
-        return await GetByIdAsync(milestoneId, userId, cancellationToken);
+        return await GetByIdAsync(milestoneId, cancellationToken);
     }
 
-    public async Task<MilestoneDetailsV1?> GetByIdAsync(Guid milestoneId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<MilestoneDetailsV1?> GetByIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
         var milestone = await _dbContext.Milestones
             .AsNoTracking()
@@ -109,7 +117,7 @@ public class MilestoneService : IMilestoneService
         return milestone == null ? null : MapToDetails(milestone);
     }
 
-    public async Task<IReadOnlyList<MilestoneSummaryV1>> GetByProjectIdAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MilestoneSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var milestones = await _dbContext.Milestones
             .AsNoTracking()
@@ -122,8 +130,9 @@ public class MilestoneService : IMilestoneService
         return milestones.Select(MapToSummary).ToList();
     }
 
-    public async Task<MilestoneDetailsV1?> UpdateAsync(Guid milestoneId, UpdateMilestoneRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<MilestoneDetailsV1?> UpdateAsync(Guid milestoneId, UpdateMilestoneRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var milestone = await _dbContext.Milestones
             .Include(m => m.Tags)
             .Include(m => m.FileReferences)
@@ -188,10 +197,10 @@ public class MilestoneService : IMilestoneService
 
         _logger.LogInformation("Updated milestone {MilestoneId}", milestoneId);
 
-        return await GetByIdAsync(milestoneId, userId, cancellationToken);
+        return await GetByIdAsync(milestoneId, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(Guid milestoneId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
         var milestone = await _dbContext.Milestones
             .FirstOrDefaultAsync(m => m.Id == milestoneId, cancellationToken);

@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,14 +18,10 @@ namespace DonkeyWork.Agents.Projects.Api.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;
-    private readonly IIdentityContext _identityContext;
 
-    public ProjectsController(
-        IProjectService projectService,
-        IIdentityContext identityContext)
+    public ProjectsController(IProjectService projectService)
     {
         _projectService = projectService;
-        _identityContext = identityContext;
     }
 
     /// <summary>
@@ -40,7 +35,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequestV1 request)
     {
-        var project = await _projectService.CreateAsync(request, _identityContext.UserId);
+        var project = await _projectService.CreateAsync(request);
         return CreatedAtAction(nameof(Get), new { id = project.Id }, project);
     }
 
@@ -55,7 +50,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var project = await _projectService.GetByIdAsync(id, _identityContext.UserId);
+        var project = await _projectService.GetByIdAsync(id);
 
         if (project == null)
             return NotFound();
@@ -71,7 +66,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType<IReadOnlyList<ProjectSummaryV1>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List()
     {
-        var projects = await _projectService.GetByUserIdAsync(_identityContext.UserId);
+        var projects = await _projectService.ListAsync();
         return Ok(projects);
     }
 
@@ -89,7 +84,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequestV1 request)
     {
-        var project = await _projectService.UpdateAsync(id, request, _identityContext.UserId);
+        var project = await _projectService.UpdateAsync(id, request);
 
         if (project == null)
             return NotFound();
@@ -108,7 +103,7 @@ public class ProjectsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var deleted = await _projectService.DeleteAsync(id, _identityContext.UserId);
+        var deleted = await _projectService.DeleteAsync(id);
 
         if (!deleted)
             return NotFound();

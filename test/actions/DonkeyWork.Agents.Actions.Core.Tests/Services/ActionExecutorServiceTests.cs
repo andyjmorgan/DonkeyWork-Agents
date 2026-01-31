@@ -59,50 +59,11 @@ public class ActionExecutorServiceTests
         Assert.Contains("not registered", ex.Message);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_WithHttpRequestProvider_ExecutesSuccessfully()
-    {
-        // Arrange
-        var executor = CreateExecutor();
-        var parameters = new HttpRequestParameters
-        {
-            Method = DonkeyWork.Agents.Actions.Core.Providers.HttpMethod.GET,
-            Url = "https://httpbin.org/get",
-            TimeoutSeconds = 30
-        };
-
-        // Act
-        var result = await executor.ExecuteAsync("http_request", parameters);
-
-        // Assert
-        Assert.NotNull(result);
-        var output = Assert.IsType<HttpRequestOutput>(result);
-        Assert.True(output.IsSuccess);
-        Assert.Equal(200, output.StatusCode);
-        Assert.NotEmpty(output.Body);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_WithContext_PassesContextToProvider()
-    {
-        // Arrange
-        var executor = CreateExecutor();
-        var parameters = new HttpRequestParameters
-        {
-            Method = DonkeyWork.Agents.Actions.Core.Providers.HttpMethod.GET,
-            Url = "https://httpbin.org/get",
-            TimeoutSeconds = 30
-        };
-        var context = new { testValue = "test" };
-
-        // Act
-        var result = await executor.ExecuteAsync("http_request", parameters, context);
-
-        // Assert
-        Assert.NotNull(result);
-        var output = Assert.IsType<HttpRequestOutput>(result);
-        Assert.True(output.IsSuccess);
-    }
+    // NOTE: Integration tests that call external services (httpbin.org) have been moved to
+    // test/integration_tests/INTEGRATION_TESTS.md for recreation using Testcontainers/WireMock.
+    // Tests removed:
+    // - ExecuteAsync_WithHttpRequestProvider_ExecutesSuccessfully
+    // - ExecuteAsync_WithContext_PassesContextToProvider
 
     private static ActionExecutorService CreateExecutor()
     {

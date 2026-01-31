@@ -1,7 +1,6 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-
-# Source folders
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "source", "source", "{969CE16F-65FD-4301-A916-0C128FB84EA5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{A1B2C3D4-0001-0001-0001-000000000001}"
@@ -20,8 +19,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Actions", "Actions", "{A1B2
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projects", "Projects", "{A1B2C3D4-0001-0001-0001-000000000008}"
 EndProject
-
-# Test folders
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{5897687E-62CC-4170-B568-E63F0CA9FF13}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Identity", "test-Identity", "{B1B2C3D4-0001-0001-0001-000000000001}"
@@ -38,74 +35,54 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Actions", "test-Action
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Projects", "test-Projects", "{B1B2C3D4-0001-0001-0001-000000000007}"
 EndProject
-
-# Main API
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Api", "src\DonkeyWork.Agents.Api\DonkeyWork.Agents.Api.csproj", "{00000001-0001-0001-0001-000000000001}"
 EndProject
-
-# Common projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Common.Contracts", "src\common\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj", "{00000001-0001-0001-0001-000000000002}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Persistence", "src\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj", "{00000001-0001-0001-0001-000000000003}"
 EndProject
-
-# Credentials projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Api", "src\credentials\DonkeyWork.Agents.Credentials.Api\DonkeyWork.Agents.Credentials.Api.csproj", "{00000001-0001-0001-0001-000000000004}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Contracts", "src\credentials\DonkeyWork.Agents.Credentials.Contracts\DonkeyWork.Agents.Credentials.Contracts.csproj", "{00000001-0001-0001-0001-000000000005}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Core", "src\credentials\DonkeyWork.Agents.Credentials.Core\DonkeyWork.Agents.Credentials.Core.csproj", "{00000001-0001-0001-0001-000000000006}"
 EndProject
-
-# Identity projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Identity.Api", "src\identity\DonkeyWork.Agents.Identity.Api\DonkeyWork.Agents.Identity.Api.csproj", "{00000001-0001-0001-0001-000000000007}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Identity.Contracts", "src\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj", "{00000001-0001-0001-0001-000000000008}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Identity.Core", "src\identity\DonkeyWork.Agents.Identity.Core\DonkeyWork.Agents.Identity.Core.csproj", "{00000001-0001-0001-0001-000000000009}"
 EndProject
-
-# Providers projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Providers.Api", "src\providers\DonkeyWork.Agents.Providers.Api\DonkeyWork.Agents.Providers.Api.csproj", "{00000001-0001-0001-0001-00000000000A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Providers.Contracts", "src\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj", "{00000001-0001-0001-0001-00000000000B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Providers.Core", "src\providers\DonkeyWork.Agents.Providers.Core\DonkeyWork.Agents.Providers.Core.csproj", "{00000001-0001-0001-0001-00000000000C}"
 EndProject
-
-# Storage projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Storage.Api", "src\storage\DonkeyWork.Agents.Storage.Api\DonkeyWork.Agents.Storage.Api.csproj", "{00000001-0001-0001-0001-00000000000D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Storage.Contracts", "src\storage\DonkeyWork.Agents.Storage.Contracts\DonkeyWork.Agents.Storage.Contracts.csproj", "{00000001-0001-0001-0001-00000000000E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Storage.Core", "src\storage\DonkeyWork.Agents.Storage.Core\DonkeyWork.Agents.Storage.Core.csproj", "{00000001-0001-0001-0001-00000000000F}"
 EndProject
-
-# Agents projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Api", "src\agents\DonkeyWork.Agents.Agents.Api\DonkeyWork.Agents.Agents.Api.csproj", "{00000002-0001-0001-0001-000000000001}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Contracts", "src\agents\DonkeyWork.Agents.Agents.Contracts\DonkeyWork.Agents.Agents.Contracts.csproj", "{00000002-0001-0001-0001-000000000002}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Core", "src\agents\DonkeyWork.Agents.Agents.Core\DonkeyWork.Agents.Agents.Core.csproj", "{00000002-0001-0001-0001-000000000003}"
 EndProject
-
-# Actions projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actions.Api", "src\actions\DonkeyWork.Agents.Actions.Api\DonkeyWork.Agents.Actions.Api.csproj", "{00000002-0001-0001-0001-000000000004}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actions.Contracts", "src\actions\DonkeyWork.Agents.Actions.Contracts\DonkeyWork.Agents.Actions.Contracts.csproj", "{00000002-0001-0001-0001-000000000005}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actions.Core", "src\actions\DonkeyWork.Agents.Actions.Core\DonkeyWork.Agents.Actions.Core.csproj", "{00000002-0001-0001-0001-000000000006}"
 EndProject
-
-# Projects projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Projects.Api", "src\projects\DonkeyWork.Agents.Projects.Api\DonkeyWork.Agents.Projects.Api.csproj", "{00000002-0001-0001-0001-000000000007}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Projects.Contracts", "src\projects\DonkeyWork.Agents.Projects.Contracts\DonkeyWork.Agents.Projects.Contracts.csproj", "{00000002-0001-0001-0001-000000000008}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Projects.Core", "src\projects\DonkeyWork.Agents.Projects.Core\DonkeyWork.Agents.Projects.Core.csproj", "{00000002-0001-0001-0001-000000000009}"
 EndProject
-
-# Test projects
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Identity.Core.Tests", "test\identity\DonkeyWork.Agents.Identity.Core.Tests\DonkeyWork.Agents.Identity.Core.Tests.csproj", "{00000001-0001-0001-0001-000000000010}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Identity.Api.Tests", "test\identity\DonkeyWork.Agents.Identity.Api.Tests\DonkeyWork.Agents.Identity.Api.Tests.csproj", "{00000003-0001-0001-0001-000000000001}"
@@ -118,8 +95,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Storage.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Core.Tests", "test\agents\DonkeyWork.Agents.Agents.Core.Tests\DonkeyWork.Agents.Agents.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000003}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Api.Tests", "test\agents\DonkeyWork.Agents.Agents.Api.Tests\DonkeyWork.Agents.Agents.Api.Tests.csproj", "{00000003-0001-0001-0001-000000000004}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Api.Tests", "test\credentials\DonkeyWork.Agents.Credentials.Api.Tests\DonkeyWork.Agents.Credentials.Api.Tests.csproj", "{00000003-0001-0001-0001-000000000005}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Core.Tests", "test\credentials\DonkeyWork.Agents.Credentials.Core.Tests\DonkeyWork.Agents.Credentials.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000006}"
@@ -128,7 +103,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actions.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Projects.Core.Tests", "test\projects\DonkeyWork.Agents.Projects.Core.Tests\DonkeyWork.Agents.Projects.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000008}"
 EndProject
-
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -255,10 +229,6 @@ Global
 		{00000003-0001-0001-0001-000000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00000003-0001-0001-0001-000000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{00000003-0001-0001-0001-000000000003}.Release|Any CPU.Build.0 = Release|Any CPU
-		{00000003-0001-0001-0001-000000000004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000004}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000004}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{00000003-0001-0001-0001-000000000004}.Release|Any CPU.Build.0 = Release|Any CPU
 		{00000003-0001-0001-0001-000000000005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{00000003-0001-0001-0001-000000000005}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00000003-0001-0001-0001-000000000005}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -280,7 +250,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		# Source module folders under source
 		{A1B2C3D4-0001-0001-0001-000000000001} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
 		{A1B2C3D4-0001-0001-0001-000000000002} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
 		{A1B2C3D4-0001-0001-0001-000000000003} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
@@ -289,7 +258,6 @@ Global
 		{A1B2C3D4-0001-0001-0001-000000000006} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
 		{A1B2C3D4-0001-0001-0001-000000000007} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
 		{A1B2C3D4-0001-0001-0001-000000000008} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
-		# Test module folders under test
 		{B1B2C3D4-0001-0001-0001-000000000001} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000002} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000003} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
@@ -297,47 +265,36 @@ Global
 		{B1B2C3D4-0001-0001-0001-000000000005} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000006} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000007} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
-		# Main API under source
 		{00000001-0001-0001-0001-000000000001} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
-		# Common projects under Common
 		{00000001-0001-0001-0001-000000000002} = {A1B2C3D4-0001-0001-0001-000000000001}
 		{00000001-0001-0001-0001-000000000003} = {A1B2C3D4-0001-0001-0001-000000000001}
-		# Credentials projects under Credentials
 		{00000001-0001-0001-0001-000000000004} = {A1B2C3D4-0001-0001-0001-000000000002}
 		{00000001-0001-0001-0001-000000000005} = {A1B2C3D4-0001-0001-0001-000000000002}
 		{00000001-0001-0001-0001-000000000006} = {A1B2C3D4-0001-0001-0001-000000000002}
-		# Identity projects under Identity
 		{00000001-0001-0001-0001-000000000007} = {A1B2C3D4-0001-0001-0001-000000000003}
 		{00000001-0001-0001-0001-000000000008} = {A1B2C3D4-0001-0001-0001-000000000003}
 		{00000001-0001-0001-0001-000000000009} = {A1B2C3D4-0001-0001-0001-000000000003}
-		# Providers projects under Providers
 		{00000001-0001-0001-0001-00000000000A} = {A1B2C3D4-0001-0001-0001-000000000004}
 		{00000001-0001-0001-0001-00000000000B} = {A1B2C3D4-0001-0001-0001-000000000004}
 		{00000001-0001-0001-0001-00000000000C} = {A1B2C3D4-0001-0001-0001-000000000004}
-		# Storage projects under Storage
 		{00000001-0001-0001-0001-00000000000D} = {A1B2C3D4-0001-0001-0001-000000000005}
 		{00000001-0001-0001-0001-00000000000E} = {A1B2C3D4-0001-0001-0001-000000000005}
 		{00000001-0001-0001-0001-00000000000F} = {A1B2C3D4-0001-0001-0001-000000000005}
-		# Agents projects under Agents
 		{00000002-0001-0001-0001-000000000001} = {A1B2C3D4-0001-0001-0001-000000000006}
 		{00000002-0001-0001-0001-000000000002} = {A1B2C3D4-0001-0001-0001-000000000006}
 		{00000002-0001-0001-0001-000000000003} = {A1B2C3D4-0001-0001-0001-000000000006}
-		# Actions projects under Actions
 		{00000002-0001-0001-0001-000000000004} = {A1B2C3D4-0001-0001-0001-000000000007}
 		{00000002-0001-0001-0001-000000000005} = {A1B2C3D4-0001-0001-0001-000000000007}
 		{00000002-0001-0001-0001-000000000006} = {A1B2C3D4-0001-0001-0001-000000000007}
-		# Projects projects under Projects
 		{00000002-0001-0001-0001-000000000007} = {A1B2C3D4-0001-0001-0001-000000000008}
 		{00000002-0001-0001-0001-000000000008} = {A1B2C3D4-0001-0001-0001-000000000008}
 		{00000002-0001-0001-0001-000000000009} = {A1B2C3D4-0001-0001-0001-000000000008}
-		# Test projects under test module folders
 		{00000001-0001-0001-0001-000000000010} = {B1B2C3D4-0001-0001-0001-000000000001}
 		{00000003-0001-0001-0001-000000000001} = {B1B2C3D4-0001-0001-0001-000000000001}
 		{00000001-0001-0001-0001-000000000011} = {B1B2C3D4-0001-0001-0001-000000000002}
 		{00000003-0001-0001-0001-000000000002} = {B1B2C3D4-0001-0001-0001-000000000002}
 		{00000001-0001-0001-0001-000000000012} = {B1B2C3D4-0001-0001-0001-000000000003}
 		{00000003-0001-0001-0001-000000000003} = {B1B2C3D4-0001-0001-0001-000000000004}
-		{00000003-0001-0001-0001-000000000004} = {B1B2C3D4-0001-0001-0001-000000000004}
 		{00000003-0001-0001-0001-000000000005} = {B1B2C3D4-0001-0001-0001-000000000005}
 		{00000003-0001-0001-0001-000000000006} = {B1B2C3D4-0001-0001-0001-000000000005}
 		{00000003-0001-0001-0001-000000000007} = {B1B2C3D4-0001-0001-0001-000000000006}

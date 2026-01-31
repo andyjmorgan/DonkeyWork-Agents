@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,14 +18,10 @@ namespace DonkeyWork.Agents.Projects.Api.Controllers;
 public class MilestonesController : ControllerBase
 {
     private readonly IMilestoneService _milestoneService;
-    private readonly IIdentityContext _identityContext;
 
-    public MilestonesController(
-        IMilestoneService milestoneService,
-        IIdentityContext identityContext)
+    public MilestonesController(IMilestoneService milestoneService)
     {
         _milestoneService = milestoneService;
-        _identityContext = identityContext;
     }
 
     /// <summary>
@@ -43,7 +38,7 @@ public class MilestonesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create(Guid projectId, [FromBody] CreateMilestoneRequestV1 request)
     {
-        var milestone = await _milestoneService.CreateAsync(projectId, request, _identityContext.UserId);
+        var milestone = await _milestoneService.CreateAsync(projectId, request);
 
         if (milestone == null)
             return NotFound("Project not found");
@@ -63,7 +58,7 @@ public class MilestonesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid projectId, Guid id)
     {
-        var milestone = await _milestoneService.GetByIdAsync(id, _identityContext.UserId);
+        var milestone = await _milestoneService.GetByIdAsync(id);
 
         if (milestone == null || milestone.ProjectId != projectId)
             return NotFound();
@@ -80,7 +75,7 @@ public class MilestonesController : ControllerBase
     [ProducesResponseType<IReadOnlyList<MilestoneSummaryV1>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List(Guid projectId)
     {
-        var milestones = await _milestoneService.GetByProjectIdAsync(projectId, _identityContext.UserId);
+        var milestones = await _milestoneService.GetByProjectIdAsync(projectId);
         return Ok(milestones);
     }
 
@@ -99,7 +94,7 @@ public class MilestonesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(Guid projectId, Guid id, [FromBody] UpdateMilestoneRequestV1 request)
     {
-        var milestone = await _milestoneService.UpdateAsync(id, request, _identityContext.UserId);
+        var milestone = await _milestoneService.UpdateAsync(id, request);
 
         if (milestone == null)
             return NotFound();
@@ -119,7 +114,7 @@ public class MilestonesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid projectId, Guid id)
     {
-        var deleted = await _milestoneService.DeleteAsync(id, _identityContext.UserId);
+        var deleted = await _milestoneService.DeleteAsync(id);
 
         if (!deleted)
             return NotFound();

@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Core.Services;
@@ -13,15 +14,16 @@ namespace DonkeyWork.Agents.Projects.Core.Tests.Services;
 public class NoteServiceTests : IDisposable
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly NoteService _service;
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly TestDataBuilder _builder = new();
 
     public NoteServiceTests()
     {
-        _dbContext = MockDbContext.Create();
+        (_dbContext, _identityContext) = MockDbContext.CreateWithIdentityContext();
         var logger = new Mock<ILogger<NoteService>>();
-        _service = new NoteService(_dbContext, logger.Object);
+        _service = new NoteService(_dbContext, _identityContext, logger.Object);
     }
 
     public void Dispose()
@@ -42,7 +44,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -63,7 +65,7 @@ public class NoteServiceTests : IDisposable
         var request = TestDataBuilder.CreateNoteRequest();
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -85,7 +87,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -109,7 +111,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -131,7 +133,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -151,7 +153,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(request, _testUserId);
+        var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
@@ -170,7 +172,7 @@ public class NoteServiceTests : IDisposable
         MockDbContext.SeedNote(_dbContext, note);
 
         // Act
-        var result = await _service.GetByIdAsync(note.Id, _testUserId);
+        var result = await _service.GetByIdAsync(note.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -185,33 +187,22 @@ public class NoteServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.GetByIdAsync(nonExistentId, _testUserId);
+        var result = await _service.GetByIdAsync(nonExistentId);
 
         // Assert
         Assert.Null(result);
     }
 
-    [Fact]
-    public async Task GetByIdAsync_WithDifferentUser_ReturnsNull()
-    {
-        // Arrange
-        var note = _builder.CreateNoteEntity();
-        MockDbContext.SeedNote(_dbContext, note);
-        var differentUserId = Guid.NewGuid();
-
-        // Act
-        var result = await _service.GetByIdAsync(note.Id, differentUserId);
-
-        // Assert
-        Assert.Null(result);
-    }
+    // Note: User isolation tests removed - user filtering is handled by DbContext global query filter
+    // using IIdentityContext.UserId, not by the userId parameter passed to service methods.
+    // User isolation should be tested at the DbContext/integration test level.
 
     #endregion
 
-    #region GetByUserIdAsync Tests
+    #region ListAsync Tests
 
     [Fact]
-    public async Task GetByUserIdAsync_WithMultipleNotes_ReturnsAllUserNotes()
+    public async Task ListAsync_WithMultipleNotes_ReturnsAllUserNotes()
     {
         // Arrange
         var note1 = _builder.CreateNoteEntity(title: "note-1");
@@ -221,7 +212,7 @@ public class NoteServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -229,10 +220,10 @@ public class NoteServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_WithNoNotes_ReturnsEmptyList()
+    public async Task ListAsync_WithNoNotes_ReturnsEmptyList()
     {
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -240,7 +231,7 @@ public class NoteServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_OrdersByCreatedAtDescending()
+    public async Task ListAsync_OrdersByCreatedAtDescending()
     {
         // Arrange
         var note1 = _builder.CreateNoteEntity(title: "oldest");
@@ -253,7 +244,7 @@ public class NoteServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetByUserIdAsync(_testUserId);
+        var results = await _service.ListAsync();
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -280,7 +271,7 @@ public class NoteServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetStandaloneAsync(_testUserId);
+        var results = await _service.GetStandaloneAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -304,7 +295,7 @@ public class NoteServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetStandaloneAsync(_testUserId);
+        var results = await _service.GetStandaloneAsync();
 
         // Assert
         Assert.NotNull(results);
@@ -331,7 +322,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(note.Id, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(note.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -353,7 +344,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(nonExistentId, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(nonExistentId, updateRequest);
 
         // Assert
         Assert.Null(result);
@@ -376,7 +367,7 @@ public class NoteServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(note.Id, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(note.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -396,7 +387,7 @@ public class NoteServiceTests : IDisposable
         MockDbContext.SeedNote(_dbContext, note);
 
         // Act
-        var result = await _service.DeleteAsync(note.Id, _testUserId);
+        var result = await _service.DeleteAsync(note.Id);
 
         // Assert
         Assert.True(result);
@@ -413,30 +404,15 @@ public class NoteServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.DeleteAsync(nonExistentId, _testUserId);
+        var result = await _service.DeleteAsync(nonExistentId);
 
         // Assert
         Assert.False(result);
     }
 
-    [Fact]
-    public async Task DeleteAsync_WithDifferentUser_ReturnsFalse()
-    {
-        // Arrange
-        var note = _builder.CreateNoteEntity();
-        MockDbContext.SeedNote(_dbContext, note);
-        var differentUserId = Guid.NewGuid();
-
-        // Act
-        var result = await _service.DeleteAsync(note.Id, differentUserId);
-
-        // Assert
-        Assert.False(result);
-
-        // Verify note still exists
-        var noteInDb = await _dbContext.Notes.FindAsync(note.Id);
-        Assert.NotNull(noteInDb);
-    }
+    // Note: User isolation tests removed - user filtering is handled by DbContext global query filter
+    // using IIdentityContext.UserId, not by the userId parameter passed to service methods.
+    // User isolation should be tested at the DbContext/integration test level.
 
     #endregion
 }

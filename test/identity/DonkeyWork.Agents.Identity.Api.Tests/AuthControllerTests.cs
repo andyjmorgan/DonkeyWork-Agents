@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using DonkeyWork.Agents.Identity.Api.Controllers;
 using DonkeyWork.Agents.Identity.Api.Options;
-using DonkeyWork.Agents.Identity.Contracts.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -106,7 +105,7 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task Callback_WithError_ReturnsBadRequest()
+    public async Task Callback_WithError_RedirectsWithError()
     {
         // Arrange
         var httpContext = CreateHttpContext();
@@ -116,13 +115,13 @@ public class AuthControllerTests
         var result = await controller.Callback(null, "access_denied", "User denied access");
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        var value = badRequestResult.Value;
-        Assert.NotNull(value);
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("error=access_denied", redirectResult.Url);
+        Assert.Contains("error_description=", redirectResult.Url);
     }
 
     [Fact]
-    public async Task Callback_WithoutCode_ReturnsBadRequest()
+    public async Task Callback_WithoutCode_RedirectsWithError()
     {
         // Arrange
         var httpContext = CreateHttpContext();
@@ -132,11 +131,12 @@ public class AuthControllerTests
         var result = await controller.Callback(null, null, null);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("error=missing_code", redirectResult.Url);
     }
 
     [Fact]
-    public async Task Callback_WithoutCodeVerifierCookie_ReturnsBadRequest()
+    public async Task Callback_WithoutCodeVerifierCookie_RedirectsWithError()
     {
         // Arrange
         var httpContext = CreateHttpContext();
@@ -146,11 +146,12 @@ public class AuthControllerTests
         var result = await controller.Callback("valid-code", null, null);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("error=missing_verifier", redirectResult.Url);
     }
 
     [Fact]
-    public async Task Callback_WithValidCodeAndVerifier_ExchangesTokens()
+    public async Task Callback_WithValidCodeAndVerifier_RedirectsWithTokens()
     {
         // Arrange
         var httpContext = CreateHttpContext();
@@ -165,18 +166,9 @@ public class AuthControllerTests
             token_type = "Bearer"
         };
 
-        var userInfoResponse = new
-        {
-            sub = Guid.NewGuid().ToString(),
-            email = "test@example.com",
-            name = "Test User",
-            preferred_username = "testuser"
-        };
-
         var mockHandler = CreateMockHttpHandler(new[]
         {
-            (HttpStatusCode.OK, JsonSerializer.Serialize(tokenResponse)),
-            (HttpStatusCode.OK, JsonSerializer.Serialize(userInfoResponse))
+            (HttpStatusCode.OK, JsonSerializer.Serialize(tokenResponse))
         });
 
         var httpClient = new HttpClient(mockHandler.Object);
@@ -188,18 +180,15 @@ public class AuthControllerTests
         var result = await controller.Callback("valid-code", null, null);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<LoginCallbackResponseV1>(okResult.Value);
-        Assert.Equal("test-access-token", response.AccessToken);
-        Assert.Equal("test-refresh-token", response.RefreshToken);
-        Assert.Equal(3600, response.ExpiresIn);
-        Assert.Equal("Bearer", response.TokenType);
-        Assert.NotNull(response.User);
-        Assert.Equal("test@example.com", response.User.Email);
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("access_token=test-access-token", redirectResult.Url);
+        Assert.Contains("refresh_token=test-refresh-token", redirectResult.Url);
+        Assert.Contains("expires_in=3600", redirectResult.Url);
+        Assert.Contains("token_type=Bearer", redirectResult.Url);
     }
 
     [Fact]
-    public async Task Callback_WhenTokenExchangeFails_ReturnsBadRequest()
+    public async Task Callback_WhenTokenExchangeFails_RedirectsWithError()
     {
         // Arrange
         var httpContext = CreateHttpContext();
@@ -220,11 +209,12 @@ public class AuthControllerTests
         var result = await controller.Callback("invalid-code", null, null);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result);
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("error=token_exchange_failed", redirectResult.Url);
     }
 
     [Fact]
-    public async Task Callback_WhenUserInfoFails_StillReturnsTokens()
+    public async Task Callback_WithoutRefreshToken_RedirectsWithAccessTokenOnly()
     {
         // Arrange
         var httpContext = CreateHttpContext();
@@ -234,15 +224,13 @@ public class AuthControllerTests
         var tokenResponse = new
         {
             access_token = "test-access-token",
-            refresh_token = "test-refresh-token",
             expires_in = 3600,
             token_type = "Bearer"
         };
 
         var mockHandler = CreateMockHttpHandler(new[]
         {
-            (HttpStatusCode.OK, JsonSerializer.Serialize(tokenResponse)),
-            (HttpStatusCode.Unauthorized, "")
+            (HttpStatusCode.OK, JsonSerializer.Serialize(tokenResponse))
         });
 
         var httpClient = new HttpClient(mockHandler.Object);
@@ -254,11 +242,10 @@ public class AuthControllerTests
         var result = await controller.Callback("valid-code", null, null);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<LoginCallbackResponseV1>(okResult.Value);
-        Assert.Equal("test-access-token", response.AccessToken);
-        Assert.NotNull(response.User);
-        Assert.True(response.User.IsAuthenticated);
+        var redirectResult = Assert.IsType<RedirectResult>(result);
+        Assert.Contains("access_token=test-access-token", redirectResult.Url);
+        Assert.Contains("expires_in=3600", redirectResult.Url);
+        Assert.DoesNotContain("refresh_token=", redirectResult.Url);
     }
 
     private static Mock<HttpMessageHandler> CreateMockHttpHandler(

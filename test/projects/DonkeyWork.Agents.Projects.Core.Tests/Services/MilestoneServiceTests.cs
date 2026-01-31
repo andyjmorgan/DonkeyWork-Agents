@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Core.Services;
@@ -13,15 +14,16 @@ namespace DonkeyWork.Agents.Projects.Core.Tests.Services;
 public class MilestoneServiceTests : IDisposable
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly MilestoneService _service;
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly TestDataBuilder _builder = new();
 
     public MilestoneServiceTests()
     {
-        _dbContext = MockDbContext.Create();
+        (_dbContext, _identityContext) = MockDbContext.CreateWithIdentityContext();
         var logger = new Mock<ILogger<MilestoneService>>();
-        _service = new MilestoneService(_dbContext, logger.Object);
+        _service = new MilestoneService(_dbContext, _identityContext, logger.Object);
     }
 
     public void Dispose()
@@ -46,7 +48,7 @@ public class MilestoneServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(project.Id, request, _testUserId);
+        var result = await _service.CreateAsync(project.Id, request);
 
         // Assert
         Assert.NotNull(result);
@@ -70,7 +72,7 @@ public class MilestoneServiceTests : IDisposable
         var request = TestDataBuilder.CreateMilestoneRequest();
 
         // Act
-        var result = await _service.CreateAsync(nonExistentProjectId, request, _testUserId);
+        var result = await _service.CreateAsync(nonExistentProjectId, request);
 
         // Assert
         Assert.Null(result);
@@ -94,7 +96,7 @@ public class MilestoneServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.CreateAsync(project.Id, request, _testUserId);
+        var result = await _service.CreateAsync(project.Id, request);
 
         // Assert
         Assert.NotNull(result);
@@ -104,23 +106,24 @@ public class MilestoneServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_MultipleMilestones_AutoIncrementsSortOrder()
+    public async Task CreateAsync_MultipleMilestones_UsesSortOrderFromRequest()
     {
         // Arrange
         var project = _builder.CreateProjectEntity();
         MockDbContext.SeedProject(_dbContext, project);
 
-        var request1 = TestDataBuilder.CreateMilestoneRequest("milestone-1");
-        var request2 = TestDataBuilder.CreateMilestoneRequest("milestone-2");
+        var request1 = new CreateMilestoneRequestV1 { Name = "milestone-1", SortOrder = 0 };
+        var request2 = new CreateMilestoneRequestV1 { Name = "milestone-2", SortOrder = 1 };
 
         // Act
-        var result1 = await _service.CreateAsync(project.Id, request1, _testUserId);
-        var result2 = await _service.CreateAsync(project.Id, request2, _testUserId);
+        var result1 = await _service.CreateAsync(project.Id, request1);
+        var result2 = await _service.CreateAsync(project.Id, request2);
 
         // Assert
         Assert.NotNull(result1);
         Assert.NotNull(result2);
-        Assert.True(result2.SortOrder > result1.SortOrder);
+        Assert.Equal(0, result1.SortOrder);
+        Assert.Equal(1, result2.SortOrder);
     }
 
     #endregion
@@ -137,7 +140,7 @@ public class MilestoneServiceTests : IDisposable
         MockDbContext.SeedMilestone(_dbContext, milestone);
 
         // Act
-        var result = await _service.GetByIdAsync(milestone.Id, _testUserId);
+        var result = await _service.GetByIdAsync(milestone.Id);
 
         // Assert
         Assert.NotNull(result);
@@ -152,7 +155,7 @@ public class MilestoneServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.GetByIdAsync(nonExistentId, _testUserId);
+        var result = await _service.GetByIdAsync(nonExistentId);
 
         // Assert
         Assert.Null(result);
@@ -176,7 +179,7 @@ public class MilestoneServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetByProjectIdAsync(project.Id, _testUserId);
+        var results = await _service.GetByProjectIdAsync(project.Id);
 
         // Assert
         Assert.NotNull(results);
@@ -191,7 +194,7 @@ public class MilestoneServiceTests : IDisposable
         MockDbContext.SeedProject(_dbContext, project);
 
         // Act
-        var results = await _service.GetByProjectIdAsync(project.Id, _testUserId);
+        var results = await _service.GetByProjectIdAsync(project.Id);
 
         // Assert
         Assert.NotNull(results);
@@ -212,7 +215,7 @@ public class MilestoneServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.GetByProjectIdAsync(project.Id, _testUserId);
+        var results = await _service.GetByProjectIdAsync(project.Id);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -244,7 +247,7 @@ public class MilestoneServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(milestone.Id, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(milestone.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
@@ -268,7 +271,7 @@ public class MilestoneServiceTests : IDisposable
         };
 
         // Act
-        var result = await _service.UpdateAsync(nonExistentId, updateRequest, _testUserId);
+        var result = await _service.UpdateAsync(nonExistentId, updateRequest);
 
         // Assert
         Assert.Null(result);
@@ -288,7 +291,7 @@ public class MilestoneServiceTests : IDisposable
         MockDbContext.SeedMilestone(_dbContext, milestone);
 
         // Act
-        var result = await _service.DeleteAsync(milestone.Id, _testUserId);
+        var result = await _service.DeleteAsync(milestone.Id);
 
         // Assert
         Assert.True(result);
@@ -305,7 +308,7 @@ public class MilestoneServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var result = await _service.DeleteAsync(nonExistentId, _testUserId);
+        var result = await _service.DeleteAsync(nonExistentId);
 
         // Assert
         Assert.False(result);

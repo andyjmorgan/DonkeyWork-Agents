@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -10,16 +11,22 @@ namespace DonkeyWork.Agents.Projects.Core.Services;
 public class TodoService : ITodoService
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IIdentityContext _identityContext;
     private readonly ILogger<TodoService> _logger;
 
-    public TodoService(AgentsDbContext dbContext, ILogger<TodoService> logger)
+    public TodoService(
+        AgentsDbContext dbContext,
+        IIdentityContext identityContext,
+        ILogger<TodoService> logger)
     {
         _dbContext = dbContext;
+        _identityContext = identityContext;
         _logger = logger;
     }
 
-    public async Task<TodoV1> CreateAsync(CreateTodoRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<TodoV1> CreateAsync(CreateTodoRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         _logger.LogInformation("Creating todo for user {UserId} with title {Title}", userId, request.Title);
 
         var todoId = Guid.NewGuid();
@@ -65,10 +72,10 @@ public class TodoService : ITodoService
 
         _logger.LogInformation("Created todo {TodoId}", todoId);
 
-        return (await GetByIdAsync(todoId, userId, cancellationToken))!;
+        return (await GetByIdAsync(todoId, cancellationToken))!;
     }
 
-    public async Task<TodoV1?> GetByIdAsync(Guid todoId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<TodoV1?> GetByIdAsync(Guid todoId, CancellationToken cancellationToken = default)
     {
         var todo = await _dbContext.Todos
             .AsNoTracking()
@@ -78,7 +85,7 @@ public class TodoService : ITodoService
         return todo == null ? null : MapToDto(todo);
     }
 
-    public async Task<IReadOnlyList<TodoV1>> GetStandaloneAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -91,7 +98,7 @@ public class TodoService : ITodoService
         return todos.Select(MapToDto).ToList();
     }
 
-    public async Task<IReadOnlyList<TodoV1>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoV1>> ListAsync(CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -103,7 +110,7 @@ public class TodoService : ITodoService
         return todos.Select(MapToDto).ToList();
     }
 
-    public async Task<IReadOnlyList<TodoV1>> GetByProjectIdAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -116,7 +123,7 @@ public class TodoService : ITodoService
         return todos.Select(MapToDto).ToList();
     }
 
-    public async Task<IReadOnlyList<TodoV1>> GetByMilestoneIdAsync(Guid milestoneId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -129,8 +136,9 @@ public class TodoService : ITodoService
         return todos.Select(MapToDto).ToList();
     }
 
-    public async Task<TodoV1?> UpdateAsync(Guid todoId, UpdateTodoRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<TodoV1?> UpdateAsync(Guid todoId, UpdateTodoRequestV1 request, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var todo = await _dbContext.Todos
             .Include(t => t.Tags)
             .FirstOrDefaultAsync(t => t.Id == todoId, cancellationToken);
@@ -188,10 +196,10 @@ public class TodoService : ITodoService
 
         _logger.LogInformation("Updated todo {TodoId}", todoId);
 
-        return await GetByIdAsync(todoId, userId, cancellationToken);
+        return await GetByIdAsync(todoId, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(Guid todoId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(Guid todoId, CancellationToken cancellationToken = default)
     {
         var todo = await _dbContext.Todos
             .FirstOrDefaultAsync(t => t.Id == todoId, cancellationToken);
