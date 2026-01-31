@@ -17,8 +17,56 @@ env:
   FRONTEND_IMAGE: ${{ github.repository }}/frontend
 
 jobs:
+  test-backend:
+    name: Test Backend
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Restore dependencies
+        run: dotnet restore DonkeyWork.Agents.sln
+
+      - name: Build
+        run: dotnet build DonkeyWork.Agents.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
+
+  test-frontend:
+    name: Test Frontend
+    runs-on: [self-hosted, Linux, X64]
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint || true
+
+      - name: Type check
+        run: npx tsc -b
+
+      - name: Test
+        run: npm run test:run
+
   build-backend:
     name: Build Backend Docker Image
+    needs: [test-backend]
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
@@ -66,6 +114,7 @@ jobs:
 
   build-frontend:
     name: Build Frontend Docker Image
+    needs: [test-frontend]
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read

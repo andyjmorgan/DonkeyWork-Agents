@@ -13,7 +13,7 @@ concurrency:
 jobs:
   backend-build-test:
     name: Backend Build & Test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
 
   frontend-build-test:
     name: Frontend Build & Test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     defaults:
       run:
         working-directory: src/frontend
