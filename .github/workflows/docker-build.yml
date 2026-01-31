@@ -69,6 +69,7 @@ jobs:
   build-backend:
     name: Build Backend Docker Image
     needs: [test-backend]
+    if: github.event_name == 'push'
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
@@ -117,6 +118,7 @@ jobs:
   build-frontend:
     name: Build Frontend Docker Image
     needs: [test-frontend]
+    if: github.event_name == 'push'
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
