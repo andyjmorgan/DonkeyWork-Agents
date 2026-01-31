@@ -46,9 +46,13 @@ COPY src/projects/DonkeyWork.Agents.Projects.Api/*.csproj src/projects/DonkeyWor
 COPY src/projects/DonkeyWork.Agents.Projects.Contracts/*.csproj src/projects/DonkeyWork.Agents.Projects.Contracts/
 COPY src/projects/DonkeyWork.Agents.Projects.Core/*.csproj src/projects/DonkeyWork.Agents.Projects.Core/
 
-# Restore dependencies (disable parallel to avoid hanging, use HTTP/1.1)
+# Restore dependencies with extended timeout for NuGet
 ENV DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=0
-RUN dotnet restore src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj --disable-parallel --verbosity minimal
+ENV NUGET_HTTP_TIMEOUT=300
+RUN dotnet restore src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj \
+    --disable-parallel \
+    --verbosity minimal \
+    || (sleep 30 && dotnet restore src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj --disable-parallel --verbosity minimal)
 
 # Copy source code
 COPY src/ src/
