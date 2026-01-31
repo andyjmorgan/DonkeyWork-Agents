@@ -1,8 +1,11 @@
 # Runtime-only Dockerfile - uses pre-built artifacts from CI
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 WORKDIR /app
 EXPOSE 8080
+
+# Allow running on newer/older patch versions
+ENV DOTNET_ROLL_FORWARD=LatestMajor
 
 # Copy pre-built publish output
 COPY publish/ .
