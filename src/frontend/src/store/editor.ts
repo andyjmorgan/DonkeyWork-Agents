@@ -603,18 +603,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { nodeConfigurations } = get()
     const existingNames = Object.values(nodeConfigurations).map(c => c.name)
 
+    // Convert camelCase to snake_case and ensure lowercase
+    const baseName = type
+      .replace(/([a-z])([A-Z])/g, '$1_$2')
+      .toLowerCase()
+
     // First try the base name without a counter
-    if (!existingNames.includes(type)) {
-      return type
+    if (!existingNames.includes(baseName)) {
+      return baseName
     }
 
     // If base name exists, start with counter = 2
     let counter = 2
-    let name = `${type}_${counter}`
+    let name = `${baseName}_${counter}`
 
     while (existingNames.includes(name)) {
       counter++
-      name = `${type}_${counter}`
+      name = `${baseName}_${counter}`
     }
 
     return name
