@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Services;
+using DonkeyWork.Agents.Projects.Api;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
 using Scalar.AspNetCore;
@@ -65,6 +66,9 @@ builder.Services.AddCredentialsApi();
 
 // Add Identity module
 builder.Services.AddIdentityApi(builder.Configuration);
+
+// Add Projects module
+builder.Services.AddProjectsApi();
 
 // Add Providers module
 builder.Services.AddProvidersApi();

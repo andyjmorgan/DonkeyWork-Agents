@@ -48,6 +48,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}, retryOnUnau
 export const api = {
   get: <T>(url: string) => fetchWithAuth(url).then(r => r.json() as Promise<T>),
   post: <T>(url: string, body: unknown) => fetchWithAuth(url, { method: 'POST', body: JSON.stringify(body) }).then(r => r.json() as Promise<T>),
+  put: <T>(url: string, body: unknown) => fetchWithAuth(url, { method: 'PUT', body: JSON.stringify(body) }).then(r => r.json() as Promise<T>),
   delete: (url: string) => fetchWithAuth(url, { method: 'DELETE' }),
 }
 
@@ -419,4 +420,246 @@ export const oauth = {
   getToken: (id: string) => api.get<OAuthTokenDetail>(`/api/v1/oauth/tokens/${id}`),
   refreshToken: (id: string) => api.post<RefreshTokenResponse>(`/api/v1/oauth/tokens/${id}/refresh`, {}),
   disconnectToken: (id: string) => api.delete(`/api/v1/oauth/tokens/${id}`),
+}
+
+// Project Management Types
+export type ProjectStatus = 'NotStarted' | 'InProgress' | 'OnHold' | 'Completed' | 'Cancelled'
+export type MilestoneStatus = 'NotStarted' | 'InProgress' | 'OnHold' | 'Completed' | 'Cancelled'
+export type TodoStatus = 'Pending' | 'InProgress' | 'Completed' | 'Cancelled'
+export type TodoPriority = 'Low' | 'Medium' | 'High' | 'Critical'
+
+export interface Tag {
+  id: string
+  name: string
+  color?: string
+}
+
+export interface TagRequest {
+  name: string
+  color?: string
+}
+
+export interface FileReference {
+  id: string
+  filePath: string
+  displayName?: string
+  description?: string
+  sortOrder: number
+}
+
+export interface FileReferenceRequest {
+  filePath: string
+  displayName?: string
+  description?: string
+  sortOrder: number
+}
+
+export interface ProjectSummary {
+  id: string
+  name: string
+  description?: string
+  status: ProjectStatus
+  tags: Tag[]
+  milestoneCount: number
+  todoCount: number
+  completedTodoCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface ProjectDetails {
+  id: string
+  name: string
+  description?: string
+  successCriteria?: string
+  status: ProjectStatus
+  tags: Tag[]
+  fileReferences: FileReference[]
+  milestones: MilestoneSummary[]
+  todos: Todo[]
+  notes: Note[]
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateProjectRequest {
+  name: string
+  description?: string
+  successCriteria?: string
+  status?: ProjectStatus
+  tags?: TagRequest[]
+  fileReferences?: FileReferenceRequest[]
+}
+
+export interface UpdateProjectRequest {
+  name: string
+  description?: string
+  successCriteria?: string
+  status: ProjectStatus
+  tags?: TagRequest[]
+  fileReferences?: FileReferenceRequest[]
+}
+
+export interface MilestoneSummary {
+  id: string
+  projectId: string
+  name: string
+  description?: string
+  status: MilestoneStatus
+  dueDate?: string
+  sortOrder: number
+  tags: Tag[]
+  todoCount: number
+  completedTodoCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface MilestoneDetails {
+  id: string
+  projectId: string
+  name: string
+  description?: string
+  successCriteria?: string
+  status: MilestoneStatus
+  dueDate?: string
+  sortOrder: number
+  tags: Tag[]
+  fileReferences: FileReference[]
+  todos: Todo[]
+  notes: Note[]
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateMilestoneRequest {
+  name: string
+  description?: string
+  successCriteria?: string
+  status?: MilestoneStatus
+  dueDate?: string
+  sortOrder?: number
+  tags?: TagRequest[]
+  fileReferences?: FileReferenceRequest[]
+}
+
+export interface UpdateMilestoneRequest {
+  name: string
+  description?: string
+  successCriteria?: string
+  status: MilestoneStatus
+  dueDate?: string
+  sortOrder: number
+  tags?: TagRequest[]
+  fileReferences?: FileReferenceRequest[]
+}
+
+export interface Todo {
+  id: string
+  title: string
+  description?: string
+  status: TodoStatus
+  priority: TodoPriority
+  completionNotes?: string
+  dueDate?: string
+  completedAt?: string
+  sortOrder: number
+  projectId?: string
+  milestoneId?: string
+  tags: Tag[]
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateTodoRequest {
+  title: string
+  description?: string
+  status?: TodoStatus
+  priority?: TodoPriority
+  dueDate?: string
+  sortOrder?: number
+  projectId?: string
+  milestoneId?: string
+  tags?: TagRequest[]
+}
+
+export interface UpdateTodoRequest {
+  title: string
+  description?: string
+  status: TodoStatus
+  priority: TodoPriority
+  completionNotes?: string
+  dueDate?: string
+  sortOrder: number
+  projectId?: string
+  milestoneId?: string
+  tags?: TagRequest[]
+}
+
+export interface Note {
+  id: string
+  title: string
+  content?: string
+  sortOrder: number
+  projectId?: string
+  milestoneId?: string
+  tags: Tag[]
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateNoteRequest {
+  title: string
+  content?: string
+  sortOrder?: number
+  projectId?: string
+  milestoneId?: string
+  tags?: TagRequest[]
+}
+
+export interface UpdateNoteRequest {
+  title: string
+  content?: string
+  sortOrder: number
+  projectId?: string
+  milestoneId?: string
+  tags?: TagRequest[]
+}
+
+// Projects API
+export const projects = {
+  list: () => api.get<ProjectSummary[]>('/api/v1/projects'),
+  get: (id: string) => api.get<ProjectDetails>(`/api/v1/projects/${id}`),
+  create: (data: CreateProjectRequest) => api.post<ProjectDetails>('/api/v1/projects', data),
+  update: (id: string, data: UpdateProjectRequest) => api.put<ProjectDetails>(`/api/v1/projects/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/projects/${id}`),
+}
+
+// Milestones API
+export const milestones = {
+  list: (projectId: string) => api.get<MilestoneSummary[]>(`/api/v1/projects/${projectId}/milestones`),
+  get: (projectId: string, id: string) => api.get<MilestoneDetails>(`/api/v1/projects/${projectId}/milestones/${id}`),
+  create: (projectId: string, data: CreateMilestoneRequest) => api.post<MilestoneDetails>(`/api/v1/projects/${projectId}/milestones`, data),
+  update: (projectId: string, id: string, data: UpdateMilestoneRequest) => api.put<MilestoneDetails>(`/api/v1/projects/${projectId}/milestones/${id}`, data),
+  delete: (projectId: string, id: string) => api.delete(`/api/v1/projects/${projectId}/milestones/${id}`),
+}
+
+// Todos API
+export const todos = {
+  list: () => api.get<Todo[]>('/api/v1/todos'),
+  listStandalone: () => api.get<Todo[]>('/api/v1/todos/standalone'),
+  get: (id: string) => api.get<Todo>(`/api/v1/todos/${id}`),
+  create: (data: CreateTodoRequest) => api.post<Todo>('/api/v1/todos', data),
+  update: (id: string, data: UpdateTodoRequest) => api.put<Todo>(`/api/v1/todos/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/todos/${id}`),
+}
+
+// Notes API
+export const notes = {
+  list: () => api.get<Note[]>('/api/v1/notes'),
+  listStandalone: () => api.get<Note[]>('/api/v1/notes/standalone'),
+  get: (id: string) => api.get<Note>(`/api/v1/notes/${id}`),
+  create: (data: CreateNoteRequest) => api.post<Note>('/api/v1/notes', data),
+  update: (id: string, data: UpdateNoteRequest) => api.put<Note>(`/api/v1/notes/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/notes/${id}`),
 }
