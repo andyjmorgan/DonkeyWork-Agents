@@ -472,7 +472,7 @@ export function ProjectDetailPage() {
                   <div className="flex items-center gap-2">
                     <span
                       className={`font-medium ${
-                        todo.status === TodoStatus.Completed ? 'line-through text-muted-foreground' : ''
+                        todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''
                       }`}
                     >
                       {todo.title}
@@ -625,10 +625,10 @@ export function ProjectDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TodoPriority.Low}>Low</SelectItem>
-                  <SelectItem value={TodoPriority.Medium}>Medium</SelectItem>
-                  <SelectItem value={TodoPriority.High}>High</SelectItem>
-                  <SelectItem value={TodoPriority.Critical}>Critical</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Critical">Critical</SelectItem>
                 </SelectContent>
               </Select>
             </div>

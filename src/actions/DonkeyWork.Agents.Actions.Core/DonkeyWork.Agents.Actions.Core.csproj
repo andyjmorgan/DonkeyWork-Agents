@@ -15,8 +15,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- Auto-generate action schemas after build -->
-  <Target Name="GenerateActionSchemas" AfterTargets="Build">
+  <!-- Auto-generate action schemas after build (only in Debug/local development) -->
+  <Target Name="GenerateActionSchemas" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
     <PropertyGroup>
       <SchemaGeneratorDll>$(MSBuildThisFileDirectory)..\..\..\tools\SchemaGenerator\bin\Debug\net10.0\DonkeyWork.Agents.Tools.SchemaGenerator.dll</SchemaGeneratorDll>
       <OutputSchemaPath>$(MSBuildThisFileDirectory)..\..\frontend\src\schemas\actions.json</OutputSchemaPath>
