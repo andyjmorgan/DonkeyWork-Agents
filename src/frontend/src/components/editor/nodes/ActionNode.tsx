@@ -77,7 +77,7 @@ const getColorScheme = (iconName?: string) => {
 }
 
 export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
-  const nodeData = data as ActionNodeData
+  const nodeData = data as unknown as ActionNodeData
   const Icon = getActionIcon(nodeData.icon)
   const colors = getColorScheme(nodeData.icon)
 

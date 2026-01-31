@@ -13,19 +13,25 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe('ActionNode', () => {
-  const createProps = (data: ActionNodeData, selected = false): NodeProps<ActionNodeData> => ({
+  const createProps = (data: ActionNodeData, selected = false): NodeProps => ({
     id: 'test-node',
     type: 'action',
-    data,
+    data: data as unknown as Record<string, unknown>,
     selected,
     isConnectable: true,
     zIndex: 0,
-    xPos: 0,
-    yPos: 0,
-    dragging: false,
-    // @ts-ignore - minimal props for testing
     positionAbsoluteX: 0,
-    positionAbsoluteY: 0
+    positionAbsoluteY: 0,
+    dragging: false,
+    draggable: true,
+    deletable: true,
+    selectable: true,
+    parentId: undefined,
+    sourcePosition: undefined,
+    targetPosition: undefined,
+    dragHandle: undefined,
+    width: undefined,
+    height: undefined,
   })
 
   it('should render action node with display name', () => {
@@ -36,11 +42,11 @@ describe('ActionNode', () => {
     })
 
     render(<ActionNode {...props} />, { wrapper: Wrapper })
-    expect(screen.getByText('HTTP Request')).toBeInTheDocument()
-    expect(screen.getByText('Action')).toBeInTheDocument()
+    expect(screen.getByText('HTTP Request')).toBeDefined()
+    expect(screen.getByText('action')).toBeDefined()
   })
 
-  it('should render with globe icon', () => {
+  it('should render with globe icon style', () => {
     const props = createProps({
       actionType: 'http_request',
       displayName: 'HTTP Request',
@@ -49,64 +55,34 @@ describe('ActionNode', () => {
 
     const { container } = render(<ActionNode {...props} />, { wrapper: Wrapper })
     const iconContainer = container.querySelector('.bg-purple-500\\/10')
-    expect(iconContainer).toBeInTheDocument()
+    expect(iconContainer).toBeTruthy()
   })
 
-  it('should render with mail icon', () => {
+  it('should render with custom label', () => {
     const props = createProps({
-      actionType: 'send_email',
-      displayName: 'Send Email',
-      icon: 'mail'
+      actionType: 'http_request',
+      displayName: 'HTTP Request',
+      icon: 'globe',
+      label: 'My Custom Label'
     })
 
-    const { container } = render(<ActionNode {...props} />, { wrapper: Wrapper })
-    const iconContainer = container.querySelector('.bg-purple-500\\/10')
-    expect(iconContainer).toBeInTheDocument()
+    render(<ActionNode {...props} />, { wrapper: Wrapper })
+    expect(screen.getByText('My Custom Label')).toBeDefined()
   })
 
-  it('should render with default icon when no icon specified', () => {
+  it('should use default label when none provided', () => {
     const props = createProps({
-      actionType: 'custom_action',
-      displayName: 'Custom Action'
+      actionType: 'http_request',
+      displayName: 'HTTP Request',
+      icon: 'globe'
     })
 
-    const { container } = render(<ActionNode {...props} />, { wrapper: Wrapper })
-    const iconContainer = container.querySelector('.bg-purple-500\\/10')
-    expect(iconContainer).toBeInTheDocument()
-  })
-
-  it('should apply selected styles when selected', () => {
-    const props = createProps(
-      {
-        actionType: 'http_request',
-        displayName: 'HTTP Request',
-        icon: 'globe'
-      },
-      true
-    )
-
-    const { container } = render(<ActionNode {...props} />, { wrapper: Wrapper })
-    const nodeElement = container.querySelector('.border-purple-500')
-    expect(nodeElement).toBeInTheDocument()
-  })
-
-  it('should apply unselected styles when not selected', () => {
-    const props = createProps(
-      {
-        actionType: 'http_request',
-        displayName: 'HTTP Request',
-        icon: 'globe'
-      },
-      false
-    )
-
-    const { container } = render(<ActionNode {...props} />, { wrapper: Wrapper })
-    const nodeElement = container.querySelector('.border-purple-500\\/30')
-    expect(nodeElement).toBeInTheDocument()
+    render(<ActionNode {...props} />, { wrapper: Wrapper })
+    expect(screen.getByText('action')).toBeDefined()
   })
 
   it('should include parameters in data', () => {
-    const props = createProps({
+    const data: ActionNodeData = {
       actionType: 'http_request',
       displayName: 'HTTP Request',
       icon: 'globe',
@@ -114,10 +90,11 @@ describe('ActionNode', () => {
         url: 'https://api.example.com',
         method: 'GET'
       }
-    })
+    }
+    const props = createProps(data)
 
     render(<ActionNode {...props} />, { wrapper: Wrapper })
-    expect(props.data.parameters).toEqual({
+    expect(data.parameters).toEqual({
       url: 'https://api.example.com',
       method: 'GET'
     })

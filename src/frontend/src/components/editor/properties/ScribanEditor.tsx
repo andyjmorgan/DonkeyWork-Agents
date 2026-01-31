@@ -2,7 +2,7 @@ import { useRef, useCallback, useMemo, useEffect } from 'react'
 import Editor, { type Monaco } from '@monaco-editor/react'
 import { useEditorStore, type StartNodeConfig } from '@/store/editor'
 import { useThemeStore } from '@/store/theme'
-import type { editor } from 'monaco-editor'
+import type { editor, languages, Position } from 'monaco-editor'
 
 interface ScribanEditorProps {
   nodeId: string
@@ -26,7 +26,7 @@ const NODE_OUTPUT_PROPERTIES: Record<string, string[]> = {
 
 function registerScribanLanguage(monaco: Monaco) {
   // Check if already registered
-  if (monaco.languages.getLanguages().some(lang => lang.id === SCRIBAN_LANGUAGE_ID)) {
+  if (monaco.languages.getLanguages().some((lang: languages.ILanguageExtensionPoint) => lang.id === SCRIBAN_LANGUAGE_ID)) {
     return
   }
 
@@ -213,7 +213,7 @@ export function ScribanEditor({ nodeId, value, onChange, height = '200px', place
 
     completionDisposableRef.current = monaco.languages.registerCompletionItemProvider(SCRIBAN_LANGUAGE_ID, {
       triggerCharacters: ['.', '{'],
-      provideCompletionItems: (model, position) => {
+      provideCompletionItems: (model: editor.ITextModel, position: Position) => {
         const textUntilPosition = model.getValueInRange({
           startLineNumber: position.lineNumber,
           startColumn: 1,

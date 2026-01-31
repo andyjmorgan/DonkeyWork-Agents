@@ -27,7 +27,6 @@ interface ViewCredentialDialogProps {
 export function ViewCredentialDialog({
   open,
   onOpenChange,
-  credentialId,
   credentialName,
   provider,
   apiKey,

@@ -74,7 +74,7 @@ export function PropertiesPanel() {
     }
   }
 
-  const getNodeTitle = () => {
+  const getNodeTitle = (): string => {
     if (!selectedNode) return 'Properties'
 
     switch (selectedNode.type) {
@@ -85,7 +85,7 @@ export function PropertiesPanel() {
       case 'end':
         return 'End Node Properties'
       case 'action':
-        return selectedNode.data?.displayName || 'Action Node Properties'
+        return String(selectedNode.data?.displayName || 'Action Node Properties')
       case 'messageFormatter':
         return 'Message Formatter Properties'
       default:
