@@ -82,10 +82,14 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // Configure forwarded headers for reverse proxy (must be first)
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
-});
+};
+// Trust all proxies in k3s/docker environment
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 // Add Serilog request logging
 app.UseSerilogRequestLogging();
