@@ -8,6 +8,7 @@ using DonkeyWork.Agents.Persistence.Services;
 using DonkeyWork.Agents.Projects.Api;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
+using Microsoft.AspNetCore.HttpOverrides;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -79,6 +80,12 @@ builder.Services.AddStorageApi(builder.Configuration);
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// Configure forwarded headers for reverse proxy (must be first)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+});
 
 // Add Serilog request logging
 app.UseSerilogRequestLogging();
