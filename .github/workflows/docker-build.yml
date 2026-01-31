@@ -17,8 +17,34 @@ env:
   FRONTEND_IMAGE: ${{ github.repository }}/frontend
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: [self-hosted, Linux, X64]
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'src/**'
+              - '!src/frontend/**'
+              - 'test/**'
+              - '*.sln'
+              - 'Dockerfile'
+              - '.github/workflows/docker-build.yml'
+            frontend:
+              - 'src/frontend/**'
+              - '.github/workflows/docker-build.yml'
+
   test-backend:
     name: Test Backend
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: [self-hosted, Linux, X64]
     env:
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
@@ -42,6 +68,8 @@ jobs:
 
   test-frontend:
     name: Test Frontend
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: [self-hosted, Linux, X64]
     defaults:
       run:
@@ -68,7 +96,11 @@ jobs:
 
   build-backend:
     name: Build Backend Docker Image
-    needs: [test-backend]
+    needs: [changes, test-backend]
+    if: |
+      always() &&
+      needs.changes.outputs.backend == 'true' &&
+      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
@@ -116,7 +148,11 @@ jobs:
 
   build-frontend:
     name: Build Frontend Docker Image
-    needs: [test-frontend]
+    needs: [changes, test-frontend]
+    if: |
+      always() &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.test-frontend.result == 'success' || needs.test-frontend.result == 'skipped')
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
@@ -164,8 +200,14 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [build-backend, build-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [changes, build-backend, build-frontend]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
+      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped') &&
+      (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success')
     runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: write

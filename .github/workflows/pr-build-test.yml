@@ -9,8 +9,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: [self-hosted, Linux, X64]
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'src/**'
+              - '!src/frontend/**'
+              - 'test/**'
+              - '*.sln'
+              - 'Dockerfile'
+            frontend:
+              - 'src/frontend/**'
+
   backend-build-test:
     name: Backend Build & Test
+    needs: [changes]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: [self-hosted, Linux, X64]
     env:
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
@@ -41,6 +65,8 @@ jobs:
 
   frontend-build-test:
     name: Frontend Build & Test
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: [self-hosted, Linux, X64]
     defaults:
       run:
