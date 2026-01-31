@@ -76,9 +76,10 @@ const getColorScheme = (iconName?: string) => {
   }
 }
 
-export const ActionNode = memo(({ id, data, selected }: NodeProps<ActionNodeData>) => {
-  const Icon = getActionIcon(data.icon)
-  const colors = getColorScheme(data.icon)
+export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
+  const nodeData = data as ActionNodeData
+  const Icon = getActionIcon(nodeData.icon)
+  const colors = getColorScheme(nodeData.icon)
 
   return (
     <BaseNode id={id} selected={selected} borderColor={colors.border}>
@@ -94,8 +95,8 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps<ActionNodeData
           <Icon className={`h-4 w-4 ${colors.text}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm">{data.displayName}</div>
-          <div className="text-xs text-muted-foreground truncate">{data.label || 'action'}</div>
+          <div className="font-medium text-sm">{nodeData.displayName}</div>
+          <div className="text-xs text-muted-foreground truncate">{nodeData.label || 'action'}</div>
         </div>
       </div>
 

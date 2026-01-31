@@ -3,7 +3,12 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { Play } from 'lucide-react'
 import { BaseNode } from './BaseNode'
 
+interface StartNodeData {
+  label?: string
+}
+
 export const StartNode = memo(({ id, data, selected }: NodeProps) => {
+  const nodeData = data as StartNodeData
   return (
     <BaseNode id={id} selected={selected} borderColor="border-green-500" canDelete={false}>
       <div className="flex items-center gap-2">
@@ -12,7 +17,7 @@ export const StartNode = memo(({ id, data, selected }: NodeProps) => {
         </div>
         <div className="flex-1">
           <div className="font-medium text-sm">Start</div>
-          <div className="text-xs text-muted-foreground">{data.label || 'start'}</div>
+          <div className="text-xs text-muted-foreground">{nodeData.label || 'start'}</div>
         </div>
       </div>
 

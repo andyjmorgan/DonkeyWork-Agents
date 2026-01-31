@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { credentials, type CreateCredentialRequest } from '@/lib/api'
+import { credentials } from '@/lib/api'
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon'
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'

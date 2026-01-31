@@ -5,11 +5,18 @@ import { AnthropicIcon } from '@/components/icons/AnthropicIcon'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { BaseNode } from './BaseNode'
 
+interface ModelNodeData {
+  label?: string
+  provider?: string
+  modelName?: string
+}
+
 export const ModelNode = memo(({ id, data, selected }: NodeProps) => {
+  const nodeData = data as ModelNodeData
+
   // Select icon based on provider
   const getProviderIcon = () => {
-    const provider = data.provider as string
-    switch (provider) {
+    switch (nodeData.provider) {
       case 'OpenAi':
       case 'OpenAI': // Backward compatibility
       case 'Azure':
@@ -39,11 +46,11 @@ export const ModelNode = memo(({ id, data, selected }: NodeProps) => {
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm">Model</div>
           <div className="text-xs text-muted-foreground truncate">
-            {data.label || 'model'}
+            {nodeData.label || 'model'}
           </div>
-          {data.modelName && (
+          {nodeData.modelName && (
             <div className="text-xs text-muted-foreground/70 truncate">
-              {data.modelName}
+              {nodeData.modelName}
             </div>
           )}
         </div>

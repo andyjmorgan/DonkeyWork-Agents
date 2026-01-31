@@ -7,7 +7,8 @@ export interface MessageFormatterNodeData {
   label?: string
 }
 
-export const MessageFormatterNode = memo(({ id, data, selected }: NodeProps<MessageFormatterNodeData>) => {
+export const MessageFormatterNode = memo(({ id, data, selected }: NodeProps) => {
+  const nodeData = data as MessageFormatterNodeData
   return (
     <BaseNode id={id} selected={selected} borderColor="border-amber-500">
       {/* Input handle (top) */}
@@ -24,7 +25,7 @@ export const MessageFormatterNode = memo(({ id, data, selected }: NodeProps<Mess
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm">Formatter</div>
           <div className="text-xs text-muted-foreground truncate">
-            {data.label || 'formatter'}
+            {nodeData.label || 'formatter'}
           </div>
         </div>
       </div>

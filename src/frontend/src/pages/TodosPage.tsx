@@ -28,20 +28,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { todos, type Todo, type TodoStatus, type TodoPriority, type CreateTodoRequest, type UpdateTodoRequest } from '@/lib/api'
+import { todos, type Todo, type TodoStatus, type TodoPriority, type CreateTodoRequest } from '@/lib/api'
 
 const statusIcons: Record<TodoStatus, React.ReactNode> = {
   Pending: <Circle className="h-4 w-4 text-gray-400" />,
   InProgress: <Clock className="h-4 w-4 text-blue-500" />,
   Completed: <CheckCircle2 className="h-4 w-4 text-green-500" />,
   Cancelled: <AlertCircle className="h-4 w-4 text-red-500" />,
-}
-
-const statusLabels: Record<TodoStatus, string> = {
-  Pending: 'Pending',
-  InProgress: 'In Progress',
-  Completed: 'Completed',
-  Cancelled: 'Cancelled',
 }
 
 const priorityColors: Record<TodoPriority, string> = {

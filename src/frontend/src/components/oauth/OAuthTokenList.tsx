@@ -11,19 +11,6 @@ interface OAuthTokenListProps {
   onDisconnect: (tokenId: string) => Promise<void>
 }
 
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'Active':
-      return 'default'
-    case 'ExpiringSoon':
-      return 'destructive'
-    case 'Expired':
-      return 'destructive'
-    default:
-      return 'secondary'
-  }
-}
-
 function getStatusVariant(status: string) {
   switch (status) {
     case 'Active':

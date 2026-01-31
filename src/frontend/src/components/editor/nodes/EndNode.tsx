@@ -3,7 +3,12 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { Flag } from 'lucide-react'
 import { BaseNode } from './BaseNode'
 
+interface EndNodeData {
+  label?: string
+}
+
 export const EndNode = memo(({ id, data, selected }: NodeProps) => {
+  const nodeData = data as EndNodeData
   return (
     <BaseNode id={id} selected={selected} borderColor="border-red-500" canDelete={false}>
       {/* Input handle (top) */}
@@ -19,7 +24,7 @@ export const EndNode = memo(({ id, data, selected }: NodeProps) => {
         </div>
         <div className="flex-1">
           <div className="font-medium text-sm">End</div>
-          <div className="text-xs text-muted-foreground">{data.label || 'end'}</div>
+          <div className="text-xs text-muted-foreground">{nodeData.label || 'end'}</div>
         </div>
       </div>
     </BaseNode>

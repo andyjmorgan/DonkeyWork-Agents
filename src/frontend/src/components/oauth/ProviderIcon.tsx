@@ -1,5 +1,4 @@
 import { type OAuthProvider } from '@/lib/api'
-import { AnthropicIcon } from '@/components/icons/AnthropicIcon'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { Github } from 'lucide-react'
 

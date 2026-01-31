@@ -147,12 +147,14 @@ export function SecretsPage() {
 
   const getProviderIcon = (provider: string) => {
     switch (provider) {
-      case 'OpenAI':
+      case 'OpenAi':
         return <OpenAIIcon className="h-4 w-4" />
       case 'Anthropic':
         return <AnthropicIcon className="h-4 w-4" />
       case 'Google':
         return <GoogleIcon className="h-4 w-4" />
+      case 'Azure':
+        return null // TODO: Add Azure icon
       default:
         return null
     }

@@ -19,7 +19,7 @@ interface ViewCredentialDialogProps {
   onOpenChange: (open: boolean) => void
   credentialId: string | null
   credentialName: string
-  provider: 'OpenAI' | 'Anthropic' | 'Google'
+  provider: 'OpenAi' | 'Anthropic' | 'Google' | 'Azure'
   apiKey: string
   createdAt: string
 }
@@ -55,12 +55,14 @@ export function ViewCredentialDialog({
 
   const getProviderIcon = (provider: string) => {
     switch (provider) {
-      case 'OpenAI':
+      case 'OpenAi':
         return <OpenAIIcon className="h-5 w-5" />
       case 'Anthropic':
         return <AnthropicIcon className="h-5 w-5" />
       case 'Google':
         return <GoogleIcon className="h-5 w-5" />
+      case 'Azure':
+        return null // TODO: Add Azure icon
       default:
         return null
     }

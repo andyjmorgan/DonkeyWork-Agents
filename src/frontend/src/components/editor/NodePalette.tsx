@@ -7,7 +7,6 @@ import { OpenAIIcon } from '@/components/icons/OpenAIIcon'
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { useActions } from '@/hooks/useActions'
-import type { ActionNodeSchema } from '@/types/actions'
 import {
   Accordion,
   AccordionContent,
@@ -62,7 +61,7 @@ export function NodePalette() {
   const { nodes } = useEditorStore()
   const [allModels, setAllModels] = useState<ModelDefinition[]>([])
   const [loading, setLoading] = useState(true)
-  const { actions, actionsByCategory, loading: actionsLoading } = useActions()
+  const { actions, actionsByCategory } = useActions()
 
   // Fetch models from backend
   useEffect(() => {
@@ -316,9 +315,7 @@ export function NodePalette() {
             Actions
           </AccordionTrigger>
           <AccordionContent className="px-2 pb-4">
-            {actionsLoading ? (
-              <div className="text-sm text-muted-foreground">Loading actions...</div>
-            ) : actions.length === 0 ? (
+            {actions.length === 0 ? (
               <div className="text-sm text-muted-foreground">No actions available</div>
             ) : (
               <div className="space-y-4">

@@ -1,10 +1,10 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import { useActions } from './useActions'
-import type { ActionNodeSchema } from '@/types/actions'
 
-describe('useActions', () => {
-  const mockActions: ActionNodeSchema[] = [
+// Mock the actions schema JSON
+vi.mock('@/schemas/actions.json', () => ({
+  default: [
     {
       actionType: 'http_request',
       displayName: 'HTTP Request',
@@ -41,25 +41,11 @@ describe('useActions', () => {
       parameters: []
     }
   ]
+}))
 
-  beforeEach(() => {
-    global.fetch = vi.fn()
-  })
-
-  it('should load actions from schema file', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockActions
-    })
-
+describe('useActions', () => {
+  it('should load actions from schema file and filter disabled', () => {
     const { result } = renderHook(() => useActions())
-
-    expect(result.current.loading).toBe(true)
-    expect(result.current.actions).toEqual([])
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
 
     // Should filter out disabled actions
     expect(result.current.actions).toHaveLength(2)
@@ -67,17 +53,8 @@ describe('useActions', () => {
     expect(result.current.actions[1].actionType).toBe('send_email')
   })
 
-  it('should group actions by category', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockActions
-    })
-
+  it('should group actions by category', () => {
     const { result } = renderHook(() => useActions())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
 
     const { actionsByCategory } = result.current
 
@@ -87,17 +64,8 @@ describe('useActions', () => {
     expect(actionsByCategory.Communication[1].actionType).toBe('send_email')
   })
 
-  it('should get action by type', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockActions
-    })
-
+  it('should get action by type', () => {
     const { result } = renderHook(() => useActions())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
 
     const action = result.current.getAction('http_request')
     expect(action).toBeDefined()
@@ -107,47 +75,8 @@ describe('useActions', () => {
     expect(notFound).toBeUndefined()
   })
 
-  it('should handle fetch errors', async () => {
-    (global.fetch as any).mockRejectedValueOnce(new Error('Network error'))
-
+  it('should filter disabled actions', () => {
     const { result } = renderHook(() => useActions())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
-
-    expect(result.current.error).toBeDefined()
-    expect(result.current.error?.message).toBe('Network error')
-    expect(result.current.actions).toEqual([])
-  })
-
-  it('should handle HTTP errors', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false,
-      statusText: 'Not Found'
-    })
-
-    const { result } = renderHook(() => useActions())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
-
-    expect(result.current.error).toBeDefined()
-    expect(result.current.actions).toEqual([])
-  })
-
-  it('should filter disabled actions', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockActions
-    })
-
-    const { result } = renderHook(() => useActions())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
 
     const disabledAction = result.current.getAction('disabled_action')
     expect(disabledAction).toBeUndefined()

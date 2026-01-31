@@ -3,14 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   Loader2,
-  Edit,
   Trash2,
   Plus,
   Target,
   CheckSquare,
   FileText,
   Calendar,
-  Flag,
   MoreHorizontal,
   ChevronDown,
   ChevronRight,
@@ -47,17 +45,15 @@ import {
   todos,
   notes,
   type ProjectDetails,
-  type MilestoneDetails,
   type MilestoneSummary,
   type Todo,
-  type Note,
   type CreateMilestoneRequest,
   type CreateTodoRequest,
   type CreateNoteRequest,
-  ProjectStatus,
-  MilestoneStatus,
-  TodoStatus,
-  TodoPriority,
+  type ProjectStatus,
+  type MilestoneStatus,
+  type TodoStatus,
+  type TodoPriority,
 } from '@/lib/api'
 
 type DialogType = 'milestone' | 'todo' | 'note' | null
@@ -83,7 +79,7 @@ export function ProjectDetailPage() {
   const [todoForm, setTodoForm] = useState<CreateTodoRequest>({
     title: '',
     description: '',
-    priority: TodoPriority.Medium,
+    priority: 'Medium',
   })
   const [noteForm, setNoteForm] = useState<CreateNoteRequest>({
     title: '',
@@ -135,7 +131,7 @@ export function ProjectDetailPage() {
     setDialogType(null)
     setSelectedMilestoneId(null)
     setMilestoneForm({ name: '', description: '' })
-    setTodoForm({ title: '', description: '', priority: TodoPriority.Medium })
+    setTodoForm({ title: '', description: '', priority: 'Medium' })
     setNoteForm({ title: '', content: '' })
   }
 
@@ -227,13 +223,14 @@ export function ProjectDetailPage() {
 
   const handleToggleTodoStatus = async (todo: Todo) => {
     try {
-      const newStatus = todo.status === TodoStatus.Completed ? TodoStatus.NotStarted : TodoStatus.Completed
+      const newStatus: TodoStatus = todo.status === 'Completed' ? 'Pending' : 'Completed'
       await todos.update(todo.id, {
         title: todo.title,
         description: todo.description,
         priority: todo.priority,
         status: newStatus,
-        completionNotes: newStatus === TodoStatus.Completed ? todo.completionNotes : undefined,
+        sortOrder: todo.sortOrder,
+        completionNotes: newStatus === 'Completed' ? todo.completionNotes : undefined,
       })
       await loadProject()
     } catch (error) {
@@ -243,23 +240,21 @@ export function ProjectDetailPage() {
 
   const getStatusBadge = (status: ProjectStatus | MilestoneStatus) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      [ProjectStatus.NotStarted]: 'secondary',
-      [ProjectStatus.InProgress]: 'default',
-      [ProjectStatus.Completed]: 'outline',
-      [ProjectStatus.OnHold]: 'destructive',
-      [MilestoneStatus.NotStarted]: 'secondary',
-      [MilestoneStatus.InProgress]: 'default',
-      [MilestoneStatus.Completed]: 'outline',
+      NotStarted: 'secondary',
+      InProgress: 'default',
+      Completed: 'outline',
+      OnHold: 'destructive',
+      Cancelled: 'destructive',
     }
     return <Badge variant={variants[status] || 'secondary'}>{status.replace(/([A-Z])/g, ' $1').trim()}</Badge>
   }
 
   const getPriorityBadge = (priority: TodoPriority) => {
     const variants: Record<TodoPriority, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      [TodoPriority.Low]: 'secondary',
-      [TodoPriority.Medium]: 'outline',
-      [TodoPriority.High]: 'default',
-      [TodoPriority.Critical]: 'destructive',
+      Low: 'secondary',
+      Medium: 'outline',
+      High: 'default',
+      Critical: 'destructive',
     }
     return <Badge variant={variants[priority]}>{priority}</Badge>
   }
@@ -392,7 +387,7 @@ export function ProjectDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">
-                      {milestone.todoCount} todos, {milestone.noteCount} notes
+                      {milestone.completedTodoCount}/{milestone.todoCount} todos
                     </span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -459,12 +454,12 @@ export function ProjectDetailPage() {
                 <button
                   onClick={() => handleToggleTodoStatus(todo)}
                   className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
-                    todo.status === TodoStatus.Completed
+                    todo.status === 'Completed'
                       ? 'bg-primary border-primary text-primary-foreground'
                       : 'border-muted-foreground hover:border-primary'
                   }`}
                 >
-                  {todo.status === TodoStatus.Completed && (
+                  {todo.status === 'Completed' && (
                     <CheckSquare className="h-3 w-3" />
                   )}
                 </button>

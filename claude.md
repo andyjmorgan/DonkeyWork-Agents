@@ -329,4 +329,30 @@ public class AuthControllerTests
 - **Unique database names**: Use `Guid.NewGuid().ToString()` for database isolation between tests
 - **IDisposable**: Implement for cleanup of DbContext
 
+## Pre-Push Verification
 
+**IMPORTANT**: Always run these checks before pushing code to ensure CI will pass.
+
+### Backend (from repo root)
+```bash
+# Build and test
+dotnet build DonkeyWork.Agents.sln
+dotnet test DonkeyWork.Agents.sln
+```
+
+### Frontend (from src/frontend)
+```bash
+# Type check, lint, test, and build
+npm run lint
+npx tsc --noEmit
+npm run test:run
+npm run build
+```
+
+### Quick Check Script
+```bash
+# Run from repo root - verifies both backend and frontend
+dotnet build DonkeyWork.Agents.sln && \
+dotnet test DonkeyWork.Agents.sln && \
+cd src/frontend && npm run lint && npx tsc --noEmit && npm run build
+```
