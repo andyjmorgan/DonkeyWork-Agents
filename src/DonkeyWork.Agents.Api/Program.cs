@@ -87,7 +87,14 @@ app.UseSerilogRequestLogging();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+    {
+        options.Servers =
+        [
+            new ScalarServer("https://localhost:5001", "HTTPS"),
+            new ScalarServer("http://localhost:5000", "HTTP")
+        ];
+    });
 }
 
 // No HTTPS redirection - API is always behind a traffic shaper/load balancer that handles TLS
