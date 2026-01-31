@@ -45,10 +45,11 @@ public static class DependencyInjection
         // Register HttpClientFactory for general use (e.g., AuthController)
         services.AddHttpClient();
 
-        // Register Keycloak service with typed HttpClient
+        // Register Keycloak service with typed HttpClient (use internal URL to avoid hairpinning)
+        var keycloakBaseUrl = keycloakOptions.InternalAuthority ?? keycloakOptions.Authority;
         services.AddHttpClient<IKeycloakService, KeycloakService>(client =>
         {
-            client.BaseAddress = new Uri(keycloakOptions.Authority.TrimEnd('/') + "/");
+            client.BaseAddress = new Uri(keycloakBaseUrl.TrimEnd('/') + "/");
         });
 
         // Configure authentication with both JWT Bearer and API Key
@@ -73,13 +74,17 @@ public static class DependencyInjection
                 ApiKeyAuthenticationHandler.SchemeName, _ => { })
             .AddJwtBearer(options =>
             {
-                options.Authority = keycloakOptions.Authority;
+                // Use internal URL for metadata if configured (avoids hairpinning in k8s)
+                var metadataAuthority = keycloakOptions.InternalAuthority ?? keycloakOptions.Authority;
+                options.Authority = metadataAuthority;
                 options.Audience = keycloakOptions.Audience;
                 options.RequireHttpsMetadata = keycloakOptions.RequireHttpsMetadata;
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
+                    // Validate issuer against external URL (what's in the token)
                     ValidateIssuer = true,
+                    ValidIssuer = keycloakOptions.Authority,
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
