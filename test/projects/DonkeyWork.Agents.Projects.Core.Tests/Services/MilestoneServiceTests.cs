@@ -1,0 +1,315 @@
+using DonkeyWork.Agents.Persistence;
+using DonkeyWork.Agents.Projects.Contracts.Models;
+using DonkeyWork.Agents.Projects.Core.Services;
+using DonkeyWork.Agents.Projects.Core.Tests.Helpers;
+using Microsoft.Extensions.Logging;
+
+namespace DonkeyWork.Agents.Projects.Core.Tests.Services;
+
+/// <summary>
+/// Unit tests for MilestoneService.
+/// Tests CRUD operations and business logic without external dependencies.
+/// </summary>
+public class MilestoneServiceTests : IDisposable
+{
+    private readonly AgentsDbContext _dbContext;
+    private readonly MilestoneService _service;
+    private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private readonly TestDataBuilder _builder = new();
+
+    public MilestoneServiceTests()
+    {
+        _dbContext = MockDbContext.Create();
+        var logger = new Mock<ILogger<MilestoneService>>();
+        _service = new MilestoneService(_dbContext, logger.Object);
+    }
+
+    public void Dispose()
+    {
+        _dbContext?.Dispose();
+    }
+
+    #region CreateAsync Tests
+
+    [Fact]
+    public async Task CreateAsync_WithValidRequest_CreatesMilestone()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var request = new CreateMilestoneRequestV1
+        {
+            Name = "test-milestone",
+            Description = "Test description",
+            DueDate = DateTimeOffset.UtcNow.AddDays(30)
+        };
+
+        // Act
+        var result = await _service.CreateAsync(project.Id, request, _testUserId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEqual(Guid.Empty, result.Id);
+        Assert.Equal(request.Name, result.Name);
+        Assert.Equal(request.Description, result.Description);
+        Assert.Equal(project.Id, result.ProjectId);
+        Assert.Equal(MilestoneStatus.NotStarted, result.Status);
+
+        // Verify milestone was created in database
+        var milestoneInDb = await _dbContext.Milestones.FindAsync(result.Id);
+        Assert.NotNull(milestoneInDb);
+        Assert.Equal(_testUserId, milestoneInDb.UserId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithNonExistentProject_ReturnsNull()
+    {
+        // Arrange
+        var nonExistentProjectId = Guid.NewGuid();
+        var request = TestDataBuilder.CreateMilestoneRequest();
+
+        // Act
+        var result = await _service.CreateAsync(nonExistentProjectId, request, _testUserId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithTags_CreatesMilestoneWithTags()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var request = new CreateMilestoneRequestV1
+        {
+            Name = "test-milestone",
+            Tags = new List<TagRequestV1>
+            {
+                new() { Name = "tag1", Color = "#ff0000" },
+                new() { Name = "tag2", Color = "#00ff00" }
+            }
+        };
+
+        // Act
+        var result = await _service.CreateAsync(project.Id, request, _testUserId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Tags.Count);
+        Assert.Contains(result.Tags, t => t.Name == "tag1");
+        Assert.Contains(result.Tags, t => t.Name == "tag2");
+    }
+
+    [Fact]
+    public async Task CreateAsync_MultipleMilestones_AutoIncrementsSortOrder()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var request1 = TestDataBuilder.CreateMilestoneRequest("milestone-1");
+        var request2 = TestDataBuilder.CreateMilestoneRequest("milestone-2");
+
+        // Act
+        var result1 = await _service.CreateAsync(project.Id, request1, _testUserId);
+        var result2 = await _service.CreateAsync(project.Id, request2, _testUserId);
+
+        // Assert
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.True(result2.SortOrder > result1.SortOrder);
+    }
+
+    #endregion
+
+    #region GetByIdAsync Tests
+
+    [Fact]
+    public async Task GetByIdAsync_WithExistingMilestone_ReturnsMilestone()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var result = await _service.GetByIdAsync(milestone.Id, _testUserId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(milestone.Id, result.Id);
+        Assert.Equal(milestone.Name, result.Name);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithNonExistentMilestone_ReturnsNull()
+    {
+        // Arrange
+        var nonExistentId = Guid.NewGuid();
+
+        // Act
+        var result = await _service.GetByIdAsync(nonExistentId, _testUserId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region GetByProjectIdAsync Tests
+
+    [Fact]
+    public async Task GetByProjectIdAsync_WithMultipleMilestones_ReturnsAllMilestones()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone1 = _builder.CreateMilestoneEntity(projectId: project.Id, name: "milestone-1", sortOrder: 0);
+        var milestone2 = _builder.CreateMilestoneEntity(projectId: project.Id, name: "milestone-2", sortOrder: 1);
+        var milestone3 = _builder.CreateMilestoneEntity(projectId: project.Id, name: "milestone-3", sortOrder: 2);
+
+        _dbContext.Projects.Add(project);
+        _dbContext.Milestones.AddRange(milestone1, milestone2, milestone3);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.GetByProjectIdAsync(project.Id, _testUserId);
+
+        // Assert
+        Assert.NotNull(results);
+        Assert.Equal(3, results.Count);
+    }
+
+    [Fact]
+    public async Task GetByProjectIdAsync_WithNoMilestones_ReturnsEmptyList()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        // Act
+        var results = await _service.GetByProjectIdAsync(project.Id, _testUserId);
+
+        // Assert
+        Assert.NotNull(results);
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task GetByProjectIdAsync_OrdersBySortOrder()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone1 = _builder.CreateMilestoneEntity(projectId: project.Id, name: "third", sortOrder: 2);
+        var milestone2 = _builder.CreateMilestoneEntity(projectId: project.Id, name: "first", sortOrder: 0);
+        var milestone3 = _builder.CreateMilestoneEntity(projectId: project.Id, name: "second", sortOrder: 1);
+
+        _dbContext.Projects.Add(project);
+        _dbContext.Milestones.AddRange(milestone1, milestone2, milestone3);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.GetByProjectIdAsync(project.Id, _testUserId);
+
+        // Assert
+        Assert.Equal(3, results.Count);
+        Assert.Equal("first", results[0].Name);
+        Assert.Equal("second", results[1].Name);
+        Assert.Equal("third", results[2].Name);
+    }
+
+    #endregion
+
+    #region UpdateAsync Tests
+
+    [Fact]
+    public async Task UpdateAsync_WithValidRequest_UpdatesMilestone()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        var updateRequest = new UpdateMilestoneRequestV1
+        {
+            Name = "updated-milestone",
+            Description = "Updated description",
+            Status = MilestoneStatus.InProgress,
+            SortOrder = 5,
+            DueDate = DateTimeOffset.UtcNow.AddDays(60)
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(milestone.Id, updateRequest, _testUserId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(milestone.Id, result.Id);
+        Assert.Equal(updateRequest.Name, result.Name);
+        Assert.Equal(updateRequest.Description, result.Description);
+        Assert.Equal(updateRequest.Status, result.Status);
+        Assert.Equal(updateRequest.SortOrder, result.SortOrder);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithNonExistentMilestone_ReturnsNull()
+    {
+        // Arrange
+        var nonExistentId = Guid.NewGuid();
+        var updateRequest = new UpdateMilestoneRequestV1
+        {
+            Name = "test",
+            Status = MilestoneStatus.InProgress,
+            SortOrder = 0
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(nonExistentId, updateRequest, _testUserId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region DeleteAsync Tests
+
+    [Fact]
+    public async Task DeleteAsync_WithExistingMilestone_DeletesMilestone()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var result = await _service.DeleteAsync(milestone.Id, _testUserId);
+
+        // Assert
+        Assert.True(result);
+
+        // Verify deleted from database
+        var deletedMilestone = await _dbContext.Milestones.FindAsync(milestone.Id);
+        Assert.Null(deletedMilestone);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithNonExistentMilestone_ReturnsFalse()
+    {
+        // Arrange
+        var nonExistentId = Guid.NewGuid();
+
+        // Act
+        var result = await _service.DeleteAsync(nonExistentId, _testUserId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    #endregion
+}

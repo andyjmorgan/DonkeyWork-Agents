@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, Lock, X, PlayCircle, List } from 'lucide-react'
+import { Bot, Key, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/branding/Logo'
@@ -28,6 +28,15 @@ const navigationGroups: NavGroup[] = [
     items: [
       { name: 'All Agents', href: '/agents', icon: List },
       { name: 'Executions', href: '/executions', icon: PlayCircle },
+    ],
+  },
+  {
+    name: 'Projects',
+    icon: FolderKanban,
+    items: [
+      { name: 'All Projects', href: '/projects', icon: Folder },
+      { name: 'Todos', href: '/todos', icon: CheckSquare },
+      { name: 'Notes', href: '/notes', icon: StickyNote },
     ],
   },
 ]

@@ -24,6 +24,7 @@
         <ProjectReference Include="..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\credentials\DonkeyWork.Agents.Credentials.Api\DonkeyWork.Agents.Credentials.Api.csproj" />
         <ProjectReference Include="..\identity\DonkeyWork.Agents.Identity.Api\DonkeyWork.Agents.Identity.Api.csproj" />
+        <ProjectReference Include="..\projects\DonkeyWork.Agents.Projects.Api\DonkeyWork.Agents.Projects.Api.csproj" />
         <ProjectReference Include="..\providers\DonkeyWork.Agents.Providers.Api\DonkeyWork.Agents.Providers.Api.csproj" />
         <ProjectReference Include="..\storage\DonkeyWork.Agents.Storage.Api\DonkeyWork.Agents.Storage.Api.csproj" />
     </ItemGroup>

@@ -2,6 +2,7 @@ using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence.Entities;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
+using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Persistence.Entities.Storage;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,6 +45,18 @@ public class AgentsDbContext : DbContext
     public DbSet<AgentExecutionEntity> AgentExecutions => Set<AgentExecutionEntity>();
     public DbSet<AgentNodeExecutionEntity> AgentNodeExecutions => Set<AgentNodeExecutionEntity>();
     public DbSet<AgentExecutionLogEntity> AgentExecutionLogs => Set<AgentExecutionLogEntity>();
+
+    // Projects module
+    public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
+    public DbSet<MilestoneEntity> Milestones => Set<MilestoneEntity>();
+    public DbSet<TodoEntity> Todos => Set<TodoEntity>();
+    public DbSet<NoteEntity> Notes => Set<NoteEntity>();
+    public DbSet<ProjectTagEntity> ProjectTags => Set<ProjectTagEntity>();
+    public DbSet<MilestoneTagEntity> MilestoneTags => Set<MilestoneTagEntity>();
+    public DbSet<TodoTagEntity> TodoTags => Set<TodoTagEntity>();
+    public DbSet<NoteTagEntity> NoteTags => Set<NoteTagEntity>();
+    public DbSet<ProjectFileReferenceEntity> ProjectFileReferences => Set<ProjectFileReferenceEntity>();
+    public DbSet<MilestoneFileReferenceEntity> MilestoneFileReferences => Set<MilestoneFileReferenceEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,5 +1,11 @@
 Project is a Modular monolith.
 
+## Prerequisites
+
+- **.NET 10 SDK** is required to build and test this project
+- Install via script: `curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0`
+- After installation, add to PATH: `export PATH="$HOME/.dotnet:$PATH"`
+
 ## Project Structure
 
 ```
