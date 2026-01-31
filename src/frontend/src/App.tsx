@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { AgentsPage, AgentEditorPage, ApiKeysPage, SecretsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TodosPage, NotesPage } from '@/pages'
+import { AgentsPage, AgentEditorPage, ApiKeysPage, SecretsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TodosPage, NotesPage, NoteEditorPage, MilestoneDetailPage } from '@/pages'
 import { useAuthStore } from '@/store/auth'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 
@@ -35,8 +35,10 @@ export default function App() {
                 <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                <Route path="/projects/:projectId/milestones/:milestoneId" element={<MilestoneDetailPage />} />
                 <Route path="/todos" element={<TodosPage />} />
                 <Route path="/notes" element={<NotesPage />} />
+                <Route path="/notes/:noteId" element={<NoteEditorPage />} />
                 <Route path="/api-keys" element={<ApiKeysPage />} />
                 <Route path="/secrets" element={<SecretsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />

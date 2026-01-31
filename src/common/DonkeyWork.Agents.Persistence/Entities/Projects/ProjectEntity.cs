@@ -11,9 +11,14 @@ public class ProjectEntity : BaseEntity
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Project description (markdown supported).
+    /// Short project description.
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Full project body content (markdown supported).
+    /// </summary>
+    public string? Body { get; set; }
 
     /// <summary>
     /// Success criteria for the project (markdown supported).

@@ -16,6 +16,9 @@ public sealed class CreateProjectRequestV1
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
+    [JsonPropertyName("body")]
+    public string? Body { get; init; }
+
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }
 
@@ -41,6 +44,9 @@ public sealed class UpdateProjectRequestV1
 
     [JsonPropertyName("description")]
     public string? Description { get; init; }
+
+    [JsonPropertyName("body")]
+    public string? Body { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }
@@ -104,6 +110,9 @@ public sealed class ProjectDetailsV1
 
     [JsonPropertyName("description")]
     public string? Description { get; init; }
+
+    [JsonPropertyName("body")]
+    public string? Body { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }

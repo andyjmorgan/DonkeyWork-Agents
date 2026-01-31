@@ -471,6 +471,7 @@ export interface ProjectDetails {
   id: string
   name: string
   description?: string
+  body?: string
   successCriteria?: string
   status: ProjectStatus
   tags: Tag[]
@@ -485,6 +486,7 @@ export interface ProjectDetails {
 export interface CreateProjectRequest {
   name: string
   description?: string
+  body?: string
   successCriteria?: string
   status?: ProjectStatus
   tags?: TagRequest[]
@@ -494,6 +496,7 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   name: string
   description?: string
+  body?: string
   successCriteria?: string
   status: ProjectStatus
   tags?: TagRequest[]
