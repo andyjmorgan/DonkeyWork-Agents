@@ -76,6 +76,8 @@ builder.Services.AddProvidersApi();
 // Add Storage module
 builder.Services.AddStorageApi(builder.Configuration);
 
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 // Add Serilog request logging
@@ -92,6 +94,8 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+app.MapHealthChecks("/healthz");
 
 using(var scope = app.Services.CreateScope())
 {
