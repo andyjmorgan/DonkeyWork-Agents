@@ -115,8 +115,9 @@ public class AuthController : ControllerBase
         // Build the redirect URI (must match exactly what was sent in /login)
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/callback";
 
-        // Exchange the authorization code for tokens
-        var tokenEndpoint = $"{_keycloakOptions.Authority}/protocol/openid-connect/token";
+        // Exchange the authorization code for tokens (use internal URL to avoid hairpinning)
+        var backchannelAuthority = _keycloakOptions.InternalAuthority ?? _keycloakOptions.Authority;
+        var tokenEndpoint = $"{backchannelAuthority}/protocol/openid-connect/token";
 
         var tokenRequest = new Dictionary<string, string>
         {
@@ -177,7 +178,8 @@ public class AuthController : ControllerBase
             return BadRequest(new { error = "refresh_token_required", error_description = "Refresh token is required." });
         }
 
-        var tokenEndpoint = $"{_keycloakOptions.Authority}/protocol/openid-connect/token";
+        var backchannelAuthority = _keycloakOptions.InternalAuthority ?? _keycloakOptions.Authority;
+        var tokenEndpoint = $"{backchannelAuthority}/protocol/openid-connect/token";
 
         var tokenRequest = new Dictionary<string, string>
         {

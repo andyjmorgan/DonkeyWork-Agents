@@ -14,10 +14,19 @@ public sealed class KeycloakOptions
 
     /// <summary>
     /// The Keycloak authority URL (e.g., https://auth.example.com/realms/myrealm).
+    /// Used for browser redirects and token validation.
     /// </summary>
     [Required]
     [Url]
     public string Authority { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Internal Keycloak URL for server-to-server calls within the cluster.
+    /// If not set, falls back to Authority. Use this to avoid hairpinning issues.
+    /// Example: http://keycloak.auth.svc.cluster.local:8080/realms/myrealm
+    /// </summary>
+    [Url]
+    public string? InternalAuthority { get; set; }
 
     /// <summary>
     /// The expected audience for token validation.
