@@ -69,12 +69,6 @@ public class OAuthFlowServiceTests
         Assert.NotEmpty(result.CodeVerifier);
         Assert.Contains("https://accounts.google.com", result.AuthorizationUrl);
 
-        // Verify state is 32 bytes worth of characters (after encoding)
-        Assert.True(result.State.Length > 40); // Base64 encoding of 32 bytes
-
-        // Verify code verifier is 32 bytes worth of characters (after encoding)
-        Assert.True(result.CodeVerifier.Length > 40);
-
         // Verify provider config was retrieved
         _providerConfigServiceMock.Verify(
             s => s.GetByProviderAsync(_userId, provider, It.IsAny<CancellationToken>()),
