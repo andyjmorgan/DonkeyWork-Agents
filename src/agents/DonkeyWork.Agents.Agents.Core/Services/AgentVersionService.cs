@@ -1,9 +1,10 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DonkeyWork.Agents.Agents.Contracts.Models;
-using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Common.Contracts.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Registry;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
 using Microsoft.EntityFrameworkCore;
@@ -24,15 +25,12 @@ public class AgentVersionService : IAgentVersionService
 
     public async Task<GetAgentVersionResponseV1> SaveDraftAsync(Guid agentId, SaveAgentVersionRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Saving draft version for agent {AgentId}. UserId from param: {ParamUserId}, UserId from DbContext: {DbContextUserId}",
-            agentId, userId, _dbContext.CurrentUserId);
+        _logger.LogInformation("Saving draft version for agent {AgentId}", agentId);
 
         // Check if agent exists
         var agentExists = await _dbContext.Agents.AnyAsync(a => a.Id == agentId, cancellationToken);
         if (!agentExists)
         {
-            _logger.LogWarning("Agent {AgentId} not found for user {UserId}. DbContext CurrentUserId: {DbContextUserId}",
-                agentId, userId, _dbContext.CurrentUserId);
             throw new InvalidOperationException($"Agent {agentId} not found");
         }
 
@@ -227,46 +225,16 @@ public class AgentVersionService : IAgentVersionService
             throw new InvalidOperationException($"Invalid node names (must be lowercase a-z, 0-9, -, _): {string.Join(", ", invalidNames)}");
         }
 
-        // 5. Validate required fields per node type
-        foreach (var kvp in nodeConfigurations)
+        // 5. Validate configurations
+        foreach (var (nodeId, config) in nodeConfigurations)
         {
-            var nodeId = kvp.Key;
-            var config = kvp.Value;
-
-            if (string.IsNullOrWhiteSpace(config.Name))
+            try
             {
-                throw new InvalidOperationException($"Node {nodeId} missing required field: name");
+                config.Validate();
             }
-
-            if (config is ModelNodeConfiguration modelConfig)
+            catch (Exception ex)
             {
-                if (modelConfig.Provider == LlmProvider.Unknown)
-                {
-                    throw new InvalidOperationException($"Model node {nodeId} missing required field: provider");
-                }
-
-                if (string.IsNullOrWhiteSpace(modelConfig.ModelId))
-                {
-                    throw new InvalidOperationException($"Model node {nodeId} missing required field: modelId");
-                }
-
-                if (modelConfig.CredentialId == Guid.Empty)
-                {
-                    throw new InvalidOperationException($"Model node {nodeId} missing required field: credentialId");
-                }
-
-                if (string.IsNullOrWhiteSpace(modelConfig.UserMessage))
-                {
-                    throw new InvalidOperationException($"Model node {nodeId} missing required field: userMessage");
-                }
-            }
-
-            if (config is ActionNodeConfiguration actionConfig)
-            {
-                if (string.IsNullOrWhiteSpace(actionConfig.ActionType))
-                {
-                    throw new InvalidOperationException($"Action node {nodeId} missing required field: actionType");
-                }
+                throw new InvalidOperationException($"Node '{nodeId}' validation failed: {ex.Message}", ex);
             }
         }
 
@@ -343,8 +311,9 @@ public class AgentVersionService : IAgentVersionService
         JsonElement nodeConfigurationsElement,
         Dictionary<string, string> nodeTypeMap)
     {
+        var registry = NodeConfigurationRegistry.Instance;
         var result = new Dictionary<string, NodeConfiguration>();
-        var enrichedConfigs = new Dictionary<string, object>();
+        var enrichedConfigs = new Dictionary<string, JsonElement>();
 
         foreach (var property in nodeConfigurationsElement.EnumerateObject())
         {
@@ -355,26 +324,43 @@ public class AgentVersionService : IAgentVersionService
                 throw new InvalidOperationException($"Node configuration for '{nodeId}' has no corresponding ReactFlow node");
             }
 
-            // Create a new JSON object with the type discriminator injected
-            var configWithType = new Dictionary<string, object>();
-            configWithType["type"] = nodeType;
+            // Map ReactFlow node type to NodeType discriminator
+            var discriminator = MapNodeTypeToDiscriminator(nodeType);
 
+            // Create enriched config with type discriminator
+            var configWithType = new Dictionary<string, object> { ["type"] = discriminator };
             foreach (var configProperty in property.Value.EnumerateObject())
             {
-                // Skip if frontend already sent type (use ReactFlow type as source of truth)
                 if (configProperty.Name == "type") continue;
                 configWithType[configProperty.Name] = configProperty.Value;
             }
 
-            var configJson = JsonSerializer.Serialize(configWithType);
-            var config = JsonSerializer.Deserialize<NodeConfiguration>(configJson)
+            var configJson = JsonSerializer.Serialize(configWithType, registry.JsonOptions);
+            var config = JsonSerializer.Deserialize<NodeConfiguration>(configJson, registry.JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize configuration for node '{nodeId}'");
 
             result[nodeId] = config;
-            enrichedConfigs[nodeId] = configWithType;
+            enrichedConfigs[nodeId] = JsonDocument.Parse(configJson).RootElement;
         }
 
-        var enrichedJson = JsonSerializer.Serialize(enrichedConfigs);
+        var enrichedJson = JsonSerializer.Serialize(enrichedConfigs, registry.JsonOptions);
         return (result, enrichedJson);
+    }
+
+    /// <summary>
+    /// Maps ReactFlow node type (lowercase) to the polymorphic type discriminator.
+    /// </summary>
+    private static string MapNodeTypeToDiscriminator(string reactFlowType)
+    {
+        return reactFlowType switch
+        {
+            "start" => "Start",
+            "end" => "End",
+            "model" => "Model",
+            "messageFormatter" => "MessageFormatter",
+            "httpRequest" => "HttpRequest",
+            "sleep" => "Sleep",
+            _ => throw new InvalidOperationException($"Unknown node type: {reactFlowType}")
+        };
     }
 }

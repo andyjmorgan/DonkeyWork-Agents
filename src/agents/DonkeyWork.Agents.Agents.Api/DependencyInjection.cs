@@ -3,9 +3,12 @@ using DonkeyWork.Agents.Agents.Api.Options;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution;
 using DonkeyWork.Agents.Agents.Core.Execution.Executors;
+using DonkeyWork.Agents.Agents.Core.Execution.Providers;
 using DonkeyWork.Agents.Agents.Core.Options;
 using DonkeyWork.Agents.Agents.Core.Services;
-using DonkeyWork.Agents.Common.Nodes.Schema;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Providers;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Stream.Client;
 
@@ -63,23 +66,46 @@ public static class DependencyInjection
 
         // Register execution infrastructure
         services.AddSingleton<GraphAnalyzer>();
-        services.AddScoped<INodeExecutorRegistry>(sp =>
+
+        // Register node method registry with provider discovery
+        services.AddSingleton(sp =>
         {
-            var registry = new NodeExecutorRegistry(sp);
-            registry.Register("start", typeof(StartNodeExecutor));
-            registry.Register("model", typeof(ModelNodeExecutor));
-            registry.Register("end", typeof(EndNodeExecutor));
-            registry.Register("action", typeof(ActionNodeExecutor));
-            registry.Register("messageFormatter", typeof(MessageFormatterNodeExecutor));
+            var registry = new NodeMethodRegistry();
+            // Discover providers from Core assembly
+            registry.DiscoverProviders(typeof(HttpNodeProvider).Assembly);
             return registry;
         });
 
-        // Register node executors as scoped
+        // Register node providers as scoped (they access scoped IExecutionContext)
+        services.AddScoped<HttpNodeProvider>();
+        services.AddScoped<TimingNodeProvider>();
+        services.AddScoped<UtilityNodeProvider>();
+
+        // Register generic executor for provider-based nodes
+        services.AddScoped<GenericNodeExecutor>();
+
+        // Register dedicated executors for complex nodes
         services.AddScoped<StartNodeExecutor>();
-        services.AddScoped<ModelNodeExecutor>();
         services.AddScoped<EndNodeExecutor>();
-        services.AddScoped<ActionNodeExecutor>();
-        services.AddScoped<MessageFormatterNodeExecutor>();
+        services.AddScoped<ModelNodeExecutor>();
+
+        // Register executor registry with mappings
+        services.AddScoped<INodeExecutorRegistry>(sp =>
+        {
+            var registry = new NodeExecutorRegistry(sp);
+
+            // Dedicated executors for flow control and complex nodes
+            registry.Register(NodeType.Start, typeof(StartNodeExecutor));
+            registry.Register(NodeType.End, typeof(EndNodeExecutor));
+            registry.Register(NodeType.Model, typeof(ModelNodeExecutor));
+
+            // Generic executor for provider-based nodes
+            registry.Register(NodeType.MessageFormatter, typeof(GenericNodeExecutor));
+            registry.Register(NodeType.HttpRequest, typeof(GenericNodeExecutor));
+            registry.Register(NodeType.Sleep, typeof(GenericNodeExecutor));
+
+            return registry;
+        });
 
         // Register background service
         services.AddHostedService<StreamCleanupBackgroundService>();

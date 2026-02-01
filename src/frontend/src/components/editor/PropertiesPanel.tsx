@@ -1,10 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store/editor'
-import { StartNodeProperties } from './properties/StartNodeProperties'
 import { ModelNodeProperties } from './properties/ModelNodeProperties'
-import { EndNodeProperties } from './properties/EndNodeProperties'
-import { ActionNodeProperties } from './properties/ActionNodeProperties'
-import { MessageFormatterNodeProperties } from './properties/MessageFormatterNodeProperties'
+import { SchemaPropertiesPanel } from './properties/SchemaPropertiesPanel'
 import {
   Sheet,
   SheetContent,
@@ -12,6 +9,17 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { GripVertical } from 'lucide-react'
+
+// Map frontend node types to backend node type names
+const nodeTypeMapping: Record<string, string> = {
+  start: 'Start',
+  end: 'End',
+  model: 'Model',
+  messageFormatter: 'MessageFormatter',
+  httpRequest: 'HttpRequest',
+  sleep: 'Sleep',
+  // Add more mappings as needed
+}
 
 const MIN_WIDTH = 400
 const MAX_WIDTH = 1200
@@ -21,6 +29,7 @@ export function PropertiesPanel() {
   const selectedNodeId = useEditorStore((state) => state.selectedNodeId)
   const isPropertiesOpen = useEditorStore((state) => state.isPropertiesOpen)
   const nodes = useEditorStore((state) => state.nodes)
+  const nodeConfigurations = useEditorStore((state) => state.nodeConfigurations)
   const selectNode = useEditorStore((state) => state.selectNode)
 
   const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH)
@@ -96,24 +105,34 @@ export function PropertiesPanel() {
   const renderNodeProperties = () => {
     if (!selectedNode) return null
 
-    switch (selectedNode.type) {
-      case 'start':
-        return <StartNodeProperties nodeId={selectedNode.id} />
-      case 'model':
-        return <ModelNodeProperties nodeId={selectedNode.id} />
-      case 'end':
-        return <EndNodeProperties nodeId={selectedNode.id} />
-      case 'action':
-        return <ActionNodeProperties nodeId={selectedNode.id} />
-      case 'messageFormatter':
-        return <MessageFormatterNodeProperties nodeId={selectedNode.id} />
-      default:
-        return (
-          <div className="p-4 text-sm text-muted-foreground">
-            Unknown node type: {selectedNode.type}
-          </div>
-        )
+    const nodeType = selectedNode.type as string
+    const backendNodeType = nodeTypeMapping[nodeType]
+
+    // Model node has special handling for provider/model selection and model-specific config
+    if (nodeType === 'model') {
+      return <ModelNodeProperties nodeId={selectedNode.id} />
     }
+
+    // Use unified schema-driven panel for all other node types
+    if (backendNodeType) {
+      // For Model nodes, pass the provider for credential filtering
+      const config = nodeConfigurations[selectedNode.id] as unknown as Record<string, unknown> | undefined
+      const credentialProvider = nodeType === 'model' ? (config?.provider as string) : undefined
+
+      return (
+        <SchemaPropertiesPanel
+          nodeId={selectedNode.id}
+          nodeType={backendNodeType}
+          credentialProvider={credentialProvider}
+        />
+      )
+    }
+
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        Unknown node type: {selectedNode.type}
+      </div>
+    )
   }
 
   return (

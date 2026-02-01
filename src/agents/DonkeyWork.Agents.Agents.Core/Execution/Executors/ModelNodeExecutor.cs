@@ -1,9 +1,9 @@
 using System.Text;
 using DonkeyWork.Agents.Agents.Contracts.Models.Events;
-using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
 using DonkeyWork.Agents.Common.Contracts.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
@@ -52,36 +52,64 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
             steps = Context.NodeOutputs
         };
 
-        // Render templates
-        string? systemPrompt = null;
-        if (!string.IsNullOrWhiteSpace(config.SystemPrompt))
+        // Build messages list
+        var messages = new List<ChatMessage>();
+
+        // Render system prompts (if any)
+        if (config.SystemPrompts != null && config.SystemPrompts.Count > 0)
         {
+            foreach (var systemPrompt in config.SystemPrompts)
+            {
+                if (string.IsNullOrWhiteSpace(systemPrompt))
+                    continue;
+
+                try
+                {
+                    var systemTemplate = Template.Parse(systemPrompt);
+                    var renderedPrompt = await systemTemplate.RenderAsync(templateContext);
+                    messages.Add(new ChatMessage
+                    {
+                        Role = ChatMessageRole.System,
+                        Content = renderedPrompt
+                    });
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to render system prompt template: {ex.Message}", ex);
+                }
+            }
+        }
+
+        // Render user messages
+        foreach (var userMessage in config.UserMessages)
+        {
+            if (string.IsNullOrWhiteSpace(userMessage))
+                continue;
+
             try
             {
-                var systemTemplate = Template.Parse(config.SystemPrompt);
-                systemPrompt = await systemTemplate.RenderAsync(templateContext);
+                var userTemplate = Template.Parse(userMessage);
+                var renderedMessage = await userTemplate.RenderAsync(templateContext);
+                messages.Add(new ChatMessage
+                {
+                    Role = ChatMessageRole.User,
+                    Content = renderedMessage
+                });
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    $"Failed to render system prompt template: {ex.Message}", ex);
+                    $"Failed to render user message template: {ex.Message}", ex);
             }
         }
 
-        string userMessage;
-        try
+        if (messages.Count == 0 || messages.All(m => m.Role != ChatMessageRole.User))
         {
-            var userTemplate = Template.Parse(config.UserMessage);
-            userMessage = await userTemplate.RenderAsync(templateContext);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Failed to render user message template: {ex.Message}", ex);
+            throw new InvalidOperationException("At least one user message is required");
         }
 
         // Resolve credential
-        // Map LlmProvider to ExternalApiKeyProvider
         var credentialProvider = config.Provider switch
         {
             LlmProvider.Anthropic => ExternalApiKeyProvider.Anthropic,
@@ -101,31 +129,15 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
                 $"Credential not found: {config.CredentialId}");
         }
 
-        // Build messages list
-        var messages = new List<ChatMessage>();
-        if (!string.IsNullOrWhiteSpace(systemPrompt))
-        {
-            messages.Add(new ChatMessage
-            {
-                Role = ChatMessageRole.System,
-                Content = systemPrompt
-            });
-        }
-        messages.Add(new ChatMessage
-        {
-            Role = ChatMessageRole.User,
-            Content = userMessage
-        });
-
         // Build options dictionary
         var options = new Dictionary<string, object>();
         if (config.Temperature.HasValue)
         {
             options["temperature"] = config.Temperature.Value;
         }
-        if (config.MaxTokens.HasValue)
+        if (config.MaxOutputTokens.HasValue)
         {
-            options["max_tokens"] = config.MaxTokens.Value;
+            options["max_tokens"] = config.MaxOutputTokens.Value;
         }
         if (config.TopP.HasValue)
         {

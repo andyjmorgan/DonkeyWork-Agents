@@ -2,11 +2,13 @@ using System.Diagnostics;
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Models.Events;
-using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
 using DonkeyWork.Agents.Agents.Core.Options;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Registry;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
 using Microsoft.EntityFrameworkCore;
@@ -155,16 +157,12 @@ public class AgentOrchestrator : IAgentOrchestrator
                 // Get node name from configuration (all NodeConfiguration subclasses have Name)
                 var nodeName = nodeConfig.Name;
 
-                // Determine action type for action nodes
-                string? actionType = null;
-                if (nodeConfig is ActionNodeConfiguration actionConfig)
-                {
-                    actionType = actionConfig.ActionType;
-                }
+                // Convert string to enum for type-safe comparisons
+                var nodeTypeEnum = nodeType.ToNodeType();
 
                 // Determine input for this node
                 string? nodeInput = null;
-                if (nodeType == "start")
+                if (nodeTypeEnum == NodeType.Start)
                 {
                     // Start node input is the execution input
                     nodeInput = JsonSerializer.Serialize(input);
@@ -188,7 +186,6 @@ public class AgentOrchestrator : IAgentOrchestrator
                     NodeId = nodeId,
                     NodeType = nodeType,
                     NodeName = nodeName,
-                    ActionType = actionType,
                     Status = ExecutionStatus.Running.ToString(),
                     Input = nodeInput,
                     StartedAt = DateTimeOffset.UtcNow
@@ -199,8 +196,8 @@ public class AgentOrchestrator : IAgentOrchestrator
 
                 try
                 {
-                    // Get executor from registry
-                    var executor = _executorRegistry.GetExecutor(nodeType) as INodeExecutor;
+                    // Get executor from registry (nodeTypeEnum is already converted above)
+                    var executor = _executorRegistry.GetExecutor(nodeTypeEnum) as INodeExecutor;
                     if (executor == null)
                     {
                         throw new InvalidOperationException($"Executor not found for node type: {nodeType}");
@@ -333,41 +330,39 @@ public class AgentOrchestrator : IAgentOrchestrator
     }
 
     /// <summary>
-    /// JSON serializer options configured for polymorphic deserialization.
-    /// AllowOutOfOrderMetadataProperties allows the type discriminator to appear anywhere in the JSON.
-    /// </summary>
-    private static readonly JsonSerializerOptions PolymorphicOptions = new()
-    {
-        AllowOutOfOrderMetadataProperties = true
-    };
-
-    /// <summary>
-    /// Deserializes a node configuration by injecting the type discriminator from ReactFlow.
-    /// This handles both old data (without discriminator) and new data (with discriminator).
+    /// Deserializes a node configuration using the NodeConfigurationRegistry.
+    /// The stored JSON includes type discriminators added during save.
     /// </summary>
     private static NodeConfiguration? DeserializeNodeConfiguration(
         JsonElement configElement,
         string nodeType,
         ILogger logger)
     {
-        // Check if type discriminator is already present
+        var registry = NodeConfigurationRegistry.Instance;
+
+        // Check if type discriminator is already present (new data)
         if (configElement.TryGetProperty("type", out var existingType))
         {
             logger.LogDebug(
-                "Type discriminator already present: {Type}",
+                "Type discriminator present: {Type}",
                 existingType.GetString());
-            // Type already present, deserialize with out-of-order metadata support
-            return JsonSerializer.Deserialize<NodeConfiguration>(configElement.GetRawText(), PolymorphicOptions);
+            return JsonSerializer.Deserialize<NodeConfiguration>(
+                configElement.GetRawText(),
+                registry.JsonOptions);
         }
 
+        // Inject type discriminator for backwards compatibility with old data
+        // Map ReactFlow node type to discriminator format
+        var discriminator = MapNodeTypeToDiscriminator(nodeType);
+
         logger.LogDebug(
-            "Injecting type discriminator '{NodeType}' for backwards compatibility",
+            "Injecting type discriminator '{Discriminator}' for node type '{NodeType}'",
+            discriminator,
             nodeType);
 
-        // Inject type discriminator for backwards compatibility with old data
         var configWithType = new Dictionary<string, object>
         {
-            ["type"] = nodeType
+            ["type"] = discriminator
         };
 
         foreach (var property in configElement.EnumerateObject())
@@ -375,9 +370,26 @@ public class AgentOrchestrator : IAgentOrchestrator
             configWithType[property.Name] = property.Value;
         }
 
-        var configJson = JsonSerializer.Serialize(configWithType);
+        var configJson = JsonSerializer.Serialize(configWithType, registry.JsonOptions);
         logger.LogDebug("Enriched config JSON: {ConfigJson}", configJson);
 
-        return JsonSerializer.Deserialize<NodeConfiguration>(configJson, PolymorphicOptions);
+        return JsonSerializer.Deserialize<NodeConfiguration>(configJson, registry.JsonOptions);
+    }
+
+    /// <summary>
+    /// Maps ReactFlow node type (lowercase) to the polymorphic type discriminator.
+    /// </summary>
+    private static string MapNodeTypeToDiscriminator(string reactFlowType)
+    {
+        return reactFlowType switch
+        {
+            "start" => "Start",
+            "end" => "End",
+            "model" => "Model",
+            "messageFormatter" => "MessageFormatter",
+            "httpRequest" => "HttpRequest",
+            "sleep" => "Sleep",
+            _ => throw new InvalidOperationException($"Unknown node type: {reactFlowType}")
+        };
     }
 }

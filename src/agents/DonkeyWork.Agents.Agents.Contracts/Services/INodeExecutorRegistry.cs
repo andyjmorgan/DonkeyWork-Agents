@@ -1,3 +1,5 @@
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+
 namespace DonkeyWork.Agents.Agents.Contracts.Services;
 
 /// <summary>
@@ -9,8 +11,8 @@ public interface INodeExecutorRegistry
     /// <summary>
     /// Gets the executor for a given node type.
     /// </summary>
-    /// <param name="nodeType">The node type string (e.g., "start", "model", "end").</param>
+    /// <param name="nodeType">The node type enum value.</param>
     /// <returns>The executor instance.</returns>
     /// <exception cref="InvalidOperationException">If no executor is registered for the node type.</exception>
-    object GetExecutor(string nodeType);
+    object GetExecutor(NodeType nodeType);
 }

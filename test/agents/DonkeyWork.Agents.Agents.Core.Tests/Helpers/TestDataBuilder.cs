@@ -13,6 +13,19 @@ public class TestDataBuilder
     private readonly Guid _defaultUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     /// <summary>
+    /// Creates a default input schema for tests.
+    /// </summary>
+    public static object CreateInputSchema() => new
+    {
+        type = "object",
+        properties = new
+        {
+            input = new { type = "string" }
+        },
+        required = new[] { "input" }
+    };
+
+    /// <summary>
     /// Creates a basic CreateAgentRequestV1 with default values.
     /// </summary>
     public static CreateAgentRequestV1 CreateAgentRequest(string name = "test-agent", string? description = "Test description")
@@ -35,11 +48,14 @@ public class TestDataBuilder
 
     /// <summary>
     /// Creates a SaveAgentVersionRequestV1 with Start -> End flow.
+    /// Uses the new Contracts.Nodes configuration format.
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequest()
     {
         var startNodeId = "start-1";
         var endNodeId = "end-1";
+
+        var inputSchema = CreateInputSchema();
 
         var reactFlowData = new
         {
@@ -57,18 +73,8 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { type = "start", name = "start_1" },
-            [endNodeId] = new { type = "end", name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new
-            {
-                input = new { type = "string" }
-            },
-            required = new[] { "input" }
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
@@ -105,6 +111,8 @@ public class TestDataBuilder
         var startNodeId = "start-1";
         var endNodeId = "end-1";
 
+        var inputSchema = CreateInputSchema();
+
         var reactFlowData = new
         {
             nodes = new[]
@@ -121,15 +129,8 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { type = "start", name = "duplicate_name" },
-            [endNodeId] = new { type = "end", name = "duplicate_name" }  // Duplicate name
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [startNodeId] = new { type = "Start", name = "duplicate_name", inputSchema = inputSchema },
+            [endNodeId] = new { type = "End", name = "duplicate_name" }  // Duplicate name
         };
 
         return new SaveAgentVersionRequestV1
@@ -149,6 +150,8 @@ public class TestDataBuilder
     {
         var endNodeId = "end-1";
 
+        var inputSchema = CreateInputSchema();
+
         var reactFlowData = new
         {
             nodes = new[]
@@ -161,14 +164,7 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [endNodeId] = new { type = "end", name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
@@ -190,6 +186,8 @@ public class TestDataBuilder
         var modelNodeId = "model-1";
         var endNodeId = "end-1";
 
+        var inputSchema = CreateInputSchema();
+
         var reactFlowData = new
         {
             nodes = new[]
@@ -209,16 +207,9 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { type = "start", name = "start_1" },
-            [modelNodeId] = new { type = "model", name = "model_1" },
-            [endNodeId] = new { type = "end", name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [modelNodeId] = new { type = "Model", name = "model_1" },
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
@@ -249,6 +240,7 @@ public class TestDataBuilder
 
     /// <summary>
     /// Creates an AgentVersionEntity with default test values.
+    /// Uses the new Contracts.Nodes configuration format.
     /// </summary>
     public AgentVersionEntity CreateAgentVersionEntity(
         Guid? id = null,
@@ -259,6 +251,8 @@ public class TestDataBuilder
     {
         var startNodeId = "start-1";
         var endNodeId = "end-1";
+
+        var inputSchema = CreateInputSchema();
 
         var reactFlowData = new
         {
@@ -276,15 +270,8 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { type = "start", name = "start_1" },
-            [endNodeId] = new { type = "end", name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new AgentVersionEntity
@@ -311,6 +298,8 @@ public class TestDataBuilder
     {
         var startNodeId = "start-1";
 
+        var inputSchema = CreateInputSchema();
+
         var reactFlowData = new
         {
             nodes = new[]
@@ -323,14 +312,7 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { type = "start", name = "start_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema }
         };
 
         return new SaveAgentVersionRequestV1
@@ -352,6 +334,8 @@ public class TestDataBuilder
         var endNodeId = "end-1";
         var modelNodeId = "model-1";
 
+        var inputSchema = CreateInputSchema();
+
         var reactFlowData = new
         {
             nodes = new[]
@@ -370,16 +354,9 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { type = "start", name = "start_1" },
-            [modelNodeId] = new { type = "model", name = "model_1" },
-            [endNodeId] = new { type = "end", name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [modelNodeId] = new { type = "Model", name = "model_1" },
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
@@ -401,6 +378,8 @@ public class TestDataBuilder
         var startNodeId2 = "start-2";
         var endNodeId = "end-1";
 
+        var inputSchema = CreateInputSchema();
+
         var reactFlowData = new
         {
             nodes = new[]
@@ -419,16 +398,9 @@ public class TestDataBuilder
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId1] = new { type = "start", name = "start_1" },
-            [startNodeId2] = new { type = "start", name = "start_2" },
-            [endNodeId] = new { type = "end", name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [startNodeId1] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [startNodeId2] = new { type = "Start", name = "start_2", inputSchema = inputSchema },
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
@@ -454,48 +426,45 @@ public class TestDataBuilder
     }
 
     /// <summary>
-    /// Creates a SaveAgentVersionRequestV1 with an action node (Start -> Action -> End).
+    /// Creates a SaveAgentVersionRequestV1 with an HttpRequest node (Start -> HttpRequest -> End).
+    /// Uses the new Contracts.Nodes configuration format with dedicated node types.
     /// </summary>
-    public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithActionNode(string actionType = "http_request")
+    public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithHttpRequestNode()
     {
         var startNodeId = "start-1";
-        var actionNodeId = "action-1";
+        var httpRequestNodeId = "http-request-1";
         var endNodeId = "end-1";
+
+        var inputSchema = CreateInputSchema();
 
         var reactFlowData = new
         {
             nodes = new[]
             {
                 new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = actionNodeId, type = "action", position = new { x = 100, y = 200 }, data = new { label = "action" } },
+                new { id = httpRequestNodeId, type = "httpRequest", position = new { x = 100, y = 200 }, data = new { label = "HTTP Request" } },
                 new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
             },
             edges = new[]
             {
-                new { id = "e1", source = startNodeId, target = actionNodeId },
-                new { id = "e2", source = actionNodeId, target = endNodeId }
+                new { id = "e1", source = startNodeId, target = httpRequestNodeId },
+                new { id = "e2", source = httpRequestNodeId, target = endNodeId }
             },
             viewport = new { x = 0, y = 0, zoom = 1 }
         };
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { name = "start_1" },
-            [actionNodeId] = new
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [httpRequestNodeId] = new
             {
-                name = "action_1",
-                actionType = actionType,
-                displayName = "Test HTTP Request",
-                parameters = new { url = "https://example.com", method = "GET" }
+                type = "HttpRequest",
+                name = "http_request_1",
+                method = "GET",
+                url = "https://example.com",
+                timeoutSeconds = 30
             },
-            [endNodeId] = new { name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
@@ -509,47 +478,42 @@ public class TestDataBuilder
     }
 
     /// <summary>
-    /// Creates a SaveAgentVersionRequestV1 with an action node that has missing actionType.
+    /// Creates a SaveAgentVersionRequestV1 with an HttpRequest node missing required properties.
     /// </summary>
-    public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithInvalidActionNode()
+    public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithInvalidHttpRequestNode()
     {
         var startNodeId = "start-1";
-        var actionNodeId = "action-1";
+        var httpRequestNodeId = "http-request-1";
         var endNodeId = "end-1";
+
+        var inputSchema = CreateInputSchema();
 
         var reactFlowData = new
         {
             nodes = new[]
             {
                 new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = actionNodeId, type = "action", position = new { x = 100, y = 200 }, data = new { label = "action" } },
+                new { id = httpRequestNodeId, type = "httpRequest", position = new { x = 100, y = 200 }, data = new { label = "HTTP Request" } },
                 new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
             },
             edges = new[]
             {
-                new { id = "e1", source = startNodeId, target = actionNodeId },
-                new { id = "e2", source = actionNodeId, target = endNodeId }
+                new { id = "e1", source = startNodeId, target = httpRequestNodeId },
+                new { id = "e2", source = httpRequestNodeId, target = endNodeId }
             },
             viewport = new { x = 0, y = 0, zoom = 1 }
         };
 
         var nodeConfigurations = new Dictionary<string, object>
         {
-            [startNodeId] = new { name = "start_1" },
-            [actionNodeId] = new
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [httpRequestNodeId] = new
             {
-                name = "action_1",
-                // Missing actionType
-                parameters = new { url = "https://example.com" }
+                type = "HttpRequest",
+                name = "http_request_1"
+                // Missing required properties: method and url
             },
-            [endNodeId] = new { name = "end_1" }
-        };
-
-        var inputSchema = new
-        {
-            type = "object",
-            properties = new { input = new { type = "string" } },
-            required = new[] { "input" }
+            [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1

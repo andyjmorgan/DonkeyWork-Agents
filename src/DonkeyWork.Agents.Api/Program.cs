@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using DonkeyWork.Agents.Actions.Api;
 using DonkeyWork.Agents.Agents.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
@@ -55,9 +54,6 @@ builder.Services.AddOpenApi();
 
 // Add Persistence module (provides DbContext)
 builder.Services.AddPersistence(builder.Configuration);
-
-// Add Actions module
-builder.Services.AddActionsApi();
 
 // Add Agents module
 builder.Services.AddAgentsApi();

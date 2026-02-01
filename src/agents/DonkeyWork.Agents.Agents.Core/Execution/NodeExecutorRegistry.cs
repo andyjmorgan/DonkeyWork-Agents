@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Agents.Contracts.Services;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution;
 
@@ -8,7 +9,7 @@ namespace DonkeyWork.Agents.Agents.Core.Execution;
 public class NodeExecutorRegistry : INodeExecutorRegistry
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly Dictionary<string, Type> _executorTypes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<NodeType, Type> _executorTypes = new();
 
     public NodeExecutorRegistry(IServiceProvider serviceProvider)
     {
@@ -18,9 +19,9 @@ public class NodeExecutorRegistry : INodeExecutorRegistry
     /// <summary>
     /// Registers a node executor type.
     /// </summary>
-    /// <param name="nodeType">The node type string (e.g., "start", "model", "end").</param>
+    /// <param name="nodeType">The node type enum value.</param>
     /// <param name="executorType">The executor type.</param>
-    public void Register(string nodeType, Type executorType)
+    public void Register(NodeType nodeType, Type executorType)
     {
         if (!typeof(INodeExecutor).IsAssignableFrom(executorType))
         {
@@ -33,7 +34,7 @@ public class NodeExecutorRegistry : INodeExecutorRegistry
     }
 
     /// <inheritdoc/>
-    public object GetExecutor(string nodeType)
+    public object GetExecutor(NodeType nodeType)
     {
         if (!_executorTypes.TryGetValue(nodeType, out var executorType))
         {

@@ -620,17 +620,17 @@ public class AgentVersionServiceTests : IDisposable
 
     #endregion
 
-    #region Action Node Tests
+    #region HttpRequest Node Tests
 
     [Fact]
-    public async Task SaveDraftAsync_WithValidActionNode_SavesActionConfiguration()
+    public async Task SaveDraftAsync_WithValidHttpRequestNode_SavesConfiguration()
     {
         // Arrange
         var agent = _builder.CreateAgentEntity();
         _dbContext.Agents.Add(agent);
         await _dbContext.SaveChangesAsync();
 
-        var request = TestDataBuilder.CreateSaveVersionRequestWithActionNode("http_request");
+        var request = TestDataBuilder.CreateSaveVersionRequestWithHttpRequestNode();
 
         // Act
         var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
@@ -639,35 +639,37 @@ public class AgentVersionServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.True(result.IsDraft);
 
-        // Verify action node configuration was stored with type discriminator
+        // Verify HttpRequest node configuration was stored with type discriminator
         var versionInDb = await _dbContext.AgentVersions.FindAsync(result.Id);
         Assert.NotNull(versionInDb);
 
         var nodeConfigs = System.Text.Json.JsonDocument.Parse(versionInDb.NodeConfigurations);
-        Assert.True(nodeConfigs.RootElement.TryGetProperty("action-1", out var actionConfig));
-        Assert.True(actionConfig.TryGetProperty("type", out var typeProperty));
-        Assert.Equal("action", typeProperty.GetString());
-        Assert.True(actionConfig.TryGetProperty("actionType", out var actionTypeProperty));
-        Assert.Equal("http_request", actionTypeProperty.GetString());
+        Assert.True(nodeConfigs.RootElement.TryGetProperty("http-request-1", out var httpConfig));
+        Assert.True(httpConfig.TryGetProperty("type", out var typeProperty));
+        Assert.Equal("HttpRequest", typeProperty.GetString());
+        Assert.True(httpConfig.TryGetProperty("method", out var methodProperty));
+        Assert.Equal("GET", methodProperty.GetString());
+        Assert.True(httpConfig.TryGetProperty("url", out var urlProperty));
+        Assert.Equal("https://example.com", urlProperty.GetString());
     }
 
     [Fact]
-    public async Task SaveDraftAsync_WithMissingActionType_ThrowsException()
+    public async Task SaveDraftAsync_WithMissingRequiredProperties_ThrowsException()
     {
         // Arrange
         var agent = _builder.CreateAgentEntity();
         _dbContext.Agents.Add(agent);
         await _dbContext.SaveChangesAsync();
 
-        var request = TestDataBuilder.CreateSaveVersionRequestWithInvalidActionNode();
+        var request = TestDataBuilder.CreateSaveVersionRequestWithInvalidHttpRequestNode();
 
         // Act & Assert
-        // JsonException is thrown during deserialization because actionType is a required property
+        // JsonException is thrown during deserialization because method and url are required properties
         var exception = await Assert.ThrowsAsync<System.Text.Json.JsonException>(
             async () => await _service.SaveDraftAsync(agent.Id, request, _testUserId)
         );
 
-        Assert.Contains("actionType", exception.Message);
+        Assert.Contains("method", exception.Message.ToLowerInvariant());
     }
 
     #endregion

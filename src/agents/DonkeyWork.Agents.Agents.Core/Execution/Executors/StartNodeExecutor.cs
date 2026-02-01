@@ -1,61 +1,29 @@
-using System.Text.Json;
-using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
-using Microsoft.Extensions.Logging;
-using NJsonSchema;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution.Executors;
 
 /// <summary>
 /// Executor for Start nodes.
-/// Validates input against the agent's InputSchema.
+/// Entry point that makes the input available to downstream nodes.
 /// </summary>
 public class StartNodeExecutor : NodeExecutor<StartNodeConfiguration, StartNodeOutput>
 {
-    private readonly ILogger<StartNodeExecutor> _logger;
-
     public StartNodeExecutor(
         IExecutionStreamWriter streamWriter,
-        IExecutionContext context,
-        ILogger<StartNodeExecutor> logger)
+        IExecutionContext context)
         : base(streamWriter, context)
     {
-        _logger = logger;
     }
 
-    protected override async Task<StartNodeOutput> ExecuteInternalAsync(
+    protected override Task<StartNodeOutput> ExecuteInternalAsync(
         StartNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Parse the schema from context
-        var schema = await JsonSchema.FromJsonAsync(Context.InputSchema, cancellationToken);
-
-        // Serialize the input to JSON for validation
-        // If it's a JsonElement, use its raw text; otherwise serialize it
-        string inputJson;
-        if (Context.Input is JsonElement jsonElement)
-        {
-            inputJson = jsonElement.GetRawText();
-        }
-        else
-        {
-            inputJson = JsonSerializer.Serialize(Context.Input);
-        }
-
-        // Validate the input
-        var errors = schema.Validate(inputJson);
-
-        if (errors.Count > 0)
-        {
-            var errorMessages = string.Join("; ", errors.Select(e => $"{e.Path}: {e.Kind}"));
-            throw new InvalidOperationException($"Input validation failed: {errorMessages}. Schema: {Context.InputSchema}. Input: {inputJson}");
-        }
-
-        // Return the validated input
-        return new StartNodeOutput
+        return Task.FromResult(new StartNodeOutput
         {
             Input = Context.Input
-        };
+        });
     }
 }

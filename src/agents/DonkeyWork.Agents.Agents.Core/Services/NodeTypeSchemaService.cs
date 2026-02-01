@@ -1,7 +1,7 @@
 using DonkeyWork.Agents.Agents.Contracts.Models;
 using DonkeyWork.Agents.Agents.Contracts.Services;
-using DonkeyWork.Agents.Common.Nodes.Enums;
-using DonkeyWork.Agents.Common.Nodes.Schema;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Schema;
 
 namespace DonkeyWork.Agents.Agents.Core.Services;
 

@@ -329,6 +329,146 @@ public class AuthControllerTests
 - **Unique database names**: Use `Guid.NewGuid().ToString()` for database isolation between tests
 - **IDisposable**: Implement for cleanup of DbContext
 
+## Integration Tests
+
+Integration tests use TestContainers to spin up real PostgreSQL and RabbitMQ instances for end-to-end API testing.
+
+**Requirements**: Docker must be running for integration tests to work.
+
+### Project Structure
+
+```
+test/integration/DonkeyWork.Agents.Integration.Tests/
+├── Infrastructure/
+│   ├── Containers/
+│   │   ├── PostgresContainerFixture.cs    # pgvector/pgvector:pg17 container
+│   │   ├── RabbitMqContainerFixture.cs    # RabbitMQ with streams plugin
+│   │   └── InfrastructureFixture.cs       # Combined fixture for xUnit collection
+│   ├── Authentication/
+│   │   ├── TestAuthenticationHandler.cs   # Bypasses JWT auth, sets IdentityContext
+│   │   └── TestUser.cs                    # Test user data (default + random)
+│   └── Factories/
+│       └── IntegrationTestWebApplicationFactory.cs
+├── Base/
+│   ├── IntegrationTestBase.cs             # Database reset via Respawn
+│   └── ControllerIntegrationTestBase.cs   # HTTP client helpers
+├── Helpers/
+│   └── TestDataBuilder.cs                 # Request/response builders
+├── Fixtures/
+│   └── IntegrationTestCollection.cs       # xUnit collection definition
+└── Tests/Controllers/
+    ├── AgentsControllerTests.cs
+    ├── AgentVersionsControllerTests.cs
+    └── ...
+```
+
+### Running Integration Tests
+
+```bash
+# Run all integration tests
+dotnet test test/integration/DonkeyWork.Agents.Integration.Tests/
+
+# Run specific controller tests
+dotnet test --filter "AgentsControllerTests"
+
+# Run with verbose output
+dotnet test test/integration/DonkeyWork.Agents.Integration.Tests/ --logger "console;verbosity=detailed"
+```
+
+### Test Authentication
+
+The `TestAuthenticationHandler` bypasses Keycloak and directly sets `IdentityContext`:
+
+```csharp
+// Default test user (used when no headers specified)
+TestUser.Default.UserId = Guid.Parse("11111111-1111-1111-1111-111111111111")
+
+// Switch users via HTTP headers
+Client.DefaultRequestHeaders.Add("X-Test-User-Id", user.UserId.ToString());
+
+// Or use helper method
+SetTestUser(TestUser.CreateRandom());
+```
+
+### Writing Controller Tests
+
+```csharp
+[Trait("Category", "Integration")]
+public class MyControllerTests : ControllerIntegrationTestBase
+{
+    private const string BaseUrl = "/api/v1/myresource";
+
+    public MyControllerTests(InfrastructureFixture infrastructure)
+        : base(infrastructure) { }
+
+    [Fact]
+    public async Task Create_WithValidRequest_ReturnsCreated()
+    {
+        // Arrange
+        var request = TestDataBuilder.CreateMyResourceRequest();
+
+        // Act
+        var response = await PostResponseAsync(BaseUrl, request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_ResourceBelongingToAnotherUser_ReturnsNotFound()
+    {
+        // Arrange - Create as user 1
+        var user1 = TestUser.CreateRandom();
+        SetTestUser(user1);
+        var created = await PostAsync<MyResourceV1>(BaseUrl, TestDataBuilder.CreateMyResourceRequest());
+
+        // Act - Try to get as user 2
+        var user2 = TestUser.CreateRandom();
+        SetTestUser(user2);
+        var response = await GetResponseAsync($"{BaseUrl}/{created!.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+}
+```
+
+### TestDataBuilder Requirements
+
+When building test data for agent versions, ensure:
+
+1. **ReactFlow data and NodeConfigurations must match** - every node ID in ReactFlow needs a corresponding entry in NodeConfigurations
+2. **StartNodeConfiguration requires**: `name` (lowercase a-z, 0-9, -, _) and `inputSchema` (JsonElement)
+3. **EndNodeConfiguration requires**: `name` only (outputSchema is optional)
+
+```csharp
+// Correct - matching node IDs and required properties
+var reactFlowData = """
+{
+    "nodes": [
+        { "id": "node-1", "type": "start", "position": { "x": 100, "y": 100 }, "data": {} },
+        { "id": "node-2", "type": "end", "position": { "x": 400, "y": 100 }, "data": {} }
+    ],
+    "edges": [{ "id": "e1", "source": "node-1", "target": "node-2" }],
+    "viewport": { "x": 0, "y": 0, "zoom": 1 }
+}
+""";
+var nodeConfigurations = """
+{
+    "node-1": { "name": "start-node", "inputSchema": { "type": "object" } },
+    "node-2": { "name": "end-node" }
+}
+""";
+```
+
+### Key Behaviors to Test
+
+1. **User isolation** - Resources created by user A should return 404 for user B
+2. **CRUD operations** - Create, Read, Update, Delete with proper status codes
+3. **Cascade deletion** - Deleting parent entities removes children
+4. **Pagination** - List endpoints with offset/limit
+5. **Validation** - Invalid requests return 400 with error details
+
 ## Pre-Push Verification
 
 **IMPORTANT**: Always run these checks before pushing code to ensure CI will pass.

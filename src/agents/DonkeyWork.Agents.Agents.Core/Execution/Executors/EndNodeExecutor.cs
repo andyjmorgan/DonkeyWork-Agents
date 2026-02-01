@@ -1,7 +1,7 @@
 using System.Text.Json;
-using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution.Executors;
 
@@ -22,10 +22,6 @@ public class EndNodeExecutor : NodeExecutor<EndNodeConfiguration, EndNodeOutput>
         EndNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // For MVP, we get the most recent output from context
-        // In the orchestrator, nodes are executed in topological order,
-        // so the last node before End will be the upstream node
-
         if (Context.NodeOutputs.Count == 0)
         {
             throw new InvalidOperationException("End node has no upstream outputs");

@@ -735,3 +735,79 @@ export const notes = {
   update: (id: string, data: UpdateNoteRequest) => api.put<Note>(`/api/v1/notes/${id}`, data),
   delete: (id: string) => api.delete(`/api/v1/notes/${id}`),
 }
+
+// Node Types - Schema API
+export type NodeControlType =
+  | 'Text'
+  | 'TextArea'
+  | 'TextAreaList'
+  | 'Number'
+  | 'Slider'
+  | 'Select'
+  | 'Toggle'
+  | 'Code'
+  | 'Json'
+  | 'KeyValueList'
+  | 'Credential'
+
+export interface NodeFieldSchema {
+  name: string
+  label: string
+  description?: string
+  propertyType: string
+  controlType: NodeControlType
+  order: number
+  tab?: string
+  required: boolean
+  supportsVariables: boolean
+  placeholder?: string
+  default?: unknown
+  min?: number
+  max?: number
+  step?: number
+  options?: string[]
+  reliesUpon?: {
+    fieldName: string
+    value: unknown
+    requiredWhenEnabled: boolean
+  }
+}
+
+export interface NodeTabSchema {
+  name: string
+  order: number
+  icon?: string
+}
+
+export interface NodeConfigSchema {
+  nodeType: string
+  tabs: NodeTabSchema[]
+  fields: NodeFieldSchema[]
+}
+
+export interface NodeTypeInfo {
+  type: string
+  displayName: string
+  description: string
+  category: string
+  icon?: string
+  color?: string
+  configSchema: NodeConfigSchema
+}
+
+export interface GetNodeTypesResponse {
+  nodeTypes: NodeTypeInfo[]
+}
+
+// Node Types API
+export const nodeTypes = {
+  list: async () => {
+    const response = await api.get<GetNodeTypesResponse>('/api/v1/agents/node-types')
+    return response.nodeTypes
+  },
+  getSchema: async (nodeType: string) => {
+    const nodeTypesList = await nodeTypes.list()
+    const found = nodeTypesList.find(nt => nt.type.toLowerCase() === nodeType.toLowerCase())
+    return found?.configSchema
+  },
+}

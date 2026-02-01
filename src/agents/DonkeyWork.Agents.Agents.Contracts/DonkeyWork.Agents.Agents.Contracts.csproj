@@ -8,7 +8,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj" />
-        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Nodes\DonkeyWork.Agents.Common.Nodes.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
-using DonkeyWork.Agents.Common.Nodes.Enums;
-using DonkeyWork.Agents.Common.Nodes.Schema;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Schema;
 
 namespace DonkeyWork.Agents.Agents.Contracts.Models;
 

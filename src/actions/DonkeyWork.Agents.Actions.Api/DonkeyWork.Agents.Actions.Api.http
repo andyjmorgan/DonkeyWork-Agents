@@ -1,6 +1,0 @@
-@DonkeyWork.Agents.Actions.Api_HostAddress = http://localhost:5065
-
-GET {{DonkeyWork.Agents.Actions.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

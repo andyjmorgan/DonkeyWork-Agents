@@ -5,11 +5,15 @@ import { useThemeStore } from '@/store/theme'
 import type { editor, languages, Position } from 'monaco-editor'
 
 interface ScribanEditorProps {
-  nodeId: string
+  /** Node ID - required for internal predecessor lookup if predecessors not provided */
+  nodeId?: string
   value: string
   onChange: (value: string) => void
   height?: string
   placeholder?: string
+  className?: string
+  /** Optional predecessors - if provided, overrides internal lookup */
+  predecessors?: Array<{ nodeId: string; nodeName: string; nodeType: string }>
 }
 
 // Scriban language definition for Monaco
@@ -90,7 +94,15 @@ function registerScribanLanguage(monaco: Monaco) {
   })
 }
 
-export function ScribanEditor({ nodeId, value, onChange, height = '200px', placeholder }: ScribanEditorProps) {
+export function ScribanEditor({
+  nodeId,
+  value,
+  onChange,
+  height = '200px',
+  placeholder,
+  className,
+  predecessors: predecessorsProp,
+}: ScribanEditorProps) {
   const getReachablePredecessors = useEditorStore((state) => state.getReachablePredecessors)
   const nodes = useEditorStore((state) => state.nodes)
   const nodeConfigurations = useEditorStore((state) => state.nodeConfigurations)
@@ -101,7 +113,8 @@ export function ScribanEditor({ nodeId, value, onChange, height = '200px', place
   const completionDisposableRef = useRef<{ dispose: () => void } | null>(null)
 
   // Get reachable predecessors for autocomplete, excluding start node
-  const allPredecessors = getReachablePredecessors(nodeId)
+  // Use prop if provided, otherwise get from store via nodeId
+  const allPredecessors = predecessorsProp ?? (nodeId ? getReachablePredecessors(nodeId) : [])
   const predecessors = useMemo(() =>
     allPredecessors.filter(p => p.nodeType !== 'start'),
     [allPredecessors]
@@ -288,7 +301,7 @@ export function ScribanEditor({ nodeId, value, onChange, height = '200px', place
   }, [predecessors, inputProperties, setupCompletionProvider])
 
   return (
-    <div className="rounded-lg border border-border overflow-hidden">
+    <div className={`rounded-lg border border-border overflow-hidden ${className ?? ''}`}>
       <Editor
         height={height}
         language={SCRIBAN_LANGUAGE_ID}
