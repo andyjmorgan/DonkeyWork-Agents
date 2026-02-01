@@ -1,14 +1,16 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
 WORKDIR /src
 
-# Copy solution and all project files for restore caching
+# Copy solution and nuget config for restore caching
 COPY *.sln ./
+COPY _nuget.config nuget.config
 
 # Main API
 COPY src/DonkeyWork.Agents.Api/*.csproj src/DonkeyWork.Agents.Api/
 
 # Common
 COPY src/common/DonkeyWork.Agents.Common.Contracts/*.csproj src/common/DonkeyWork.Agents.Common.Contracts/
+COPY src/common/DonkeyWork.Agents.Common.Sdk/*.csproj src/common/DonkeyWork.Agents.Common.Sdk/
 COPY src/common/DonkeyWork.Agents.Persistence/*.csproj src/common/DonkeyWork.Agents.Persistence/
 
 # Credentials
@@ -35,11 +37,6 @@ COPY src/providers/DonkeyWork.Agents.Providers.Core/*.csproj src/providers/Donke
 COPY src/agents/DonkeyWork.Agents.Agents.Api/*.csproj src/agents/DonkeyWork.Agents.Agents.Api/
 COPY src/agents/DonkeyWork.Agents.Agents.Contracts/*.csproj src/agents/DonkeyWork.Agents.Agents.Contracts/
 COPY src/agents/DonkeyWork.Agents.Agents.Core/*.csproj src/agents/DonkeyWork.Agents.Agents.Core/
-
-# Actions
-COPY src/actions/DonkeyWork.Agents.Actions.Api/*.csproj src/actions/DonkeyWork.Agents.Actions.Api/
-COPY src/actions/DonkeyWork.Agents.Actions.Contracts/*.csproj src/actions/DonkeyWork.Agents.Actions.Contracts/
-COPY src/actions/DonkeyWork.Agents.Actions.Core/*.csproj src/actions/DonkeyWork.Agents.Actions.Core/
 
 # Projects
 COPY src/projects/DonkeyWork.Agents.Projects.Api/*.csproj src/projects/DonkeyWork.Agents.Projects.Api/
