@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Agents.Core.Execution;
 using DonkeyWork.Agents.Agents.Core.Execution.Executors;
 using DonkeyWork.Agents.Agents.Core.Options;
 using DonkeyWork.Agents.Agents.Core.Services;
+using DonkeyWork.Agents.Common.Nodes.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Stream.Client;
 
@@ -46,6 +47,9 @@ public static class DependencyInjection
         services.AddScoped<IAgentVersionService, AgentVersionService>();
         services.AddSingleton<IExecutionStreamService, ExecutionStreamService>();
         services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
+
+        // Register node schema services
+        services.AddSingleton<INodeSchemaGenerator, NodeSchemaGenerator>();
         services.AddSingleton<INodeTypeSchemaService, NodeTypeSchemaService>();
 
         // Register execution context as scoped (hydrated by orchestrator)

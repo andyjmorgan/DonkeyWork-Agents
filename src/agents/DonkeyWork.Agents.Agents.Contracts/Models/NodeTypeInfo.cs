@@ -1,5 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Common.Nodes.Enums;
+using DonkeyWork.Agents.Common.Nodes.Schema;
 
 namespace DonkeyWork.Agents.Agents.Contracts.Models;
 
@@ -9,10 +10,10 @@ namespace DonkeyWork.Agents.Agents.Contracts.Models;
 public sealed class NodeTypeInfo
 {
     /// <summary>
-    /// The node type identifier (e.g., "start", "model", "end").
+    /// The node type identifier.
     /// </summary>
     [JsonPropertyName("type")]
-    public required string Type { get; init; }
+    public required NodeType Type { get; init; }
 
     /// <summary>
     /// Display name for the node type.
@@ -27,8 +28,28 @@ public sealed class NodeTypeInfo
     public required string Description { get; init; }
 
     /// <summary>
-    /// JSON Schema for the node's configuration.
+    /// Category for grouping in the palette (e.g., "Flow", "AI", "Utility").
+    /// </summary>
+    [JsonPropertyName("category")]
+    public required string Category { get; init; }
+
+    /// <summary>
+    /// Icon name for the node (lucide-react icon name).
+    /// </summary>
+    [JsonPropertyName("icon")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Icon { get; init; }
+
+    /// <summary>
+    /// Color theme for the node (e.g., "green", "blue", "purple").
+    /// </summary>
+    [JsonPropertyName("color")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Color { get; init; }
+
+    /// <summary>
+    /// Configuration schema for the node.
     /// </summary>
     [JsonPropertyName("configSchema")]
-    public required JsonElement ConfigSchema { get; init; }
+    public required NodeConfigSchema ConfigSchema { get; init; }
 }

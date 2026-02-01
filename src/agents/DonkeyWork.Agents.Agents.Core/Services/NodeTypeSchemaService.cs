@@ -1,18 +1,21 @@
-using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models;
-using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 using DonkeyWork.Agents.Agents.Contracts.Services;
-using NJsonSchema;
-using NJsonSchema.Generation;
+using DonkeyWork.Agents.Common.Nodes.Enums;
+using DonkeyWork.Agents.Common.Nodes.Schema;
 
 namespace DonkeyWork.Agents.Agents.Core.Services;
 
+/// <summary>
+/// Provides node type information and configuration schemas.
+/// </summary>
 public class NodeTypeSchemaService : INodeTypeSchemaService
 {
+    private readonly INodeSchemaGenerator _schemaGenerator;
     private readonly Lazy<IReadOnlyList<NodeTypeInfo>> _nodeTypes;
 
-    public NodeTypeSchemaService()
+    public NodeTypeSchemaService(INodeSchemaGenerator schemaGenerator)
     {
+        _schemaGenerator = schemaGenerator;
         _nodeTypes = new Lazy<IReadOnlyList<NodeTypeInfo>>(GenerateNodeTypes);
     }
 
@@ -21,51 +24,75 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
         return _nodeTypes.Value;
     }
 
-    private static IReadOnlyList<NodeTypeInfo> GenerateNodeTypes()
+    private IReadOnlyList<NodeTypeInfo> GenerateNodeTypes()
     {
-        var settings = new SystemTextJsonSchemaGeneratorSettings
+        var nodeTypeDefinitions = new[]
         {
-            SerializerOptions = new JsonSerializerOptions
+            new
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }
-        };
-
-        var startSchema = JsonSchema.FromType<StartNodeConfiguration>(settings);
-        var modelSchema = JsonSchema.FromType<ModelNodeConfiguration>(settings);
-        var endSchema = JsonSchema.FromType<EndNodeConfiguration>(settings);
-        var messageFormatterSchema = JsonSchema.FromType<MessageFormatterNodeConfiguration>(settings);
-
-        return new List<NodeTypeInfo>
-        {
-            new NodeTypeInfo
-            {
-                Type = "start",
+                Type = NodeType.Start,
                 DisplayName = "Start",
-                Description = "Entry point - validates input",
-                ConfigSchema = JsonSerializer.Deserialize<JsonElement>(startSchema.ToJson())
+                Description = "Entry point - validates input against schema",
+                Category = "Flow",
+                Icon = "play",
+                Color = "green"
             },
-            new NodeTypeInfo
+            new
             {
-                Type = "model",
-                DisplayName = "Model",
-                Description = "Call an LLM",
-                ConfigSchema = JsonSerializer.Deserialize<JsonElement>(modelSchema.ToJson())
-            },
-            new NodeTypeInfo
-            {
-                Type = "end",
+                Type = NodeType.End,
                 DisplayName = "End",
                 Description = "Output and completion",
-                ConfigSchema = JsonSerializer.Deserialize<JsonElement>(endSchema.ToJson())
+                Category = "Flow",
+                Icon = "flag",
+                Color = "orange"
             },
-            new NodeTypeInfo
+            new
             {
-                Type = "messageFormatter",
+                Type = NodeType.Model,
+                DisplayName = "Model",
+                Description = "Call an LLM with configured prompts",
+                Category = "AI",
+                Icon = "brain",
+                Color = "blue"
+            },
+            new
+            {
+                Type = NodeType.MessageFormatter,
                 DisplayName = "Message Formatter",
                 Description = "Format messages using Scriban templates",
-                ConfigSchema = JsonSerializer.Deserialize<JsonElement>(messageFormatterSchema.ToJson())
+                Category = "Utility",
+                Icon = "file-text",
+                Color = "cyan"
+            },
+            new
+            {
+                Type = NodeType.HttpRequest,
+                DisplayName = "HTTP Request",
+                Description = "Make HTTP requests to external APIs",
+                Category = "Integration",
+                Icon = "globe",
+                Color = "purple"
+            },
+            new
+            {
+                Type = NodeType.Sleep,
+                DisplayName = "Sleep",
+                Description = "Pause execution for a specified duration",
+                Category = "Utility",
+                Icon = "clock",
+                Color = "cyan"
             }
         };
+
+        return nodeTypeDefinitions.Select(def => new NodeTypeInfo
+        {
+            Type = def.Type,
+            DisplayName = def.DisplayName,
+            Description = def.Description,
+            Category = def.Category,
+            Icon = def.Icon,
+            Color = def.Color,
+            ConfigSchema = _schemaGenerator.GenerateSchema(def.Type)
+        }).ToList();
     }
 }
