@@ -92,5 +92,11 @@ export default {
   		}
   	}
   },
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [
+    require('@tailwindcss/typography')({
+      className: 'prose',
+    }),
+  ],
 }
+
+// Custom prose styles for dark mode are in markdown-editor.css

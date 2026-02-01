@@ -17,6 +17,11 @@ import {
   Unlink,
   Undo,
   Redo,
+  Image,
+  FileCode,
+  Eye,
+  Columns,
+  GitBranch,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -26,10 +31,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useCallback } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { useCallback, useState } from 'react'
+import type { ViewMode } from './MarkdownEditor'
 
 interface MarkdownToolbarProps {
   editor: Editor
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
 }
 
 interface ToolbarButtonProps {
@@ -63,169 +81,335 @@ function ToolbarButton({ onClick, isActive, disabled, tooltip, children }: Toolb
   )
 }
 
-export function MarkdownToolbar({ editor }: MarkdownToolbarProps) {
-  const setLink = useCallback(() => {
-    const previousUrl = editor.getAttributes('link').href
-    const url = window.prompt('URL', previousUrl)
+export function MarkdownToolbar({ editor, viewMode, onViewModeChange }: MarkdownToolbarProps) {
+  const [showImageDialog, setShowImageDialog] = useState(false)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [showMermaidDialog, setShowMermaidDialog] = useState(false)
+  const [imageUrl, setImageUrl] = useState('')
+  const [imageAlt, setImageAlt] = useState('')
+  const [linkUrl, setLinkUrl] = useState('')
+  const [mermaidCode, setMermaidCode] = useState('')
 
-    if (url === null) return
-
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run()
-      return
-    }
-
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  const openLinkDialog = useCallback(() => {
+    const previousUrl = editor.getAttributes('link').href || ''
+    setLinkUrl(previousUrl)
+    setShowLinkDialog(true)
   }, [editor])
 
+  const insertLink = useCallback(() => {
+    if (!linkUrl) {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run()
+    }
+    setShowLinkDialog(false)
+    setLinkUrl('')
+  }, [editor, linkUrl])
+
+  const insertImage = useCallback(() => {
+    if (imageUrl) {
+      editor.chain().focus().setImage({ src: imageUrl, alt: imageAlt }).run()
+    }
+    setShowImageDialog(false)
+    setImageUrl('')
+    setImageAlt('')
+  }, [editor, imageUrl, imageAlt])
+
+  const insertMermaid = useCallback(() => {
+    if (mermaidCode) {
+      editor.chain().focus().insertContent(`\n\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n`).run()
+    }
+    setShowMermaidDialog(false)
+    setMermaidCode('')
+  }, [editor, mermaidCode])
+
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-border p-1 bg-muted/50">
-      {/* Undo/Redo */}
-      <ToolbarButton
-        onClick={() => editor.chain().focus().undo().run()}
-        disabled={!editor.can().undo()}
-        tooltip="Undo"
-      >
-        <Undo className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().redo().run()}
-        disabled={!editor.can().redo()}
-        tooltip="Redo"
-      >
-        <Redo className="h-4 w-4" />
-      </ToolbarButton>
+    <>
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-border p-1 bg-muted/50">
+        {/* Undo/Redo */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          tooltip="Undo"
+        >
+          <Undo className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          tooltip="Redo"
+        >
+          <Redo className="h-4 w-4" />
+        </ToolbarButton>
 
-      <Separator orientation="vertical" className="mx-1 h-6" />
+        <Separator orientation="vertical" className="mx-1 h-6" />
 
-      {/* Headings */}
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        isActive={editor.isActive('heading', { level: 1 })}
-        tooltip="Heading 1"
-      >
-        <Heading1 className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        isActive={editor.isActive('heading', { level: 2 })}
-        tooltip="Heading 2"
-      >
-        <Heading2 className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        isActive={editor.isActive('heading', { level: 3 })}
-        tooltip="Heading 3"
-      >
-        <Heading3 className="h-4 w-4" />
-      </ToolbarButton>
+        {/* Headings */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          isActive={editor.isActive('heading', { level: 1 })}
+          tooltip="Heading 1"
+        >
+          <Heading1 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          isActive={editor.isActive('heading', { level: 2 })}
+          tooltip="Heading 2"
+        >
+          <Heading2 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          isActive={editor.isActive('heading', { level: 3 })}
+          tooltip="Heading 3"
+        >
+          <Heading3 className="h-4 w-4" />
+        </ToolbarButton>
 
-      <Separator orientation="vertical" className="mx-1 h-6" />
+        <Separator orientation="vertical" className="mx-1 h-6" />
 
-      {/* Text formatting */}
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        isActive={editor.isActive('bold')}
-        tooltip="Bold"
-      >
-        <Bold className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        isActive={editor.isActive('italic')}
-        tooltip="Italic"
-      >
-        <Italic className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        isActive={editor.isActive('underline')}
-        tooltip="Underline"
-      >
-        <Underline className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        isActive={editor.isActive('strike')}
-        tooltip="Strikethrough"
-      >
-        <Strikethrough className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        isActive={editor.isActive('code')}
-        tooltip="Inline Code"
-      >
-        <Code className="h-4 w-4" />
-      </ToolbarButton>
+        {/* Text formatting */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          isActive={editor.isActive('bold')}
+          tooltip="Bold"
+        >
+          <Bold className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          isActive={editor.isActive('italic')}
+          tooltip="Italic"
+        >
+          <Italic className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          isActive={editor.isActive('underline')}
+          tooltip="Underline"
+        >
+          <Underline className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          isActive={editor.isActive('strike')}
+          tooltip="Strikethrough"
+        >
+          <Strikethrough className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          isActive={editor.isActive('code')}
+          tooltip="Inline Code"
+        >
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
 
-      <Separator orientation="vertical" className="mx-1 h-6" />
+        <Separator orientation="vertical" className="mx-1 h-6" />
 
-      {/* Lists */}
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        isActive={editor.isActive('bulletList')}
-        tooltip="Bullet List"
-      >
-        <List className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        isActive={editor.isActive('orderedList')}
-        tooltip="Numbered List"
-      >
-        <ListOrdered className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
-        isActive={editor.isActive('taskList')}
-        tooltip="Task List"
-      >
-        <ListTodo className="h-4 w-4" />
-      </ToolbarButton>
+        {/* Lists */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          isActive={editor.isActive('bulletList')}
+          tooltip="Bullet List"
+        >
+          <List className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          isActive={editor.isActive('orderedList')}
+          tooltip="Numbered List"
+        >
+          <ListOrdered className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          isActive={editor.isActive('taskList')}
+          tooltip="Task List"
+        >
+          <ListTodo className="h-4 w-4" />
+        </ToolbarButton>
 
-      <Separator orientation="vertical" className="mx-1 h-6" />
+        <Separator orientation="vertical" className="mx-1 h-6" />
 
-      {/* Blocks */}
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        isActive={editor.isActive('blockquote')}
-        tooltip="Quote"
-      >
-        <Quote className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        isActive={editor.isActive('codeBlock')}
-        tooltip="Code Block"
-      >
-        <Code className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        tooltip="Horizontal Rule"
-      >
-        <Minus className="h-4 w-4" />
-      </ToolbarButton>
+        {/* Blocks */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          isActive={editor.isActive('blockquote')}
+          tooltip="Quote"
+        >
+          <Quote className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          isActive={editor.isActive('codeBlock')}
+          tooltip="Code Block"
+        >
+          <FileCode className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          tooltip="Horizontal Rule"
+        >
+          <Minus className="h-4 w-4" />
+        </ToolbarButton>
 
-      <Separator orientation="vertical" className="mx-1 h-6" />
+        <Separator orientation="vertical" className="mx-1 h-6" />
 
-      {/* Links */}
-      <ToolbarButton
-        onClick={setLink}
-        isActive={editor.isActive('link')}
-        tooltip="Add Link"
-      >
-        <Link className="h-4 w-4" />
-      </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().unsetLink().run()}
-        disabled={!editor.isActive('link')}
-        tooltip="Remove Link"
-      >
-        <Unlink className="h-4 w-4" />
-      </ToolbarButton>
-    </div>
+        {/* Links & Media */}
+        <ToolbarButton
+          onClick={openLinkDialog}
+          isActive={editor.isActive('link')}
+          tooltip="Add Link"
+        >
+          <Link className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().unsetLink().run()}
+          disabled={!editor.isActive('link')}
+          tooltip="Remove Link"
+        >
+          <Unlink className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => setShowImageDialog(true)}
+          tooltip="Add Image"
+        >
+          <Image className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => setShowMermaidDialog(true)}
+          tooltip="Add Mermaid Diagram"
+        >
+          <GitBranch className="h-4 w-4" />
+        </ToolbarButton>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* View mode toggle */}
+        <div className="flex items-center border border-border rounded-md overflow-hidden">
+          <ToolbarButton
+            onClick={() => onViewModeChange('preview')}
+            isActive={viewMode === 'preview'}
+            tooltip="Preview"
+          >
+            <Eye className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => onViewModeChange('split')}
+            isActive={viewMode === 'split'}
+            tooltip="Split View"
+          >
+            <Columns className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => onViewModeChange('code')}
+            isActive={viewMode === 'code'}
+            tooltip="Markdown"
+          >
+            <Code className="h-4 w-4" />
+          </ToolbarButton>
+        </div>
+      </div>
+
+      {/* Link Dialog */}
+      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Insert Link</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="linkUrl">URL</Label>
+              <Input
+                id="linkUrl"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://example.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLinkDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={insertLink}>Insert</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Dialog */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Insert Image</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input
+                id="imageUrl"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://example.com/image.png"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageAlt">Alt Text (optional)</Label>
+              <Input
+                id="imageAlt"
+                value={imageAlt}
+                onChange={(e) => setImageAlt(e.target.value)}
+                placeholder="Image description"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImageDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={insertImage} disabled={!imageUrl}>Insert</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mermaid Dialog */}
+      <Dialog open={showMermaidDialog} onOpenChange={setShowMermaidDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Insert Mermaid Diagram</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="mermaidCode">Mermaid Code</Label>
+              <Textarea
+                id="mermaidCode"
+                value={mermaidCode}
+                onChange={(e) => setMermaidCode(e.target.value)}
+                placeholder={`graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]`}
+                className="min-h-[200px] font-mono text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Learn more about Mermaid syntax at{' '}
+              <a href="https://mermaid.js.org/syntax/flowchart.html" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                mermaid.js.org
+              </a>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMermaidDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={insertMermaid} disabled={!mermaidCode}>Insert</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

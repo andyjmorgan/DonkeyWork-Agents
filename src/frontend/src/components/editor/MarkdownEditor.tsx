@@ -1,14 +1,24 @@
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Underline from '@tiptap/extension-underline'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useEffect, useRef } from 'react'
+import Image from '@tiptap/extension-image'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { parseMarkdown, serializeMarkdown } from '@/lib/markdown'
 import { MarkdownToolbar } from './MarkdownToolbar'
+import { RawMarkdownEditor } from './RawMarkdownEditor'
+import { CodeBlockWithCopy } from './CodeBlockWithCopy'
 import './markdown-editor.css'
+
+// Create lowlight instance with common languages
+const lowlight = createLowlight(common)
+
+export type ViewMode = 'preview' | 'code' | 'split'
 
 interface MarkdownEditorProps {
   content: string
@@ -16,6 +26,7 @@ interface MarkdownEditorProps {
   placeholder?: string
   className?: string
   autoFocus?: boolean
+  defaultViewMode?: ViewMode
 }
 
 export function MarkdownEditor({
@@ -24,8 +35,11 @@ export function MarkdownEditor({
   placeholder = 'Start writing...',
   className = '',
   autoFocus = false,
+  defaultViewMode = 'preview',
 }: MarkdownEditorProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode)
   const isUpdatingFromProps = useRef(false)
+  const isUpdatingFromRaw = useRef(false)
   const lastContent = useRef(content)
 
   const editor = useEditor({
@@ -34,6 +48,15 @@ export function MarkdownEditor({
         heading: {
           levels: [1, 2, 3],
         },
+        codeBlock: false, // Use CodeBlockLowlight instead
+      }),
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockWithCopy)
+        },
+      }).configure({
+        lowlight,
+        defaultLanguage: 'plaintext',
       }),
       Link.configure({
         openOnClick: false,
@@ -49,6 +72,10 @@ export function MarkdownEditor({
       Placeholder.configure({
         placeholder,
       }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+      }),
     ],
     content: parseMarkdown(content),
     editorProps: {
@@ -57,7 +84,7 @@ export function MarkdownEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      if (isUpdatingFromProps.current) return
+      if (isUpdatingFromProps.current || isUpdatingFromRaw.current) return
 
       const html = editor.getHTML()
       const markdown = serializeMarkdown(html)
@@ -69,6 +96,21 @@ export function MarkdownEditor({
     },
     immediatelyRender: false,
   })
+
+  // Handle raw markdown changes
+  const handleRawChange = useCallback((markdown: string) => {
+    if (!editor) return
+    if (markdown === lastContent.current) return
+
+    isUpdatingFromRaw.current = true
+    lastContent.current = markdown
+    onChange(markdown)
+
+    const html = parseMarkdown(markdown)
+    editor.commands.setContent(html, { emitUpdate: false })
+
+    isUpdatingFromRaw.current = false
+  }, [editor, onChange])
 
   // Update editor content when props change
   useEffect(() => {
@@ -97,8 +139,27 @@ export function MarkdownEditor({
 
   return (
     <div className={`markdown-editor rounded-md border border-input bg-background ${className}`}>
-      <MarkdownToolbar editor={editor} />
-      <EditorContent editor={editor} />
+      <MarkdownToolbar
+        editor={editor}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
+
+      <div className={`markdown-editor-content ${viewMode === 'split' ? 'grid grid-cols-2 divide-x divide-border' : ''}`}>
+        {/* Raw markdown editor */}
+        {(viewMode === 'code' || viewMode === 'split') && (
+          <RawMarkdownEditor
+            value={content}
+            onChange={handleRawChange}
+            className={viewMode === 'split' ? 'border-r border-border' : ''}
+          />
+        )}
+
+        {/* WYSIWYG preview */}
+        {(viewMode === 'preview' || viewMode === 'split') && (
+          <EditorContent editor={editor} />
+        )}
+      </div>
     </div>
   )
 }

@@ -506,67 +506,34 @@ export function ProjectDetailPage() {
             )}
           </div>
 
-          {/* Recent Items Preview */}
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Recent Milestones */}
-            {projectMilestones.length > 0 && (
-              <div className="rounded-lg border border-border bg-card p-4">
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">Recent Milestones</h4>
-                <div className="space-y-2">
-                  {projectMilestones.slice(0, 3).map((milestone) => (
-                    <div
-                      key={milestone.id}
-                      className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors"
-                      onClick={() => navigate(`/projects/${id}/milestones/${milestone.id}`)}
-                    >
-                      <Target className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                      <span className="truncate">{milestone.name}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {milestone.completedTodoCount}/{milestone.todoCount}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {projectMilestones.length > 3 && (
-                  <button
-                    onClick={() => setActiveTab('milestones')}
-                    className="text-xs text-primary hover:underline mt-2"
-                  >
-                    View all {projectMilestones.length} milestones
-                  </button>
-                )}
+          {/* Recent Tasks Preview */}
+          {project.todos.length > 0 && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Recent Tasks</h4>
+              <div className="space-y-2">
+                {project.todos.slice(0, 5).map((todo) => (
+                  <div key={todo.id} className="flex items-center gap-2 text-sm">
+                    {todo.status === 'Completed' ? (
+                      <CheckSquare className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                    ) : (
+                      <div className="h-3.5 w-3.5 rounded border border-muted-foreground flex-shrink-0" />
+                    )}
+                    <span className={`truncate ${todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
+                      {todo.title}
+                    </span>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {/* Recent Tasks */}
-            {project.todos.length > 0 && (
-              <div className="rounded-lg border border-border bg-card p-4">
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">Recent Tasks</h4>
-                <div className="space-y-2">
-                  {project.todos.slice(0, 3).map((todo) => (
-                    <div key={todo.id} className="flex items-center gap-2 text-sm">
-                      {todo.status === 'Completed' ? (
-                        <CheckSquare className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                      ) : (
-                        <div className="h-3.5 w-3.5 rounded border border-muted-foreground flex-shrink-0" />
-                      )}
-                      <span className={`truncate ${todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
-                        {todo.title}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {project.todos.length > 3 && (
-                  <button
-                    onClick={() => setActiveTab('tasks')}
-                    className="text-xs text-primary hover:underline mt-2"
-                  >
-                    View all {project.todos.length} tasks
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+              {project.todos.length > 5 && (
+                <button
+                  onClick={() => setActiveTab('tasks')}
+                  className="text-xs text-primary hover:underline mt-2"
+                >
+                  View all {project.todos.length} tasks
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
