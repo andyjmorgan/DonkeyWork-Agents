@@ -12,5 +12,6 @@ internal interface IModelMiddleware
     /// </summary>
     IAsyncEnumerable<BaseMiddlewareMessage> ExecuteAsync(
         ModelMiddlewareContext context,
-        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next);
+        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next,
+        CancellationToken cancellationToken = default);
 }

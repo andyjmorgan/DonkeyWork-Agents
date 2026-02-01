@@ -32,18 +32,18 @@ interface UtilityNode {
 
 const coreNodes: CoreNode[] = [
   {
+    type: 'end',
+    label: 'End',
+    icon: Flag,
+    description: 'Output and completion',
+    color: 'orange'
+  },
+  {
     type: 'start',
     label: 'Start',
     icon: Play,
     description: 'Entry point - validates input',
     color: 'green'
-  },
-  {
-    type: 'end',
-    label: 'End',
-    icon: Flag,
-    description: 'Output and completion',
-    color: 'red'
   }
 ]
 
@@ -97,31 +97,38 @@ export function NodePalette() {
   }
 
   const getColorClasses = (color: string) => {
-    if (color === 'green') return 'border-green-500/20 bg-green-500/5 hover:border-green-500/40 hover:bg-green-500/10'
-    if (color === 'red') return 'border-red-500/20 bg-red-500/5 hover:border-red-500/40 hover:bg-red-500/10'
-    if (color === 'blue') return 'border-blue-500/20 bg-blue-500/5 hover:border-blue-500/40 hover:bg-blue-500/10'
-    if (color === 'amber') return 'border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40 hover:bg-amber-500/10'
+    if (color === 'green') return 'border-green-500/30 bg-green-500/5 hover:border-green-500/50 hover:bg-green-500/10'
+    if (color === 'orange') return 'border-orange-500/30 bg-orange-500/5 hover:border-orange-500/50 hover:bg-orange-500/10'
+    if (color === 'blue') return 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50 hover:bg-blue-500/10'
+    if (color === 'amber') return 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50 hover:bg-amber-500/10'
     return 'border-border bg-muted/50 hover:bg-muted'
   }
 
+  const getIconContainerClasses = (color: string) => {
+    if (color === 'green') return 'bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/25'
+    if (color === 'orange') return 'bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/25'
+    if (color === 'blue') return 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25'
+    if (color === 'amber') return 'bg-gradient-to-br from-yellow-500 to-amber-600 shadow-lg shadow-yellow-500/25'
+    return 'bg-muted'
+  }
+
   const getIconColorClasses = (color: string) => {
-    if (color === 'green') return 'text-green-500'
-    if (color === 'red') return 'text-red-500'
-    if (color === 'blue') return 'text-blue-500'
-    if (color === 'amber') return 'text-amber-500'
+    // With gradient backgrounds, icons should be white
+    if (color === 'green' || color === 'orange' || color === 'blue' || color === 'amber') return 'text-white'
     return 'text-muted-foreground'
   }
 
-  const getProviderIcon = (provider: string) => {
+  const getProviderIcon = (provider: string, useWhite = false) => {
+    const colorClass = useWhite ? 'text-white' : 'text-blue-500'
     switch (provider) {
       case 'OpenAI':
-        return <OpenAIIcon className="h-3.5 w-3.5 text-blue-500" />
+        return <OpenAIIcon className={cn('h-3.5 w-3.5', colorClass)} />
       case 'Anthropic':
-        return <AnthropicIcon className="h-3.5 w-3.5 text-blue-500" />
+        return <AnthropicIcon className={cn('h-3.5 w-3.5', colorClass)} />
       case 'Google':
-        return <GoogleIcon className="h-3.5 w-3.5 text-blue-500" />
+        return <GoogleIcon className={cn('h-3.5 w-3.5', colorClass)} />
       default:
-        return <OpenAIIcon className="h-3.5 w-3.5 text-blue-500" />
+        return <OpenAIIcon className={cn('h-3.5 w-3.5', colorClass)} />
     }
   }
 
@@ -145,40 +152,102 @@ export function NodePalette() {
   const getActionColorClasses = (iconName?: string) => {
     switch (iconName) {
       case 'globe':
-        return 'border-purple-500/20 bg-purple-500/5 hover:border-purple-500/40 hover:bg-purple-500/10'
+        return 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500/50 hover:bg-purple-500/10'
       case 'clock':
-        return 'border-cyan-500/20 bg-cyan-500/5 hover:border-cyan-500/40 hover:bg-cyan-500/10'
+        return 'border-cyan-500/30 bg-cyan-500/5 hover:border-cyan-500/50 hover:bg-cyan-500/10'
       case 'mail':
-        return 'border-pink-500/20 bg-pink-500/5 hover:border-pink-500/40 hover:bg-pink-500/10'
+        return 'border-pink-500/30 bg-pink-500/5 hover:border-pink-500/50 hover:bg-pink-500/10'
       case 'database':
-        return 'border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/40 hover:bg-emerald-500/10'
+        return 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 hover:bg-emerald-500/10'
       case 'file':
-        return 'border-orange-500/20 bg-orange-500/5 hover:border-orange-500/40 hover:bg-orange-500/10'
+        return 'border-orange-500/30 bg-orange-500/5 hover:border-orange-500/50 hover:bg-orange-500/10'
       default:
-        return 'border-violet-500/20 bg-violet-500/5 hover:border-violet-500/40 hover:bg-violet-500/10'
+        return 'border-violet-500/30 bg-violet-500/5 hover:border-violet-500/50 hover:bg-violet-500/10'
     }
   }
 
-  const getActionIconColorClass = (iconName?: string) => {
+  const getActionIconContainerClasses = (iconName?: string) => {
     switch (iconName) {
       case 'globe':
-        return 'text-purple-500'
+        return 'bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/25'
       case 'clock':
-        return 'text-cyan-500'
+        return 'bg-gradient-to-br from-cyan-500 to-teal-600 shadow-lg shadow-cyan-500/25'
       case 'mail':
-        return 'text-pink-500'
+        return 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/25'
       case 'database':
-        return 'text-emerald-500'
+        return 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/25'
       case 'file':
-        return 'text-orange-500'
+        return 'bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg shadow-orange-500/25'
       default:
-        return 'text-violet-500'
+        return 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/25'
     }
+  }
+
+  const getActionIconColorClass = () => {
+    // All action icons use white since they're on gradient backgrounds
+    return 'text-white'
   }
 
   return (
     <div className="h-full overflow-y-auto">
-      <Accordion type="multiple" defaultValue={['core-nodes', 'utilities', 'actions']} className="space-y-2">
+      <Accordion type="multiple" defaultValue={['actions', 'core-nodes', 'models', 'utilities']} className="space-y-2">
+        {/* Actions Section */}
+        <AccordionItem value="actions">
+          <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline px-2">
+            Actions
+          </AccordionTrigger>
+          <AccordionContent className="px-2 pb-4">
+            {actions.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No actions available</div>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(actionsByCategory)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([category, categoryActions]) => (
+                  <div key={category}>
+                    <h4 className="mb-2 text-xs font-medium text-muted-foreground">{category}</h4>
+                    <div className="space-y-1.5">
+                      {[...categoryActions].sort((a, b) => a.displayName.localeCompare(b.displayName)).map((action) => {
+                        const Icon = getActionIcon(action.icon)
+                        return (
+                          <div
+                            key={action.actionType}
+                            draggable
+                            onDragStart={(e) =>
+                              handleDragStart(e, 'action', {
+                                actionType: action.actionType,
+                                displayName: action.displayName,
+                                icon: action.icon
+                              })
+                            }
+                            className={cn(
+                              'flex cursor-move items-center gap-2.5 rounded-xl border-2 p-2.5 transition-all',
+                              getActionColorClasses(action.icon)
+                            )}
+                            title={action.description || action.displayName}
+                          >
+                            <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md', getActionIconContainerClasses(action.icon))}>
+                              <Icon className={cn('h-4 w-4', getActionIconColorClass())} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium">{action.displayName}</div>
+                              {action.group && (
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {action.group}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+
         {/* Core Nodes Section */}
         <AccordionItem value="core-nodes">
           <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline px-2">
@@ -198,50 +267,13 @@ export function NodePalette() {
                     draggable={!isDisabled}
                     onDragStart={(e) => handleDragStart(e, node.type)}
                     className={cn(
-                      'flex cursor-move items-center gap-3 rounded-lg border-2 p-3 transition-all',
+                      'flex cursor-move items-center gap-3 rounded-xl border-2 p-3 transition-all',
                       getColorClasses(node.color),
                       isDisabled && 'cursor-not-allowed opacity-40'
                     )}
                     title={node.description}
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background/50">
-                      <Icon className={cn('h-4 w-4', getIconColorClasses(node.color))} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium">{node.label}</div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {node.description}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Utilities Section */}
-        <AccordionItem value="utilities">
-          <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline px-2">
-            Utilities
-          </AccordionTrigger>
-          <AccordionContent className="px-2 pb-4">
-            <div className="space-y-2">
-              {utilityNodes.map((node) => {
-                const Icon = node.icon
-
-                return (
-                  <div
-                    key={node.type}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, node.type)}
-                    className={cn(
-                      'flex cursor-move items-center gap-3 rounded-lg border-2 p-3 transition-all',
-                      getColorClasses(node.color)
-                    )}
-                    title={node.description}
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background/50">
+                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', getIconContainerClasses(node.color))}>
                       <Icon className={cn('h-4 w-4', getIconColorClasses(node.color))} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -267,7 +299,9 @@ export function NodePalette() {
               <div className="text-sm text-muted-foreground">Loading models...</div>
             ) : (
               <div className="space-y-4">
-                {Object.entries(modelsByProvider).map(([provider, providerModels]) => (
+                {Object.entries(modelsByProvider)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([provider, providerModels]) => (
                   <div key={provider}>
                     <div className="mb-2 flex items-center gap-2">
                       <div className="flex h-4 w-4 items-center justify-center">
@@ -276,7 +310,7 @@ export function NodePalette() {
                       <h4 className="text-xs font-medium text-muted-foreground">{provider}</h4>
                     </div>
                     <div className="space-y-1.5">
-                      {providerModels.map((model) => (
+                      {[...providerModels].sort((a, b) => a.name.localeCompare(b.name)).map((model) => (
                         <div
                           key={model.id}
                           draggable
@@ -288,13 +322,13 @@ export function NodePalette() {
                             })
                           }
                           className={cn(
-                            'flex cursor-move items-center gap-2.5 rounded-lg border-2 p-2.5 transition-all',
+                            'flex cursor-move items-center gap-2.5 rounded-xl border-2 p-2.5 transition-all',
                             getColorClasses('blue')
                           )}
                           title={`Add ${model.name} node`}
                         >
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-background/50">
-                            {getProviderIcon(model.provider)}
+                          <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md', getIconContainerClasses('blue'))}>
+                            {getProviderIcon(model.provider, true)}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{model.name}</div>
@@ -309,58 +343,40 @@ export function NodePalette() {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Actions Section */}
-        <AccordionItem value="actions">
+        {/* Utilities Section */}
+        <AccordionItem value="utilities">
           <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline px-2">
-            Actions
+            Utilities
           </AccordionTrigger>
           <AccordionContent className="px-2 pb-4">
-            {actions.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No actions available</div>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(actionsByCategory).map(([category, categoryActions]) => (
-                  <div key={category}>
-                    <h4 className="mb-2 text-xs font-medium text-muted-foreground">{category}</h4>
-                    <div className="space-y-1.5">
-                      {categoryActions.map((action) => {
-                        const Icon = getActionIcon(action.icon)
-                        return (
-                          <div
-                            key={action.actionType}
-                            draggable
-                            onDragStart={(e) =>
-                              handleDragStart(e, 'action', {
-                                actionType: action.actionType,
-                                displayName: action.displayName,
-                                icon: action.icon
-                              })
-                            }
-                            className={cn(
-                              'flex cursor-move items-center gap-2.5 rounded-lg border-2 p-2.5 transition-all',
-                              getActionColorClasses(action.icon)
-                            )}
-                            title={action.description || action.displayName}
-                          >
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-background/50">
-                              <Icon className={cn('h-4 w-4', getActionIconColorClass(action.icon))} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-medium">{action.displayName}</div>
-                              {action.group && (
-                                <div className="truncate text-xs text-muted-foreground">
-                                  {action.group}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
+            <div className="space-y-2">
+              {[...utilityNodes].sort((a, b) => a.label.localeCompare(b.label)).map((node) => {
+                const Icon = node.icon
+
+                return (
+                  <div
+                    key={node.type}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, node.type)}
+                    className={cn(
+                      'flex cursor-move items-center gap-3 rounded-xl border-2 p-3 transition-all',
+                      getColorClasses(node.color)
+                    )}
+                    title={node.description}
+                  >
+                    <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', getIconContainerClasses(node.color))}>
+                      <Icon className={cn('h-4 w-4', getIconColorClasses(node.color))} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium">{node.label}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {node.description}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                )
+              })}
+            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

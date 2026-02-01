@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using DonkeyWork.Agents.Common.Contracts.Enums;
+using DonkeyWork.Agents.Common.Sdk.Models.Schema;
 using DonkeyWork.Agents.Providers.Contracts.Enums;
 
 namespace DonkeyWork.Agents.Providers.Contracts.Models.Schema;
@@ -9,10 +10,10 @@ namespace DonkeyWork.Agents.Providers.Contracts.Models.Schema;
 /// </summary>
 public sealed class ModelConfigSchema
 {
-    [JsonPropertyName("model_id")]
+    [JsonPropertyName("modelId")]
     public required string ModelId { get; init; }
 
-    [JsonPropertyName("model_name")]
+    [JsonPropertyName("modelName")]
     public required string ModelName { get; init; }
 
     [JsonPropertyName("provider")]
@@ -20,6 +21,9 @@ public sealed class ModelConfigSchema
 
     [JsonPropertyName("mode")]
     public required ModelMode Mode { get; init; }
+
+    [JsonPropertyName("tabs")]
+    public IReadOnlyList<TabSchema> Tabs { get; init; } = [];
 
     [JsonPropertyName("fields")]
     public required IReadOnlyList<ConfigFieldSchema> Fields { get; init; }

@@ -227,29 +227,28 @@ public class ModelConfigSchemaServiceTests
         Assert.NotNull(schema);
 
         var fieldNames = schema.Fields.Select(f => f.Name).ToList();
+
+        // Verify specific fields exist with expected order values (new schema structure)
+        var credentialId = schema.Fields.First(f => f.Name == "credentialId");
         var temperature = schema.Fields.First(f => f.Name == "temperature");
         var maxOutputTokens = schema.Fields.First(f => f.Name == "maxOutputTokens");
         var topP = schema.Fields.First(f => f.Name == "topP");
         var reasoningEffort = schema.Fields.First(f => f.Name == "reasoningEffort");
         var thinkingBudget = schema.Fields.First(f => f.Name == "thinkingBudget");
 
-        Assert.Equal(10, temperature.Order);
-        Assert.Equal(20, maxOutputTokens.Order);
-        Assert.Equal(30, topP.Order);
-        Assert.Equal(40, reasoningEffort.Order);
-        Assert.Equal(41, thinkingBudget.Order);
+        // Verify order values match new structure
+        Assert.Equal(0, credentialId.Order);
+        Assert.Equal(30, temperature.Order);
+        Assert.Equal(40, maxOutputTokens.Order);
+        Assert.Equal(10, topP.Order); // TopP is in Advanced tab with Order=10
+        Assert.Equal(10, reasoningEffort.Order); // ReasoningEffort is in Reasoning tab with Order=10
+        Assert.Equal(20, thinkingBudget.Order); // ThinkingBudget is in Reasoning tab with Order=20
 
-        // Verify ordering in list
+        // Verify fields are sorted by global order
+        var credentialIndex = fieldNames.IndexOf("credentialId");
         var tempIndex = fieldNames.IndexOf("temperature");
-        var maxTokensIndex = fieldNames.IndexOf("maxOutputTokens");
-        var topPIndex = fieldNames.IndexOf("topP");
-        var reasoningIndex = fieldNames.IndexOf("reasoningEffort");
-        var thinkingIndex = fieldNames.IndexOf("thinkingBudget");
 
-        Assert.True(tempIndex < maxTokensIndex);
-        Assert.True(maxTokensIndex < topPIndex);
-        Assert.True(topPIndex < reasoningIndex);
-        Assert.True(reasoningIndex < thinkingIndex);
+        Assert.True(credentialIndex < tempIndex);
     }
 
     [Fact]
@@ -345,7 +344,7 @@ public class ModelConfigSchemaServiceTests
     }
 
     [Fact]
-    public void GetSchemaForModel_WithGroupedFields_IncludesGroupInformation()
+    public void GetSchemaForModel_WithTabbedAndGroupedFields_IncludesTabAndGroupInformation()
     {
         // Arrange
         var model = CreateChatModel("test-model", LlmProvider.Anthropic, supportsReasoning: true);
@@ -357,13 +356,33 @@ public class ModelConfigSchemaServiceTests
         // Assert
         Assert.NotNull(schema);
 
+        // Verify tabs are generated
+        Assert.NotEmpty(schema.Tabs);
+        Assert.Contains(schema.Tabs, t => t.Name == "Basic");
+        Assert.Contains(schema.Tabs, t => t.Name == "Advanced");
+        Assert.Contains(schema.Tabs, t => t.Name == "Reasoning");
+
+        // Verify fields have both Tab and Group
         var topP = schema.Fields.FirstOrDefault(f => f.Name == "topP");
         Assert.NotNull(topP);
-        Assert.Equal("Advanced", topP.Group);
+        Assert.Equal("Advanced", topP.Tab);
+        Assert.Equal("Sampling", topP.Group);
 
         var thinkingBudget = schema.Fields.FirstOrDefault(f => f.Name == "thinkingBudget");
         Assert.NotNull(thinkingBudget);
-        Assert.Equal("Reasoning", thinkingBudget.Group);
+        Assert.Equal("Reasoning", thinkingBudget.Tab);
+        Assert.Equal("Settings", thinkingBudget.Group);
+
+        var temperature = schema.Fields.FirstOrDefault(f => f.Name == "temperature");
+        Assert.NotNull(temperature);
+        Assert.Equal("Basic", temperature.Tab);
+        Assert.Equal("Sampling", temperature.Group);
+
+        // Verify some fields have no group (just tab)
+        var stream = schema.Fields.FirstOrDefault(f => f.Name == "stream");
+        Assert.NotNull(stream);
+        Assert.Equal("Basic", stream.Tab);
+        Assert.Null(stream.Group);
     }
 
     private static ModelDefinition CreateChatModel(

@@ -126,8 +126,8 @@ export function CanvasInner() {
         defaultEdgeOptions={{
           type: 'smoothstep',
           animated: true,
-          style: { stroke: '#94a3b8', strokeWidth: 2 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' }
+          style: { stroke: '#22d3ee', strokeWidth: 2 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#22d3ee' }
         }}
         snapToGrid
         snapGrid={[15, 15]}
@@ -143,11 +143,6 @@ export function CanvasInner() {
           className="bg-muted/20"
         />
 
-        <Panel position="top-center" className="bg-card/80 backdrop-blur-sm border border-border rounded-lg px-4 py-2 shadow-lg">
-          <div className="text-xs text-muted-foreground">
-            Drag to move • Shift + drag to select multiple • Delete to remove
-          </div>
-        </Panel>
 
         <Panel position="bottom-right" className="mb-2 mr-2">
           <Button
@@ -155,7 +150,7 @@ export function CanvasInner() {
             size="icon"
             onClick={handleTidyUp}
             title="Format layout"
-            className="bg-card/80 backdrop-blur-sm shadow-lg"
+            className="bg-card/80 backdrop-blur-sm shadow-lg rounded-xl hover:border-accent/50"
           >
             <AlignVerticalSpaceAround className="h-4 w-4" />
           </Button>

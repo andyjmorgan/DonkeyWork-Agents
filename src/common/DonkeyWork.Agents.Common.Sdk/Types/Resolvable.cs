@@ -1,10 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace DonkeyWork.Agents.Actions.Contracts.Types;
+namespace DonkeyWork.Agents.Common.Sdk.Types;
 
 /// <summary>
 /// A generic type that can hold either a literal value or an expression to be resolved at runtime.
+/// Supports {{variable}} syntax for dynamic value resolution.
 /// </summary>
 /// <typeparam name="T">The target type after resolution</typeparam>
 [JsonConverter(typeof(ResolvableJsonConverterFactory))]
@@ -55,6 +56,11 @@ public readonly struct Resolvable<T>
                    trimmed.IndexOf("{{", 2) == -1; // Only one {{ pair
         }
     }
+
+    /// <summary>
+    /// Checks if this Resolvable has a value set
+    /// </summary>
+    public bool HasValue => !string.IsNullOrEmpty(_rawValue);
 
     /// <summary>
     /// Implicit conversion from T to Resolvable&lt;T&gt;

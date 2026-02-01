@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Common.Sdk.Models.Schema;
 
 namespace DonkeyWork.Agents.Providers.Contracts.Models.Schema;
 
@@ -17,10 +18,10 @@ public sealed class ConfigFieldSchema
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; init; }
 
-    [JsonPropertyName("control_type")]
+    [JsonPropertyName("controlType")]
     public required FieldControlType ControlType { get; init; }
 
-    [JsonPropertyName("property_type")]
+    [JsonPropertyName("propertyType")]
     public required string PropertyType { get; init; }
 
     [JsonPropertyName("order")]
@@ -29,6 +30,16 @@ public sealed class ConfigFieldSchema
     [JsonPropertyName("group")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Group { get; init; }
+
+    [JsonPropertyName("tab")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Tab { get; init; }
+
+    [JsonPropertyName("required")]
+    public bool Required { get; init; }
+
+    [JsonPropertyName("resolvable")]
+    public bool Resolvable { get; init; }
 
     [JsonPropertyName("min")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -50,7 +61,15 @@ public sealed class ConfigFieldSchema
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<string>? Options { get; init; }
 
-    [JsonPropertyName("depends_on")]
+    [JsonPropertyName("dependsOn")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<FieldDependency>? DependsOn { get; init; }
+
+    [JsonPropertyName("reliesUpon")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ReliesUponSchema? ReliesUpon { get; init; }
+
+    [JsonPropertyName("credentialTypes")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? CredentialTypes { get; init; }
 }

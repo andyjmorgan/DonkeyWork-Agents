@@ -52,6 +52,19 @@ export default {
   				DEFAULT: 'hsl(var(--success))',
   				foreground: 'hsl(var(--success-foreground))'
   			},
+  			warning: {
+  				DEFAULT: 'hsl(var(--warning))',
+  				foreground: 'hsl(var(--warning-foreground))'
+  			},
+  			/* DonkeyWork Node Colors */
+  			node: {
+  				start: '#22c55e',
+  				end: '#f97316',
+  				action: '#a855f7',
+  				utility: '#22d3ee',
+  				model: '#3b82f6',
+  				condition: '#eab308'
+  			},
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',

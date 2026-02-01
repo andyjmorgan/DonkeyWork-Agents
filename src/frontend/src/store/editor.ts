@@ -18,12 +18,9 @@ export interface ModelNodeConfig {
   name: string
   provider: 'OpenAi' | 'Anthropic' | 'Google' | 'Azure'
   modelId: string
-  credentialId?: string
-  systemPrompt?: string
-  userMessage?: string
-  temperature?: number
-  maxTokens?: number
-  topP?: number
+  // Store all config values as a flat object keyed by field name
+  // This allows schema-driven fields to be stored dynamically
+  config: Record<string, unknown>
 }
 
 export interface EndNodeConfig {
@@ -34,8 +31,7 @@ export interface EndNodeConfig {
 export interface ActionNodeConfig {
   name: string
   actionType: string
-  displayName: string
-  parameters?: Record<string, any>
+  parameters?: Record<string, unknown>
 }
 
 export interface MessageFormatterNodeConfig {
@@ -291,12 +287,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         name: nodeName,
         provider: (config as any).provider || 'OpenAi',
         modelId: (config as any).modelId || '',
-        credentialId: undefined,
-        systemPrompt: undefined,
-        userMessage: undefined,
-        temperature: undefined,
-        maxTokens: undefined,
-        topP: undefined,
+        config: {
+          // Default config values - will be populated by schema
+          credentialId: undefined,
+          systemPrompts: [],
+          userMessages: [],
+          temperature: undefined,
+          maxOutputTokens: undefined,
+          stream: undefined,
+          topP: undefined,
+          ...(config as any).config
+        },
         ...config
       } as ModelNodeConfig
       nodeData = {
@@ -313,19 +314,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         .replace(/[^a-z0-9_]/g, '') || 'action'
       const actionNodeName = generateNodeName(actionBaseName)
 
+      // Config only stores what backend needs for execution
       defaultConfig = {
         name: actionNodeName,
         actionType: (config as any).actionType || '',
-        displayName: actionDisplayName,
         parameters: {},
-        ...config
       } as ActionNodeConfig
+      // Node data stores display info for ReactFlow (derived from schema at load time)
       nodeData = {
         label: actionNodeName,
         actionType: (config as any).actionType,
+        // displayName and icon should be derived from action schema, not stored
+        // But we need them for initial render, so pass from palette
         displayName: actionDisplayName,
         icon: (config as any).icon,
-        parameters: {}
       }
     } else if (type === 'messageFormatter') {
       defaultConfig = {
@@ -466,14 +468,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const syncedNodes = reactFlowData.nodes.map(node => {
         const config = nodeConfigurations[node.id]
 
-        // For action nodes, preserve all data fields
+        // For action nodes, sync actionType and parameters from config
+        // displayName and icon are already in node.data (preserved from reactFlowData)
         if (node.type === 'action' && config && 'actionType' in config) {
           return {
             ...node,
             data: {
               ...node.data,
               actionType: config.actionType,
-              displayName: config.displayName,
               parameters: config.parameters
             }
           }
@@ -562,7 +564,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           if (!modelConfig.modelId) {
             errors.push({ nodeId: node.id, field: 'modelId', message: 'Model is required' })
           }
-          if (!modelConfig.credentialId) {
+          if (!modelConfig.config?.credentialId) {
             errors.push({ nodeId: node.id, field: 'credentialId', message: 'Credential is required' })
           }
         } else if (node.type === 'action') {
@@ -760,11 +762,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     for (const node of nodes) {
       const config = nodeConfigurations[node.id]
-      if (config && 'credentialId' in config && config.credentialId) {
-        mappings.push({
-          nodeId: node.id,
-          credentialId: config.credentialId
-        })
+      if (config) {
+        // Check for model node with nested config
+        if ('config' in config && config.config && typeof config.config === 'object') {
+          const nestedConfig = config.config as Record<string, unknown>
+          if (nestedConfig.credentialId && typeof nestedConfig.credentialId === 'string') {
+            mappings.push({
+              nodeId: node.id,
+              credentialId: nestedConfig.credentialId
+            })
+          }
+        }
+        // Legacy: check for direct credentialId
+        else if ('credentialId' in config && config.credentialId) {
+          mappings.push({
+            nodeId: node.id,
+            credentialId: config.credentialId as string
+          })
+        }
       }
     }
 

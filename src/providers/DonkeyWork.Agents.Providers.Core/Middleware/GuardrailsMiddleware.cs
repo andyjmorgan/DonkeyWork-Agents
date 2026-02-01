@@ -20,11 +20,4 @@ internal class GuardrailsMiddleware : IModelMiddleware
             yield return message;
         }
     }
-
-    IAsyncEnumerable<BaseMiddlewareMessage> IModelMiddleware.ExecuteAsync(
-        ModelMiddlewareContext context,
-        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next)
-    {
-        return ExecuteAsync(context, next);
-    }
 }

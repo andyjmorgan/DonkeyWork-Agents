@@ -43,7 +43,7 @@ export function EndNodeProperties({ nodeId }: EndNodePropertiesProps) {
         {/* Output Schema editor */}
         <div className="flex-1 space-y-2">
           <Label>Output Schema (Optional)</Label>
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-xl border border-border overflow-hidden">
             <Editor
               height="400px"
               language="json"

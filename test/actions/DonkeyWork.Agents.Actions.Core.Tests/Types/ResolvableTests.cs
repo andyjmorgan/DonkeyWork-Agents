@@ -1,4 +1,4 @@
-using DonkeyWork.Agents.Actions.Contracts.Types;
+using DonkeyWork.Agents.Common.Sdk.Types;
 
 namespace DonkeyWork.Agents.Actions.Core.Tests.Types;
 

@@ -40,7 +40,7 @@ export function StartNodeProperties({ nodeId }: StartNodePropertiesProps) {
         {/* Input Schema editor */}
         <div className="flex-1 space-y-2">
           <Label>Input Schema</Label>
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-xl border border-border overflow-hidden">
             <Editor
               height="400px"
               language="json"

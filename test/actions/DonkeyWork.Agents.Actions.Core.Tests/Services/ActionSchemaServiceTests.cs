@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using DonkeyWork.Agents.Actions.Contracts.Attributes;
 using DonkeyWork.Agents.Actions.Contracts.Models;
-using DonkeyWork.Agents.Actions.Contracts.Types;
+using DonkeyWork.Agents.Common.Sdk.Types;
 using DonkeyWork.Agents.Actions.Core.Services;
 
 namespace DonkeyWork.Agents.Actions.Core.Tests.Services;

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace DonkeyWork.Agents.Actions.Contracts.Types;
+namespace DonkeyWork.Agents.Common.Sdk.Types;
 
 /// <summary>
 /// A single key-value item where both key and value support variable expressions.

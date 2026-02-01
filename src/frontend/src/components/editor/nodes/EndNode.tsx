@@ -10,17 +10,17 @@ interface EndNodeData {
 export const EndNode = memo(({ id, data, selected }: NodeProps) => {
   const nodeData = data as EndNodeData
   return (
-    <BaseNode id={id} selected={selected} borderColor="border-red-500" canDelete={false}>
+    <BaseNode id={id} selected={selected} borderColor="border-orange-500" canDelete={false}>
       {/* Input handle (top) */}
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-3 !h-3 !bg-red-500 !border-2 !border-background"
+        className="!w-3 !h-3 !bg-orange-500 !border-2 !border-background"
       />
 
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10">
-          <Flag className="h-4 w-4 text-red-500" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/25">
+          <Flag className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1">
           <div className="font-medium text-sm">End</div>

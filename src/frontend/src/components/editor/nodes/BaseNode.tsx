@@ -36,8 +36,8 @@ export function BaseNode({
   return (
     <div
       className={cn(
-        'px-4 py-3 rounded-xl border-2 bg-card shadow-lg min-w-[180px] transition-all relative group',
-        borderColor,
+        'px-4 py-3 rounded-2xl border-2 bg-card shadow-lg min-w-[180px] transition-all relative group',
+        borderColor.replace('border-', 'border-').replace('-500', '-500/50'),
         selected && `ring-2 ${borderColor.replace('border-', 'ring-')} ring-offset-2 ring-offset-background`
       )}
     >

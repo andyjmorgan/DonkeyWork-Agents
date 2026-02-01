@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj" />
+    <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Sdk\DonkeyWork.Agents.Common.Sdk.csproj" />
   </ItemGroup>
 
 </Project>

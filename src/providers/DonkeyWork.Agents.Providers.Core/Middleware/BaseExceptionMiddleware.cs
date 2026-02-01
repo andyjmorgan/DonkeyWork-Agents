@@ -20,9 +20,10 @@ internal class BaseExceptionMiddleware : IModelMiddleware
 
     public IAsyncEnumerable<BaseMiddlewareMessage> ExecuteAsync(
         ModelMiddlewareContext context,
-        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next)
+        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next,
+        CancellationToken cancellationToken = default)
     {
-        return WrapWithHandlerAsync(next, context, HandleException);
+        return WrapWithHandlerAsync(next, context, HandleException, cancellationToken);
     }
 
     private BaseMiddlewareMessage HandleException(Exception exception, ModelMiddlewareContext context)

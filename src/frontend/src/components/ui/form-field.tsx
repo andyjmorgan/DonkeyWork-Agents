@@ -27,7 +27,7 @@ export function FormField({
 }: FormFieldProps) {
   return (
     <div className={cn(
-      "rounded-lg border border-border/50 bg-muted/30 p-4 space-y-2",
+      "rounded-xl border border-border bg-muted/30 p-4 space-y-2",
       className
     )}>
       <Label htmlFor={htmlFor} className="text-sm font-medium">

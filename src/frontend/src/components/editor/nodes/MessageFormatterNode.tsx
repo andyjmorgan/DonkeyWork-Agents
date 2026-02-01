@@ -19,8 +19,8 @@ export const MessageFormatterNode = memo(({ id, data, selected }: NodeProps) => 
       />
 
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
-          <FileText className="h-4 w-4 text-amber-500" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-500 to-amber-600 shadow-lg shadow-yellow-500/25">
+          <FileText className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm">Formatter</div>

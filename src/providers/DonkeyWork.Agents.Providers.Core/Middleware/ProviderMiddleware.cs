@@ -36,11 +36,4 @@ internal class ProviderMiddleware : IModelMiddleware
             };
         }
     }
-
-    IAsyncEnumerable<BaseMiddlewareMessage> IModelMiddleware.ExecuteAsync(
-        ModelMiddlewareContext context,
-        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next)
-    {
-        return ExecuteAsync(context, next);
-    }
 }

@@ -1,4 +1,5 @@
-using DonkeyWork.Agents.Providers.Contracts.Attributes;
+using DonkeyWork.Agents.Common.Sdk.Attributes;
+using DonkeyWork.Agents.Common.Sdk.Types;
 using DonkeyWork.Agents.Providers.Contracts.Configuration.Base;
 
 namespace DonkeyWork.Agents.Providers.Contracts.Configuration.Provider;
@@ -8,7 +9,8 @@ namespace DonkeyWork.Agents.Providers.Contracts.Configuration.Provider;
 /// </summary>
 public sealed class GoogleChatConfig : ChatModelConfig
 {
-    [ConfigField(Label = "Top K", Description = "Number of highest probability tokens to consider", Order = 35, Group = "Advanced")]
-    [RangeConstraint(Min = 1, Max = 100, DefaultValue = 40)]
-    public int? TopK { get; init; }
+    [ConfigurableField(Label = "Top K", Description = "Number of highest probability tokens to consider", Order = 20)]
+    [Tab("Advanced")]
+    [RangeConstraint(Min = 1, Max = 100, Default = 40)]
+    public Resolvable<int>? TopK { get; init; }
 }

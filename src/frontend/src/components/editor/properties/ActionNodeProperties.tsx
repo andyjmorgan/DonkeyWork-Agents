@@ -39,6 +39,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
     return <div className="p-4 text-sm text-muted-foreground">No action type specified</div>
   }
 
+  // Get display metadata from action schema, not stored config
   const actionSchema = getAction(actionType)
   if (!actionSchema) {
     return <div className="p-4 text-sm text-muted-foreground">Action schema not found: {actionType}</div>
@@ -82,16 +83,19 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
     })
   }
 
-  const getParameterValue = (paramName: string, defaultValue?: string) => {
-    return config.parameters?.[paramName] ?? defaultValue ?? ''
+  const getParameterValue = (paramName: string, defaultValue?: string): unknown => {
+    const value = config.parameters?.[paramName]
+    if (value !== undefined && value !== null) return value
+    return defaultValue ?? ''
   }
 
   const renderParameter = (param: ParameterSchema) => {
-    const value = getParameterValue(param.name, param.defaultValue)
+    const rawValue = getParameterValue(param.name, param.defaultValue)
     const label = param.required ? `${param.displayName} *` : param.displayName
 
     // Dropdown (enum)
     if (param.controlType === 'dropdown' && param.options) {
+      const stringValue = String(rawValue ?? '')
       return (
         <FormField
           key={param.name}
@@ -100,7 +104,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
           htmlFor={param.name}
         >
           <Select
-            value={value}
+            value={stringValue}
             onValueChange={(v) => handleParameterChange(param.name, v)}
           >
             <SelectTrigger id={param.name}>
@@ -123,7 +127,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
       const min = param.validation.min ?? 0
       const max = param.validation.max ?? 100
       const step = param.validation.step ?? 1
-      const numValue = typeof value === 'number' ? value : parseInt(value) || min
+      const numValue = typeof rawValue === 'number' ? rawValue : parseInt(String(rawValue)) || min
 
       return (
         <FormField
@@ -150,6 +154,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
 
     // Textarea
     if (param.controlType === 'textarea') {
+      const stringValue = String(rawValue ?? '')
       return (
         <FormField
           key={param.name}
@@ -159,7 +164,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
         >
           <Textarea
             id={param.name}
-            value={value}
+            value={stringValue}
             onChange={(e) => handleParameterChange(param.name, e.target.value)}
             placeholder={param.displayName}
             rows={4}
@@ -170,6 +175,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
 
     // Code editor using Scriban (with variable autocomplete)
     if (param.controlType === 'code') {
+      const stringValue = String(rawValue ?? '')
       const description = param.supportsVariables
         ? `${param.description || ''} Type {{ for autocomplete.`.trim()
         : param.description
@@ -182,7 +188,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
         >
           <ScribanEditor
             nodeId={nodeId}
-            value={value}
+            value={stringValue}
             onChange={(v) => handleParameterChange(param.name, v)}
             height="200px"
           />
@@ -192,7 +198,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
 
     // Key-Value List
     if (param.controlType === 'keyValueList') {
-      const kvValue = (value as KeyValueCollection | null) ?? {
+      const kvValue = (rawValue as KeyValueCollection | null) ?? {
         useVariable: false,
         variable: '',
         items: []
@@ -212,7 +218,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
 
     // Checkbox
     if (param.controlType === 'checkbox') {
-      const checked = value === true || value === 'true'
+      const checked = rawValue === true || rawValue === 'true'
       return (
         <FormField
           key={param.name}
@@ -238,6 +244,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
 
     // Number input
     if (param.controlType === 'number' || param.type === 'number') {
+      const numString = rawValue !== undefined && rawValue !== '' ? String(rawValue) : ''
       return (
         <FormField
           key={param.name}
@@ -248,7 +255,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
           <Input
             id={param.name}
             type="number"
-            value={value}
+            value={numString}
             onChange={(e) => handleParameterChange(param.name, e.target.value)}
             placeholder={param.displayName}
             min={param.validation?.min}
@@ -260,6 +267,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
     }
 
     // Default: text input
+    const stringValue = String(rawValue ?? '')
     const textDescription = param.supportsVariables
       ? `${param.description || ''} Use {{expressions}} for variables.`.trim()
       : param.description
@@ -273,7 +281,7 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
         <Input
           id={param.name}
           type="text"
-          value={value}
+          value={stringValue}
           onChange={(e) => handleParameterChange(param.name, e.target.value)}
           placeholder={param.displayName}
           maxLength={param.validation?.maxLength}
@@ -296,11 +304,11 @@ export function ActionNodeProperties({ nodeId }: ActionNodePropertiesProps) {
                 onKeyDown={handleKeyDown}
                 onBlur={handleSaveName}
                 autoFocus
-                className="flex-1 bg-transparent text-sm font-semibold outline-none border-b border-primary"
+                className="flex-1 bg-transparent text-sm font-semibold outline-none border-b-2 border-accent"
               />
               <button
                 onClick={handleSaveName}
-                className="p-1 hover:bg-muted rounded"
+                className="p-1 hover:bg-accent/20 rounded-lg transition-colors"
               >
                 <Check className="h-3.5 w-3.5" />
               </button>

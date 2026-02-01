@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using DonkeyWork.Agents.Actions.Contracts.Attributes;
 using DonkeyWork.Agents.Actions.Contracts.Models;
-using DonkeyWork.Agents.Actions.Contracts.Types;
+using DonkeyWork.Agents.Common.Sdk.Types;
 
 namespace DonkeyWork.Agents.Actions.Core.Tests.Models;
 

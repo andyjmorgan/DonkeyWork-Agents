@@ -105,6 +105,66 @@ export interface GetModelsResponse {
   models: ModelDefinition[]
 }
 
+// Model config schema types
+export type FieldControlType =
+  | 'Slider'
+  | 'NumberInput'
+  | 'TextInput'
+  | 'TextArea'
+  | 'Select'
+  | 'Toggle'
+  | 'Credential'
+  | 'Code'
+  | 'Json'
+  | 'KeyValueList'
+
+export interface TabSchema {
+  name: string
+  order: number
+  icon?: string
+}
+
+export interface ReliesUponSchema {
+  fieldName: string
+  value: unknown
+  requiredWhenEnabled: boolean
+}
+
+export interface FieldDependency {
+  field: string
+  value: unknown
+}
+
+export interface ConfigFieldSchema {
+  name: string
+  label: string
+  description?: string
+  controlType: FieldControlType
+  propertyType: string
+  order: number
+  group?: string
+  tab?: string
+  required: boolean
+  resolvable: boolean
+  min?: number
+  max?: number
+  step?: number
+  default?: unknown
+  options?: string[]
+  dependsOn?: FieldDependency[]
+  reliesUpon?: ReliesUponSchema
+  credentialTypes?: string[]
+}
+
+export interface ModelConfigSchema {
+  modelId: string
+  modelName: string
+  provider: 'OpenAi' | 'Anthropic' | 'Google' | 'Azure'
+  mode: string
+  tabs: TabSchema[]
+  fields: ConfigFieldSchema[]
+}
+
 // API functions
 export const apiKeys = {
   list: (offset = 0, limit = 10) => api.get<PaginatedResponse<ApiKeyItem>>(`/api/v1/apikeys?offset=${offset}&limit=${limit}`),
@@ -113,12 +173,21 @@ export const apiKeys = {
   delete: (id: string) => api.delete(`/api/v1/apikeys/${id}`),
 }
 
+export interface GetConfigSchemasResponse {
+  schemas: Record<string, ModelConfigSchema>
+}
+
 export const models = {
   list: async () => {
     const response = await api.get<GetModelsResponse>('/api/v1/models')
     return response.models
   },
   get: (modelId: string) => api.get<ModelDefinition>(`/api/v1/models/${modelId}`),
+  getConfigSchema: (modelId: string) => api.get<ModelConfigSchema>(`/api/v1/models/${modelId}/config-schema`),
+  getAllConfigSchemas: async () => {
+    const response = await api.get<GetConfigSchemasResponse>('/api/v1/models/config-schemas')
+    return response.schemas
+  },
 }
 
 // Credential types

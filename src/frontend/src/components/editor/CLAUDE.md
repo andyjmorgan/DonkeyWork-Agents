@@ -116,24 +116,26 @@ MyNode.displayName = 'MyNode'
 
 ## Node Color Conventions
 
-Each node type has a dedicated color scheme:
+Each node type has a dedicated color scheme from the DonkeyWork design system:
 
-| Node Type | Color | Border Class | Background Class |
-|-----------|-------|--------------|------------------|
-| Start | Green | `border-green-500` | `bg-green-500/10` |
-| End | Red | `border-red-500` | `bg-red-500/10` |
-| Model | Blue | `border-blue-500` | `bg-blue-500/10` |
-| Action | Purple | `border-purple-500` | `bg-purple-500/10` |
+| Node Type | Color | Border Class | Gradient Background |
+|-----------|-------|--------------|---------------------|
+| Start | Green #22c55e | `border-green-500` | `from-green-500 to-emerald-600` |
+| End | Orange #f97316 | `border-orange-500` | `from-orange-500 to-red-500` |
+| Model | Blue #3b82f6 | `border-blue-500` | `from-blue-500 to-indigo-600` |
+| Action | Purple #a855f7 | `border-purple-500` | `from-purple-500 to-fuchsia-600` |
+| Utility | Cyan #22d3ee | `border-cyan-500` | `from-cyan-500 to-teal-600` |
+| Condition | Yellow #eab308 | `border-amber-500` | `from-yellow-500 to-amber-600` |
 
-### Color Usage
+### Color Usage (Design System)
 
 ```tsx
-// Icon container background (10% opacity)
-<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10">
-  <Icon className="h-4 w-4 text-purple-500" />
+// Icon container with gradient and glow shadow
+<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/25">
+  <Icon className="h-4 w-4 text-white" />
 </div>
 
-// BaseNode border
+// BaseNode border (50% opacity for softer look)
 <BaseNode borderColor="border-purple-500">
   {/* ... */}
 </BaseNode>

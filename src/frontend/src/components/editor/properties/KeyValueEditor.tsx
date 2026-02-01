@@ -79,7 +79,7 @@ export function KeyValueEditor({
   }, [collection, onChange])
 
   return (
-    <div className="space-y-3">
+    <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <Label htmlFor={id}>
           {label}

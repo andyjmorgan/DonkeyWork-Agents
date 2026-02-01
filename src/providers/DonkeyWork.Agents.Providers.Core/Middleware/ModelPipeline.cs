@@ -39,7 +39,7 @@ public class ModelPipeline : IModelPipeline
         var context = MapToInternalContext(request);
 
         // Build and execute the internal pipeline
-        var pipelineFunc = CreatePipelineFunc(PipelineOrder.ToList(), 0);
+        var pipelineFunc = CreatePipelineFunc(PipelineOrder.ToList(), 0, cancellationToken);
 
         ModelResponseUsage? usage = null;
 
@@ -169,7 +169,8 @@ public class ModelPipeline : IModelPipeline
 
     private Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> CreatePipelineFunc(
         List<Type> middlewareTypes,
-        int index)
+        int index,
+        CancellationToken cancellationToken)
     {
         if (index >= middlewareTypes.Count)
         {
@@ -184,9 +185,9 @@ public class ModelPipeline : IModelPipeline
             _middlewareCache[middlewareType] = middleware;
         }
 
-        var next = CreatePipelineFunc(middlewareTypes, index + 1);
+        var next = CreatePipelineFunc(middlewareTypes, index + 1, cancellationToken);
 
-        return context => middleware.ExecuteAsync(context, next);
+        return context => middleware.ExecuteAsync(context, next, cancellationToken);
     }
 
     private static async IAsyncEnumerable<T> EmptyAsyncEnumerableAsync<T>()

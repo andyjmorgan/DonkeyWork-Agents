@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DonkeyWork.Agents.Agents.Contracts.Models;
 using DonkeyWork.Agents.Agents.Contracts.Models.NodeConfigurations;
 using DonkeyWork.Agents.Agents.Contracts.Services;
+using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
 using Microsoft.EntityFrameworkCore;
@@ -23,12 +24,15 @@ public class AgentVersionService : IAgentVersionService
 
     public async Task<GetAgentVersionResponseV1> SaveDraftAsync(Guid agentId, SaveAgentVersionRequestV1 request, Guid userId, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Saving draft version for agent {AgentId}", agentId);
+        _logger.LogInformation("Saving draft version for agent {AgentId}. UserId from param: {ParamUserId}, UserId from DbContext: {DbContextUserId}",
+            agentId, userId, _dbContext.CurrentUserId);
 
         // Check if agent exists
         var agentExists = await _dbContext.Agents.AnyAsync(a => a.Id == agentId, cancellationToken);
         if (!agentExists)
         {
+            _logger.LogWarning("Agent {AgentId} not found for user {UserId}. DbContext CurrentUserId: {DbContextUserId}",
+                agentId, userId, _dbContext.CurrentUserId);
             throw new InvalidOperationException($"Agent {agentId} not found");
         }
 
@@ -236,7 +240,7 @@ public class AgentVersionService : IAgentVersionService
 
             if (config is ModelNodeConfiguration modelConfig)
             {
-                if (modelConfig.Provider == 0) // Default enum value
+                if (modelConfig.Provider == LlmProvider.Unknown)
                 {
                     throw new InvalidOperationException($"Model node {nodeId} missing required field: provider");
                 }

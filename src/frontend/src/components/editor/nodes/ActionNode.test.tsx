@@ -54,7 +54,8 @@ describe('ActionNode', () => {
     })
 
     const { container } = render(<ActionNode {...props} />, { wrapper: Wrapper })
-    const iconContainer = container.querySelector('.bg-purple-500\\/10')
+    // Check for gradient icon container (design system uses from-purple-500)
+    const iconContainer = container.querySelector('.from-purple-500')
     expect(iconContainer).toBeTruthy()
   })
 

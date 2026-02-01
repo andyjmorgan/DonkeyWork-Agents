@@ -20,13 +20,13 @@ export const ModelNode = memo(({ id, data, selected }: NodeProps) => {
       case 'OpenAi':
       case 'OpenAI': // Backward compatibility
       case 'Azure':
-        return <OpenAIIcon className="h-4 w-4 text-blue-500" />
+        return <OpenAIIcon className="h-4 w-4 text-white" />
       case 'Anthropic':
-        return <AnthropicIcon className="h-4 w-4 text-blue-500" />
+        return <AnthropicIcon className="h-4 w-4 text-white" />
       case 'Google':
-        return <GoogleIcon className="h-4 w-4 text-blue-500" />
+        return <GoogleIcon className="h-4 w-4 text-white" />
       default:
-        return <OpenAIIcon className="h-4 w-4 text-blue-500" />
+        return <OpenAIIcon className="h-4 w-4 text-white" />
     }
   }
 
@@ -40,7 +40,7 @@ export const ModelNode = memo(({ id, data, selected }: NodeProps) => {
       />
 
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25">
           {getProviderIcon()}
         </div>
         <div className="flex-1 min-w-0">

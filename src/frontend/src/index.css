@@ -3,73 +3,113 @@
 @tailwind utilities;
 
 @layer base {
+  /* DonkeyWork Design System - Light Mode */
   :root {
+    /* Backgrounds: #ffffff, #f8fafc, #f1f5f9, #e2e8f0 */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --success: 142 76% 36%;
-    --success-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --card-foreground: 222 47% 11%;
+    --popover: 210 40% 98%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary button: gradient cyan-to-blue, white text */
+    --primary: 187 86% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: #f8fafc bg, dark text */
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted: #f1f5f9 bg, #64748b text */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent (cyan): #0891b2 */
+    --accent: 192 91% 37%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: red */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success: emerald #10b981 */
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning: amber #f59e0b */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Borders: #e2e8f0 */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 192 91% 37%;
+    --radius: 0.75rem;
 
     /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 192 91% 37%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 192 91% 37%;
   }
 
+  /* DonkeyWork Design System - Dark Mode */
   .dark {
-    --background: 0 0% 5%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 10%;
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-    --border: 0 0% 20%;
-    --input: 0 0% 3%;
-    --ring: 0 0% 80%;
+    /* Backgrounds: #0a0d12, #0f1318, #151a21, #1a2028 */
+    --background: 216 28% 5%;
+    --foreground: 0 0% 100%;
+    --card: 216 23% 7%;
+    --card-foreground: 0 0% 100%;
+    --popover: 216 20% 10%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Primary button: gradient cyan-to-blue, white text */
+    --primary: 187 86% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: #151a21 bg, light text */
+    --secondary: 216 20% 11%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted: #1a2028 bg, #94a3b8 text */
+    --muted: 216 17% 13%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Accent (cyan): #22d3ee */
+    --accent: 187 86% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: red */
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success: emerald #10b981 */
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning: amber #f59e0b */
+    --warning: 38 92% 50%;
+    --warning-foreground: 216 28% 5%;
+
+    /* Borders: very subtle, barely visible in dark mode */
+    --border: 220 13% 12%;
+    --input: 220 13% 14%;
+    --ring: 187 86% 53%;
 
     /* Sidebar */
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 216 28% 5%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 187 86% 53%;
+    --sidebar-primary-foreground: 216 28% 5%;
+    --sidebar-accent: 216 20% 11%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 187 86% 53%;
   }
 }
 
@@ -156,6 +196,11 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Hide ReactFlow attribution */
+  .react-flow__attribution {
+    display: none !important;
   }
 
   /* Terminal/console output styling */

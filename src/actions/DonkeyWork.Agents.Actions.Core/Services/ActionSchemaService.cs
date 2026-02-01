@@ -5,7 +5,7 @@ using System.Text.Json;
 using DonkeyWork.Agents.Actions.Contracts.Attributes;
 using DonkeyWork.Agents.Actions.Contracts.Models.Schema;
 using DonkeyWork.Agents.Actions.Contracts.Services;
-using DonkeyWork.Agents.Actions.Contracts.Types;
+using DonkeyWork.Agents.Common.Sdk.Types;
 
 namespace DonkeyWork.Agents.Actions.Core.Services;
 

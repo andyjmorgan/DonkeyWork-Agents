@@ -12,8 +12,8 @@ export const StartNode = memo(({ id, data, selected }: NodeProps) => {
   return (
     <BaseNode id={id} selected={selected} borderColor="border-green-500" canDelete={false}>
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
-          <Play className="h-4 w-4 text-green-500" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/25">
+          <Play className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1">
           <div className="font-medium text-sm">Start</div>

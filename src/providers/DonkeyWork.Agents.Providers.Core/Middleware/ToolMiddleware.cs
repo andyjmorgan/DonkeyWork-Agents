@@ -97,11 +97,4 @@ internal class ToolMiddleware : IModelMiddleware
 
         await Task.CompletedTask;
     }
-
-    IAsyncEnumerable<BaseMiddlewareMessage> IModelMiddleware.ExecuteAsync(
-        ModelMiddlewareContext context,
-        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next)
-    {
-        return ExecuteAsync(context, next);
-    }
 }

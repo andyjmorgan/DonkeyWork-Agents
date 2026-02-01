@@ -28,49 +28,49 @@ const getActionIcon = (iconName?: string) => {
   }
 }
 
-// Get color scheme based on icon type
+// Get color scheme based on icon type - using design system gradients
 const getColorScheme = (iconName?: string) => {
   switch (iconName) {
     case 'globe':
       return {
         border: 'border-purple-500',
-        bg: 'bg-purple-500/10',
-        text: 'text-purple-500',
+        bg: 'bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/25',
+        text: 'text-white',
         handle: '!bg-purple-500'
       }
     case 'clock':
       return {
         border: 'border-cyan-500',
-        bg: 'bg-cyan-500/10',
-        text: 'text-cyan-500',
+        bg: 'bg-gradient-to-br from-cyan-500 to-teal-600 shadow-lg shadow-cyan-500/25',
+        text: 'text-white',
         handle: '!bg-cyan-500'
       }
     case 'mail':
       return {
         border: 'border-pink-500',
-        bg: 'bg-pink-500/10',
-        text: 'text-pink-500',
+        bg: 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-lg shadow-pink-500/25',
+        text: 'text-white',
         handle: '!bg-pink-500'
       }
     case 'database':
       return {
         border: 'border-emerald-500',
-        bg: 'bg-emerald-500/10',
-        text: 'text-emerald-500',
+        bg: 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/25',
+        text: 'text-white',
         handle: '!bg-emerald-500'
       }
     case 'file':
       return {
         border: 'border-orange-500',
-        bg: 'bg-orange-500/10',
-        text: 'text-orange-500',
+        bg: 'bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg shadow-orange-500/25',
+        text: 'text-white',
         handle: '!bg-orange-500'
       }
     default:
       return {
         border: 'border-violet-500',
-        bg: 'bg-violet-500/10',
-        text: 'text-violet-500',
+        bg: 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/25',
+        text: 'text-white',
         handle: '!bg-violet-500'
       }
   }

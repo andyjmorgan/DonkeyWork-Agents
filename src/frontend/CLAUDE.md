@@ -223,11 +223,71 @@ export const api = {
 
 ## Styling
 
-### Theme (copy from CodeSandbox-Manager)
+### DonkeyWork Design System
 
-Dark mode default, HSL CSS variables, Zustand persistence.
+The design system is documented in two HTML reference files:
+- `colorstyle.html` - Dark mode design system
+- `lightmmode.colorstyle.html` - Light mode design system
 
-See index.css for full variable definitions.
+Open these files in a browser to see the full visual reference.
+
+### Design Tokens
+
+| Token | Dark Mode | Light Mode |
+|-------|-----------|------------|
+| **Backgrounds** | | |
+| Primary | `#0a0d12` | `#ffffff` |
+| Secondary | `#0f1318` | `#f8fafc` |
+| Tertiary | `#151a21` | `#f1f5f9` |
+| Elevated | `#1a2028` | `#e2e8f0` |
+| **Text** | | |
+| Primary | `#ffffff` | `#0f172a` |
+| Secondary | `#94a3b8` | `#475569` |
+| Tertiary | `#64748b` | `#64748b` |
+| Muted | `#475569` | `#94a3b8` |
+| **Accent** | `#22d3ee` | `#0891b2` |
+
+### Node Colors (same for both modes)
+
+| Node Type | Color | Tailwind Class |
+|-----------|-------|----------------|
+| Start | `#22c55e` | `node-start` |
+| End | `#f97316` | `node-end` |
+| Action | `#a855f7` | `node-action` |
+| Utility | `#22d3ee` | `node-utility` |
+| Model | `#3b82f6` | `node-model` |
+| Condition | `#eab308` | `node-condition` |
+
+### Component Patterns
+
+**Buttons:**
+- Primary: Gradient `from-cyan-500 to-blue-600` with glow shadow
+- Secondary: Border with `shadow-sm`
+- Destructive: Red tinted background with red text/border
+- Ghost: Transparent, accent on hover
+- Success: Gradient `from-emerald-500 to-green-600`
+- Warning: Gradient `from-amber-500 to-orange-600`
+
+**Inputs:**
+- Border radius: `rounded-xl` (12px)
+- Focus: Cyan border with `ring-accent/20`
+- Shadow: `shadow-sm`
+
+**Cards:**
+- Border radius: `rounded-2xl` (16px)
+- Border: `border-border`
+- Hover: `hover:border-accent/30` or `hover:shadow-md`
+
+**Badges:**
+- Status badges use colored backgrounds with matching borders
+- Include dot indicator with status color
+
+### Typography
+
+- **Font family**: Inter (body), JetBrains Mono (code)
+- **Headings**: Semibold/Bold, slate-900 (light) / white (dark)
+- **Body**: Regular, slate-700 (light) / slate-300 (dark)
+- **Muted**: Regular, slate-500 (light) / slate-500 (dark)
 
 ---
 

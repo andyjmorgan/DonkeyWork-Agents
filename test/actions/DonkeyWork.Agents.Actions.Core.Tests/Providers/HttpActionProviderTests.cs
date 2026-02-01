@@ -1,6 +1,6 @@
 using System.Net;
 using DonkeyWork.Agents.Actions.Contracts.Services;
-using DonkeyWork.Agents.Actions.Contracts.Types;
+using DonkeyWork.Agents.Common.Sdk.Types;
 using DonkeyWork.Agents.Actions.Core.Providers;
 using Moq;
 using Moq.Protected;

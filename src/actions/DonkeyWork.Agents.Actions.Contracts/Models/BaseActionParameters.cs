@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Common.Sdk.Types;
 
 namespace DonkeyWork.Agents.Actions.Contracts.Models;
 
@@ -169,6 +170,6 @@ public abstract class BaseActionParameters
     private static bool IsResolvableType(Type type)
     {
         return type.IsGenericType &&
-               type.GetGenericTypeDefinition() == typeof(Types.Resolvable<>);
+               type.GetGenericTypeDefinition() == typeof(Resolvable<>);
     }
 }

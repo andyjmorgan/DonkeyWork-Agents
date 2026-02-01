@@ -9,6 +9,7 @@ import { NodePalette } from '@/components/editor/NodePalette'
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel'
 import { AgentMetadataDialog } from '@/components/editor/AgentMetadataDialog'
 import { VersionHistorySheet } from '@/components/editor/VersionHistorySheet'
+import { ExportJsonDialog } from '@/components/editor/ExportJsonDialog'
 import { TestPanel } from '@/components/execution/TestPanel'
 import { useEditorStore } from '@/store/editor'
 import type { AgentVersion } from '@/lib/api'
@@ -34,6 +35,7 @@ export function AgentEditorPage() {
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(false)
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -146,17 +148,8 @@ export function AgentEditorPage() {
   }, [agentId, isLoading, agentName, agentDescription, handleSave]) // Trigger on metadata changes
 
   const handleExport = useCallback(() => {
-    const json = exportToJson()
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${agentName || 'agent'}_export.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, [exportToJson, agentName])
+    setIsExportDialogOpen(true)
+  }, [])
 
   const handleMetadataSave = useCallback(async (name: string, description: string) => {
     if (!agentId) return
@@ -172,7 +165,7 @@ export function AgentEditorPage() {
   }, [agentId, setAgentMetadata])
 
   const handlePublish = useCallback(async () => {
-    if (!agentId || !isDraft) return
+    if (!agentId) return
 
     // Confirm before publishing
     if (!window.confirm('Are you sure you want to publish this version? The next save will create a new draft.')) {
@@ -181,6 +174,9 @@ export function AgentEditorPage() {
 
     try {
       setIsPublishing(true)
+
+      // First save current state as draft to ensure latest changes are captured
+      await save()
 
       const { agents } = await import('@/lib/api')
       const publishedVersion = await agents.publish(agentId)
@@ -218,7 +214,7 @@ export function AgentEditorPage() {
     } finally {
       setIsPublishing(false)
     }
-  }, [agentId, agentName, agentDescription, isDraft])
+  }, [agentId, agentName, agentDescription, save])
 
   const handleLoadVersion = useCallback(async (version: AgentVersion) => {
     // Merge top-level inputSchema into start node configuration
@@ -365,7 +361,7 @@ export function AgentEditorPage() {
             {isPublishing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : null}
-            {isDraft ? 'Publish' : 'Publish Current'}
+            Publish
           </Button>
         </div>
       </header>
@@ -419,6 +415,14 @@ export function AgentEditorPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Export JSON Dialog */}
+      <ExportJsonDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        json={exportToJson()}
+        filename={`${agentName || 'agent'}_export.json`}
+      />
     </div>
   )
 }
