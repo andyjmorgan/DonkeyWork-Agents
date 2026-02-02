@@ -30,7 +30,7 @@ public class ProjectsTools
     [McpTool(
         Name = "projects_list",
         Title = "List Projects",
-        Description = "List all projects for the current user",
+        Description = "List all projects for the current user. Projects are the top-level container and can contain milestones, tasks, and notes. Tasks and notes can also exist standalone or at the project level.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<ProjectSummaryV1>> ListProjects(CancellationToken ct)
@@ -45,7 +45,7 @@ public class ProjectsTools
     [McpTool(
         Name = "projects_get",
         Title = "Get Project",
-        Description = "Get a project by ID with full details including milestones, todos, and notes",
+        Description = "Get a project by ID with full details including its milestones, project-level tasks, and project-level notes. Use milestones_get to see tasks/notes within a specific milestone.",
         Icon = "file",
         ReadOnlyHint = true)]
     public async Task<ProjectDetailsV1?> GetProject(
@@ -62,13 +62,13 @@ public class ProjectsTools
     [McpTool(
         Name = "projects_create",
         Title = "Create Project",
-        Description = "Create a new project",
+        Description = "Create a new project. Projects are the top-level container that can hold milestones, tasks, and notes. After creating a project, you can add milestones with milestones_create, or add tasks/notes directly to the project.",
         Icon = "plus")]
     public async Task<ProjectDetailsV1> CreateProject(
         [Description("The name of the project")] string name,
-        [Description("Optional content/description of the project")] string? content,
+        [Description("Optional content/description of the project (supports markdown and mermaid diagrams)")] string? content,
         [Description("Optional success criteria for the project")] string? successCriteria,
-        [Description("Optional status (NotStarted, InProgress, OnHold, Completed, Cancelled)")] ProjectStatus? status,
+        [Description("Status: NotStarted (default), InProgress, OnHold, Completed, or Cancelled")] ProjectStatus? status,
         CancellationToken ct)
     {
         var request = new CreateProjectRequestV1
@@ -89,14 +89,14 @@ public class ProjectsTools
     [McpTool(
         Name = "projects_update",
         Title = "Update Project",
-        Description = "Update an existing project",
+        Description = "Update an existing project's details. Does not affect milestones, tasks, or notes within the project - use the respective tools to manage those.",
         Icon = "edit")]
     public async Task<ProjectDetailsV1?> UpdateProject(
         [Description("The unique identifier of the project to update")] Guid id,
         [Description("The new name of the project")] string name,
-        [Description("Optional new content/description of the project")] string? content,
+        [Description("Optional new content/description of the project (supports markdown and mermaid diagrams)")] string? content,
         [Description("Optional new success criteria for the project")] string? successCriteria,
-        [Description("Optional new status (NotStarted, InProgress, OnHold, Completed, Cancelled)")] ProjectStatus? status,
+        [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled")] ProjectStatus? status,
         CancellationToken ct)
     {
         var request = new UpdateProjectRequestV1

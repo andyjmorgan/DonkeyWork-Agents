@@ -30,7 +30,7 @@ public class NotesTools
     [McpTool(
         Name = "notes_list",
         Title = "List Notes",
-        Description = "List all notes for the current user",
+        Description = "List all notes for the current user. Notes can be standalone, or optionally associated with a project or milestone. Returns all notes regardless of their association.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<NoteV1>> ListNotes(CancellationToken ct)
@@ -62,14 +62,14 @@ public class NotesTools
     [McpTool(
         Name = "notes_create",
         Title = "Create Note",
-        Description = "Create a new note",
+        Description = "Create a new note. Notes can be standalone (no project or milestone), associated with a project only, or associated with a specific milestone within a project. Provide projectId for project-level notes, or milestoneId for milestone-level notes.",
         Icon = "plus")]
     public async Task<NoteV1> CreateNote(
         [Description("The title of the note")] string title,
-        [Description("Optional content of the note")] string? content,
+        [Description("Optional content of the note (supports markdown and mermaid diagrams)")] string? content,
         [Description("Optional sort order for display")] int? sortOrder,
-        [Description("Optional project ID to associate the note with")] Guid? projectId,
-        [Description("Optional milestone ID to associate the note with")] Guid? milestoneId,
+        [Description("Optional project ID - set to associate this note with a project (note becomes project-level)")] Guid? projectId,
+        [Description("Optional milestone ID - set to associate this note with a milestone (note becomes milestone-level)")] Guid? milestoneId,
         CancellationToken ct)
     {
         var request = new CreateNoteRequestV1
@@ -91,15 +91,15 @@ public class NotesTools
     [McpTool(
         Name = "notes_update",
         Title = "Update Note",
-        Description = "Update an existing note",
+        Description = "Update an existing note. You can change its content or move it between standalone/project/milestone associations by setting or clearing the projectId and milestoneId fields.",
         Icon = "edit")]
     public async Task<NoteV1?> UpdateNote(
         [Description("The unique identifier of the note to update")] Guid id,
         [Description("The new title of the note")] string title,
-        [Description("Optional new content of the note")] string? content,
+        [Description("Optional new content of the note (supports markdown and mermaid diagrams)")] string? content,
         [Description("Optional new sort order for display")] int? sortOrder,
-        [Description("Optional project ID to associate the note with")] Guid? projectId,
-        [Description("Optional milestone ID to associate the note with")] Guid? milestoneId,
+        [Description("Project ID - set to associate with a project, or null to make standalone")] Guid? projectId,
+        [Description("Milestone ID - set to associate with a milestone, or null to remove milestone association")] Guid? milestoneId,
         CancellationToken ct)
     {
         var request = new UpdateNoteRequestV1
@@ -139,7 +139,7 @@ public class NotesTools
     [McpTool(
         Name = "notes_list_by_project",
         Title = "List Notes by Project",
-        Description = "List all notes for a specific project",
+        Description = "List all notes directly associated with a specific project (project-level notes only). Does not include notes associated with milestones within the project - use notes_list_by_milestone for those.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<NoteV1>> ListNotesByProject(
@@ -156,7 +156,7 @@ public class NotesTools
     [McpTool(
         Name = "notes_list_by_milestone",
         Title = "List Notes by Milestone",
-        Description = "List all notes for a specific milestone",
+        Description = "List all notes associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<NoteV1>> ListNotesByMilestone(

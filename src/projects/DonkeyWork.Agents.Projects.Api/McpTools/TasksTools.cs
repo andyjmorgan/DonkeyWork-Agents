@@ -30,7 +30,7 @@ public class TasksTools
     [McpTool(
         Name = "tasks_list",
         Title = "List Tasks",
-        Description = "List all tasks for the current user",
+        Description = "List all tasks (todos) for the current user. Tasks can be standalone, or optionally associated with a project or milestone. Returns all tasks regardless of their association.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<TodoV1>> ListTasks(CancellationToken ct)
@@ -62,16 +62,16 @@ public class TasksTools
     [McpTool(
         Name = "tasks_create",
         Title = "Create Task",
-        Description = "Create a new task",
+        Description = "Create a new task (todo). Tasks can be standalone (no project or milestone), associated with a project only, or associated with a specific milestone within a project. Provide projectId for project-level tasks, or milestoneId for milestone-level tasks.",
         Icon = "plus")]
     public async Task<TodoV1> CreateTask(
         [Description("The title of the task")] string title,
-        [Description("Optional description of the task")] string? description,
-        [Description("Optional status (Pending, InProgress, Completed, Cancelled)")] TodoStatus? status,
-        [Description("Optional priority (Low, Medium, High, Critical)")] TodoPriority? priority,
+        [Description("Optional description of the task (supports markdown and mermaid diagrams)")] string? description,
+        [Description("Status: Pending (default), InProgress, Completed, or Cancelled")] TodoStatus? status,
+        [Description("Priority: Low, Medium (default), High, or Critical")] TodoPriority? priority,
         [Description("Optional due date for the task")] DateTimeOffset? dueDate,
-        [Description("Optional project ID to associate the task with")] Guid? projectId,
-        [Description("Optional milestone ID to associate the task with")] Guid? milestoneId,
+        [Description("Optional project ID - set to associate this task with a project (task becomes project-level)")] Guid? projectId,
+        [Description("Optional milestone ID - set to associate this task with a milestone (task becomes milestone-level)")] Guid? milestoneId,
         CancellationToken ct)
     {
         var request = new CreateTodoRequestV1
@@ -95,18 +95,18 @@ public class TasksTools
     [McpTool(
         Name = "tasks_update",
         Title = "Update Task",
-        Description = "Update an existing task",
+        Description = "Update an existing task. You can change its details, status, priority, or move it between standalone/project/milestone associations by setting or clearing the projectId and milestoneId fields.",
         Icon = "edit")]
     public async Task<TodoV1?> UpdateTask(
         [Description("The unique identifier of the task to update")] Guid id,
         [Description("The new title of the task")] string title,
-        [Description("Optional new description of the task")] string? description,
-        [Description("Optional new status (Pending, InProgress, Completed, Cancelled)")] TodoStatus? status,
-        [Description("Optional new priority (Low, Medium, High, Critical)")] TodoPriority? priority,
-        [Description("Optional completion notes")] string? completionNotes,
+        [Description("Optional new description of the task (supports markdown and mermaid diagrams)")] string? description,
+        [Description("Status: Pending, InProgress, Completed, or Cancelled")] TodoStatus? status,
+        [Description("Priority: Low, Medium, High, or Critical")] TodoPriority? priority,
+        [Description("Optional completion notes (set when marking as Completed)")] string? completionNotes,
         [Description("Optional new due date for the task")] DateTimeOffset? dueDate,
-        [Description("Optional project ID to associate the task with")] Guid? projectId,
-        [Description("Optional milestone ID to associate the task with")] Guid? milestoneId,
+        [Description("Project ID - set to associate with a project, or null to make standalone")] Guid? projectId,
+        [Description("Milestone ID - set to associate with a milestone, or null to remove milestone association")] Guid? milestoneId,
         CancellationToken ct)
     {
         var request = new UpdateTodoRequestV1
@@ -149,7 +149,7 @@ public class TasksTools
     [McpTool(
         Name = "tasks_list_by_project",
         Title = "List Tasks by Project",
-        Description = "List all tasks for a specific project",
+        Description = "List all tasks directly associated with a specific project (project-level tasks only). Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<TodoV1>> ListTasksByProject(
@@ -166,7 +166,7 @@ public class TasksTools
     [McpTool(
         Name = "tasks_list_by_milestone",
         Title = "List Tasks by Milestone",
-        Description = "List all tasks for a specific milestone",
+        Description = "List all tasks associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<TodoV1>> ListTasksByMilestone(

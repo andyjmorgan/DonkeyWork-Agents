@@ -30,11 +30,11 @@ public class MilestonesTools
     [McpTool(
         Name = "milestones_list",
         Title = "List Milestones",
-        Description = "List all milestones for a specific project",
+        Description = "List all milestones for a specific project. Milestones are phases or deliverables within a project. Each milestone can have its own tasks and notes.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<MilestoneSummaryV1>> ListMilestones(
-        [Description("The unique identifier of the project")] Guid projectId,
+        [Description("The unique identifier of the project to list milestones for")] Guid projectId,
         CancellationToken ct)
     {
         return await _milestoneService.GetByProjectIdAsync(projectId, ct);
@@ -47,7 +47,7 @@ public class MilestonesTools
     [McpTool(
         Name = "milestones_get",
         Title = "Get Milestone",
-        Description = "Get a milestone by ID with full details including todos and notes",
+        Description = "Get a milestone by ID with full details including all tasks and notes associated with this milestone.",
         Icon = "file",
         ReadOnlyHint = true)]
     public async Task<MilestoneDetailsV1?> GetMilestone(
@@ -64,14 +64,14 @@ public class MilestonesTools
     [McpTool(
         Name = "milestones_create",
         Title = "Create Milestone",
-        Description = "Create a new milestone within a project",
+        Description = "Create a new milestone within a project. Milestones represent major phases or deliverables. After creating a milestone, you can add tasks and notes to it using tasks_create and notes_create with the milestoneId parameter.",
         Icon = "plus")]
     public async Task<MilestoneDetailsV1?> CreateMilestone(
-        [Description("The unique identifier of the project")] Guid projectId,
+        [Description("The project ID this milestone belongs to (required - milestones must belong to a project)")] Guid projectId,
         [Description("The name of the milestone")] string name,
-        [Description("Optional content/description of the milestone")] string? content,
+        [Description("Optional content/description of the milestone (supports markdown and mermaid diagrams)")] string? content,
         [Description("Optional success criteria for the milestone")] string? successCriteria,
-        [Description("Optional status (NotStarted, InProgress, OnHold, Completed, Cancelled)")] MilestoneStatus? status,
+        [Description("Status: NotStarted (default), InProgress, OnHold, Completed, or Cancelled")] MilestoneStatus? status,
         [Description("Optional due date for the milestone")] DateTimeOffset? dueDate,
         [Description("Optional sort order for display")] int? sortOrder,
         CancellationToken ct)
@@ -96,14 +96,14 @@ public class MilestonesTools
     [McpTool(
         Name = "milestones_update",
         Title = "Update Milestone",
-        Description = "Update an existing milestone",
+        Description = "Update an existing milestone's details. Does not affect tasks or notes within the milestone - use the respective tools to manage those.",
         Icon = "edit")]
     public async Task<MilestoneDetailsV1?> UpdateMilestone(
         [Description("The unique identifier of the milestone to update")] Guid id,
         [Description("The new name of the milestone")] string name,
-        [Description("Optional new content/description of the milestone")] string? content,
+        [Description("Optional new content/description of the milestone (supports markdown and mermaid diagrams)")] string? content,
         [Description("Optional new success criteria for the milestone")] string? successCriteria,
-        [Description("Optional new status (NotStarted, InProgress, OnHold, Completed, Cancelled)")] MilestoneStatus? status,
+        [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled")] MilestoneStatus? status,
         [Description("Optional new due date for the milestone")] DateTimeOffset? dueDate,
         [Description("Optional new sort order for display")] int? sortOrder,
         CancellationToken ct)
