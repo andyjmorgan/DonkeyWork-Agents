@@ -16,6 +16,7 @@ Implementation milestones for the orchestration platform evolution.
 
 | # | Milestone | Status | Dependencies |
 |---|-----------|--------|--------------|
+| M6 | [API Key User Details from Keycloak](./m6-api-key-user-details.md) | 🔲 Post-MVP | M2 |
 | M7 | [MCP Server — User Orchestrations](./m7-mcp-server-user-orchestrations.md) | 🔲 Post-MVP | M1, M2 |
 
 ## Dependency Graph
@@ -28,6 +29,8 @@ M1: Orchestration Rename
  │     ├──► M3: Chat Interface
  │     │
  │     ├──► M4: MCP OAuth (post-MVP)
+ │     │
+ │     ├──► M6: API Key User Details (post-MVP)
  │     │
  │     └──► M7: MCP User Orchestrations (post-MVP)
  │
