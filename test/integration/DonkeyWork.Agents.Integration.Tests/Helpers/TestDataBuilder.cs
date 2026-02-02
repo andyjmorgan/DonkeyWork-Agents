@@ -1,5 +1,7 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -96,22 +98,44 @@ public static class TestDataBuilder
         string? reactFlowData = null,
         string? nodeConfigurations = null)
     {
-        var startNodeId = Guid.NewGuid().ToString();
-        var endNodeId = Guid.NewGuid().ToString();
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
         var inputSchemaJson = inputSchema ?? "{}";
-        var reactFlowDataJson = reactFlowData ?? $$"""
+
+        ReactFlowData parsedReactFlowData;
+        if (reactFlowData != null)
+        {
+            parsedReactFlowData = JsonSerializer.Deserialize<ReactFlowData>(reactFlowData) ?? new ReactFlowData();
+        }
+        else
+        {
+            parsedReactFlowData = new ReactFlowData
             {
-                "nodes": [
-                    { "id": "{{startNodeId}}", "type": "start", "position": { "x": 100, "y": 100 }, "data": {} },
-                    { "id": "{{endNodeId}}", "type": "end", "position": { "x": 400, "y": 100 }, "data": {} }
+                Nodes =
+                [
+                    new ReactFlowNode
+                    {
+                        Id = startNodeId,
+                        Type = "schemaNode",
+                        Position = new ReactFlowPosition { X = 100, Y = 100 },
+                        Data = new ReactFlowNodeData { NodeType = NodeType.Start, Label = "start_1", DisplayName = "start_1" }
+                    },
+                    new ReactFlowNode
+                    {
+                        Id = endNodeId,
+                        Type = "schemaNode",
+                        Position = new ReactFlowPosition { X = 400, Y = 100 },
+                        Data = new ReactFlowNodeData { NodeType = NodeType.End, Label = "end_1", DisplayName = "end_1" }
+                    }
                 ],
-                "edges": [
-                    { "id": "e1", "source": "{{startNodeId}}", "target": "{{endNodeId}}" }
+                Edges =
+                [
+                    new ReactFlowEdge { Id = Guid.NewGuid(), Source = startNodeId, Target = endNodeId }
                 ],
-                "viewport": { "x": 0, "y": 0, "zoom": 1 }
-            }
-            """;
+                Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
+            };
+        }
 
         // Node configurations must have an entry for each node in the ReactFlow data
         // StartNodeConfiguration requires: name (string), inputSchema (JsonElement)
@@ -119,10 +143,12 @@ public static class TestDataBuilder
         var nodeConfigurationsJson = nodeConfigurations ?? $$"""
             {
                 "{{startNodeId}}": {
+                    "type": "Start",
                     "name": "start-node",
                     "inputSchema": { "type": "object", "properties": { "input": { "type": "string" } } }
                 },
                 "{{endNodeId}}": {
+                    "type": "End",
                     "name": "end-node"
                 }
             }
@@ -130,8 +156,8 @@ public static class TestDataBuilder
 
         return new SaveAgentVersionRequestV1
         {
-            InputSchema = JsonDocument.Parse(inputSchemaJson).RootElement.Clone(),
-            ReactFlowData = JsonDocument.Parse(reactFlowDataJson).RootElement.Clone(),
+            InputSchema = JsonDocument.Parse(inputSchemaJson),
+            ReactFlowData = parsedReactFlowData,
             NodeConfigurations = JsonDocument.Parse(nodeConfigurationsJson).RootElement.Clone()
         };
     }

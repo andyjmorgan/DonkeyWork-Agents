@@ -266,10 +266,8 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("input");
 
-                    b.Property<string>("NodeId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uuid")
                         .HasColumnName("node_id");
 
                     b.Property<string>("NodeName")
@@ -348,10 +346,8 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("credential_id");
 
-                    b.Property<string>("NodeId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uuid")
                         .HasColumnName("node_id");
 
                     b.Property<DateTimeOffset>("UpdatedAt")

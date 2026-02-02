@@ -136,7 +136,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
             }
             if (configType == typeof(SleepNodeConfiguration))
             {
-                return new SleepNodeConfiguration { Name = name, DurationMs = 0 };
+                return new SleepNodeConfiguration { Name = name, DurationSeconds = 0 };
             }
 
             return null;

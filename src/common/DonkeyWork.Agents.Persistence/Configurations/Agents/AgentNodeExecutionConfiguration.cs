@@ -26,11 +26,11 @@ public class AgentNodeExecutionConfiguration : IEntityTypeConfiguration<AgentNod
 
         builder.Property(e => e.NodeId)
             .HasColumnName("node_id")
-            .IsRequired()
-            .HasMaxLength(255);
+            .IsRequired();
 
         builder.Property(e => e.NodeType)
             .HasColumnName("node_type")
+            .HasConversion<string>()
             .IsRequired()
             .HasMaxLength(50);
 

@@ -48,6 +48,24 @@ public sealed class NodeTypeInfo
     public string? Color { get; init; }
 
     /// <summary>
+    /// Whether this node has an input handle (can receive connections).
+    /// </summary>
+    [JsonPropertyName("hasInputHandle")]
+    public bool HasInputHandle { get; init; } = true;
+
+    /// <summary>
+    /// Whether this node has an output handle (can send connections).
+    /// </summary>
+    [JsonPropertyName("hasOutputHandle")]
+    public bool HasOutputHandle { get; init; } = true;
+
+    /// <summary>
+    /// Whether this node can be deleted by the user.
+    /// </summary>
+    [JsonPropertyName("canDelete")]
+    public bool CanDelete { get; init; } = true;
+
+    /// <summary>
     /// Configuration schema for the node.
     /// </summary>
     [JsonPropertyName("configSchema")]

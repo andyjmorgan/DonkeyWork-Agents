@@ -202,7 +202,6 @@ public class ModelConfigSchemaServiceTests
         // Check base fields
         Assert.Contains(schema.Fields, f => f.Name == "temperature");
         Assert.Contains(schema.Fields, f => f.Name == "maxOutputTokens");
-        Assert.Contains(schema.Fields, f => f.Name == "topP");
 
         // Verify temperature details
         var temperature = schema.Fields.First(f => f.Name == "temperature");
@@ -216,7 +215,7 @@ public class ModelConfigSchemaServiceTests
     [Fact]
     public void GetSchemaForModel_FieldsAreOrderedByOrderProperty()
     {
-        // Arrange
+        // Arrange - Use Anthropic with reasoning support
         var model = CreateChatModel("test-model", LlmProvider.Anthropic, supportsReasoning: true);
         _mockCatalogService.Setup(x => x.GetAllModels()).Returns(new[] { model });
 
@@ -232,7 +231,6 @@ public class ModelConfigSchemaServiceTests
         var credentialId = schema.Fields.First(f => f.Name == "credentialId");
         var temperature = schema.Fields.First(f => f.Name == "temperature");
         var maxOutputTokens = schema.Fields.First(f => f.Name == "maxOutputTokens");
-        var topP = schema.Fields.First(f => f.Name == "topP");
         var reasoningEffort = schema.Fields.First(f => f.Name == "reasoningEffort");
         var thinkingBudget = schema.Fields.First(f => f.Name == "thinkingBudget");
 
@@ -240,7 +238,6 @@ public class ModelConfigSchemaServiceTests
         Assert.Equal(0, credentialId.Order);
         Assert.Equal(30, temperature.Order);
         Assert.Equal(40, maxOutputTokens.Order);
-        Assert.Equal(10, topP.Order); // TopP is in Advanced tab with Order=10
         Assert.Equal(10, reasoningEffort.Order); // ReasoningEffort is in Reasoning tab with Order=10
         Assert.Equal(20, thinkingBudget.Order); // ThinkingBudget is in Reasoning tab with Order=20
 
@@ -346,7 +343,7 @@ public class ModelConfigSchemaServiceTests
     [Fact]
     public void GetSchemaForModel_WithTabbedAndGroupedFields_IncludesTabAndGroupInformation()
     {
-        // Arrange
+        // Arrange - Use Anthropic for Reasoning tab verification
         var model = CreateChatModel("test-model", LlmProvider.Anthropic, supportsReasoning: true);
         _mockCatalogService.Setup(x => x.GetAllModels()).Returns(new[] { model });
 
@@ -356,18 +353,12 @@ public class ModelConfigSchemaServiceTests
         // Assert
         Assert.NotNull(schema);
 
-        // Verify tabs are generated
+        // Verify tabs are generated - Anthropic has Basic and Reasoning tabs
         Assert.NotEmpty(schema.Tabs);
         Assert.Contains(schema.Tabs, t => t.Name == "Basic");
-        Assert.Contains(schema.Tabs, t => t.Name == "Advanced");
         Assert.Contains(schema.Tabs, t => t.Name == "Reasoning");
 
-        // Verify fields have both Tab and Group
-        var topP = schema.Fields.FirstOrDefault(f => f.Name == "topP");
-        Assert.NotNull(topP);
-        Assert.Equal("Advanced", topP.Tab);
-        Assert.Equal("Sampling", topP.Group);
-
+        // Verify thinkingBudget (Anthropic-specific Reasoning field)
         var thinkingBudget = schema.Fields.FirstOrDefault(f => f.Name == "thinkingBudget");
         Assert.NotNull(thinkingBudget);
         Assert.Equal("Reasoning", thinkingBudget.Tab);
@@ -383,6 +374,38 @@ public class ModelConfigSchemaServiceTests
         Assert.NotNull(stream);
         Assert.Equal("Basic", stream.Tab);
         Assert.Null(stream.Group);
+    }
+
+    [Fact]
+    public void GetSchemaForModel_WithOpenAI_IncludesAdvancedTab()
+    {
+        // Arrange - Use OpenAI for Advanced tab (TopP, Penalties)
+        var model = CreateChatModel("test-model", LlmProvider.OpenAI, supportsReasoning: true);
+        _mockCatalogService.Setup(x => x.GetAllModels()).Returns(new[] { model });
+
+        // Act
+        var schema = _service.GetSchemaForModel("test-model");
+
+        // Assert
+        Assert.NotNull(schema);
+
+        // Verify OpenAI has Basic, Advanced, and Reasoning tabs
+        Assert.NotEmpty(schema.Tabs);
+        Assert.Contains(schema.Tabs, t => t.Name == "Basic");
+        Assert.Contains(schema.Tabs, t => t.Name == "Advanced");
+        Assert.Contains(schema.Tabs, t => t.Name == "Reasoning");
+
+        // Verify TopP is in Advanced tab
+        var topP = schema.Fields.FirstOrDefault(f => f.Name == "topP");
+        Assert.NotNull(topP);
+        Assert.Equal("Advanced", topP.Tab);
+        Assert.Equal("Sampling", topP.Group);
+
+        // Verify FrequencyPenalty is in Advanced tab
+        var frequencyPenalty = schema.Fields.FirstOrDefault(f => f.Name == "frequencyPenalty");
+        Assert.NotNull(frequencyPenalty);
+        Assert.Equal("Advanced", frequencyPenalty.Tab);
+        Assert.Equal("Penalties", frequencyPenalty.Group);
     }
 
     private static ModelDefinition CreateChatModel(

@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace DonkeyWork.Agents.Agents.Contracts.Services;
 
 /// <summary>
@@ -25,7 +27,7 @@ public interface IExecutionContext
     /// <summary>
     /// The JSON Schema for input validation.
     /// </summary>
-    string InputSchema { get; }
+    JsonDocument InputSchema { get; }
 
     /// <summary>
     /// Dictionary of node outputs keyed by node name.
@@ -37,7 +39,7 @@ public interface IExecutionContext
     /// Hydrates the context with execution details.
     /// Called by the orchestrator before execution begins.
     /// </summary>
-    void Hydrate(Guid executionId, Guid userId, object input, string inputSchema);
+    void Hydrate(Guid executionId, Guid userId, object input, JsonDocument inputSchema);
 
     /// <summary>
     /// Sets the output for a completed node.

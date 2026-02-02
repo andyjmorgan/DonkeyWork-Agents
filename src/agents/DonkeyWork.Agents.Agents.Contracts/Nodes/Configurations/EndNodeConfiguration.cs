@@ -8,6 +8,14 @@ namespace DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 /// <summary>
 /// Configuration for the End node - the exit point of an agent workflow.
 /// </summary>
+[Node(
+    DisplayName = "End",
+    Description = "Output and completion",
+    Category = "Flow",
+    Icon = "flag",
+    Color = "orange",
+    HasOutputHandle = false,
+    CanDelete = false)]
 public sealed class EndNodeConfiguration : NodeConfiguration
 {
     /// <inheritdoc />

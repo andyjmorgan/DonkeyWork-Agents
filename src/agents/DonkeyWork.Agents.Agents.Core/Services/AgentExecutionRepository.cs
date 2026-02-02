@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DonkeyWork.Agents.Agents.Contracts.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Models;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
@@ -30,7 +31,7 @@ public class AgentExecutionRepository : IAgentExecutionRepository
             UserId = userId,
             AgentId = agentId,
             AgentVersionId = versionId,
-            Status = "Running",
+            Status = ExecutionStatus.Running,
             Input = input,
             StartedAt = DateTimeOffset.UtcNow,
             StreamName = streamName,
@@ -46,7 +47,7 @@ public class AgentExecutionRepository : IAgentExecutionRepository
 
     public async Task UpdateCompletionAsync(
         Guid executionId,
-        string status,
+        ExecutionStatus status,
         string? output,
         string? errorMessage,
         int? totalTokensUsed,

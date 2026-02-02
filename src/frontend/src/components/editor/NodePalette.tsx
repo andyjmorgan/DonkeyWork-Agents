@@ -77,16 +77,6 @@ const colorClasses: Record<string, { border: string; iconContainer: string; icon
   },
 }
 
-// Map backend node type to frontend node type (for drag data)
-const nodeTypeToFrontendType: Record<string, string> = {
-  Start: 'start',
-  End: 'end',
-  Model: 'model',
-  MessageFormatter: 'messageFormatter',
-  HttpRequest: 'httpRequest',
-  Sleep: 'sleep',
-}
-
 export function NodePalette() {
   const { nodes } = useEditorStore()
   const [allModels, setAllModels] = useState<ModelDefinition[]>([])
@@ -122,18 +112,20 @@ export function NodePalette() {
       }, {} as Record<string, NodeTypeInfo[]>)
   }, [allNodeTypes])
 
-  // Group models by provider
-  const modelsByProvider = allModels.reduce((acc, model) => {
-    if (!acc[model.provider]) {
-      acc[model.provider] = []
-    }
-    acc[model.provider].push(model)
-    return acc
-  }, {} as Record<string, ModelDefinition[]>)
+  // Group models by provider (only chat models)
+  const modelsByProvider = allModels
+    .filter(model => model.mode === 'Chat') // Only show chat models, not image/video
+    .reduce((acc, model) => {
+      if (!acc[model.provider]) {
+        acc[model.provider] = []
+      }
+      acc[model.provider].push(model)
+      return acc
+    }, {} as Record<string, ModelDefinition[]>)
 
   // Check if Start/End nodes exist
-  const hasStartNode = nodes.some(n => n.type === 'start')
-  const hasEndNode = nodes.some(n => n.type === 'end')
+  const hasStartNode = nodes.some(n => n.data?.nodeType === 'Start')
+  const hasEndNode = nodes.some(n => n.data?.nodeType === 'End')
 
   const handleDragStart = (event: React.DragEvent, nodeType: string, data?: Record<string, unknown>) => {
     event.dataTransfer.effectAllowed = 'move'
@@ -169,7 +161,6 @@ export function NodePalette() {
 
   // Render a node type item
   const renderNodeTypeItem = (nodeType: NodeTypeInfo) => {
-    const frontendType = nodeTypeToFrontendType[nodeType.type] || nodeType.type.toLowerCase()
     const isDisabled =
       (nodeType.type === 'Start' && hasStartNode) ||
       (nodeType.type === 'End' && hasEndNode)
@@ -181,11 +172,14 @@ export function NodePalette() {
       <div
         key={nodeType.type}
         draggable={!isDisabled}
-        onDragStart={(e) => handleDragStart(e, frontendType, {
+        onDragStart={(e) => handleDragStart(e, 'schemaNode', {
           nodeType: nodeType.type,
           displayName: nodeType.displayName,
           icon: nodeType.icon,
           color: nodeType.color,
+          hasInputHandle: nodeType.hasInputHandle,
+          hasOutputHandle: nodeType.hasOutputHandle,
+          canDelete: nodeType.canDelete,
         })}
         className={cn(
           'flex cursor-move items-center gap-3 rounded-xl border-2 p-3 transition-all',
@@ -251,10 +245,16 @@ export function NodePalette() {
                             key={model.id}
                             draggable
                             onDragStart={(e) =>
-                              handleDragStart(e, 'model', {
+                              handleDragStart(e, 'schemaNode', {
+                                nodeType: 'MultimodalChatModel',
+                                displayName: model.name,
+                                icon: 'brain',
+                                color: 'blue',
+                                hasInputHandle: true,
+                                hasOutputHandle: true,
+                                canDelete: true,
                                 provider: model.provider,
-                                modelId: model.id,
-                                modelName: model.name
+                                modelId: model.id
                               })
                             }
                             className={cn(

@@ -1,4 +1,5 @@
-using System.Text.Json;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Agents.Core.Execution;
 
 namespace DonkeyWork.Agents.Agents.Core.Tests.Execution;
@@ -11,6 +12,15 @@ public class GraphAnalyzerTests
 {
     private readonly GraphAnalyzer _analyzer = new();
 
+    // Predefined GUIDs for consistent testing
+    private static readonly Guid StartNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid EndNodeId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid ModelNode1Id = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly Guid ModelNode2Id = Guid.Parse("44444444-4444-4444-4444-444444444444");
+    private static readonly Guid ModelNode3Id = Guid.Parse("55555555-5555-5555-5555-555555555555");
+    private static readonly Guid SecondStartNodeId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+    private static readonly Guid NonExistentNodeId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+
     #region Valid Graph Tests
 
     [Fact]
@@ -20,12 +30,12 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "end-1")
+                CreateEdge(StartNodeId, EndNodeId)
             }
         );
 
@@ -36,8 +46,8 @@ public class GraphAnalyzerTests
         Assert.True(result.IsValid);
         Assert.Null(result.ErrorMessage);
         Assert.Equal(2, result.ExecutionOrder.Count);
-        Assert.Equal("start-1", result.ExecutionOrder[0]);
-        Assert.Equal("end-1", result.ExecutionOrder[1]);
+        Assert.Equal(StartNodeId, result.ExecutionOrder[0]);
+        Assert.Equal(EndNodeId, result.ExecutionOrder[1]);
     }
 
     [Fact]
@@ -47,14 +57,14 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1"),
-                CreateEdge("model-1", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(ModelNode1Id, EndNodeId)
             }
         );
 
@@ -64,9 +74,9 @@ public class GraphAnalyzerTests
         // Assert
         Assert.True(result.IsValid);
         Assert.Equal(3, result.ExecutionOrder.Count);
-        Assert.Equal("start-1", result.ExecutionOrder[0]);
-        Assert.Equal("model-1", result.ExecutionOrder[1]);
-        Assert.Equal("end-1", result.ExecutionOrder[2]);
+        Assert.Equal(StartNodeId, result.ExecutionOrder[0]);
+        Assert.Equal(ModelNode1Id, result.ExecutionOrder[1]);
+        Assert.Equal(EndNodeId, result.ExecutionOrder[2]);
     }
 
     [Fact]
@@ -77,17 +87,17 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("model-2", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(ModelNode2Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1"),
-                CreateEdge("start-1", "model-2"),
-                CreateEdge("model-1", "end-1"),
-                CreateEdge("model-2", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(StartNodeId, ModelNode2Id),
+                CreateEdge(ModelNode1Id, EndNodeId),
+                CreateEdge(ModelNode2Id, EndNodeId)
             }
         );
 
@@ -97,10 +107,10 @@ public class GraphAnalyzerTests
         // Assert
         Assert.True(result.IsValid);
         Assert.Equal(4, result.ExecutionOrder.Count);
-        Assert.Equal("start-1", result.ExecutionOrder[0]);
-        Assert.Contains("model-1", result.ExecutionOrder);
-        Assert.Contains("model-2", result.ExecutionOrder);
-        Assert.Equal("end-1", result.ExecutionOrder[3]);
+        Assert.Equal(StartNodeId, result.ExecutionOrder[0]);
+        Assert.Contains(ModelNode1Id, result.ExecutionOrder);
+        Assert.Contains(ModelNode2Id, result.ExecutionOrder);
+        Assert.Equal(EndNodeId, result.ExecutionOrder[3]);
     }
 
     [Fact]
@@ -111,19 +121,19 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("node-a", "model"),
-                CreateNode("node-b", "model"),
-                CreateNode("node-c", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model), // A
+                CreateNode(ModelNode2Id, NodeType.Model), // B
+                CreateNode(ModelNode3Id, NodeType.Model), // C
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "node-a"),
-                CreateEdge("start-1", "node-b"),
-                CreateEdge("node-a", "node-c"),
-                CreateEdge("node-b", "node-c"),
-                CreateEdge("node-c", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(StartNodeId, ModelNode2Id),
+                CreateEdge(ModelNode1Id, ModelNode3Id),
+                CreateEdge(ModelNode2Id, ModelNode3Id),
+                CreateEdge(ModelNode3Id, EndNodeId)
             }
         );
 
@@ -133,13 +143,13 @@ public class GraphAnalyzerTests
         // Assert
         Assert.True(result.IsValid);
         Assert.Equal(5, result.ExecutionOrder.Count);
-        Assert.Equal("start-1", result.ExecutionOrder[0]);
-        Assert.Equal("end-1", result.ExecutionOrder[4]);
+        Assert.Equal(StartNodeId, result.ExecutionOrder[0]);
+        Assert.Equal(EndNodeId, result.ExecutionOrder[4]);
 
         // node-c should come after both node-a and node-b
-        var indexA = result.ExecutionOrder.IndexOf("node-a");
-        var indexB = result.ExecutionOrder.IndexOf("node-b");
-        var indexC = result.ExecutionOrder.IndexOf("node-c");
+        var indexA = result.ExecutionOrder.IndexOf(ModelNode1Id);
+        var indexB = result.ExecutionOrder.IndexOf(ModelNode2Id);
+        var indexC = result.ExecutionOrder.IndexOf(ModelNode3Id);
         Assert.True(indexC > indexA);
         Assert.True(indexC > indexB);
     }
@@ -155,9 +165,9 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("end-1", "end")
+                CreateNode(EndNodeId, NodeType.End)
             },
-            edges: Array.Empty<object>()
+            edges: Array.Empty<ReactFlowEdge>()
         );
 
         // Act
@@ -176,12 +186,12 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("model-1", "model"),
-                CreateNode("model-2", "model")
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(ModelNode2Id, NodeType.Model)
             },
             edges: new[]
             {
-                CreateEdge("model-1", "model-2")
+                CreateEdge(ModelNode1Id, ModelNode2Id)
             }
         );
 
@@ -204,14 +214,14 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("start-2", "start"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(SecondStartNodeId, NodeType.Start),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "end-1"),
-                CreateEdge("start-2", "end-1")
+                CreateEdge(StartNodeId, EndNodeId),
+                CreateEdge(SecondStartNodeId, EndNodeId)
             }
         );
 
@@ -235,15 +245,15 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1"),
-                CreateEdge("model-1", "model-1"), // Self-loop
-                CreateEdge("model-1", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(ModelNode1Id, ModelNode1Id), // Self-loop
+                CreateEdge(ModelNode1Id, EndNodeId)
             }
         );
 
@@ -263,17 +273,17 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("model-2", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(ModelNode2Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1"),
-                CreateEdge("model-1", "model-2"),
-                CreateEdge("model-2", "model-1"), // Cycle
-                CreateEdge("model-2", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(ModelNode1Id, ModelNode2Id),
+                CreateEdge(ModelNode2Id, ModelNode1Id), // Cycle
+                CreateEdge(ModelNode2Id, EndNodeId)
             }
         );
 
@@ -292,19 +302,19 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("node-a", "model"),
-                CreateNode("node-b", "model"),
-                CreateNode("node-c", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(ModelNode2Id, NodeType.Model),
+                CreateNode(ModelNode3Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "node-a"),
-                CreateEdge("node-a", "node-b"),
-                CreateEdge("node-b", "node-c"),
-                CreateEdge("node-c", "node-a"), // Cycle
-                CreateEdge("node-c", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(ModelNode1Id, ModelNode2Id),
+                CreateEdge(ModelNode2Id, ModelNode3Id),
+                CreateEdge(ModelNode3Id, ModelNode1Id), // Cycle
+                CreateEdge(ModelNode3Id, EndNodeId)
             }
         );
 
@@ -327,14 +337,14 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("model-2", "model"), // Disconnected
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(ModelNode2Id, NodeType.Model), // Disconnected
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1")
+                CreateEdge(StartNodeId, ModelNode1Id)
                 // model-2 and end-1 have no edges
             }
         );
@@ -355,13 +365,13 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1")
+                CreateEdge(StartNodeId, ModelNode1Id)
                 // End node is not connected
             }
         );
@@ -372,7 +382,7 @@ public class GraphAnalyzerTests
         // Assert
         Assert.False(result.IsValid);
         Assert.Contains("Unreachable nodes from start", result.ErrorMessage);
-        Assert.Contains("end-1", result.ErrorMessage);
+        Assert.Contains(EndNodeId.ToString(), result.ErrorMessage);
     }
 
     [Fact]
@@ -382,14 +392,14 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("model-2", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(ModelNode2Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "end-1")
+                CreateEdge(StartNodeId, EndNodeId)
                 // model-1 and model-2 are disconnected
             }
         );
@@ -413,12 +423,12 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "non-existent-node")
+                CreateEdge(StartNodeId, NonExistentNodeId)
             }
         );
 
@@ -438,12 +448,12 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("non-existent-node", "end-1")
+                CreateEdge(NonExistentNodeId, EndNodeId)
             }
         );
 
@@ -456,176 +466,38 @@ public class GraphAnalyzerTests
     }
 
     [Fact]
-    public void Analyze_WithNullEdgeSource_ReturnsError()
+    public void Analyze_WithEmptyGuidNodeId_ReturnsError()
     {
-        // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [
-                {""id"": ""start-1"", ""type"": ""start""},
-                {""id"": ""end-1"", ""type"": ""end""}
-            ],
-            ""edges"": [
-                {""source"": null, ""target"": ""end-1""}
-            ]
-        }");
+        // Arrange - Node with empty GUID
+        var graphData = CreateGraphData(
+            nodes: new[]
+            {
+                CreateNode(Guid.Empty, NodeType.Start)
+            },
+            edges: Array.Empty<ReactFlowEdge>()
+        );
 
         // Act
         var result = _analyzer.Analyze(graphData);
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Contains("null or empty source or target", result.ErrorMessage);
-    }
-
-    [Fact]
-    public void Analyze_WithEmptyEdgeTarget_ReturnsError()
-    {
-        // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [
-                {""id"": ""start-1"", ""type"": ""start""},
-                {""id"": ""end-1"", ""type"": ""end""}
-            ],
-            ""edges"": [
-                {""source"": ""start-1"", ""target"": """"}
-            ]
-        }");
-
-        // Act
-        var result = _analyzer.Analyze(graphData);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("null or empty source or target", result.ErrorMessage);
-    }
-
-    [Fact]
-    public void Analyze_WithMissingEdgeProperties_ReturnsError()
-    {
-        // Arrange - Edge missing source property
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [
-                {""id"": ""start-1"", ""type"": ""start""},
-                {""id"": ""end-1"", ""type"": ""end""}
-            ],
-            ""edges"": [
-                {""target"": ""end-1""}
-            ]
-        }");
-
-        // Act
-        var result = _analyzer.Analyze(graphData);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("Edge missing 'source' or 'target'", result.ErrorMessage);
+        Assert.Contains("Node has empty", result.ErrorMessage);
     }
 
     #endregion
 
-    #region Invalid Node Tests
-
-    [Fact]
-    public void Analyze_WithMissingNodeId_ReturnsError()
-    {
-        // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [
-                {""type"": ""start""}
-            ],
-            ""edges"": []
-        }");
-
-        // Act
-        var result = _analyzer.Analyze(graphData);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("Node missing 'id' property", result.ErrorMessage);
-    }
-
-    [Fact]
-    public void Analyze_WithNullNodeId_ReturnsError()
-    {
-        // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [
-                {""id"": null, ""type"": ""start""}
-            ],
-            ""edges"": []
-        }");
-
-        // Act
-        var result = _analyzer.Analyze(graphData);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("Node has null or empty 'id'", result.ErrorMessage);
-    }
-
-    [Fact]
-    public void Analyze_WithEmptyNodeId_ReturnsError()
-    {
-        // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [
-                {""id"": """", ""type"": ""start""}
-            ],
-            ""edges"": []
-        }");
-
-        // Act
-        var result = _analyzer.Analyze(graphData);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("Node has null or empty 'id'", result.ErrorMessage);
-    }
-
-    #endregion
-
-    #region Missing Graph Properties Tests
-
-    [Fact]
-    public void Analyze_WithMissingNodesProperty_ReturnsError()
-    {
-        // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""edges"": []
-        }");
-
-        // Act
-        var result = _analyzer.Analyze(graphData);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("ReactFlow data missing 'nodes' property", result.ErrorMessage);
-    }
-
-    [Fact]
-    public void Analyze_WithMissingEdgesProperty_ReturnsError()
-    {
-        // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [{""id"": ""start-1"", ""type"": ""start""}]
-        }");
-
-        // Act
-        var result = _analyzer.Analyze(graphData);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("ReactFlow data missing 'edges' property", result.ErrorMessage);
-    }
+    #region Empty Graph Tests
 
     [Fact]
     public void Analyze_WithEmptyGraph_ReturnsError()
     {
         // Arrange
-        var graphData = JsonSerializer.Deserialize<JsonElement>(@"{
-            ""nodes"": [],
-            ""edges"": []
-        }");
+        var graphData = new ReactFlowData
+        {
+            Nodes = new List<ReactFlowNode>(),
+            Edges = new List<ReactFlowEdge>()
+        };
 
         // Act
         var result = _analyzer.Analyze(graphData);
@@ -646,14 +518,14 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1"),
-                CreateEdge("model-1", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(ModelNode1Id, EndNodeId)
             }
         );
 
@@ -663,9 +535,9 @@ public class GraphAnalyzerTests
         // Assert
         Assert.True(result.IsValid);
         Assert.NotNull(result.AdjacencyList);
-        Assert.Contains("model-1", result.AdjacencyList["start-1"]);
-        Assert.Contains("end-1", result.AdjacencyList["model-1"]);
-        Assert.Empty(result.AdjacencyList["end-1"]);
+        Assert.Contains(ModelNode1Id, result.AdjacencyList[StartNodeId]);
+        Assert.Contains(EndNodeId, result.AdjacencyList[ModelNode1Id]);
+        Assert.Empty(result.AdjacencyList[EndNodeId]);
     }
 
     [Fact]
@@ -675,14 +547,14 @@ public class GraphAnalyzerTests
         var graphData = CreateGraphData(
             nodes: new[]
             {
-                CreateNode("start-1", "start"),
-                CreateNode("model-1", "model"),
-                CreateNode("end-1", "end")
+                CreateNode(StartNodeId, NodeType.Start),
+                CreateNode(ModelNode1Id, NodeType.Model),
+                CreateNode(EndNodeId, NodeType.End)
             },
             edges: new[]
             {
-                CreateEdge("start-1", "model-1"),
-                CreateEdge("model-1", "end-1")
+                CreateEdge(StartNodeId, ModelNode1Id),
+                CreateEdge(ModelNode1Id, EndNodeId)
             }
         );
 
@@ -692,47 +564,61 @@ public class GraphAnalyzerTests
         // Assert
         Assert.True(result.IsValid);
         Assert.NotNull(result.ReverseAdjacencyList);
-        Assert.Empty(result.ReverseAdjacencyList["start-1"]);
-        Assert.Contains("start-1", result.ReverseAdjacencyList["model-1"]);
-        Assert.Contains("model-1", result.ReverseAdjacencyList["end-1"]);
+        Assert.Empty(result.ReverseAdjacencyList[StartNodeId]);
+        Assert.Contains(StartNodeId, result.ReverseAdjacencyList[ModelNode1Id]);
+        Assert.Contains(ModelNode1Id, result.ReverseAdjacencyList[EndNodeId]);
     }
 
     #endregion
 
     #region Helper Methods
 
-    private JsonElement CreateGraphData(object[] nodes, object[] edges)
+    private static ReactFlowData CreateGraphData(ReactFlowNode[] nodes, ReactFlowEdge[] edges)
     {
-        var graphObject = new
+        return new ReactFlowData
         {
-            nodes = nodes,
-            edges = edges,
-            viewport = new { x = 0, y = 0, zoom = 1 }
-        };
-
-        return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(graphObject));
-    }
-
-    private object CreateNode(string id, string type)
-    {
-        return new
-        {
-            id = id,
-            type = type,
-            position = new { x = 100, y = 100 },
-            data = new { label = id }
+            Nodes = nodes.ToList(),
+            Edges = edges.ToList(),
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
     }
 
-    private object CreateEdge(string source, string target)
+    private static ReactFlowNode CreateNode(Guid id, NodeType nodeType)
     {
-        return new
+        return new ReactFlowNode
         {
-            id = $"{source}-{target}",
-            source = source,
-            target = target
+            Id = id,
+            Type = GetReactFlowType(nodeType),
+            Position = new ReactFlowPosition { X = 100, Y = 100 },
+            Data = new ReactFlowNodeData
+            {
+                NodeType = nodeType,
+                Label = id.ToString(),
+                DisplayName = $"{nodeType} Node"
+            }
         };
     }
+
+    private static ReactFlowEdge CreateEdge(Guid source, Guid target)
+    {
+        return new ReactFlowEdge
+        {
+            Id = Guid.NewGuid(),
+            Source = source,
+            Target = target
+        };
+    }
+
+    private static string GetReactFlowType(NodeType nodeType) => nodeType switch
+    {
+        NodeType.Start => "start",
+        NodeType.End => "end",
+        NodeType.Model => "model",
+        NodeType.MessageFormatter => "messageFormatter",
+        NodeType.HttpRequest => "httpRequest",
+        NodeType.Sleep => "sleep",
+        _ => "unknown"
+    };
 
     #endregion
 }

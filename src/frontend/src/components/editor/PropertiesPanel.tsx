@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store/editor'
-import { ModelNodeProperties } from './properties/ModelNodeProperties'
 import { SchemaPropertiesPanel } from './properties/SchemaPropertiesPanel'
+import { MultimodalChatPropertiesPanel } from './properties/MultimodalChatPropertiesPanel'
 import {
   Sheet,
   SheetContent,
@@ -9,17 +9,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { GripVertical } from 'lucide-react'
-
-// Map frontend node types to backend node type names
-const nodeTypeMapping: Record<string, string> = {
-  start: 'Start',
-  end: 'End',
-  model: 'Model',
-  messageFormatter: 'MessageFormatter',
-  httpRequest: 'HttpRequest',
-  sleep: 'Sleep',
-  // Add more mappings as needed
-}
 
 const MIN_WIDTH = 400
 const MAX_WIDTH = 1200
@@ -86,52 +75,44 @@ export function PropertiesPanel() {
   const getNodeTitle = (): string => {
     if (!selectedNode) return 'Properties'
 
-    switch (selectedNode.type) {
-      case 'start':
-        return 'Start Node Properties'
-      case 'model':
-        return 'Model Node Properties'
-      case 'end':
-        return 'End Node Properties'
-      case 'action':
-        return String(selectedNode.data?.displayName || 'Action Node Properties')
-      case 'messageFormatter':
-        return 'Message Formatter Properties'
-      default:
-        return 'Node Properties'
-    }
+    // Get display name from node data (comes from schema)
+    const displayName = selectedNode.data?.displayName as string
+    return displayName ? `${displayName} Properties` : 'Node Properties'
   }
 
   const renderNodeProperties = () => {
     if (!selectedNode) return null
 
-    const nodeType = selectedNode.type as string
-    const backendNodeType = nodeTypeMapping[nodeType]
+    // Get backend node type from node data (all nodes are schemaNode type now)
+    const backendNodeType = selectedNode.data?.nodeType as string
 
-    // Model node has special handling for provider/model selection and model-specific config
-    if (nodeType === 'model') {
-      return <ModelNodeProperties nodeId={selectedNode.id} />
-    }
-
-    // Use unified schema-driven panel for all other node types
-    if (backendNodeType) {
-      // For Model nodes, pass the provider for credential filtering
-      const config = nodeConfigurations[selectedNode.id] as unknown as Record<string, unknown> | undefined
-      const credentialProvider = nodeType === 'model' ? (config?.provider as string) : undefined
-
+    if (!backendNodeType) {
       return (
-        <SchemaPropertiesPanel
-          nodeId={selectedNode.id}
-          nodeType={backendNodeType}
-          credentialProvider={credentialProvider}
-        />
+        <div className="p-4 text-sm text-muted-foreground">
+          Unknown node type
+        </div>
       )
     }
 
+    // MultimodalChatModel uses its own specialized panel
+    if (backendNodeType === 'MultimodalChatModel') {
+      return <MultimodalChatPropertiesPanel nodeId={selectedNode.id} />
+    }
+
+    // Get provider and modelId for credential filtering and supportedBy checks (Model nodes)
+    const config = nodeConfigurations[selectedNode.id]
+    const isModelNode = backendNodeType === 'Model' || backendNodeType === 'MultimodalChatModel'
+    const credentialProvider = isModelNode ? (config?.provider as string) : undefined
+    const modelId = isModelNode ? (config?.modelId as string) : undefined
+
+    // All other nodes use the unified schema-driven panel
     return (
-      <div className="p-4 text-sm text-muted-foreground">
-        Unknown node type: {selectedNode.type}
-      </div>
+      <SchemaPropertiesPanel
+        nodeId={selectedNode.id}
+        nodeType={backendNodeType}
+        credentialProvider={credentialProvider}
+        modelId={modelId}
+      />
     )
   }
 

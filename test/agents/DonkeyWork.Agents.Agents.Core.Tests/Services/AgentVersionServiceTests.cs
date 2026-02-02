@@ -129,10 +129,11 @@ public class AgentVersionServiceTests : IDisposable
         _dbContext.Agents.Add(agent);
         await _dbContext.SaveChangesAsync();
 
+        var nodeId = Guid.NewGuid();
         var credentialId = Guid.NewGuid();
         var credentials = new List<CredentialMappingV1>
         {
-            TestDataBuilder.CreateCredentialMapping("model-1", credentialId)
+            TestDataBuilder.CreateCredentialMapping(nodeId, credentialId)
         };
         var request = TestDataBuilder.CreateSaveVersionRequestWithCredentials(credentials);
 
@@ -145,7 +146,7 @@ public class AgentVersionServiceTests : IDisposable
             .ToList();
 
         Assert.Single(mappings);
-        Assert.Equal("model-1", mappings[0].NodeId);
+        Assert.Equal(nodeId, mappings[0].NodeId);
         Assert.Equal(credentialId, mappings[0].CredentialId);
     }
 
@@ -155,12 +156,13 @@ public class AgentVersionServiceTests : IDisposable
         // Arrange
         var agent = _builder.CreateAgentEntity();
         var draft = _builder.CreateAgentVersionEntity(agentId: agent.Id, isDraft: true);
+        var oldNodeId = Guid.NewGuid();
         var oldMapping = new AgentVersionCredentialMappingEntity
         {
             Id = Guid.NewGuid(),
             UserId = _testUserId,
             AgentVersionId = draft.Id,
-            NodeId = "old-node",
+            NodeId = oldNodeId,
             CredentialId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
@@ -171,10 +173,11 @@ public class AgentVersionServiceTests : IDisposable
         _dbContext.AgentVersionCredentialMappings.Add(oldMapping);
         await _dbContext.SaveChangesAsync();
 
+        var newNodeId = Guid.NewGuid();
         var newCredentialId = Guid.NewGuid();
         var newCredentials = new List<CredentialMappingV1>
         {
-            TestDataBuilder.CreateCredentialMapping("model-1", newCredentialId)
+            TestDataBuilder.CreateCredentialMapping(newNodeId, newCredentialId)
         };
         var request = TestDataBuilder.CreateSaveVersionRequestWithCredentials(newCredentials);
 
@@ -187,7 +190,7 @@ public class AgentVersionServiceTests : IDisposable
             .ToList();
 
         Assert.Single(mappings);
-        Assert.Equal("model-1", mappings[0].NodeId);
+        Assert.Equal(newNodeId, mappings[0].NodeId);
         Assert.Equal(newCredentialId, mappings[0].CredentialId);
         Assert.NotEqual(oldMapping.Id, mappings[0].Id);
     }
@@ -205,10 +208,13 @@ public class AgentVersionServiceTests : IDisposable
         // Act
         var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
 
-        // Assert
-        Assert.True(result.ReactFlowData.TryGetProperty("nodes", out var nodes));
-        Assert.True(result.ReactFlowData.TryGetProperty("edges", out var edges));
-        Assert.True(result.ReactFlowData.TryGetProperty("viewport", out var viewport));
+        // Assert - ReactFlowData is now typed
+        Assert.NotNull(result.ReactFlowData);
+        Assert.NotNull(result.ReactFlowData.Nodes);
+        Assert.NotNull(result.ReactFlowData.Edges);
+        Assert.NotNull(result.ReactFlowData.Viewport);
+        Assert.Equal(2, result.ReactFlowData.Nodes.Count); // Start + End
+        Assert.Single(result.ReactFlowData.Edges); // Start -> End
     }
 
     [Fact]
@@ -229,7 +235,7 @@ public class AgentVersionServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveDraftAsync_EnrichesNodeConfigurationsWithTypeDiscriminator()
+    public async Task SaveDraftAsync_DeserializesNodeConfigurationsCorrectly()
     {
         // Arrange
         var agent = _builder.CreateAgentEntity();
@@ -241,16 +247,19 @@ public class AgentVersionServiceTests : IDisposable
         // Act
         var result = await _service.SaveDraftAsync(agent.Id, request, _testUserId);
 
-        // Assert - Verify stored JSON includes type discriminator for each node
+        // Assert - Verify stored NodeConfigurations are typed correctly
         var versionInDb = await _dbContext.AgentVersions.FindAsync(result.Id);
         Assert.NotNull(versionInDb);
 
-        var nodeConfigs = System.Text.Json.JsonDocument.Parse(versionInDb.NodeConfigurations);
-        foreach (var nodeConfig in nodeConfigs.RootElement.EnumerateObject())
+        // NodeConfigurations is now a typed Dictionary<string, NodeConfiguration>
+        Assert.NotNull(versionInDb.NodeConfigurations);
+        Assert.Equal(2, versionInDb.NodeConfigurations.Count);
+
+        // Verify each node configuration has the correct type
+        foreach (var (nodeId, config) in versionInDb.NodeConfigurations)
         {
-            Assert.True(nodeConfig.Value.TryGetProperty("type", out var typeProperty),
-                $"Node configuration for '{nodeConfig.Name}' should have type discriminator");
-            Assert.NotNull(typeProperty.GetString());
+            Assert.NotNull(config);
+            Assert.False(string.IsNullOrEmpty(config.Name), $"Node configuration for '{nodeId}' should have a name");
         }
     }
 
@@ -639,18 +648,20 @@ public class AgentVersionServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.True(result.IsDraft);
 
-        // Verify HttpRequest node configuration was stored with type discriminator
+        // Verify HttpRequest node configuration was stored correctly (typed)
         var versionInDb = await _dbContext.AgentVersions.FindAsync(result.Id);
         Assert.NotNull(versionInDb);
 
-        var nodeConfigs = System.Text.Json.JsonDocument.Parse(versionInDb.NodeConfigurations);
-        Assert.True(nodeConfigs.RootElement.TryGetProperty("http-request-1", out var httpConfig));
-        Assert.True(httpConfig.TryGetProperty("type", out var typeProperty));
-        Assert.Equal("HttpRequest", typeProperty.GetString());
-        Assert.True(httpConfig.TryGetProperty("method", out var methodProperty));
-        Assert.Equal("GET", methodProperty.GetString());
-        Assert.True(httpConfig.TryGetProperty("url", out var urlProperty));
-        Assert.Equal("https://example.com", urlProperty.GetString());
+        // NodeConfigurations is now a typed Dictionary<Guid, NodeConfiguration>
+        // Find the HttpRequest node by type (since the Guid is randomly generated)
+        var httpConfig = versionInDb.NodeConfigurations.Values
+            .FirstOrDefault(c => c is DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations.HttpRequestNodeConfiguration);
+        Assert.NotNull(httpConfig);
+        Assert.IsType<DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations.HttpRequestNodeConfiguration>(httpConfig);
+
+        var httpRequestConfig = (DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations.HttpRequestNodeConfiguration)httpConfig;
+        Assert.Equal(DonkeyWork.Agents.Agents.Contracts.Nodes.Enums.HttpMethod.Get, httpRequestConfig.Method);
+        Assert.Equal("https://example.com", httpRequestConfig.Url);
     }
 
     [Fact]
@@ -687,7 +698,7 @@ public class AgentVersionServiceTests : IDisposable
             Id = Guid.NewGuid(),
             UserId = _testUserId,
             AgentVersionId = draft.Id,
-            NodeId = "model-1",
+            NodeId = Guid.NewGuid(),
             CredentialId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow

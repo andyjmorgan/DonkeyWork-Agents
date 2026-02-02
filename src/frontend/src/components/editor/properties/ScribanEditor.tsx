@@ -1,6 +1,6 @@
 import { useRef, useCallback, useMemo, useEffect } from 'react'
 import Editor, { type Monaco } from '@monaco-editor/react'
-import { useEditorStore, type StartNodeConfig } from '@/store/editor'
+import { useEditorStore, type NodeConfig } from '@/store/editor'
 import { useThemeStore } from '@/store/theme'
 import type { editor, languages, Position } from 'monaco-editor'
 
@@ -122,13 +122,15 @@ export function ScribanEditor({
 
   // Get input schema properties from the start node
   const inputProperties = useMemo(() => {
-    const startNode = nodes.find(n => n.type === 'start')
+    // Start node uses 'schemaNode' type with nodeType: 'Start' in data
+    const startNode = nodes.find(n => n.data?.nodeType === 'Start')
     if (!startNode) return []
 
-    const startConfig = nodeConfigurations[startNode.id] as StartNodeConfig | undefined
-    if (!startConfig?.inputSchema?.properties) return []
+    const startConfig = nodeConfigurations[startNode.id] as NodeConfig | undefined
+    const inputSchema = startConfig?.inputSchema as { properties?: Record<string, unknown> } | undefined
+    if (!inputSchema?.properties) return []
 
-    return Object.keys(startConfig.inputSchema.properties)
+    return Object.keys(inputSchema.properties)
   }, [nodes, nodeConfigurations])
 
   // Build completion items based on the current path context
@@ -137,12 +139,23 @@ export function ScribanEditor({
     const pathParts = currentPath.split('.').filter(p => p.length > 0)
     const pathLower = pathParts.map(p => p.toLowerCase())
 
-    // Root level - no path yet
-    if (pathParts.length === 0) {
+    // Known root-level identifiers
+    const rootIdentifiers = ['input', 'steps', 'executionid', 'userid']
+
+    // Determine if we should show root-level completions:
+    // - No path typed yet (pathParts.length === 0)
+    // - OR typing a partial/full first identifier that isn't followed by a dot
+    //   (we show root items and let Monaco filter them)
+    const showRootItems = pathParts.length === 0 ||
+      (pathParts.length === 1 && !rootIdentifiers.includes(pathLower[0]))
+
+    if (showRootItems) {
       items.push({
         label: 'Input',
         kind: monaco.languages.CompletionItemKind.Variable,
         insertText: 'Input',
+        filterText: 'Input',
+        sortText: '0_Input',
         detail: 'Input provided to the workflow',
         documentation: 'Access the input object passed to this workflow execution'
       })
@@ -150,6 +163,8 @@ export function ScribanEditor({
         label: 'ExecutionId',
         kind: monaco.languages.CompletionItemKind.Variable,
         insertText: 'ExecutionId',
+        filterText: 'ExecutionId',
+        sortText: '1_ExecutionId',
         detail: 'Current execution ID',
         documentation: 'The unique identifier for this execution'
       })
@@ -157,6 +172,8 @@ export function ScribanEditor({
         label: 'UserId',
         kind: monaco.languages.CompletionItemKind.Variable,
         insertText: 'UserId',
+        filterText: 'UserId',
+        sortText: '2_UserId',
         detail: 'Current user ID',
         documentation: 'The ID of the user running this execution'
       })
@@ -167,6 +184,8 @@ export function ScribanEditor({
           label: 'Steps',
           kind: monaco.languages.CompletionItemKind.Module,
           insertText: 'Steps',
+          filterText: 'Steps',
+          sortText: '3_Steps',
           detail: 'Access outputs from previous steps',
           documentation: 'Contains the outputs from all previous workflow steps'
         })
@@ -174,27 +193,31 @@ export function ScribanEditor({
     }
     // After "Input" - show input schema properties
     else if (pathLower.length === 1 && pathLower[0] === 'input') {
-      for (const prop of inputProperties) {
+      inputProperties.forEach((prop, i) => {
         items.push({
           label: prop,
           kind: monaco.languages.CompletionItemKind.Property,
           insertText: prop,
+          filterText: prop,
+          sortText: `${i}_${prop}`,
           detail: `Input property: ${prop}`,
           documentation: `Access the "${prop}" property from the workflow input`
         })
-      }
+      })
     }
     // After "Steps" - show predecessor node names
     else if (pathLower.length === 1 && pathLower[0] === 'steps') {
-      for (const pred of predecessors) {
+      predecessors.forEach((pred, i) => {
         items.push({
           label: pred.nodeName,
           kind: monaco.languages.CompletionItemKind.Class,
           insertText: pred.nodeName,
+          filterText: pred.nodeName,
+          sortText: `${i}_${pred.nodeName}`,
           detail: `${pred.nodeType} node`,
           documentation: `Access outputs from the "${pred.nodeName}" step`
         })
-      }
+      })
     }
     // After "Steps.<nodeName>" - show output properties for that node type
     else if (pathLower.length === 2 && pathLower[0] === 'steps') {
@@ -202,15 +225,17 @@ export function ScribanEditor({
       const pred = predecessors.find(p => p.nodeName.toLowerCase() === nodeName.toLowerCase())
       if (pred) {
         const outputProps = NODE_OUTPUT_PROPERTIES[pred.nodeType] || []
-        for (const prop of outputProps) {
+        outputProps.forEach((prop, i) => {
           items.push({
             label: prop,
             kind: monaco.languages.CompletionItemKind.Property,
             insertText: prop,
+            filterText: prop,
+            sortText: `${i}_${prop}`,
             detail: `Output property`,
             documentation: `The ${prop} output from this step`
           })
-        }
+        })
       }
     }
 
@@ -247,10 +272,14 @@ export function ScribanEditor({
         }
 
         // Get the current path (e.g., "Steps.MyNode" or "Input")
-        const pathMatch = afterBrace.match(/^\s*([\w.]*?)\.?$/)
+        // Use greedy match to capture the full path
+        const pathMatch = afterBrace.match(/^\s*([\w.]*)$/)
         const currentPath = pathMatch ? pathMatch[1] : ''
 
-        const { items } = buildCompletionItems(monaco, currentPath)
+        // If path ends with a dot, remove it for path parsing but remember we're completing after a dot
+        const normalizedPath = currentPath.endsWith('.') ? currentPath.slice(0, -1) : currentPath
+
+        const { items } = buildCompletionItems(monaco, normalizedPath)
 
         // Calculate the range for replacement
         const wordInfo = model.getWordUntilPosition(position)
@@ -262,6 +291,7 @@ export function ScribanEditor({
         }
 
         return {
+          incomplete: true, // Keep querying as user types
           suggestions: items.map(item => ({
             ...item,
             range
@@ -290,6 +320,32 @@ export function ScribanEditor({
     // Disable find widget (Ctrl+F / Cmd+F)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
       // Do nothing - prevents find dialog
+    })
+
+    // Manually trigger suggestions when {{ is typed
+    // This fixes the issue where typing { triggers completion with no results,
+    // and then the second { doesn't re-trigger
+    editor.onDidChangeModelContent((e) => {
+      for (const change of e.changes) {
+        // Check if the change ends with {{ (user just typed the second brace)
+        if (change.text === '{') {
+          const model = editor.getModel()
+          if (!model) return
+
+          const position = editor.getPosition()
+          if (!position) return
+
+          // Check if the character before is also {
+          const lineContent = model.getLineContent(position.lineNumber)
+          const charBefore = lineContent[position.column - 2] // -1 for 0-index, -1 for previous char
+          if (charBefore === '{') {
+            // Trigger suggestions after a small delay to let Monaco process the change
+            setTimeout(() => {
+              editor.trigger('keyboard', 'editor.action.triggerSuggest', {})
+            }, 10)
+          }
+        }
+      }
     })
   }, [setupCompletionProvider])
 

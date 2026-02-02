@@ -1,3 +1,5 @@
+using DonkeyWork.Agents.Agents.Contracts.Enums;
+
 namespace DonkeyWork.Agents.Persistence.Entities.Agents;
 
 /// <summary>
@@ -18,7 +20,7 @@ public class AgentExecutionEntity : BaseEntity
     /// <summary>
     /// Execution status.
     /// </summary>
-    public string Status { get; set; } = string.Empty;
+    public ExecutionStatus Status { get; set; } = ExecutionStatus.Pending;
 
     /// <summary>
     /// Input data. Stored as JSONB.

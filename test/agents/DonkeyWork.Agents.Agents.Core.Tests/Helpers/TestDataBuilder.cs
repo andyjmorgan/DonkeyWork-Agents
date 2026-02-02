@@ -1,5 +1,8 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
 
 namespace DonkeyWork.Agents.Agents.Core.Tests.Helpers;
@@ -13,17 +16,46 @@ public class TestDataBuilder
     private readonly Guid _defaultUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     /// <summary>
-    /// Creates a default input schema for tests.
+    /// Creates a default input schema JSON string for tests.
     /// </summary>
-    public static object CreateInputSchema() => new
+    public static string CreateInputSchemaJson() => """{"type":"object","properties":{"input":{"type":"string"}},"required":["input"]}""";
+
+    /// <summary>
+    /// Creates a default input schema as JsonDocument for tests.
+    /// </summary>
+    public static JsonDocument CreateInputSchemaDocument() => JsonDocument.Parse(CreateInputSchemaJson());
+
+    /// <summary>
+    /// Creates a ReactFlowNode with the specified parameters.
+    /// </summary>
+    public static ReactFlowNode CreateReactFlowNode(Guid id, NodeType nodeType, string label, double x = 100, double y = 100)
     {
-        type = "object",
-        properties = new
+        return new ReactFlowNode
         {
-            input = new { type = "string" }
-        },
-        required = new[] { "input" }
-    };
+            Id = id,
+            Type = "schemaNode",
+            Position = new ReactFlowPosition { X = x, Y = y },
+            Data = new ReactFlowNodeData
+            {
+                NodeType = nodeType,
+                Label = label,
+                DisplayName = label
+            }
+        };
+    }
+
+    /// <summary>
+    /// Creates a ReactFlowEdge with the specified parameters.
+    /// </summary>
+    public static ReactFlowEdge CreateReactFlowEdge(Guid source, Guid target, Guid? id = null)
+    {
+        return new ReactFlowEdge
+        {
+            Id = id ?? Guid.NewGuid(),
+            Source = source,
+            Target = target
+        };
+    }
 
     /// <summary>
     /// Creates a basic CreateAgentRequestV1 with default values.
@@ -52,36 +84,34 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequest()
     {
-        var startNodeId = "start-1";
-        var endNodeId = "end-1";
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 250 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId, target = endNodeId }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "start_1", 100, 100),
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 250)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId, endNodeId)
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = new { type = "object", properties = new { input = new { type = "string" } }, required = new[] { "input" } } },
             [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -108,36 +138,34 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithDuplicateNames()
     {
-        var startNodeId = "start-1";
-        var endNodeId = "end-1";
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 250 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId, target = endNodeId }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "duplicate_name", 100, 100),
+                CreateReactFlowNode(endNodeId, NodeType.End, "duplicate_name", 100, 250)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId, endNodeId)
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId] = new { type = "Start", name = "duplicate_name", inputSchema = inputSchema },
+            [startNodeId] = new { type = "Start", name = "duplicate_name", inputSchema = new { type = "object" } },
             [endNodeId] = new { type = "End", name = "duplicate_name" }  // Duplicate name
         };
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -148,30 +176,28 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithoutStartNode()
     {
-        var endNodeId = "end-1";
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 250 }, data = new { label = "end" } }
-            },
-            edges = Array.Empty<object>(),
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 250)
+            ],
+            Edges = [],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
             [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -182,41 +208,39 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithCycle()
     {
-        var startNodeId = "start-1";
-        var modelNodeId = "model-1";
-        var endNodeId = "end-1";
+        var startNodeId = Guid.NewGuid();
+        var modelNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = modelNodeId, type = "model", position = new { x = 100, y = 200 }, data = new { label = "model" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId, target = modelNodeId },
-                new { id = "e2", source = modelNodeId, target = startNodeId },  // Cycle back to start
-                new { id = "e3", source = modelNodeId, target = endNodeId }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "start_1", 100, 100),
+                CreateReactFlowNode(modelNodeId, NodeType.Model, "model_1", 100, 200),
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 300)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId, modelNodeId),
+                CreateReactFlowEdge(modelNodeId, startNodeId),  // Cycle back to start
+                CreateReactFlowEdge(modelNodeId, endNodeId)
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = new { type = "object" } },
             [modelNodeId] = new { type = "Model", name = "model_1" },
             [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -240,7 +264,7 @@ public class TestDataBuilder
 
     /// <summary>
     /// Creates an AgentVersionEntity with default test values.
-    /// Uses the new Contracts.Nodes configuration format.
+    /// Uses typed ReactFlowData and Dictionary for NodeConfigurations.
     /// </summary>
     public AgentVersionEntity CreateAgentVersionEntity(
         Guid? id = null,
@@ -249,29 +273,27 @@ public class TestDataBuilder
         int versionNumber = 1,
         bool isDraft = true)
     {
-        var startNodeId = "start-1";
-        var endNodeId = "end-1";
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 250 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId, target = endNodeId }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "start_1", 100, 100),
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 250)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId, endNodeId)
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, NodeConfiguration>
         {
-            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
-            [endNodeId] = new { type = "End", name = "end_1" }
+            [startNodeId] = new StartNodeConfiguration { Name = "start_1", InputSchema = JsonSerializer.SerializeToElement(new { type = "object", properties = new { input = new { type = "string" } }, required = new[] { "input" } }) },
+            [endNodeId] = new EndNodeConfiguration { Name = "end_1" }
         };
 
         return new AgentVersionEntity
@@ -281,10 +303,10 @@ public class TestDataBuilder
             UserId = userId ?? _defaultUserId,
             VersionNumber = versionNumber,
             IsDraft = isDraft,
-            InputSchema = JsonSerializer.Serialize(inputSchema),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
-            ReactFlowData = JsonSerializer.Serialize(reactFlowData),
-            NodeConfigurations = JsonSerializer.Serialize(nodeConfigurations),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = nodeConfigurations,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
             PublishedAt = isDraft ? null : DateTimeOffset.UtcNow
@@ -296,30 +318,28 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithoutEndNode()
     {
-        var startNodeId = "start-1";
+        var startNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } }
-            },
-            edges = Array.Empty<object>(),
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "start_1", 100, 100)
+            ],
+            Edges = [],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema }
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = new { type = "object" } }
         };
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -330,40 +350,38 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithDisconnectedNodes()
     {
-        var startNodeId = "start-1";
-        var endNodeId = "end-1";
-        var modelNodeId = "model-1";
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
+        var modelNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = modelNodeId, type = "model", position = new { x = 100, y = 200 }, data = new { label = "model" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId, target = modelNodeId }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "start_1", 100, 100),
+                CreateReactFlowNode(modelNodeId, NodeType.Model, "model_1", 100, 200),
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 300)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId, modelNodeId)
                 // Note: No edge from model to end - end is disconnected
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = new { type = "object" } },
             [modelNodeId] = new { type = "Model", name = "model_1" },
             [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -374,40 +392,38 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithMultipleStartNodes()
     {
-        var startNodeId1 = "start-1";
-        var startNodeId2 = "start-2";
-        var endNodeId = "end-1";
+        var startNodeId1 = Guid.NewGuid();
+        var startNodeId2 = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId1, type = "start", position = new { x = 50, y = 100 }, data = new { label = "start 1" } },
-                new { id = startNodeId2, type = "start", position = new { x = 150, y = 100 }, data = new { label = "start 2" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 250 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId1, target = endNodeId },
-                new { id = "e2", source = startNodeId2, target = endNodeId }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId1, NodeType.Start, "start_1", 50, 100),
+                CreateReactFlowNode(startNodeId2, NodeType.Start, "start_2", 150, 100),
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 250)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId1, endNodeId),
+                CreateReactFlowEdge(startNodeId2, endNodeId)
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId1] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
-            [startNodeId2] = new { type = "Start", name = "start_2", inputSchema = inputSchema },
+            [startNodeId1] = new { type = "Start", name = "start_1", inputSchema = new { type = "object" } },
+            [startNodeId2] = new { type = "Start", name = "start_2", inputSchema = new { type = "object" } },
             [endNodeId] = new { type = "End", name = "end_1" }
         };
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -416,11 +432,11 @@ public class TestDataBuilder
     /// <summary>
     /// Creates a credential mapping for testing.
     /// </summary>
-    public static CredentialMappingV1 CreateCredentialMapping(string nodeId = "model-1", Guid? credentialId = null)
+    public static CredentialMappingV1 CreateCredentialMapping(Guid? nodeId = null, Guid? credentialId = null)
     {
         return new CredentialMappingV1
         {
-            NodeId = nodeId,
+            NodeId = nodeId ?? Guid.NewGuid(),
             CredentialId = credentialId ?? Guid.NewGuid()
         };
     }
@@ -431,31 +447,29 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithHttpRequestNode()
     {
-        var startNodeId = "start-1";
-        var httpRequestNodeId = "http-request-1";
-        var endNodeId = "end-1";
+        var startNodeId = Guid.NewGuid();
+        var httpRequestNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = httpRequestNodeId, type = "httpRequest", position = new { x = 100, y = 200 }, data = new { label = "HTTP Request" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId, target = httpRequestNodeId },
-                new { id = "e2", source = httpRequestNodeId, target = endNodeId }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "start_1", 100, 100),
+                CreateReactFlowNode(httpRequestNodeId, NodeType.HttpRequest, "http_request_1", 100, 200),
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 300)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId, httpRequestNodeId),
+                CreateReactFlowEdge(httpRequestNodeId, endNodeId)
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = new { type = "object" } },
             [httpRequestNodeId] = new
             {
                 type = "HttpRequest",
@@ -469,9 +483,9 @@ public class TestDataBuilder
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };
@@ -482,31 +496,29 @@ public class TestDataBuilder
     /// </summary>
     public static SaveAgentVersionRequestV1 CreateSaveVersionRequestWithInvalidHttpRequestNode()
     {
-        var startNodeId = "start-1";
-        var httpRequestNodeId = "http-request-1";
-        var endNodeId = "end-1";
+        var startNodeId = Guid.NewGuid();
+        var httpRequestNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
-        var inputSchema = CreateInputSchema();
-
-        var reactFlowData = new
+        var reactFlowData = new ReactFlowData
         {
-            nodes = new[]
-            {
-                new { id = startNodeId, type = "start", position = new { x = 100, y = 100 }, data = new { label = "start" } },
-                new { id = httpRequestNodeId, type = "httpRequest", position = new { x = 100, y = 200 }, data = new { label = "HTTP Request" } },
-                new { id = endNodeId, type = "end", position = new { x = 100, y = 300 }, data = new { label = "end" } }
-            },
-            edges = new[]
-            {
-                new { id = "e1", source = startNodeId, target = httpRequestNodeId },
-                new { id = "e2", source = httpRequestNodeId, target = endNodeId }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            Nodes =
+            [
+                CreateReactFlowNode(startNodeId, NodeType.Start, "start_1", 100, 100),
+                CreateReactFlowNode(httpRequestNodeId, NodeType.HttpRequest, "http_request_1", 100, 200),
+                CreateReactFlowNode(endNodeId, NodeType.End, "end_1", 100, 300)
+            ],
+            Edges =
+            [
+                CreateReactFlowEdge(startNodeId, httpRequestNodeId),
+                CreateReactFlowEdge(httpRequestNodeId, endNodeId)
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var nodeConfigurations = new Dictionary<string, object>
+        var nodeConfigurations = new Dictionary<Guid, object>
         {
-            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = inputSchema },
+            [startNodeId] = new { type = "Start", name = "start_1", inputSchema = new { type = "object" } },
             [httpRequestNodeId] = new
             {
                 type = "HttpRequest",
@@ -518,9 +530,9 @@ public class TestDataBuilder
 
         return new SaveAgentVersionRequestV1
         {
-            ReactFlowData = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(reactFlowData)),
-            NodeConfigurations = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(nodeConfigurations)),
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(inputSchema)),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = JsonSerializer.SerializeToElement(nodeConfigurations),
+            InputSchema = CreateInputSchemaDocument(),
             OutputSchema = null,
             CredentialMappings = new List<CredentialMappingV1>()
         };

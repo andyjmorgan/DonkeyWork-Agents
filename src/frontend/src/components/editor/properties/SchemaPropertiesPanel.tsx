@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useEditorStore } from '@/store/editor'
-import { nodeTypes, type NodeConfigSchema, type NodeFieldSchema } from '@/lib/api'
+import { nodeTypes, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@/lib/api'
 import { FieldRenderer } from './FieldRenderer'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,16 +12,20 @@ interface SchemaPropertiesPanelProps {
   nodeType: string
   /** Optional provider for filtering credentials (e.g., for Model nodes) */
   credentialProvider?: string
+  /** Optional model ID for filtering fields by supportedBy */
+  modelId?: string
 }
 
 export function SchemaPropertiesPanel({
   nodeId,
   nodeType,
   credentialProvider,
+  modelId,
 }: SchemaPropertiesPanelProps) {
   const [schema, setSchema] = useState<NodeConfigSchema | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedModel, setSelectedModel] = useState<ModelDefinition | null>(null)
 
   const nodeConfigurations = useEditorStore((state) => state.nodeConfigurations)
   const updateNodeConfig = useEditorStore((state) => state.updateNodeConfig)
@@ -51,6 +55,20 @@ export function SchemaPropertiesPanel({
         setLoading(false)
       })
   }, [nodeType])
+
+  // Fetch model definition when modelId changes (for Model nodes)
+  useEffect(() => {
+    if (modelId) {
+      models.get(modelId)
+        .then(setSelectedModel)
+        .catch((err) => {
+          console.error('Failed to fetch model:', err)
+          setSelectedModel(null)
+        })
+    } else {
+      setSelectedModel(null)
+    }
+  }, [modelId])
 
   const handleFieldChange = (fieldName: string, value: unknown) => {
     updateNodeConfig(nodeId, { [fieldName]: value })
@@ -169,6 +187,8 @@ export function SchemaPropertiesPanel({
                 onChange={(value) => handleFieldChange(field.name, value)}
                 predecessors={predecessors}
                 credentialProvider={credentialProvider}
+                modelId={modelId}
+                modelMaxOutputTokens={selectedModel?.max_output_tokens}
               />
             ) : null
           )}
@@ -194,6 +214,8 @@ export function SchemaPropertiesPanel({
                     onChange={(value) => handleFieldChange(field.name, value)}
                     predecessors={predecessors}
                     credentialProvider={credentialProvider}
+                    modelId={modelId}
+                    modelMaxOutputTokens={selectedModel?.max_output_tokens}
                   />
                 ) : null
               )}

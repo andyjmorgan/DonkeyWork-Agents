@@ -13,6 +13,7 @@ import { ExportJsonDialog } from '@/components/editor/ExportJsonDialog'
 import { TestPanel } from '@/components/execution/TestPanel'
 import { useEditorStore } from '@/store/editor'
 import type { AgentVersion } from '@/lib/api'
+import { toast } from 'sonner'
 
 export function AgentEditorPage() {
   const { id } = useParams<{ id: string }>()
@@ -42,7 +43,7 @@ export function AgentEditorPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   // Get input schema from start node
-  const startNode = nodes.find(n => n.type === 'start')
+  const startNode = nodes.find(n => n.data?.nodeType === 'Start')
   const inputSchema = startNode ? (nodeConfigurations[startNode.id] as any)?.inputSchema : undefined
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export function AgentEditorPage() {
 
           if (currentVersion) {
             // Merge top-level inputSchema into start node configuration
-            const startNode = currentVersion.reactFlowData.nodes.find(n => n.type === 'start')
+            const startNode = currentVersion.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
             const nodeConfigurations = {
               ...currentVersion.nodeConfigurations,
               ...(startNode ? {
@@ -119,10 +120,15 @@ export function AgentEditorPage() {
 
       if (!silent) {
         setSaveStatus('saved')
+        toast.success('Draft saved successfully')
         setTimeout(() => setSaveStatus('idle'), 2000)
       }
     } catch (error) {
       console.error('Failed to save:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      toast.error('Failed to save draft', {
+        description: errorMessage,
+      })
       if (!silent) {
         setSaveStatus('error')
         setTimeout(() => setSaveStatus('idle'), 3000)
@@ -182,7 +188,7 @@ export function AgentEditorPage() {
       const publishedVersion = await agents.publish(agentId)
 
       // Merge top-level inputSchema into start node configuration
-      const startNode = publishedVersion.reactFlowData.nodes.find(n => n.type === 'start')
+      const startNode = publishedVersion.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
       const nodeConfigurations = {
         ...publishedVersion.nodeConfigurations,
         ...(startNode ? {
@@ -218,7 +224,7 @@ export function AgentEditorPage() {
 
   const handleLoadVersion = useCallback(async (version: AgentVersion) => {
     // Merge top-level inputSchema into start node configuration
-    const startNode = version.reactFlowData.nodes.find(n => n.type === 'start')
+    const startNode = version.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
     const nodeConfigurations = {
       ...version.nodeConfigurations,
       ...(startNode ? {
@@ -243,7 +249,7 @@ export function AgentEditorPage() {
 
   const handleCreateDraftFromVersion = useCallback(async (version: AgentVersion) => {
     // Merge top-level inputSchema into start node configuration
-    const startNode = version.reactFlowData.nodes.find(n => n.type === 'start')
+    const startNode = version.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
     const nodeConfigurations = {
       ...version.nodeConfigurations,
       ...(startNode ? {

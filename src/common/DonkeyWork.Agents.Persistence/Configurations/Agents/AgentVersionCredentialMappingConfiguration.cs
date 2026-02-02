@@ -26,8 +26,7 @@ public class AgentVersionCredentialMappingConfiguration : IEntityTypeConfigurati
 
         builder.Property(e => e.NodeId)
             .HasColumnName("node_id")
-            .IsRequired()
-            .HasMaxLength(255);
+            .IsRequired();
 
         builder.Property(e => e.CredentialId)
             .HasColumnName("credential_id")

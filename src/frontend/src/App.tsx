@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/layout'
 import { AgentsPage, AgentEditorPage, ApiKeysPage, SecretsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TodosPage, NotesPage, NoteEditorPage, MilestoneDetailPage } from '@/pages'
 import { useAuthStore } from '@/store/auth'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
+import { Toaster } from '@/components/ui/toaster'
 
 function TokenRefreshManager({ children }: { children: React.ReactNode }) {
   useTokenRefresh()
@@ -15,6 +16,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <TokenRefreshManager>
+        <Toaster />
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />

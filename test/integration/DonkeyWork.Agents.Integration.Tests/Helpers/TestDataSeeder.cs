@@ -1,3 +1,7 @@
+using System.Text.Json;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
@@ -40,6 +44,41 @@ public class TestDataSeeder
         int versionNumber = 1,
         bool isDraft = true)
     {
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
+
+        var reactFlowData = new ReactFlowData
+        {
+            Nodes =
+            [
+                new ReactFlowNode
+                {
+                    Id = startNodeId,
+                    Type = "schemaNode",
+                    Position = new ReactFlowPosition { X = 100, Y = 100 },
+                    Data = new ReactFlowNodeData { NodeType = NodeType.Start, Label = "start_1", DisplayName = "start_1" }
+                },
+                new ReactFlowNode
+                {
+                    Id = endNodeId,
+                    Type = "schemaNode",
+                    Position = new ReactFlowPosition { X = 100, Y = 250 },
+                    Data = new ReactFlowNodeData { NodeType = NodeType.End, Label = "end_1", DisplayName = "end_1" }
+                }
+            ],
+            Edges =
+            [
+                new ReactFlowEdge { Id = Guid.NewGuid(), Source = startNodeId, Target = endNodeId }
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
+        };
+
+        var nodeConfigurations = new Dictionary<Guid, NodeConfiguration>
+        {
+            [startNodeId] = new StartNodeConfiguration { Name = "start_1", InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }) },
+            [endNodeId] = new EndNodeConfiguration { Name = "end_1" }
+        };
+
         var version = new AgentVersionEntity
         {
             Id = Guid.NewGuid(),
@@ -47,9 +86,9 @@ public class TestDataSeeder
             UserId = userId,
             VersionNumber = versionNumber,
             IsDraft = isDraft,
-            InputSchema = "{}",
-            ReactFlowData = "{}",
-            NodeConfigurations = "{}"
+            InputSchema = JsonDocument.Parse("{}"),
+            ReactFlowData = reactFlowData,
+            NodeConfigurations = nodeConfigurations
         };
 
         _dbContext.AgentVersions.Add(version);

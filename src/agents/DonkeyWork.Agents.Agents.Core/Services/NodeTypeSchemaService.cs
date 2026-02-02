@@ -1,12 +1,15 @@
+using System.Reflection;
 using DonkeyWork.Agents.Agents.Contracts.Models;
 using DonkeyWork.Agents.Agents.Contracts.Services;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Attributes;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Agents.Contracts.Nodes.Schema;
 
 namespace DonkeyWork.Agents.Agents.Core.Services;
 
 /// <summary>
 /// Provides node type information and configuration schemas.
+/// Reads all metadata from NodeAttribute on configuration classes.
 /// </summary>
 public class NodeTypeSchemaService : INodeTypeSchemaService
 {
@@ -26,73 +29,93 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
 
     private IReadOnlyList<NodeTypeInfo> GenerateNodeTypes()
     {
-        var nodeTypeDefinitions = new[]
-        {
-            new
-            {
-                Type = NodeType.Start,
-                DisplayName = "Start",
-                Description = "Entry point - validates input against schema",
-                Category = "Flow",
-                Icon = "play",
-                Color = "green"
-            },
-            new
-            {
-                Type = NodeType.End,
-                DisplayName = "End",
-                Description = "Output and completion",
-                Category = "Flow",
-                Icon = "flag",
-                Color = "orange"
-            },
-            new
-            {
-                Type = NodeType.Model,
-                DisplayName = "Model",
-                Description = "Call an LLM with configured prompts",
-                Category = "AI",
-                Icon = "brain",
-                Color = "blue"
-            },
-            new
-            {
-                Type = NodeType.MessageFormatter,
-                DisplayName = "Message Formatter",
-                Description = "Format messages using Scriban templates",
-                Category = "Utility",
-                Icon = "file-text",
-                Color = "cyan"
-            },
-            new
-            {
-                Type = NodeType.HttpRequest,
-                DisplayName = "HTTP Request",
-                Description = "Make HTTP requests to external APIs",
-                Category = "Integration",
-                Icon = "globe",
-                Color = "purple"
-            },
-            new
-            {
-                Type = NodeType.Sleep,
-                DisplayName = "Sleep",
-                Description = "Pause execution for a specified duration",
-                Category = "Utility",
-                Icon = "clock",
-                Color = "cyan"
-            }
-        };
+        var result = new List<NodeTypeInfo>();
+        var assembly = typeof(NodeConfiguration).Assembly;
 
-        return nodeTypeDefinitions.Select(def => new NodeTypeInfo
+        // Find all concrete NodeConfiguration classes
+        var configTypes = assembly.GetTypes()
+            .Where(t => t.IsSubclassOf(typeof(NodeConfiguration)) && !t.IsAbstract);
+
+        foreach (var configType in configTypes)
         {
-            Type = def.Type,
-            DisplayName = def.DisplayName,
-            Description = def.Description,
-            Category = def.Category,
-            Icon = def.Icon,
-            Color = def.Color,
-            ConfigSchema = _schemaGenerator.GenerateSchema(def.Type)
-        }).ToList();
+            // Read NodeAttribute from the class
+            var nodeAttr = configType.GetCustomAttribute<NodeAttribute>();
+            if (nodeAttr == null)
+            {
+                // Skip configurations without NodeAttribute
+                continue;
+            }
+
+            // Create minimal instance to get NodeType
+            var instance = CreateMinimalInstance(configType);
+            if (instance == null)
+            {
+                continue;
+            }
+
+            var nodeType = instance.NodeType;
+
+            result.Add(new NodeTypeInfo
+            {
+                Type = nodeType,
+                DisplayName = nodeAttr.DisplayName,
+                Description = nodeAttr.Description,
+                Category = nodeAttr.Category,
+                Icon = nodeAttr.Icon,
+                Color = nodeAttr.Color,
+                HasInputHandle = nodeAttr.HasInputHandle,
+                HasOutputHandle = nodeAttr.HasOutputHandle,
+                CanDelete = nodeAttr.CanDelete,
+                ConfigSchema = _schemaGenerator.GenerateSchema(nodeType)
+            });
+        }
+
+        return result;
+    }
+
+    private static NodeConfiguration? CreateMinimalInstance(Type configType)
+    {
+        try
+        {
+            // Create minimal instance for type discovery (required properties need values)
+            return configType.Name switch
+            {
+                nameof(StartNodeConfiguration) => new StartNodeConfiguration
+                {
+                    Name = "temp",
+                    InputSchema = System.Text.Json.JsonDocument.Parse("{}").RootElement
+                },
+                nameof(EndNodeConfiguration) => new EndNodeConfiguration { Name = "temp" },
+                nameof(ModelNodeConfiguration) => new ModelNodeConfiguration
+                {
+                    Name = "temp",
+                    Provider = Common.Contracts.Enums.LlmProvider.OpenAI,
+                    ModelId = "temp",
+                    CredentialId = Guid.Empty,
+                    UserMessages = []
+                },
+                nameof(MessageFormatterNodeConfiguration) => new MessageFormatterNodeConfiguration
+                {
+                    Name = "temp",
+                    Template = ""
+                },
+                nameof(HttpRequestNodeConfiguration) => new HttpRequestNodeConfiguration
+                {
+                    Name = "temp",
+                    Method = Contracts.Nodes.Enums.HttpMethod.Get,
+                    Url = ""
+                },
+                nameof(SleepNodeConfiguration) => new SleepNodeConfiguration
+                {
+                    Name = "temp",
+                    DurationSeconds = 0
+                },
+                _ => null
+            };
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

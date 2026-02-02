@@ -8,6 +8,12 @@ namespace DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 /// <summary>
 /// Configuration for the Model node - calls an LLM with configured prompts and parameters.
 /// </summary>
+[Node(
+    DisplayName = "Model",
+    Description = "Call an LLM with configured prompts",
+    Category = "AI",
+    Icon = "brain",
+    Color = "blue")]
 public sealed class ModelNodeConfiguration : NodeConfiguration, IRequiresCredential
 {
     /// <inheritdoc />
@@ -66,10 +72,12 @@ public sealed class ModelNodeConfiguration : NodeConfiguration, IRequiresCredent
 
     /// <summary>
     /// Maximum number of tokens to generate.
+    /// Range: 1-128,000 (actual max depends on selected model).
     /// </summary>
     [JsonPropertyName("maxOutputTokens")]
-    [ConfigurableField(Label = "Max Output Tokens", ControlType = ControlType.Number, Order = 20)]
+    [ConfigurableField(Label = "Max Output Tokens", ControlType = ControlType.Slider, Order = 20)]
     [Tab("Advanced", Order = 3)]
+    [Slider(Min = 1, Max = 128000, Step = 256, Default = 4096)]
     public int? MaxOutputTokens { get; init; }
 
     /// <summary>
@@ -80,4 +88,14 @@ public sealed class ModelNodeConfiguration : NodeConfiguration, IRequiresCredent
     [Tab("Advanced", Order = 3)]
     [Slider(Min = 0, Max = 1, Step = 0.05, Default = 1.0)]
     public double? TopP { get; init; }
+
+    /// <summary>
+    /// Whether to stream the model response. When false, the entire response is returned at once.
+    /// Default is true for streaming output.
+    /// </summary>
+    [JsonPropertyName("stream")]
+    [ConfigurableField(Label = "Stream Output", ControlType = ControlType.Toggle, Order = 40,
+        Description = "When enabled, the model response is streamed incrementally. Disable for batch processing.")]
+    [Tab("Advanced", Order = 3)]
+    public bool Stream { get; init; } = true;
 }

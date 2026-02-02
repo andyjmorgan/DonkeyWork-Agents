@@ -67,72 +67,6 @@
       "client_types": ["MultimodalInput"]
     },
     {
-      "id": "gpt-image-1.5",
-      "name": "GPT Image 1.5",
-      "provider": "OpenAI",
-      "mode": "ImageGeneration",
-      "max_input_tokens": 4000,
-      "max_output_tokens": 0,
-      "input_cost_per_million_tokens": 5.00,
-      "output_cost_per_million_tokens": 40.00,
-      "supports": {
-        "vision": true,
-        "audio_input": false,
-        "audio_output": false,
-        "function_calling": false,
-        "tool_choice": false,
-        "prompt_caching": false,
-        "reasoning": false,
-        "image_output": true,
-        "streaming": false
-      },
-      "client_types": ["ImageOutput"]
-    },
-    {
-      "id": "gpt-4o-mini-tts",
-      "name": "GPT-4o mini TTS",
-      "provider": "OpenAI",
-      "mode": "AudioGeneration",
-      "max_input_tokens": 2000,
-      "max_output_tokens": 0,
-      "input_cost_per_million_tokens": 0.60,
-      "output_cost_per_million_tokens": 12.00,
-      "supports": {
-        "vision": false,
-        "audio_input": false,
-        "audio_output": true,
-        "function_calling": false,
-        "tool_choice": false,
-        "prompt_caching": false,
-        "reasoning": false,
-        "image_output": false,
-        "streaming": true
-      },
-      "client_types": ["AudioOutput"]
-    },
-    {
-      "id": "sora-2",
-      "name": "Sora 2",
-      "provider": "OpenAI",
-      "mode": "VideoGeneration",
-      "max_input_tokens": 4000,
-      "max_output_tokens": 0,
-      "input_cost_per_million_tokens": 0,
-      "output_cost_per_million_tokens": 0,
-      "supports": {
-        "vision": true,
-        "audio_input": false,
-        "audio_output": true,
-        "function_calling": false,
-        "tool_choice": false,
-        "prompt_caching": false,
-        "reasoning": false,
-        "image_output": false,
-        "streaming": false
-      },
-      "client_types": ["VideoOutput"]
-    },
-    {
       "id": "claude-opus-4-5",
       "name": "Claude Opus 4.5",
       "provider": "Anthropic",
@@ -297,28 +231,6 @@
         "streaming": true
       },
       "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
-    },
-    {
-      "id": "veo-3.1",
-      "name": "Veo 3.1",
-      "provider": "Google",
-      "mode": "VideoGeneration",
-      "max_input_tokens": 4000,
-      "max_output_tokens": 0,
-      "input_cost_per_million_tokens": 0,
-      "output_cost_per_million_tokens": 0,
-      "supports": {
-        "vision": true,
-        "audio_input": false,
-        "audio_output": true,
-        "function_calling": false,
-        "tool_choice": false,
-        "prompt_caching": false,
-        "reasoning": false,
-        "image_output": false,
-        "streaming": false
-      },
-      "client_types": ["VideoOutput"]
     }
   ]
 }

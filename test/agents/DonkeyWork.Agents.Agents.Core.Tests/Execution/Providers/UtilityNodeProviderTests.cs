@@ -8,25 +8,20 @@ namespace DonkeyWork.Agents.Agents.Core.Tests.Execution.Providers;
 
 /// <summary>
 /// Unit tests for UtilityNodeProvider.
-/// Tests MessageFormatter node execution with Scriban templates.
+/// Tests MessageFormatter node execution with template rendering.
 /// </summary>
 public class UtilityNodeProviderTests
 {
-    private readonly Mock<IExecutionContext> _executionContextMock;
+    private readonly Mock<ITemplateRenderer> _templateRendererMock;
     private readonly Mock<ILogger<UtilityNodeProvider>> _loggerMock;
     private readonly UtilityNodeProvider _provider;
 
     public UtilityNodeProviderTests()
     {
-        _executionContextMock = new Mock<IExecutionContext>();
+        _templateRendererMock = new Mock<ITemplateRenderer>();
         _loggerMock = new Mock<ILogger<UtilityNodeProvider>>();
 
-        _executionContextMock.Setup(c => c.ExecutionId).Returns(Guid.NewGuid());
-        _executionContextMock.Setup(c => c.UserId).Returns(Guid.NewGuid());
-        _executionContextMock.Setup(c => c.Input).Returns(new { message = "Hello" });
-        _executionContextMock.Setup(c => c.NodeOutputs).Returns(new Dictionary<string, object>());
-
-        _provider = new UtilityNodeProvider(_executionContextMock.Object, _loggerMock.Object);
+        _provider = new UtilityNodeProvider(_templateRendererMock.Object, _loggerMock.Object);
     }
 
     #region ExecuteMessageFormatterAsync Tests
@@ -41,6 +36,10 @@ public class UtilityNodeProviderTests
             Template = "Hello, World!"
         };
 
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("Hello, World!", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Hello, World!");
+
         // Act
         var result = await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None);
 
@@ -50,59 +49,42 @@ public class UtilityNodeProviderTests
     }
 
     [Fact]
-    public async Task ExecuteMessageFormatterAsync_WithInputVariable_ResolvesVariable()
+    public async Task ExecuteMessageFormatterAsync_WithTemplateVariable_CallsRenderer()
     {
         // Arrange
-        _executionContextMock.Setup(c => c.Input).Returns(new { name = "Claude" });
-
         var config = new MessageFormatterNodeConfiguration
         {
             Name = "formatter_1",
-            Template = "Hello, {{ input.name }}!"
+            Template = "Hello, {{ Input.name }}!"
         };
+
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("Hello, {{ Input.name }}!", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Hello, Claude!");
 
         // Act
         var result = await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None);
 
         // Assert
         Assert.Equal("Hello, Claude!", result.FormattedMessage);
+        _templateRendererMock.Verify(
+            r => r.RenderAsync("Hello, {{ Input.name }}!", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task ExecuteMessageFormatterAsync_WithExecutionIdVariable_ResolvesVariable()
+    public async Task ExecuteMessageFormatterAsync_WithStepsVariable_CallsRenderer()
     {
         // Arrange
-        var executionId = Guid.NewGuid();
-        _executionContextMock.Setup(c => c.ExecutionId).Returns(executionId);
-
         var config = new MessageFormatterNodeConfiguration
         {
             Name = "formatter_1",
-            Template = "Execution: {{ execution_id }}"
+            Template = "Previous: {{ Steps.previous_step.Result }}"
         };
 
-        // Act
-        var result = await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None);
-
-        // Assert
-        Assert.Equal($"Execution: {executionId}", result.FormattedMessage);
-    }
-
-    [Fact]
-    public async Task ExecuteMessageFormatterAsync_WithStepsVariable_ResolvesFromNodeOutputs()
-    {
-        // Arrange
-        var nodeOutputs = new Dictionary<string, object>
-        {
-            ["previous_step"] = new { result = "success" }
-        };
-        _executionContextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
-
-        var config = new MessageFormatterNodeConfiguration
-        {
-            Name = "formatter_1",
-            Template = "Previous: {{ steps.previous_step.result }}"
-        };
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("Previous: {{ Steps.previous_step.Result }}", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Previous: success");
 
         // Act
         var result = await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None);
@@ -121,6 +103,10 @@ public class UtilityNodeProviderTests
             Template = ""
         };
 
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("");
+
         // Act
         var result = await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None);
 
@@ -129,47 +115,25 @@ public class UtilityNodeProviderTests
     }
 
     [Fact]
-    public async Task ExecuteMessageFormatterAsync_WithInvalidTemplate_ThrowsException()
+    public async Task ExecuteMessageFormatterAsync_WhenRendererThrows_PropagatesException()
     {
-        // Arrange - use an invalid expression that Scriban definitely reports as an error
+        // Arrange
         var config = new MessageFormatterNodeConfiguration
         {
             Name = "formatter_1",
-            Template = "{{ for x in items }}{{ end }}" // missing end without proper loop
+            Template = "{{ 1 + }}"
         };
 
-        // The template above is actually valid syntax, so let's use one with a syntax error
-        config = new MessageFormatterNodeConfiguration
-        {
-            Name = "formatter_1",
-            Template = "{{ 1 + }}" // incomplete expression
-        };
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("{{ 1 + }}", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Template parse error: unexpected end of expression"));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None)
         );
 
-        Assert.Contains("Template parsing errors", exception.Message);
-    }
-
-    [Fact]
-    public async Task ExecuteMessageFormatterAsync_WithScribanLogic_ExecutesLogic()
-    {
-        // Arrange
-        _executionContextMock.Setup(c => c.Input).Returns(new { count = 5 });
-
-        var config = new MessageFormatterNodeConfiguration
-        {
-            Name = "formatter_1",
-            Template = "{{ if input.count > 3 }}Many{{ else }}Few{{ end }}"
-        };
-
-        // Act
-        var result = await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None);
-
-        // Assert
-        Assert.Equal("Many", result.FormattedMessage);
+        Assert.Contains("Template parse error", exception.Message);
     }
 
     [Fact]
@@ -182,12 +146,40 @@ public class UtilityNodeProviderTests
             Template = "Test message"
         };
 
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("Test message", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Test message");
+
         // Act
         var result = await _provider.ExecuteMessageFormatterAsync(config, CancellationToken.None);
         var messageOutput = result.ToMessageOutput();
 
         // Assert
         Assert.Equal("Test message", messageOutput);
+    }
+
+    [Fact]
+    public async Task ExecuteMessageFormatterAsync_WithCancellationToken_PassesTokenToRenderer()
+    {
+        // Arrange
+        var config = new MessageFormatterNodeConfiguration
+        {
+            Name = "formatter_1",
+            Template = "Hello"
+        };
+
+        using var cts = new CancellationTokenSource();
+        var token = cts.Token;
+
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("Hello", token))
+            .ReturnsAsync("Hello");
+
+        // Act
+        var result = await _provider.ExecuteMessageFormatterAsync(config, token);
+
+        // Assert
+        _templateRendererMock.Verify(r => r.RenderAsync("Hello", token), Times.Once);
     }
 
     #endregion

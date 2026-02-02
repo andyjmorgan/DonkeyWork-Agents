@@ -61,5 +61,10 @@ public enum ControlType
     /// <summary>
     /// Credential selector dropdown.
     /// </summary>
-    Credential
+    Credential,
+
+    /// <summary>
+    /// Key-value pair editor.
+    /// </summary>
+    KeyValue
 }

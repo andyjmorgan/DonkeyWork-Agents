@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { NodeFieldSchema } from '@/lib/api'
 import { credentials, type CredentialSummary } from '@/lib/api'
 import { Input } from '@/components/ui/input'
@@ -13,11 +13,44 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Variable } from 'lucide-react'
 import { KeyValueEditor } from './KeyValueEditor'
 import { ScribanEditor } from './ScribanEditor'
 import Editor from '@monaco-editor/react'
 import { Label } from '@/components/ui/label'
+import { CreateCredentialDialog } from '@/components/credentials/CreateCredentialDialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
+// Variable mode toggle button - allows switching between native control and ScribanEditor
+function VariableModeButton({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onClick}
+            className={`p-1 rounded transition-colors ${
+              isActive
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            <Variable className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          <p>{isActive ? 'Switch to value mode' : 'Switch to variable mode'}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
 
 interface FieldRendererProps {
   field: NodeFieldSchema
@@ -25,6 +58,12 @@ interface FieldRendererProps {
   onChange: (value: unknown) => void
   predecessors?: Array<{ nodeId: string; nodeName: string; nodeType: string }>
   credentialProvider?: string
+  /** If true, render the field as read-only */
+  readOnly?: boolean
+  /** Model ID for checking supportedBy field visibility */
+  modelId?: string
+  /** Max output tokens for the selected model (for dynamic slider max) */
+  modelMaxOutputTokens?: number
 }
 
 export function FieldRenderer({
@@ -33,15 +72,46 @@ export function FieldRenderer({
   onChange,
   predecessors = [],
   credentialProvider,
+  readOnly = false,
+  modelId,
+  modelMaxOutputTokens,
 }: FieldRendererProps) {
   const [availableCredentials, setAvailableCredentials] = useState<CredentialSummary[]>([])
+  const [isCreateCredentialOpen, setIsCreateCredentialOpen] = useState(false)
+  // Track if field is in variable mode (showing ScribanEditor instead of native control)
+  const [isVariableMode, setIsVariableMode] = useState(false)
+
+  // Check if value contains a variable expression
+  const hasVariableExpression = typeof value === 'string' && value.includes('{{')
+
+  // Determine if we should show variable mode (either explicitly toggled or value has variables)
+  const showAsVariable = isVariableMode || hasVariableExpression
+
+  // Control types that need the variable mode toggle (native controls that don't support variables directly)
+  const needsVariableToggle = field.supportsVariables && ['Slider', 'Toggle', 'Number', 'Select'].includes(field.controlType)
+
+  // Check if field is immutable (read-only)
+  const isReadOnly = readOnly || field.immutable === true
 
   // Load credentials if this is a Credential field
+  // NOTE: All hooks MUST be called before any conditional returns
+  const loadCredentials = useCallback(() => {
+    credentials.list().then(setAvailableCredentials).catch(console.error)
+  }, [])
+
   useEffect(() => {
     if (field.controlType === 'Credential') {
-      credentials.list().then(setAvailableCredentials).catch(console.error)
+      loadCredentials()
     }
-  }, [field.controlType])
+  }, [field.controlType, loadCredentials])
+
+  // Check if field should be hidden based on supportedBy
+  // If supportedBy is specified and modelId is not in the list, hide the field
+  if (field.supportedBy && field.supportedBy.length > 0 && modelId) {
+    if (!field.supportedBy.includes(modelId)) {
+      return null
+    }
+  }
 
   // Filter credentials by provider if specified
   const filteredCredentials = credentialProvider
@@ -49,8 +119,29 @@ export function FieldRenderer({
     : availableCredentials
 
   const renderControl = () => {
+    // If field is immutable/read-only, render as static text
+    if (isReadOnly) {
+      return (
+        <div className="rounded-xl border border-input bg-muted/50 px-3 py-2.5 text-sm text-muted-foreground">
+          {value !== undefined && value !== null ? String(value) : (field.default !== undefined ? String(field.default) : 'Not set')}
+        </div>
+      )
+    }
+
     switch (field.controlType) {
       case 'Text':
+        // Use ScribanEditor for Text fields that support variables
+        if (field.supportsVariables) {
+          return (
+            <ScribanEditor
+              value={String(value ?? '')}
+              onChange={onChange}
+              placeholder={field.placeholder}
+              predecessors={predecessors}
+              height="60px"
+            />
+          )
+        }
         return (
           <Input
             value={String(value ?? '')}
@@ -91,6 +182,18 @@ export function FieldRenderer({
         )
 
       case 'Number':
+        // Show ScribanEditor if in variable mode
+        if (showAsVariable && field.supportsVariables) {
+          return (
+            <ScribanEditor
+              value={String(value ?? '')}
+              onChange={onChange}
+              placeholder={`Enter value or variable, e.g. {{Input.${field.name}}}`}
+              predecessors={predecessors}
+              height="60px"
+            />
+          )
+        }
         return (
           <Input
             type="number"
@@ -106,31 +209,75 @@ export function FieldRenderer({
           />
         )
 
-      case 'Slider':
+      case 'Slider': {
+        // Show ScribanEditor if in variable mode
+        if (showAsVariable && field.supportsVariables) {
+          return (
+            <ScribanEditor
+              value={String(value ?? '')}
+              onChange={onChange}
+              placeholder={`Enter value or variable, e.g. {{Input.${field.name}}}`}
+              predecessors={predecessors}
+              height="60px"
+            />
+          )
+        }
+
+        // For maxOutputTokens, use model-specific max if available
+        const isMaxOutputTokens = field.name === 'maxOutputTokens'
+        const sliderMax = isMaxOutputTokens && modelMaxOutputTokens
+          ? modelMaxOutputTokens
+          : (field.max ?? 100)
+        const sliderMin = field.min ?? (isMaxOutputTokens ? 1 : 0)
+        const sliderStep = field.step ?? (isMaxOutputTokens ? 256 : 1)
+        const sliderDefault = field.default ?? (isMaxOutputTokens ? 4096 : 0)
+        const currentValue = Number(value ?? sliderDefault)
+
+        // Format display: integers with locale for large numbers, decimals for others
+        const displayValue = isMaxOutputTokens
+          ? currentValue.toLocaleString()
+          : (Number.isInteger(currentValue) ? currentValue.toString() : currentValue.toFixed(2))
+
         return (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                {field.min ?? 0}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
+                {sliderMin.toLocaleString()}
               </span>
-              <span className="text-sm font-medium">
-                {value !== undefined && value !== null ? String(value) : String(field.default ?? '')}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {field.max ?? 100}
+              <Slider
+                value={[currentValue]}
+                onValueChange={([val]) => onChange(val)}
+                min={sliderMin}
+                max={sliderMax}
+                step={sliderStep}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground tabular-nums w-14">
+                {sliderMax.toLocaleString()}
               </span>
             </div>
-            <Slider
-              value={[Number(value ?? field.default ?? field.min ?? 0)]}
-              onValueChange={([val]) => onChange(val)}
-              min={field.min ?? 0}
-              max={field.max ?? 100}
-              step={field.step ?? 1}
-            />
+            <div className="text-center">
+              <span className="text-sm font-medium tabular-nums">
+                {displayValue}
+              </span>
+            </div>
           </div>
         )
+      }
 
       case 'Select':
+        // Show ScribanEditor if in variable mode
+        if (showAsVariable && field.supportsVariables) {
+          return (
+            <ScribanEditor
+              value={String(value ?? '')}
+              onChange={onChange}
+              placeholder={`Enter value or variable, e.g. {{Input.${field.name}}}`}
+              predecessors={predecessors}
+              height="60px"
+            />
+          )
+        }
         return (
           <Select
             value={String(value ?? '')}
@@ -150,6 +297,18 @@ export function FieldRenderer({
         )
 
       case 'Toggle':
+        // Show ScribanEditor if in variable mode
+        if (showAsVariable && field.supportsVariables) {
+          return (
+            <ScribanEditor
+              value={String(value ?? '')}
+              onChange={onChange}
+              placeholder={`Enter value or variable, e.g. {{Input.${field.name}}}`}
+              predecessors={predecessors}
+              height="60px"
+            />
+          )
+        }
         return (
           <Switch
             checked={Boolean(value)}
@@ -231,26 +390,44 @@ export function FieldRenderer({
 
       case 'Credential':
         return (
-          <Select
-            value={String(value ?? '')}
-            onValueChange={onChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select credential" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredCredentials.map((cred) => (
-                <SelectItem key={cred.id} value={cred.id}>
-                  {cred.name} ({cred.provider})
+          <>
+            <Select
+              value={String(value ?? '')}
+              onValueChange={(v) => {
+                if (v === '__create_new__') {
+                  setIsCreateCredentialOpen(true)
+                } else {
+                  onChange(v)
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select credential" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredCredentials.map((cred) => (
+                  <SelectItem key={cred.id} value={cred.id}>
+                    {cred.name} ({cred.provider})
+                  </SelectItem>
+                ))}
+                <SelectItem value="__create_new__" className="text-blue-500">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add New Credential</span>
+                  </div>
                 </SelectItem>
-              ))}
-              {filteredCredentials.length === 0 && (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No credentials available
-                </div>
-              )}
-            </SelectContent>
-          </Select>
+              </SelectContent>
+            </Select>
+            <CreateCredentialDialog
+              open={isCreateCredentialOpen}
+              onOpenChange={setIsCreateCredentialOpen}
+              onCreated={(credentialId) => {
+                loadCredentials()
+                onChange(credentialId)
+              }}
+              defaultProvider={credentialProvider as "OpenAi" | "Anthropic" | "Google" | "Azure" | undefined}
+            />
+          </>
         )
 
       default:
@@ -276,8 +453,11 @@ export function FieldRenderer({
           {field.label}
           {field.required && <span className="text-destructive ml-1">*</span>}
         </Label>
-        {field.supportsVariables && (
-          <span className="text-xs text-muted-foreground">Supports {'{{variables}}'}</span>
+        {needsVariableToggle && (
+          <VariableModeButton
+            isActive={showAsVariable}
+            onClick={() => setIsVariableMode(!isVariableMode)}
+          />
         )}
       </div>
       {field.description && (

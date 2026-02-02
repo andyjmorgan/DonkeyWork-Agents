@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
 
 namespace DonkeyWork.Agents.Agents.Contracts.Models;
 
@@ -48,10 +49,11 @@ public sealed class GetAgentVersionResponseV1
     /// ReactFlow export data.
     /// </summary>
     [JsonPropertyName("reactFlowData")]
-    public required JsonElement ReactFlowData { get; init; }
+    public required ReactFlowData ReactFlowData { get; init; }
 
     /// <summary>
     /// Node configurations keyed by node ID.
+    /// Kept as JsonElement for frontend compatibility.
     /// </summary>
     [JsonPropertyName("nodeConfigurations")]
     public required JsonElement NodeConfigurations { get; init; }

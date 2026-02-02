@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Agents.Contracts.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Models;
 
 namespace DonkeyWork.Agents.Agents.Contracts.Services;
@@ -23,7 +24,7 @@ public interface IAgentExecutionRepository
     /// </summary>
     Task UpdateCompletionAsync(
         Guid executionId,
-        string status,
+        ExecutionStatus status,
         string? output,
         string? errorMessage,
         int? totalTokensUsed,

@@ -4,7 +4,6 @@ using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Nodes.Providers;
 using Microsoft.Extensions.Logging;
-using Scriban;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution.Providers;
 
@@ -14,14 +13,14 @@ namespace DonkeyWork.Agents.Agents.Core.Execution.Providers;
 [NodeProvider]
 public class UtilityNodeProvider
 {
-    private readonly IExecutionContext _executionContext;
+    private readonly ITemplateRenderer _templateRenderer;
     private readonly ILogger<UtilityNodeProvider> _logger;
 
     public UtilityNodeProvider(
-        IExecutionContext executionContext,
+        ITemplateRenderer templateRenderer,
         ILogger<UtilityNodeProvider> logger)
     {
-        _executionContext = executionContext;
+        _templateRenderer = templateRenderer;
         _logger = logger;
     }
 
@@ -30,38 +29,7 @@ public class UtilityNodeProvider
         MessageFormatterNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Prepare template variables (Pascal case with lowercase aliases)
-        var templateContext = new
-        {
-            Input = _executionContext.Input,
-            input = _executionContext.Input,
-            Steps = _executionContext.NodeOutputs,
-            steps = _executionContext.NodeOutputs,
-            ExecutionId = _executionContext.ExecutionId,
-            executionId = _executionContext.ExecutionId,
-            UserId = _executionContext.UserId,
-            userId = _executionContext.UserId
-        };
-
-        // Render the template
-        string formattedMessage;
-        try
-        {
-            var template = Template.Parse(config.Template);
-
-            if (template.HasErrors)
-            {
-                var errors = string.Join("; ", template.Messages.Select(m => m.Message));
-                throw new InvalidOperationException($"Template parsing errors: {errors}");
-            }
-
-            formattedMessage = await template.RenderAsync(templateContext);
-        }
-        catch (Exception ex) when (ex is not InvalidOperationException)
-        {
-            throw new InvalidOperationException(
-                $"Failed to render message formatter template: {ex.Message}", ex);
-        }
+        var formattedMessage = await _templateRenderer.RenderAsync(config.Template, cancellationToken);
 
         _logger.LogDebug("Message formatter rendered template. Output length: {Length}", formattedMessage.Length);
 

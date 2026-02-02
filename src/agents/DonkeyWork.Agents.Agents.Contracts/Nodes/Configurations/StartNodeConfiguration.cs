@@ -8,6 +8,14 @@ namespace DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 /// <summary>
 /// Configuration for the Start node - the entry point of an agent workflow.
 /// </summary>
+[Node(
+    DisplayName = "Start",
+    Description = "Entry point - validates input against schema",
+    Category = "Flow",
+    Icon = "play",
+    Color = "green",
+    HasInputHandle = false,
+    CanDelete = false)]
 public sealed class StartNodeConfiguration : NodeConfiguration
 {
     /// <inheritdoc />

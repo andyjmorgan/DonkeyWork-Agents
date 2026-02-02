@@ -2,13 +2,12 @@ using System.Diagnostics;
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Models.Events;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Agents.Core.Execution;
 using DonkeyWork.Agents.Agents.Core.Execution.Outputs;
 using DonkeyWork.Agents.Agents.Core.Options;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Registry;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
 using Microsoft.EntityFrameworkCore;
@@ -78,7 +77,7 @@ public class AgentOrchestrator : IAgentOrchestrator
                 UserId = userId,
                 AgentId = version.AgentId,
                 AgentVersionId = versionId,
-                Status = ExecutionStatus.Pending.ToString(),
+                Status = ExecutionStatus.Pending,
                 Input = JsonSerializer.Serialize(input),
                 StartedAt = DateTimeOffset.UtcNow,
                 StreamName = $"execution-{executionId}"
@@ -92,12 +91,11 @@ public class AgentOrchestrator : IAgentOrchestrator
             await _streamWriter.WriteEventAsync(new ExecutionStartedEvent());
 
             // 3. Set Status: Running
-            execution.Status = ExecutionStatus.Running.ToString();
+            execution.Status = ExecutionStatus.Running;
             await _dbContext.SaveChangesAsync(timeoutCts.Token);
 
-            // 4. Analyze graph (topological sort)
-            var reactFlowData = JsonSerializer.Deserialize<JsonElement>(version.ReactFlowData);
-            var analysisResult = _graphAnalyzer.Analyze(reactFlowData);
+            // 4. Analyze graph (topological sort) - use typed ReactFlowData directly
+            var analysisResult = _graphAnalyzer.Analyze(version.ReactFlowData);
 
             if (!analysisResult.IsValid)
             {
@@ -105,14 +103,8 @@ public class AgentOrchestrator : IAgentOrchestrator
                     $"Graph analysis failed: {analysisResult.ErrorMessage}");
             }
 
-            // Parse node configurations
-            var nodeConfigsJson = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-                version.NodeConfigurations);
-
-            if (nodeConfigsJson == null)
-            {
-                throw new InvalidOperationException("Failed to parse node configurations");
-            }
+            // NodeConfigurations is already a typed Dictionary<string, NodeConfiguration>
+            var nodeConfigurations = version.NodeConfigurations;
 
             // 5. Hydrate execution context
             _executionContext.Hydrate(executionId, userId, input, version.InputSchema);
@@ -122,43 +114,32 @@ public class AgentOrchestrator : IAgentOrchestrator
 
             foreach (var nodeId in analysisResult.ExecutionOrder)
             {
-                // Get node from ReactFlow data
-                var reactFlowNodes = reactFlowData.GetProperty("nodes").EnumerateArray();
-                var node = reactFlowNodes.FirstOrDefault(n => n.GetProperty("id").GetString() == nodeId);
+                // Get node from typed ReactFlow data
+                var node = version.ReactFlowData.Nodes.FirstOrDefault(n => n.Id == nodeId);
 
-                if (node.ValueKind == JsonValueKind.Undefined)
+                if (node == null)
                 {
                     throw new InvalidOperationException($"Node not found in ReactFlow data: {nodeId}");
                 }
 
-                var nodeType = node.GetProperty("type").GetString();
-                if (string.IsNullOrEmpty(nodeType))
-                {
-                    throw new InvalidOperationException($"Node missing type: {nodeId}");
-                }
+                // Use typed NodeType enum directly
+                var nodeTypeEnum = node.Data.NodeType;
 
-                // Get node configuration
-                if (!nodeConfigsJson.TryGetValue(nodeId, out var nodeConfigElement))
+                // Get node configuration - already typed
+                if (!nodeConfigurations.TryGetValue(nodeId, out var nodeConfig))
                 {
                     throw new InvalidOperationException($"Node configuration not found: {nodeId}");
                 }
 
-                // Log the raw config for debugging
+                // Log for debugging
                 _logger.LogDebug(
-                    "Node {NodeId} config JSON: {ConfigJson}",
+                    "Node {NodeId} type: {NodeType}, config type: {ConfigType}",
                     nodeId,
-                    nodeConfigElement.GetRawText());
-
-                // Deserialize node configuration using polymorphic deserialization
-                // Inject type discriminator from ReactFlow to support both old data (without discriminator) and new data
-                var nodeConfig = DeserializeNodeConfiguration(nodeConfigElement, nodeType, _logger)
-                    ?? throw new InvalidOperationException($"Failed to parse node config: {nodeId}");
+                    nodeTypeEnum,
+                    nodeConfig.GetType().Name);
 
                 // Get node name from configuration (all NodeConfiguration subclasses have Name)
                 var nodeName = nodeConfig.Name;
-
-                // Convert string to enum for type-safe comparisons
-                var nodeTypeEnum = nodeType.ToNodeType();
 
                 // Determine input for this node
                 string? nodeInput = null;
@@ -184,9 +165,9 @@ public class AgentOrchestrator : IAgentOrchestrator
                     UserId = userId,
                     AgentExecutionId = executionId,
                     NodeId = nodeId,
-                    NodeType = nodeType,
+                    NodeType = nodeTypeEnum,
                     NodeName = nodeName,
-                    Status = ExecutionStatus.Running.ToString(),
+                    Status = ExecutionStatus.Running,
                     Input = nodeInput,
                     StartedAt = DateTimeOffset.UtcNow
                 };
@@ -196,11 +177,11 @@ public class AgentOrchestrator : IAgentOrchestrator
 
                 try
                 {
-                    // Get executor from registry (nodeTypeEnum is already converted above)
+                    // Get executor from registry
                     var executor = _executorRegistry.GetExecutor(nodeTypeEnum) as INodeExecutor;
                     if (executor == null)
                     {
-                        throw new InvalidOperationException($"Executor not found for node type: {nodeType}");
+                        throw new InvalidOperationException($"Executor not found for node type: {nodeTypeEnum}");
                     }
 
                     // Execute node (timed) - executor emits NodeStarted/NodeCompleted events
@@ -215,7 +196,7 @@ public class AgentOrchestrator : IAgentOrchestrator
                     _executionContext.SetNodeOutput(nodeName, output);
 
                     // Update NodeExecution record
-                    nodeExecution.Status = ExecutionStatus.Completed.ToString();
+                    nodeExecution.Status = ExecutionStatus.Completed;
                     nodeExecution.CompletedAt = DateTimeOffset.UtcNow;
                     nodeExecution.DurationMs = (int)nodeStopwatch.ElapsedMilliseconds;
                     nodeExecution.Output = JsonSerializer.Serialize(output);
@@ -231,10 +212,10 @@ public class AgentOrchestrator : IAgentOrchestrator
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Node execution failed: {NodeId} ({NodeType})", nodeId, nodeType);
+                    _logger.LogError(ex, "Node execution failed: {NodeId} ({NodeType})", nodeId, nodeTypeEnum);
 
                     // Update node execution as failed
-                    nodeExecution.Status = ExecutionStatus.Failed.ToString();
+                    nodeExecution.Status = ExecutionStatus.Failed;
                     nodeExecution.CompletedAt = DateTimeOffset.UtcNow;
                     nodeExecution.ErrorMessage = ex.Message;
                     await _dbContext.SaveChangesAsync(CancellationToken.None);
@@ -265,7 +246,7 @@ public class AgentOrchestrator : IAgentOrchestrator
             execution.TotalTokensUsed = totalTokens > 0 ? totalTokens : null;
 
             // 8. Set Status: Completed
-            execution.Status = ExecutionStatus.Completed.ToString();
+            execution.Status = ExecutionStatus.Completed;
             execution.CompletedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(CancellationToken.None);
 
@@ -311,7 +292,7 @@ public class AgentOrchestrator : IAgentOrchestrator
 
             if (execution != null)
             {
-                execution.Status = ExecutionStatus.Failed.ToString();
+                execution.Status = ExecutionStatus.Failed;
                 execution.CompletedAt = DateTimeOffset.UtcNow;
                 execution.ErrorMessage = errorMessage;
                 await _dbContext.SaveChangesAsync(cancellationToken);
@@ -329,67 +310,4 @@ public class AgentOrchestrator : IAgentOrchestrator
         }
     }
 
-    /// <summary>
-    /// Deserializes a node configuration using the NodeConfigurationRegistry.
-    /// The stored JSON includes type discriminators added during save.
-    /// </summary>
-    private static NodeConfiguration? DeserializeNodeConfiguration(
-        JsonElement configElement,
-        string nodeType,
-        ILogger logger)
-    {
-        var registry = NodeConfigurationRegistry.Instance;
-
-        // Check if type discriminator is already present (new data)
-        if (configElement.TryGetProperty("type", out var existingType))
-        {
-            logger.LogDebug(
-                "Type discriminator present: {Type}",
-                existingType.GetString());
-            return JsonSerializer.Deserialize<NodeConfiguration>(
-                configElement.GetRawText(),
-                registry.JsonOptions);
-        }
-
-        // Inject type discriminator for backwards compatibility with old data
-        // Map ReactFlow node type to discriminator format
-        var discriminator = MapNodeTypeToDiscriminator(nodeType);
-
-        logger.LogDebug(
-            "Injecting type discriminator '{Discriminator}' for node type '{NodeType}'",
-            discriminator,
-            nodeType);
-
-        var configWithType = new Dictionary<string, object>
-        {
-            ["type"] = discriminator
-        };
-
-        foreach (var property in configElement.EnumerateObject())
-        {
-            configWithType[property.Name] = property.Value;
-        }
-
-        var configJson = JsonSerializer.Serialize(configWithType, registry.JsonOptions);
-        logger.LogDebug("Enriched config JSON: {ConfigJson}", configJson);
-
-        return JsonSerializer.Deserialize<NodeConfiguration>(configJson, registry.JsonOptions);
-    }
-
-    /// <summary>
-    /// Maps ReactFlow node type (lowercase) to the polymorphic type discriminator.
-    /// </summary>
-    private static string MapNodeTypeToDiscriminator(string reactFlowType)
-    {
-        return reactFlowType switch
-        {
-            "start" => "Start",
-            "end" => "End",
-            "model" => "Model",
-            "messageFormatter" => "MessageFormatter",
-            "httpRequest" => "HttpRequest",
-            "sleep" => "Sleep",
-            _ => throw new InvalidOperationException($"Unknown node type: {reactFlowType}")
-        };
-    }
 }

@@ -120,6 +120,65 @@ internal sealed class OpenAiClient : IAiClient
         }
     }
 
+    public async IAsyncEnumerable<ModelResponseBase> CompleteAsync(
+        IReadOnlyList<InternalMessage> messages,
+        IReadOnlyList<InternalToolDefinition>? tools,
+        IReadOnlyDictionary<string, object>? providerParameters,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var chatMessages = MapMessages(messages);
+        var options = BuildOptions(tools, providerParameters);
+
+        // Non-streaming API call
+        ChatCompletion completion = await _chatClient.CompleteChatAsync(chatMessages, options, cancellationToken);
+
+        // Emit block start
+        yield return new ModelResponseBlockStart
+        {
+            BlockIndex = 0,
+            Type = InternalContentBlockType.Text
+        };
+
+        // Extract text content from response
+        var textContent = new System.Text.StringBuilder();
+        foreach (var part in completion.Content)
+        {
+            if (part.Kind == ChatMessageContentPartKind.Text && !string.IsNullOrEmpty(part.Text))
+            {
+                textContent.Append(part.Text);
+            }
+        }
+
+        // Emit the complete text as a single chunk
+        if (textContent.Length > 0)
+        {
+            yield return new ModelResponseTextContent { Content = textContent.ToString() };
+        }
+
+        // Emit block end
+        yield return new ModelResponseBlockEnd { BlockIndex = 0 };
+
+        // Emit usage
+        if (completion.Usage is not null)
+        {
+            yield return new ModelResponseUsage
+            {
+                InputTokens = completion.Usage.InputTokenCount,
+                OutputTokens = completion.Usage.OutputTokenCount
+            };
+        }
+
+        // Emit stream end
+        yield return new ModelResponseStreamEnd
+        {
+            Reason = MapFinishReason(completion.FinishReason),
+            Metadata = new Dictionary<string, object>
+            {
+                ["provider"] = "openai"
+            }
+        };
+    }
+
     private static List<ChatMessage> MapMessages(IReadOnlyList<InternalMessage> messages)
     {
         var result = new List<ChatMessage>();

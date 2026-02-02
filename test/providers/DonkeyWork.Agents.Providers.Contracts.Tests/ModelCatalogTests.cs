@@ -108,9 +108,6 @@ public class ModelCatalogTests
     [InlineData("gpt-5")]
     [InlineData("gpt-5-mini")]
     [InlineData("gpt-5-nano")]
-    [InlineData("gpt-image-1.5")]
-    [InlineData("gpt-4o-mini-tts")]
-    [InlineData("sora-2")]
     [InlineData("claude-opus-4-5")]
     [InlineData("claude-sonnet-4-5")]
     [InlineData("claude-haiku-4-5")]
@@ -118,7 +115,6 @@ public class ModelCatalogTests
     [InlineData("gemini-2.5-flash")]
     [InlineData("gemini-3-pro")]
     [InlineData("gemini-3-flash")]
-    [InlineData("veo-3.1")]
     public void ModelsJson_Deserialize_SpecificModelExists(string modelId)
     {
         // Arrange

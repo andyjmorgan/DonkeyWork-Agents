@@ -1,45 +1,57 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport } from '@xyflow/react'
 
-// Types
-export interface JSONSchema {
-  type: string
-  properties?: Record<string, unknown>
-  required?: string[]
-  [key: string]: unknown
+/**
+ * Schema lookup for node display properties.
+ * Used to enrich loaded nodes that may be missing display data.
+ */
+const nodeSchemaLookup: Record<string, { displayName: string; icon: string; color: string; hasInputHandle: boolean; hasOutputHandle: boolean; canDelete: boolean }> = {
+  Start: { displayName: 'Start', icon: 'play', color: 'green', hasInputHandle: false, hasOutputHandle: true, canDelete: false },
+  End: { displayName: 'End', icon: 'flag', color: 'orange', hasInputHandle: true, hasOutputHandle: false, canDelete: false },
+  Model: { displayName: 'Model', icon: 'brain', color: 'blue', hasInputHandle: true, hasOutputHandle: true, canDelete: true },
+  MultimodalChatModel: { displayName: 'Multimodal Chat', icon: 'brain', color: 'blue', hasInputHandle: true, hasOutputHandle: true, canDelete: true },
+  HttpRequest: { displayName: 'HTTP Request', icon: 'globe', color: 'purple', hasInputHandle: true, hasOutputHandle: true, canDelete: true },
+  Sleep: { displayName: 'Sleep', icon: 'clock', color: 'cyan', hasInputHandle: true, hasOutputHandle: true, canDelete: true },
+  MessageFormatter: { displayName: 'Message Formatter', icon: 'file-text', color: 'cyan', hasInputHandle: true, hasOutputHandle: true, canDelete: true },
 }
 
-export interface StartNodeConfig {
-  name: string
-  inputSchema: JSONSchema
+/**
+ * Enriches a node with schema display data if missing.
+ */
+function enrichNodeWithSchema(node: Node, config?: NodeConfig): Node {
+  const nodeType = (node.data?.nodeType as string) || config?.type
+  if (!nodeType) return node
+
+  const schema = nodeSchemaLookup[nodeType]
+  if (!schema) return node
+
+  return {
+    ...node,
+    type: 'schemaNode', // Ensure correct type
+    data: {
+      ...node.data,
+      nodeType,
+      label: config?.name || node.data?.label || nodeType.toLowerCase(),
+      displayName: node.data?.displayName || schema.displayName,
+      icon: node.data?.icon || schema.icon,
+      color: node.data?.color || schema.color,
+      hasInputHandle: node.data?.hasInputHandle ?? schema.hasInputHandle,
+      hasOutputHandle: node.data?.hasOutputHandle ?? schema.hasOutputHandle,
+      canDelete: node.data?.canDelete ?? schema.canDelete,
+    }
+  }
 }
 
-export interface ModelNodeConfig {
-  name: string
-  provider: 'OpenAi' | 'Anthropic' | 'Google' | 'Azure'
-  modelId: string
-  // Store all config values as a flat object keyed by field name
-  // This allows schema-driven fields to be stored dynamically
-  config: Record<string, unknown>
+/**
+ * Schema-driven node configuration.
+ * All nodes use the same structure - the 'type' field is the polymorphic discriminator
+ * that the backend uses to deserialize to the correct NodeConfiguration class.
+ */
+export interface NodeConfig {
+  type: string                          // Backend type discriminator (e.g., "Start", "Model", "HttpRequest")
+  name: string                          // Instance name (e.g., "start", "http_request_1")
+  [key: string]: unknown                // All other fields from schema
 }
-
-export interface EndNodeConfig {
-  name: string
-  outputSchema?: JSONSchema | null
-}
-
-export interface ActionNodeConfig {
-  name: string
-  actionType: string
-  parameters?: Record<string, unknown>
-}
-
-export interface MessageFormatterNodeConfig {
-  name: string
-  template: string
-}
-
-export type NodeConfig = StartNodeConfig | ModelNodeConfig | EndNodeConfig | ActionNodeConfig | MessageFormatterNodeConfig
 
 export interface ValidationError {
   nodeId?: string
@@ -67,7 +79,7 @@ interface EditorState {
   edges: Edge[]
   viewport: Viewport
 
-  // Node configurations (source of truth)
+  // Node configurations (source of truth for backend)
   nodeConfigurations: Record<string, NodeConfig>
 
   // UI state
@@ -82,7 +94,7 @@ interface EditorState {
   onNodesChange: (changes: any[]) => void
   onEdgesChange: (changes: any[]) => void
   onConnect: (connection: any) => void
-  addNode: (type: string, position: { x: number; y: number }, config?: Partial<NodeConfig>) => void
+  addNode: (position: { x: number; y: number }, schemaInfo: Record<string, unknown>) => void
   removeNode: (nodeId: string) => void
   updateNodeConfig: (nodeId: string, config: Partial<NodeConfig>) => void
   updateNodeData: (nodeId: string, data: any) => void
@@ -120,8 +132,8 @@ interface EditorState {
   getReachablePredecessors: (nodeId: string) => Array<{ nodeId: string; nodeName: string; nodeType: string }>
 }
 
-// Default input schema
-const defaultInputSchema: JSONSchema = {
+// Default input schema for Start node
+const defaultInputSchema = {
   type: 'object',
   properties: {
     input: { type: 'string' }
@@ -138,34 +150,47 @@ function generateGuid(): string {
   })
 }
 
-// Create initial state
+// Create initial state with Start and End nodes
 const createInitialState = () => {
   const startId = generateGuid()
   const endId = generateGuid()
 
   return {
-    // Agent metadata
     agentId: null,
     agentName: 'Untitled Agent',
     agentDescription: '',
-
-    // Version data
     versionId: null,
     isDraft: true,
-
-    // ReactFlow state
     nodes: [
       {
         id: startId,
-        type: 'start',
+        type: 'schemaNode',
         position: { x: 250, y: 50 },
-        data: { label: 'start' }
+        data: {
+          label: 'start',
+          nodeType: 'Start',
+          displayName: 'Start',
+          icon: 'play',
+          color: 'green',
+          hasInputHandle: false,
+          hasOutputHandle: true,
+          canDelete: false
+        }
       },
       {
         id: endId,
-        type: 'end',
+        type: 'schemaNode',
         position: { x: 250, y: 250 },
-        data: { label: 'end' }
+        data: {
+          label: 'end',
+          nodeType: 'End',
+          displayName: 'End',
+          icon: 'flag',
+          color: 'orange',
+          hasInputHandle: true,
+          hasOutputHandle: false,
+          canDelete: false
+        }
       }
     ] as Node[],
     edges: [
@@ -178,20 +203,17 @@ const createInitialState = () => {
       }
     ] as Edge[],
     viewport: { x: 0, y: 0, zoom: 1 },
-
-    // Node configurations
     nodeConfigurations: {
       [startId]: {
+        type: 'Start',
         name: 'start',
         inputSchema: defaultInputSchema
-      } as StartNodeConfig,
+      },
       [endId]: {
-        name: 'end',
-        outputSchema: null
-      } as EndNodeConfig
-    },
-
-    // UI state
+        type: 'End',
+        name: 'end'
+      }
+    } as Record<string, NodeConfig>,
     selectedNodeId: null,
     isPaletteOpen: true,
     isPropertiesOpen: false
@@ -215,7 +237,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   onNodesChange: (changes) => {
     const { nodes } = get()
-    // Apply changes to nodes (ReactFlow will handle this)
     set({ nodes: nodes.map(node => {
       const change = changes.find((c: any) => c.id === node.id)
       if (!change) return node
@@ -261,99 +282,63 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ edges: [...edges, newEdge] })
   },
 
-  addNode: (type, position, config = {}) => {
+  addNode: (position, schemaInfo) => {
     const { nodes, nodeConfigurations, generateNodeName } = get()
     const nodeId = generateGuid()
-    const nodeName = generateNodeName(type)
 
-    // Create default config based on type
-    let defaultConfig: NodeConfig
-    let nodeData: any = { label: nodeName }
+    // Get node type from schema info
+    const nodeType = schemaInfo.nodeType as string
+    const displayName = schemaInfo.displayName as string || nodeType
 
-    if (type === 'start') {
-      defaultConfig = {
-        name: nodeName,
-        inputSchema: defaultInputSchema,
-        ...config
-      } as StartNodeConfig
-    } else if (type === 'end') {
-      defaultConfig = {
-        name: nodeName,
-        outputSchema: null,
-        ...config
-      } as EndNodeConfig
-    } else if (type === 'model') {
-      defaultConfig = {
-        name: nodeName,
-        provider: (config as any).provider || 'OpenAi',
-        modelId: (config as any).modelId || '',
-        config: {
-          // Default config values - will be populated by schema
-          credentialId: undefined,
-          systemPrompts: [],
-          userMessages: [],
-          temperature: undefined,
-          maxOutputTokens: undefined,
-          stream: undefined,
-          topP: undefined,
-          ...(config as any).config
-        },
-        ...config
-      } as ModelNodeConfig
-      nodeData = {
-        label: nodeName,
-        provider: (config as any).provider,
-        modelName: (config as any).modelName
-      }
-    } else if (type === 'action') {
-      // Use displayName as the base for the node name (e.g., "http_request", "sleep")
-      const actionDisplayName = (config as any).displayName || ''
-      const actionBaseName = actionDisplayName
-        .toLowerCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^a-z0-9_]/g, '') || 'action'
-      const actionNodeName = generateNodeName(actionBaseName)
+    // Generate instance name based on display name (allows A-Za-z0-9_-)
+    const baseName = displayName.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_-]/g, '')
+    const nodeName = generateNodeName(baseName)
 
-      // Config only stores what backend needs for execution
-      defaultConfig = {
-        name: actionNodeName,
-        actionType: (config as any).actionType || '',
-        parameters: {},
-      } as ActionNodeConfig
-      // Node data stores display info for ReactFlow (derived from schema at load time)
-      nodeData = {
-        label: actionNodeName,
-        actionType: (config as any).actionType,
-        // displayName and icon should be derived from action schema, not stored
-        // But we need them for initial render, so pass from palette
-        displayName: actionDisplayName,
-        icon: (config as any).icon,
-      }
-    } else if (type === 'messageFormatter') {
-      defaultConfig = {
-        name: nodeName,
-        template: '',
-        ...config
-      } as MessageFormatterNodeConfig
-      nodeData = {
-        label: nodeName
-      }
-    } else {
-      return
-    }
-
+    // Create ReactFlow node with all display data from schema
     const newNode: Node = {
       id: nodeId,
-      type,
+      type: 'schemaNode',
       position,
-      data: nodeData
+      data: {
+        label: nodeName,
+        nodeType,
+        displayName,
+        icon: schemaInfo.icon,
+        color: schemaInfo.color,
+        hasInputHandle: schemaInfo.hasInputHandle,
+        hasOutputHandle: schemaInfo.hasOutputHandle,
+        canDelete: schemaInfo.canDelete
+      }
+    }
+
+    // Create config with type discriminator for backend serialization
+    const newConfig: NodeConfig = {
+      type: nodeType,
+      name: nodeName
+    }
+
+    // Add default values based on node type
+    if (nodeType === 'Start') {
+      newConfig.inputSchema = defaultInputSchema
+    } else if (nodeType === 'Model') {
+      // Copy model-specific data from schema info
+      newConfig.provider = schemaInfo.provider
+      newConfig.modelId = schemaInfo.modelId
+    } else if (nodeType === 'MultimodalChatModel') {
+      // Copy model-specific data from schema info - provider and modelId are immutable
+      newConfig.provider = schemaInfo.provider
+      newConfig.modelId = schemaInfo.modelId
+      // Initialize required fields
+      newConfig.userMessages = []
+      // Initialize providerConfig with type discriminator for polymorphic deserialization
+      newConfig.providerConfig = { type: schemaInfo.provider }
     }
 
     set({
       nodes: [...nodes, newNode],
       nodeConfigurations: {
         ...nodeConfigurations,
-        [nodeId]: defaultConfig
+        [nodeId]: newConfig
       }
     })
   },
@@ -361,13 +346,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   removeNode: (nodeId) => {
     const { nodes, edges, nodeConfigurations } = get()
 
-    // Remove node
     const newNodes = nodes.filter(n => n.id !== nodeId)
-
-    // Remove connected edges
     const newEdges = edges.filter(e => e.source !== nodeId && e.target !== nodeId)
-
-    // Remove configuration
     const newConfigs = { ...nodeConfigurations }
     delete newConfigs[nodeId]
 
@@ -382,7 +362,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   updateNodeConfig: (nodeId, config) => {
     const { nodeConfigurations, nodes } = get()
 
-    // Update node configuration
     const updatedConfig = {
       ...nodeConfigurations[nodeId],
       ...config
@@ -407,10 +386,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   updateNodeData: (nodeId, data) => {
-    const { nodes, nodeConfigurations } = get()
-
-    // Find the node to determine its type
-    const node = nodes.find(n => n.id === nodeId)
+    const { nodes } = get()
 
     const updatedNodes = nodes.map(n =>
       n.id === nodeId
@@ -418,25 +394,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         : n
     )
 
-    // For action nodes, also update the nodeConfiguration with parameters
-    let updatedConfigurations = nodeConfigurations
-    if (node?.type === 'action' && data.parameters) {
-      const config = nodeConfigurations[nodeId]
-      if (config && 'parameters' in config) {
-        updatedConfigurations = {
-          ...nodeConfigurations,
-          [nodeId]: {
-            ...config,
-            parameters: data.parameters
-          }
-        }
-      }
-    }
-
-    set({
-      nodes: updatedNodes,
-      nodeConfigurations: updatedConfigurations
-    })
+    set({ nodes: updatedNodes })
   },
 
   selectNode: (nodeId) => {
@@ -464,41 +422,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   loadAgent: (agentId, agentName, agentDescription, versionId, isDraft, reactFlowData, nodeConfigurations) => {
     if (reactFlowData && nodeConfigurations) {
-      // Sync data from nodeConfigurations to nodes
-      const syncedNodes = reactFlowData.nodes.map(node => {
+      // Enrich nodes with schema data (for backward compatibility with old saved nodes)
+      const enrichedNodes = reactFlowData.nodes.map(node => {
         const config = nodeConfigurations[node.id]
-
-        // For action nodes, sync actionType and parameters from config
-        // displayName and icon are already in node.data (preserved from reactFlowData)
-        if (node.type === 'action' && config && 'actionType' in config) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              actionType: config.actionType,
-              parameters: config.parameters
-            }
-          }
-        }
-
-        // For other nodes, just sync the label
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            label: config?.name || node.data.label
-          }
-        }
+        return enrichNodeWithSchema(node, config)
       })
 
-      // Load existing version data
       set({
         agentId,
         agentName,
         agentDescription,
         versionId: versionId || null,
         isDraft: isDraft ?? true,
-        nodes: syncedNodes,
+        nodes: enrichedNodes,
         edges: reactFlowData.edges,
         viewport: reactFlowData.viewport,
         nodeConfigurations,
@@ -507,7 +443,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         isPropertiesOpen: false
       })
     } else {
-      // Reset to default state with agent metadata
       const initial = createInitialState()
       set({
         ...initial,
@@ -523,7 +458,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const errors: ValidationError[] = []
 
     // Check for exactly one Start node
-    const startNodes = nodes.filter(n => n.type === 'start')
+    const startNodes = nodes.filter(n => n.data?.nodeType === 'Start')
     if (startNodes.length === 0) {
       errors.push({ field: 'nodes', message: 'Missing Start node' })
     } else if (startNodes.length > 1) {
@@ -531,7 +466,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     // Check for exactly one End node
-    const endNodes = nodes.filter(n => n.type === 'end')
+    const endNodes = nodes.filter(n => n.data?.nodeType === 'End')
     if (endNodes.length === 0) {
       errors.push({ field: 'nodes', message: 'Missing End node' })
     } else if (endNodes.length > 1) {
@@ -550,30 +485,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           errors.push({ nodeId: node.id, field: 'name', message: 'Node name is required' })
         }
 
-        // Validate based on type
-        if (node.type === 'start') {
-          const startConfig = config as StartNodeConfig
-          if (!startConfig.inputSchema) {
-            errors.push({ nodeId: node.id, field: 'inputSchema', message: 'Input schema is required' })
-          }
-        } else if (node.type === 'model') {
-          const modelConfig = config as ModelNodeConfig
-          if (!modelConfig.provider) {
-            errors.push({ nodeId: node.id, field: 'provider', message: 'Provider is required' })
-          }
-          if (!modelConfig.modelId) {
-            errors.push({ nodeId: node.id, field: 'modelId', message: 'Model is required' })
-          }
-          if (!modelConfig.config?.credentialId) {
-            errors.push({ nodeId: node.id, field: 'credentialId', message: 'Credential is required' })
-          }
-        } else if (node.type === 'action') {
-          const actionConfig = config as ActionNodeConfig
-          if (!actionConfig.actionType) {
-            errors.push({ nodeId: node.id, field: 'actionType', message: 'Action type is required' })
-          }
-          // Note: Specific parameter validation would require loading the action schema
-          // and checking required fields. This could be added in the future.
+        // Check type discriminator
+        if (!config.type) {
+          errors.push({ nodeId: node.id, field: 'type', message: 'Node type is required' })
         }
       }
     })
@@ -605,10 +519,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { nodeConfigurations } = get()
     const existingNames = Object.values(nodeConfigurations).map(c => c.name)
 
-    // Convert camelCase to snake_case and ensure lowercase
-    const baseName = type
-      .replace(/([a-z])([A-Z])/g, '$1_$2')
-      .toLowerCase()
+    // Use the type as base name (preserves case), insert underscore before capitals
+    const baseName = type.replace(/([a-z])([A-Z])/g, '$1_$2')
 
     // First try the base name without a counter
     if (!existingNames.includes(baseName)) {
@@ -635,13 +547,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const inDegree: Record<string, number> = {}
     const children: Record<string, string[]> = {}
 
-    // Initialize
     nodes.forEach(node => {
       inDegree[node.id] = 0
       children[node.id] = []
     })
 
-    // Build graph
     edges.forEach(edge => {
       if (inDegree[edge.target] !== undefined) {
         inDegree[edge.target]++
@@ -684,20 +594,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const HORIZONTAL_SPACING = 50
     const START_Y = 50
 
-    // Find the widest level to center everything
     const maxNodesInLevel = Math.max(...levels.map(level => level.length))
     const totalWidth = maxNodesInLevel * NODE_WIDTH + (maxNodesInLevel - 1) * HORIZONTAL_SPACING
     const centerX = totalWidth / 2
 
     const updatedNodes = nodes.map(node => {
-      // Find which level this node is in
       const levelIndex = levels.findIndex(level => level.includes(node.id))
       if (levelIndex === -1) return node
 
       const level = levels[levelIndex]
       const indexInLevel = level.indexOf(node.id)
 
-      // Calculate position
       const levelWidth = level.length * NODE_WIDTH + (level.length - 1) * HORIZONTAL_SPACING
       const levelStartX = centerX - levelWidth / 2
 
@@ -744,11 +651,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         result.push({
           nodeId: currentId,
           nodeName: config.name,
-          nodeType: node.type || 'unknown'
+          nodeType: (node.data?.nodeType as string) || 'unknown'
         })
       }
 
-      // Add predecessors of current node to queue
       const preds = predecessors[currentId] || []
       queue.push(...preds.filter(p => !visited.has(p)))
     }
@@ -762,24 +668,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     for (const node of nodes) {
       const config = nodeConfigurations[node.id]
-      if (config) {
-        // Check for model node with nested config
-        if ('config' in config && config.config && typeof config.config === 'object') {
-          const nestedConfig = config.config as Record<string, unknown>
-          if (nestedConfig.credentialId && typeof nestedConfig.credentialId === 'string') {
-            mappings.push({
-              nodeId: node.id,
-              credentialId: nestedConfig.credentialId
-            })
-          }
-        }
-        // Legacy: check for direct credentialId
-        else if ('credentialId' in config && config.credentialId) {
-          mappings.push({
-            nodeId: node.id,
-            credentialId: config.credentialId as string
-          })
-        }
+      if (config && 'credentialId' in config && config.credentialId) {
+        mappings.push({
+          nodeId: node.id,
+          credentialId: config.credentialId as string
+        })
       }
     }
 
@@ -794,15 +687,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     // Find start node and get input schema
-    const startNode = nodes.find(n => n.type === 'start')
-    const inputSchema = startNode
-      ? (nodeConfigurations[startNode.id] as StartNodeConfig)?.inputSchema || defaultInputSchema
-      : defaultInputSchema
+    const startNode = nodes.find(n => n.data?.nodeType === 'Start')
+    const startConfig = startNode ? nodeConfigurations[startNode.id] : null
+    const inputSchema = (startConfig?.inputSchema as { type: string; properties?: Record<string, unknown>; required?: string[] }) || defaultInputSchema
 
     const reactFlowData = { nodes, edges, viewport }
     const credentialMappings = get().extractCredentialMappings()
 
-    // Import agents API
     const { agents } = await import('@/lib/api')
 
     await agents.saveVersion(agentId, {
@@ -815,15 +706,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   load: async (agentId: string, versionId: string) => {
-    // Import agents API
     const { agents } = await import('@/lib/api')
 
     const version = await agents.getVersion(agentId, versionId)
 
+    // Enrich nodes with schema data (for backward compatibility with old saved nodes)
+    const enrichedNodes = version.reactFlowData.nodes.map((node: Node) => {
+      const config = version.nodeConfigurations[node.id]
+      return enrichNodeWithSchema(node, config)
+    })
+
     set({
       agentId,
       versionId,
-      nodes: version.reactFlowData.nodes,
+      nodes: enrichedNodes,
       edges: version.reactFlowData.edges,
       viewport: version.reactFlowData.viewport,
       nodeConfigurations: version.nodeConfigurations,
@@ -834,10 +730,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   exportToJson: () => {
     const { agentId, agentName, agentDescription, nodes, edges, viewport, nodeConfigurations } = get()
 
-    const startNode = nodes.find(n => n.type === 'start')
-    const inputSchema = startNode
-      ? (nodeConfigurations[startNode.id] as StartNodeConfig)?.inputSchema || defaultInputSchema
-      : defaultInputSchema
+    const startNode = nodes.find(n => n.data?.nodeType === 'Start')
+    const startConfig = startNode ? nodeConfigurations[startNode.id] : null
+    const inputSchema = (startConfig?.inputSchema as Record<string, unknown>) || defaultInputSchema
 
     return JSON.stringify({
       agent: {

@@ -24,13 +24,14 @@ public class TimingNodeProvider
         SleepNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Sleeping for {DurationMs}ms", config.DurationMs);
+        var durationMs = (int)(config.DurationSeconds * 1000);
+        _logger.LogDebug("Sleeping for {DurationSeconds}s ({DurationMs}ms)", config.DurationSeconds, durationMs);
 
-        await Task.Delay(config.DurationMs, cancellationToken);
+        await Task.Delay(durationMs, cancellationToken);
 
         return new SleepNodeOutput
         {
-            DurationMs = config.DurationMs
+            DurationSeconds = config.DurationSeconds
         };
     }
 }

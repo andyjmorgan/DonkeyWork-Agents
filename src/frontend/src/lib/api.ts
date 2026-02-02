@@ -95,10 +95,10 @@ export interface ModelDefinition {
   name: string
   provider: 'OpenAi' | 'Anthropic' | 'Google' | 'Azure'
   mode: string
-  maxInputTokens: number
-  maxOutputTokens: number
-  inputCostPerMillionTokens: number
-  outputCostPerMillionTokens: number
+  max_input_tokens: number
+  max_output_tokens: number
+  input_cost_per_million_tokens: number
+  output_cost_per_million_tokens: number
 }
 
 export interface GetModelsResponse {
@@ -758,14 +758,17 @@ export interface NodeFieldSchema {
   controlType: NodeControlType
   order: number
   tab?: string
+  group?: string
   required: boolean
   supportsVariables: boolean
+  immutable?: boolean
   placeholder?: string
   default?: unknown
   min?: number
   max?: number
   step?: number
   options?: string[]
+  supportedBy?: string[]
   reliesUpon?: {
     fieldName: string
     value: unknown
@@ -792,6 +795,9 @@ export interface NodeTypeInfo {
   category: string
   icon?: string
   color?: string
+  hasInputHandle: boolean
+  hasOutputHandle: boolean
+  canDelete: boolean
   configSchema: NodeConfigSchema
 }
 
@@ -809,5 +815,13 @@ export const nodeTypes = {
     const nodeTypesList = await nodeTypes.list()
     const found = nodeTypesList.find(nt => nt.type.toLowerCase() === nodeType.toLowerCase())
     return found?.configSchema
+  },
+}
+
+// Multimodal Chat Schema API
+export const multimodalChat = {
+  getSchema: async (provider: string): Promise<NodeConfigSchema> => {
+    const response = await api.get<{ schema: NodeConfigSchema }>(`/api/v1/multimodal-chat/schema?provider=${provider}`)
+    return response.schema
   },
 }

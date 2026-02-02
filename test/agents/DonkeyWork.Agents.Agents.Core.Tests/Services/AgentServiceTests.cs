@@ -80,17 +80,19 @@ public class AgentServiceTests : IDisposable
         var version = await _dbContext.AgentVersions.FindAsync(result.VersionId);
         Assert.NotNull(version);
 
-        // Verify ReactFlowData contains start and end nodes
-        Assert.Contains("start", version.ReactFlowData);
-        Assert.Contains("end", version.ReactFlowData);
+        // Verify ReactFlowData contains start and end nodes (typed ReactFlowData)
+        Assert.NotNull(version.ReactFlowData);
+        Assert.Contains(version.ReactFlowData.Nodes, n => n.Data.NodeType == DonkeyWork.Agents.Agents.Contracts.Nodes.Enums.NodeType.Start);
+        Assert.Contains(version.ReactFlowData.Nodes, n => n.Data.NodeType == DonkeyWork.Agents.Agents.Contracts.Nodes.Enums.NodeType.End);
 
-        // Verify NodeConfigurations has both nodes
-        Assert.Contains("start_1", version.NodeConfigurations);
-        Assert.Contains("end_1", version.NodeConfigurations);
+        // Verify NodeConfigurations has both nodes (typed Dictionary)
+        Assert.Contains(version.NodeConfigurations.Values, c => c.Name == "start");
+        Assert.Contains(version.NodeConfigurations.Values, c => c.Name == "end");
 
-        // Verify InputSchema has required structure
-        Assert.Contains("\"type\":\"object\"", version.InputSchema);
-        Assert.Contains("\"input\"", version.InputSchema);
+        // Verify InputSchema has required structure (typed JsonDocument)
+        Assert.NotNull(version.InputSchema);
+        Assert.True(version.InputSchema.RootElement.TryGetProperty("type", out var typeProperty));
+        Assert.Equal("object", typeProperty.GetString());
     }
 
     [Fact]

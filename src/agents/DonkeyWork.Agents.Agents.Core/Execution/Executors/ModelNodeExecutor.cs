@@ -10,7 +10,6 @@ using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
 using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events;
 using DonkeyWork.Agents.Providers.Contracts.Services;
 using Microsoft.Extensions.Logging;
-using Scriban;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution.Executors;
 
@@ -23,6 +22,7 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
     private readonly IModelPipeline _modelPipeline;
     private readonly IExternalApiKeyService _credentialService;
     private readonly IExecutionStreamWriter _streamWriter;
+    private readonly ITemplateRenderer _templateRenderer;
     private readonly ILogger<ModelNodeExecutor> _logger;
 
     public ModelNodeExecutor(
@@ -30,12 +30,14 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
         IExternalApiKeyService credentialService,
         IExecutionStreamWriter streamWriter,
         IExecutionContext context,
+        ITemplateRenderer templateRenderer,
         ILogger<ModelNodeExecutor> logger)
         : base(streamWriter, context)
     {
         _modelPipeline = modelPipeline;
         _credentialService = credentialService;
         _streamWriter = streamWriter;
+        _templateRenderer = templateRenderer;
         _logger = logger;
     }
 
@@ -43,15 +45,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
         ModelNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Prepare template variables (Pascal case with lowercase aliases)
-        var templateContext = new
-        {
-            Input = Context.Input,
-            input = Context.Input,
-            Steps = Context.NodeOutputs,
-            steps = Context.NodeOutputs
-        };
-
         // Build messages list
         var messages = new List<ChatMessage>();
 
@@ -63,21 +56,12 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
                 if (string.IsNullOrWhiteSpace(systemPrompt))
                     continue;
 
-                try
+                var renderedPrompt = await _templateRenderer.RenderAsync(systemPrompt, cancellationToken);
+                messages.Add(new ChatMessage
                 {
-                    var systemTemplate = Template.Parse(systemPrompt);
-                    var renderedPrompt = await systemTemplate.RenderAsync(templateContext);
-                    messages.Add(new ChatMessage
-                    {
-                        Role = ChatMessageRole.System,
-                        Content = renderedPrompt
-                    });
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException(
-                        $"Failed to render system prompt template: {ex.Message}", ex);
-                }
+                    Role = ChatMessageRole.System,
+                    Content = renderedPrompt
+                });
             }
         }
 
@@ -87,21 +71,12 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
             if (string.IsNullOrWhiteSpace(userMessage))
                 continue;
 
-            try
+            var renderedMessage = await _templateRenderer.RenderAsync(userMessage, cancellationToken);
+            messages.Add(new ChatMessage
             {
-                var userTemplate = Template.Parse(userMessage);
-                var renderedMessage = await userTemplate.RenderAsync(templateContext);
-                messages.Add(new ChatMessage
-                {
-                    Role = ChatMessageRole.User,
-                    Content = renderedMessage
-                });
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to render user message template: {ex.Message}", ex);
-            }
+                Role = ChatMessageRole.User,
+                Content = renderedMessage
+            });
         }
 
         if (messages.Count == 0 || messages.All(m => m.Role != ChatMessageRole.User))
@@ -110,14 +85,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
         }
 
         // Resolve credential
-        var credentialProvider = config.Provider switch
-        {
-            LlmProvider.Anthropic => ExternalApiKeyProvider.Anthropic,
-            LlmProvider.OpenAI => ExternalApiKeyProvider.OpenAI,
-            LlmProvider.Google => ExternalApiKeyProvider.Google,
-            _ => throw new InvalidOperationException($"Unsupported provider: {config.Provider}")
-        };
-
         var credential = await _credentialService.GetByIdAsync(
             Context.UserId,
             config.CredentialId,
@@ -143,6 +110,9 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
         {
             options["top_p"] = config.TopP.Value;
         }
+
+        // Pass stream option to control whether the provider uses streaming or non-streaming API
+        options["stream"] = config.Stream;
 
         // Create pipeline request
         var request = new ModelPipelineRequest

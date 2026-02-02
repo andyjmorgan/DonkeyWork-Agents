@@ -104,6 +104,67 @@ internal sealed class GoogleAiClient : IAiClient
         }
     }
 
+    public async IAsyncEnumerable<ModelResponseBase> CompleteAsync(
+        IReadOnlyList<InternalMessage> messages,
+        IReadOnlyList<InternalToolDefinition>? tools,
+        IReadOnlyDictionary<string, object>? providerParameters,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ConfigureModel(providerParameters);
+
+        var request = BuildRequest(messages);
+
+        // Non-streaming API call
+        var response = await _model.GenerateContentAsync(request, cancellationToken: cancellationToken);
+
+        // Emit block start
+        yield return new ModelResponseBlockStart
+        {
+            BlockIndex = 0,
+            Type = InternalContentBlockType.Text
+        };
+
+        // Extract and emit text content
+        if (response?.Text is not null)
+        {
+            yield return new ModelResponseTextContent { Content = response.Text };
+        }
+
+        // Emit block end
+        yield return new ModelResponseBlockEnd { BlockIndex = 0 };
+
+        // Emit usage info
+        if (response?.UsageMetadata is not null)
+        {
+            yield return new ModelResponseUsage
+            {
+                InputTokens = response.UsageMetadata.PromptTokenCount,
+                OutputTokens = response.UsageMetadata.CandidatesTokenCount
+            };
+        }
+
+        // Determine finish reason and emit stream end
+        var stopReason = InternalStopReason.EndTurn;
+        if (response?.Candidates is { Length: > 0 })
+        {
+            var candidate = response.Candidates[0];
+            if (candidate.FinishReason is not null &&
+                candidate.FinishReason != FinishReason.FINISH_REASON_UNSPECIFIED)
+            {
+                stopReason = MapFinishReason(candidate.FinishReason.Value);
+            }
+        }
+
+        yield return new ModelResponseStreamEnd
+        {
+            Reason = stopReason,
+            Metadata = new Dictionary<string, object>
+            {
+                ["provider"] = "google"
+            }
+        };
+    }
+
     private void ConfigureModel(IReadOnlyDictionary<string, object>? providerParameters)
     {
         if (providerParameters is null) return;

@@ -16,6 +16,7 @@ public class EndNodeExecutorTests
 {
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly Guid _testExecutionId = Guid.NewGuid();
+    private readonly Guid _testNodeId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private readonly Mock<IExecutionStreamWriter> _streamWriterMock;
     private readonly Mock<IExecutionContext> _contextMock;
     private readonly EndNodeExecutor _executor;
@@ -46,7 +47,7 @@ public class EndNodeExecutorTests
         _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -64,7 +65,7 @@ public class EndNodeExecutorTests
         _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -82,7 +83,7 @@ public class EndNodeExecutorTests
         _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -102,7 +103,7 @@ public class EndNodeExecutorTests
         _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -127,7 +128,7 @@ public class EndNodeExecutorTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _executor.ExecuteAsync("end_1", config, CancellationToken.None)
+            async () => await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None)
         );
 
         Assert.Contains("no upstream outputs", exception.InnerException?.Message ?? exception.Message);
@@ -142,7 +143,7 @@ public class EndNodeExecutorTests
         _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert - should handle null gracefully (serializes to "null" string)
         Assert.NotNull(result);
@@ -161,7 +162,7 @@ public class EndNodeExecutorTests
         _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         var endOutput = (EndNodeOutput)result;
@@ -184,7 +185,7 @@ public class EndNodeExecutorTests
         _contextMock.Setup(c => c.NodeOutputs).Returns(nodeOutputs);
 
         // Act
-        var result = await _executor.ExecuteAsync("end_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);

@@ -12,12 +12,21 @@ public class NodeTypeExtensionsTests
     #region ToNodeType Tests
 
     [Theory]
+    // Old format (lowercase)
     [InlineData("start", NodeType.Start)]
     [InlineData("end", NodeType.End)]
     [InlineData("model", NodeType.Model)]
     [InlineData("messageFormatter", NodeType.MessageFormatter)]
     [InlineData("httpRequest", NodeType.HttpRequest)]
     [InlineData("sleep", NodeType.Sleep)]
+    // New format (PascalCase - from data.nodeType)
+    [InlineData("Start", NodeType.Start)]
+    [InlineData("End", NodeType.End)]
+    [InlineData("Model", NodeType.Model)]
+    [InlineData("MultimodalChatModel", NodeType.MultimodalChatModel)]
+    [InlineData("MessageFormatter", NodeType.MessageFormatter)]
+    [InlineData("HttpRequest", NodeType.HttpRequest)]
+    [InlineData("Sleep", NodeType.Sleep)]
     public void ToNodeType_WithValidReactFlowType_ReturnsCorrectNodeType(string reactFlowType, NodeType expected)
     {
         // Act
@@ -29,10 +38,10 @@ public class NodeTypeExtensionsTests
 
     [Theory]
     [InlineData("invalid")]
-    [InlineData("Start")]
     [InlineData("END")]
     [InlineData("")]
     [InlineData("unknown")]
+    [InlineData("START")]
     public void ToNodeType_WithInvalidReactFlowType_ThrowsArgumentException(string reactFlowType)
     {
         // Act & Assert
@@ -68,6 +77,7 @@ public class NodeTypeExtensionsTests
     [InlineData(NodeType.Start, "Start")]
     [InlineData(NodeType.End, "End")]
     [InlineData(NodeType.Model, "Model")]
+    [InlineData(NodeType.MultimodalChatModel, "MultimodalChatModel")]
     [InlineData(NodeType.MessageFormatter, "MessageFormatter")]
     [InlineData(NodeType.HttpRequest, "HttpRequest")]
     [InlineData(NodeType.Sleep, "Sleep")]

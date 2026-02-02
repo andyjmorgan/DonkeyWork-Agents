@@ -114,7 +114,7 @@ public class NodeConfigurationRegistryTests
     public void Deserialize_SleepNodeConfiguration_ReturnsCorrectType()
     {
         // Arrange
-        var json = "{\"type\":\"Sleep\",\"name\":\"sleep_1\",\"durationMs\":1000}";
+        var json = "{\"type\":\"Sleep\",\"name\":\"sleep_1\",\"durationSeconds\":1.5}";
 
         // Act
         var result = _registry.Deserialize(json);
@@ -123,7 +123,7 @@ public class NodeConfigurationRegistryTests
         Assert.IsType<SleepNodeConfiguration>(result);
         var sleepConfig = (SleepNodeConfiguration)result;
         Assert.Equal("sleep_1", sleepConfig.Name);
-        Assert.Equal(1000, sleepConfig.DurationMs);
+        Assert.Equal(1.5, sleepConfig.DurationSeconds);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class NodeConfigurationRegistryTests
         {
             new StartNodeConfiguration { Name = "start_1", InputSchema = inputSchema },
             new EndNodeConfiguration { Name = "end_1" },
-            new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 500 },
+            new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 0.5 },
             new MessageFormatterNodeConfiguration { Name = "formatter_1", Template = "Hello {{name}}" },
             new HttpRequestNodeConfiguration { Name = "http_1", Method = Contracts.Nodes.Enums.HttpMethod.Post, Url = "https://api.example.com" }
         };
@@ -161,7 +161,7 @@ public class NodeConfigurationRegistryTests
     public void SerializeToElement_ReturnsJsonElement()
     {
         // Arrange
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 100 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 0.1 };
 
         // Act
         var element = _registry.SerializeToElement(config);
@@ -180,9 +180,11 @@ public class NodeConfigurationRegistryTests
     public void DeserializeConfigurations_WithDictionary_ReturnsCorrectTypes()
     {
         // Arrange
+        var startNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var endNodeId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var json = @"{
-            ""start-1"": {""type"": ""Start"", ""name"": ""start_1"", ""inputSchema"": {}},
-            ""end-1"": {""type"": ""End"", ""name"": ""end_1""}
+            ""11111111-1111-1111-1111-111111111111"": {""type"": ""Start"", ""name"": ""start_1"", ""inputSchema"": {}},
+            ""22222222-2222-2222-2222-222222222222"": {""type"": ""End"", ""name"": ""end_1""}
         }";
 
         // Act
@@ -190,8 +192,8 @@ public class NodeConfigurationRegistryTests
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.IsType<StartNodeConfiguration>(result["start-1"]);
-        Assert.IsType<EndNodeConfiguration>(result["end-1"]);
+        Assert.IsType<StartNodeConfiguration>(result[startNodeId]);
+        Assert.IsType<EndNodeConfiguration>(result[endNodeId]);
     }
 
     #endregion

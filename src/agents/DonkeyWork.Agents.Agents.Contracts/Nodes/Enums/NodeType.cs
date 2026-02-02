@@ -36,5 +36,10 @@ public enum NodeType
     /// <summary>
     /// Pauses execution for a specified duration.
     /// </summary>
-    Sleep
+    Sleep,
+
+    /// <summary>
+    /// Calls a multimodal LLM with configured prompts and parameters.
+    /// </summary>
+    MultimodalChatModel
 }

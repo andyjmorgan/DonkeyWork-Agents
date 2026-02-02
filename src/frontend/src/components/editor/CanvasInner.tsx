@@ -12,7 +12,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { AlignVerticalSpaceAround } from 'lucide-react'
 
-import { StartNode, ModelNode, EndNode, ActionNode, MessageFormatterNode } from './nodes'
+import { SchemaNode } from './nodes'
 import { useEditorStore } from '@/store/editor'
 import { Button } from '@/components/ui/button'
 
@@ -37,14 +37,11 @@ export function CanvasInner() {
     }
   }, [nodesInitialized, fitView])
 
-  // Define custom node types
+  // All nodes use SchemaNode - the component reads nodeType from data
+  // to determine icon, color, handles, and delete behavior
   const nodeTypes = useMemo(
     () => ({
-      start: StartNode,
-      model: ModelNode,
-      end: EndNode,
-      action: ActionNode,
-      messageFormatter: MessageFormatterNode
+      schemaNode: SchemaNode
     }),
     []
   )
@@ -80,8 +77,17 @@ export function CanvasInner() {
     (event: React.DragEvent) => {
       event.preventDefault()
 
-      const type = event.dataTransfer.getData('application/reactflow')
-      if (!type) return
+      // Get node type info from JSON data
+      const jsonData = event.dataTransfer.getData('application/json')
+      if (!jsonData) return
+
+      let nodeTypeInfo: Record<string, unknown> = {}
+      try {
+        nodeTypeInfo = JSON.parse(jsonData)
+      } catch (error) {
+        console.error('Failed to parse drop data:', error)
+        return
+      }
 
       // Get the drop position
       const position = screenToFlowPosition({
@@ -89,21 +95,8 @@ export function CanvasInner() {
         y: event.clientY
       })
 
-      // Get additional data if it's a model node
-      const jsonData = event.dataTransfer.getData('application/json')
-      let additionalConfig = {}
-
-      if (jsonData) {
-        try {
-          const data = JSON.parse(jsonData)
-          additionalConfig = data
-        } catch (error) {
-          console.error('Failed to parse drop data:', error)
-        }
-      }
-
-      // Add the node
-      addNode(type, position, additionalConfig)
+      // Add the node with schema data
+      addNode(position, nodeTypeInfo)
     },
     [screenToFlowPosition, addNode]
   )

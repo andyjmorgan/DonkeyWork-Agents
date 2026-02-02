@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Agents.Contracts.Enums;
 
 namespace DonkeyWork.Agents.Agents.Contracts.Models;
 
@@ -30,7 +31,8 @@ public sealed class GetExecutionResponseV1
     /// The execution status.
     /// </summary>
     [JsonPropertyName("status")]
-    public required string Status { get; init; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public required ExecutionStatus Status { get; init; }
 
     /// <summary>
     /// The input data.

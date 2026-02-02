@@ -45,7 +45,7 @@ public abstract class NodeExecutor<TConfig, TOutput> : INodeExecutor
     /// Emits NodeStarted and NodeCompleted events to the stream.
     /// </summary>
     public async Task<NodeOutput> ExecuteAsync(
-        string nodeId,
+        Guid nodeId,
         object config,
         CancellationToken cancellationToken)
     {

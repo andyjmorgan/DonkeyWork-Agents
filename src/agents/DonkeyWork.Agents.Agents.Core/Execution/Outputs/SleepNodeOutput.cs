@@ -6,9 +6,9 @@ namespace DonkeyWork.Agents.Agents.Core.Execution.Outputs;
 public sealed class SleepNodeOutput : NodeOutput
 {
     /// <summary>
-    /// The actual duration slept in milliseconds.
+    /// The actual duration slept in seconds.
     /// </summary>
-    public required int DurationMs { get; init; }
+    public required double DurationSeconds { get; init; }
 
-    public override string ToMessageOutput() => $"Slept for {DurationMs}ms";
+    public override string ToMessageOutput() => $"Slept for {DurationSeconds}s";
 }

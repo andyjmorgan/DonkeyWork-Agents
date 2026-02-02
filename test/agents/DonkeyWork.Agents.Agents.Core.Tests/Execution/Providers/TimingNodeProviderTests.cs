@@ -26,21 +26,21 @@ public class TimingNodeProviderTests
     public async Task ExecuteSleepAsync_WithValidConfig_ReturnsOutput()
     {
         // Arrange
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 0.01 };
 
         // Act
         var result = await _provider.ExecuteSleepAsync(config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(10, result.DurationMs);
+        Assert.Equal(0.01, result.DurationSeconds);
     }
 
     [Fact]
     public async Task ExecuteSleepAsync_WithZeroDuration_CompletesImmediately()
     {
         // Arrange
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 0 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 0 };
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
         // Act
@@ -49,7 +49,7 @@ public class TimingNodeProviderTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(0, result.DurationMs);
+        Assert.Equal(0, result.DurationSeconds);
         Assert.True(sw.ElapsedMilliseconds < 100, "Zero duration sleep should complete quickly");
     }
 
@@ -57,7 +57,7 @@ public class TimingNodeProviderTests
     public async Task ExecuteSleepAsync_WithCancellation_ThrowsOperationCanceledException()
     {
         // Arrange
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10000 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10 };
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -71,7 +71,7 @@ public class TimingNodeProviderTests
     public async Task ExecuteSleepAsync_OutputToMessageOutput_ReturnsFormattedString()
     {
         // Arrange
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 100 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 0.1 };
 
         // Act
         var result = await _provider.ExecuteSleepAsync(config, CancellationToken.None);
@@ -79,7 +79,7 @@ public class TimingNodeProviderTests
 
         // Assert
         Assert.NotNull(messageOutput);
-        Assert.Contains("100", messageOutput);
+        Assert.Contains("0.1", messageOutput);
     }
 
     #endregion

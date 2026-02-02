@@ -7,6 +7,12 @@ namespace DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 /// <summary>
 /// Configuration for the MessageFormatter node - formats messages using Scriban templates.
 /// </summary>
+[Node(
+    DisplayName = "Message Formatter",
+    Description = "Format messages using Scriban templates",
+    Category = "Utility",
+    Icon = "file-text",
+    Color = "cyan")]
 public sealed class MessageFormatterNodeConfiguration : NodeConfiguration
 {
     /// <inheritdoc />

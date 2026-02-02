@@ -1,4 +1,5 @@
-using System.Text.Json;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution;
 
@@ -25,90 +26,60 @@ public class GraphAnalyzer
         /// <summary>
         /// Execution order (topologically sorted list of node IDs).
         /// </summary>
-        public List<string> ExecutionOrder { get; set; } = new();
+        public List<Guid> ExecutionOrder { get; set; } = [];
 
         /// <summary>
         /// Adjacency list representation (node ID -> list of target node IDs).
         /// </summary>
-        public Dictionary<string, List<string>> AdjacencyList { get; set; } = new();
+        public Dictionary<Guid, List<Guid>> AdjacencyList { get; set; } = new();
 
         /// <summary>
         /// Reverse adjacency list (node ID -> list of source node IDs).
         /// </summary>
-        public Dictionary<string, List<string>> ReverseAdjacencyList { get; set; } = new();
+        public Dictionary<Guid, List<Guid>> ReverseAdjacencyList { get; set; } = new();
     }
 
     /// <summary>
     /// Analyzes the ReactFlow graph and computes execution order.
     /// </summary>
-    /// <param name="reactFlowData">The ReactFlow data (nodes and edges).</param>
+    /// <param name="reactFlowData">The typed ReactFlow data (nodes and edges).</param>
     /// <returns>Analysis result with execution order or error message.</returns>
-    public GraphAnalysisResult Analyze(JsonElement reactFlowData)
+    public GraphAnalysisResult Analyze(ReactFlowData reactFlowData)
     {
         try
         {
-            // Extract nodes and edges from ReactFlow data
-            if (!reactFlowData.TryGetProperty("nodes", out var nodesElement))
-            {
-                return new GraphAnalysisResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "ReactFlow data missing 'nodes' property"
-                };
-            }
+            var nodes = reactFlowData.Nodes;
+            var edges = reactFlowData.Edges;
 
-            if (!reactFlowData.TryGetProperty("edges", out var edgesElement))
-            {
-                return new GraphAnalysisResult
-                {
-                    IsValid = false,
-                    ErrorMessage = "ReactFlow data missing 'edges' property"
-                };
-            }
+            // Build node ID set and find start node
+            var nodeIds = new HashSet<Guid>();
+            Guid? startNodeId = null;
 
-            // Parse nodes
-            var nodeIds = new HashSet<string>();
-            string? startNodeId = null;
-
-            foreach (var node in nodesElement.EnumerateArray())
+            foreach (var node in nodes)
             {
-                if (!node.TryGetProperty("id", out var idElement))
+                if (node.Id == Guid.Empty)
                 {
                     return new GraphAnalysisResult
                     {
                         IsValid = false,
-                        ErrorMessage = "Node missing 'id' property"
+                        ErrorMessage = "Node has empty id"
                     };
                 }
 
-                var nodeId = idElement.GetString();
-                if (string.IsNullOrEmpty(nodeId))
-                {
-                    return new GraphAnalysisResult
-                    {
-                        IsValid = false,
-                        ErrorMessage = "Node has null or empty 'id'"
-                    };
-                }
+                nodeIds.Add(node.Id);
 
-                nodeIds.Add(nodeId);
-
-                // Find start node
-                if (node.TryGetProperty("type", out var typeElement))
+                // Find start node using typed enum
+                if (node.Data.NodeType == NodeType.Start)
                 {
-                    var nodeType = typeElement.GetString();
-                    if (nodeType == "start")
+                    if (startNodeId != null)
                     {
-                        if (startNodeId != null)
+                        return new GraphAnalysisResult
                         {
-                            return new GraphAnalysisResult
-                            {
-                                IsValid = false,
-                                ErrorMessage = "Multiple start nodes found"
-                            };
-                        }
-                        startNodeId = nodeId;
+                            IsValid = false,
+                            ErrorMessage = "Multiple start nodes found"
+                        };
                     }
+                    startNodeId = node.Id;
                 }
             }
 
@@ -122,57 +93,38 @@ public class GraphAnalyzer
             }
 
             // Build adjacency lists
-            var adjacencyList = new Dictionary<string, List<string>>();
-            var reverseAdjacencyList = new Dictionary<string, List<string>>();
+            var adjacencyList = nodeIds.ToDictionary(id => id, _ => new List<Guid>());
+            var reverseAdjacencyList = nodeIds.ToDictionary(id => id, _ => new List<Guid>());
 
-            foreach (var nodeId in nodeIds)
+            foreach (var edge in edges)
             {
-                adjacencyList[nodeId] = new List<string>();
-                reverseAdjacencyList[nodeId] = new List<string>();
-            }
-
-            foreach (var edge in edgesElement.EnumerateArray())
-            {
-                if (!edge.TryGetProperty("source", out var sourceElement) ||
-                    !edge.TryGetProperty("target", out var targetElement))
+                if (edge.Source == Guid.Empty || edge.Target == Guid.Empty)
                 {
                     return new GraphAnalysisResult
                     {
                         IsValid = false,
-                        ErrorMessage = "Edge missing 'source' or 'target' property"
+                        ErrorMessage = "Edge has empty source or target"
                     };
                 }
 
-                var source = sourceElement.GetString();
-                var target = targetElement.GetString();
-
-                if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(target))
+                if (!nodeIds.Contains(edge.Source) || !nodeIds.Contains(edge.Target))
                 {
                     return new GraphAnalysisResult
                     {
                         IsValid = false,
-                        ErrorMessage = "Edge has null or empty source or target"
+                        ErrorMessage = $"Edge references non-existent node: {edge.Source} -> {edge.Target}"
                     };
                 }
 
-                if (!nodeIds.Contains(source) || !nodeIds.Contains(target))
-                {
-                    return new GraphAnalysisResult
-                    {
-                        IsValid = false,
-                        ErrorMessage = $"Edge references non-existent node: {source} -> {target}"
-                    };
-                }
-
-                adjacencyList[source].Add(target);
-                reverseAdjacencyList[target].Add(source);
+                adjacencyList[edge.Source].Add(edge.Target);
+                reverseAdjacencyList[edge.Target].Add(edge.Source);
             }
 
             // Check connectivity: all nodes must be reachable from start
-            var reachableNodes = new HashSet<string>();
-            var queue = new Queue<string>();
-            queue.Enqueue(startNodeId);
-            reachableNodes.Add(startNodeId);
+            var reachableNodes = new HashSet<Guid>();
+            var queue = new Queue<Guid>();
+            queue.Enqueue(startNodeId.Value);
+            reachableNodes.Add(startNodeId.Value);
 
             while (queue.Count > 0)
             {
@@ -198,8 +150,8 @@ public class GraphAnalyzer
 
             // Topological sort using Kahn's algorithm
             var inDegree = nodeIds.ToDictionary(id => id, id => reverseAdjacencyList[id].Count);
-            var sortQueue = new Queue<string>();
-            var executionOrder = new List<string>();
+            var sortQueue = new Queue<Guid>();
+            var executionOrder = new List<Guid>();
 
             // Start with nodes that have no incoming edges (should just be start node)
             foreach (var nodeId in nodeIds)

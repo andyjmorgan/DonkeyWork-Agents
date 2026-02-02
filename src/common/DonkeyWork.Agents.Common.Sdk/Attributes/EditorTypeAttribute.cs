@@ -16,6 +16,11 @@ public enum EditorType
     TextArea,
 
     /// <summary>
+    /// List of multi-line textareas (for arrays like SystemPrompts[], UserMessages[])
+    /// </summary>
+    TextAreaList,
+
+    /// <summary>
     /// Code editor with syntax highlighting
     /// </summary>
     Code,

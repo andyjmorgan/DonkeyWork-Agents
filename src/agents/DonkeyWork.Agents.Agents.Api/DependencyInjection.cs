@@ -54,9 +54,13 @@ public static class DependencyInjection
         // Register node schema services
         services.AddSingleton<INodeSchemaGenerator, NodeSchemaGenerator>();
         services.AddSingleton<INodeTypeSchemaService, NodeTypeSchemaService>();
+        services.AddSingleton<IMultimodalChatSchemaService, MultimodalChatSchemaService>();
 
         // Register execution context as scoped (hydrated by orchestrator)
         services.AddScoped<IExecutionContext, Core.Execution.ExecutionContext>();
+
+        // Register template renderer as scoped (uses IExecutionContext)
+        services.AddScoped<ITemplateRenderer, TemplateRenderer>();
 
         // Register stream writer as scoped (one producer per execution)
         services.AddScoped<IExecutionStreamWriter, ExecutionStreamWriter>();
@@ -88,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped<StartNodeExecutor>();
         services.AddScoped<EndNodeExecutor>();
         services.AddScoped<ModelNodeExecutor>();
+        services.AddScoped<MultimodalChatNodeExecutor>();
 
         // Register executor registry with mappings
         services.AddScoped<INodeExecutorRegistry>(sp =>
@@ -98,6 +103,7 @@ public static class DependencyInjection
             registry.Register(NodeType.Start, typeof(StartNodeExecutor));
             registry.Register(NodeType.End, typeof(EndNodeExecutor));
             registry.Register(NodeType.Model, typeof(ModelNodeExecutor));
+            registry.Register(NodeType.MultimodalChatModel, typeof(MultimodalChatNodeExecutor));
 
             // Generic executor for provider-based nodes
             registry.Register(NodeType.MessageFormatter, typeof(GenericNodeExecutor));

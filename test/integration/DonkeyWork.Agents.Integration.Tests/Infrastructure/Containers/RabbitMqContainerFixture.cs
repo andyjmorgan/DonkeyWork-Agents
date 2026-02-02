@@ -20,7 +20,11 @@ public class RabbitMqContainerFixture : IAsyncLifetime
 
     public string ConnectionString => _container.GetConnectionString();
 
-    public string HostName => _container.Hostname;
+    /// <summary>
+    /// Returns the host for connecting to the RabbitMQ container.
+    /// Uses localhost since ports are mapped to the host machine.
+    /// </summary>
+    public string HostName => "localhost";
 
     public int AmqpPort => _container.GetMappedPublicPort(5672);
 

@@ -11,9 +11,9 @@ public class AgentVersionCredentialMappingEntity : BaseEntity
     public Guid AgentVersionId { get; set; }
 
     /// <summary>
-    /// The node ID (GUID string) that references this credential.
+    /// The node ID that references this credential.
     /// </summary>
-    public string NodeId { get; set; } = string.Empty;
+    public Guid NodeId { get; set; }
 
     /// <summary>
     /// Foreign key to the credential (ExternalApiKey).

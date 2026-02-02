@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Asp.Versioning;
+using DonkeyWork.Agents.Agents.Contracts.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Models;
 using DonkeyWork.Agents.Agents.Contracts.Models.Events;
 using DonkeyWork.Agents.Agents.Contracts.Services;
@@ -376,7 +377,7 @@ public class ExecutionsController : ControllerBase
             return StatusCode(500, new { message = "Execution not found" });
         }
 
-        if (execution.Status == "Completed")
+        if (execution.Status == ExecutionStatus.Completed)
         {
             var output = execution.Output.HasValue
                 ? JsonSerializer.Serialize(execution.Output.Value)
@@ -385,17 +386,17 @@ public class ExecutionsController : ControllerBase
             return Ok(new ExecuteAgentResponseV1
             {
                 ExecutionId = executionId,
-                Status = "Completed",
+                Status = ExecutionStatus.Completed,
                 Output = output
             });
         }
 
-        if (execution.Status == "Failed")
+        if (execution.Status == ExecutionStatus.Failed)
         {
             return Ok(new ExecuteAgentResponseV1
             {
                 ExecutionId = executionId,
-                Status = "Failed",
+                Status = ExecutionStatus.Failed,
                 Error = execution.ErrorMessage
             });
         }

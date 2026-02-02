@@ -56,6 +56,51 @@ internal class PlaceholderAiClient : IAiClient
         };
     }
 
+    public async IAsyncEnumerable<ModelResponseBase> CompleteAsync(
+        IReadOnlyList<InternalMessage> messages,
+        IReadOnlyList<InternalToolDefinition>? tools,
+        IReadOnlyDictionary<string, object>? providerParameters,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        // Simulate non-streaming API call delay
+        await Task.Delay(50, cancellationToken);
+
+        var responseText = "This is a placeholder response from the middleware pipeline (non-streaming). ";
+        responseText += "Replace this with a real provider implementation.";
+
+        yield return new ModelResponseBlockStart
+        {
+            BlockIndex = 0,
+            Type = InternalContentBlockType.Text
+        };
+
+        // Emit complete response at once (non-streaming)
+        yield return new ModelResponseTextContent
+        {
+            Content = responseText
+        };
+
+        yield return new ModelResponseBlockEnd
+        {
+            BlockIndex = 0
+        };
+
+        yield return new ModelResponseUsage
+        {
+            InputTokens = 10,
+            OutputTokens = responseText.Split(' ').Length
+        };
+
+        yield return new ModelResponseStreamEnd
+        {
+            Reason = InternalStopReason.EndTurn,
+            Metadata = new Dictionary<string, object>
+            {
+                ["provider"] = "placeholder"
+            }
+        };
+    }
+
     private static IEnumerable<string> ChunkText(string text, int chunkSize)
     {
         for (var i = 0; i < text.Length; i += chunkSize)

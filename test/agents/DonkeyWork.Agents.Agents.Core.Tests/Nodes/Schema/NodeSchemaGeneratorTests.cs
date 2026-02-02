@@ -105,7 +105,7 @@ public class NodeSchemaGeneratorTests
         var schema = _generator.GenerateSchema(NodeType.Sleep);
 
         // Assert
-        var durationField = schema.Fields.FirstOrDefault(f => f.Name == "durationMs");
+        var durationField = schema.Fields.FirstOrDefault(f => f.Name == "durationSeconds");
         Assert.NotNull(durationField);
     }
 

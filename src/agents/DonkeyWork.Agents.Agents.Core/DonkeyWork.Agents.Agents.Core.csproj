@@ -14,6 +14,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Agents.Contracts\DonkeyWork.Agents.Agents.Contracts.csproj" />
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Sdk\DonkeyWork.Agents.Common.Sdk.csproj" />
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
         <ProjectReference Include="..\..\credentials\DonkeyWork.Agents.Credentials.Contracts\DonkeyWork.Agents.Credentials.Contracts.csproj" />

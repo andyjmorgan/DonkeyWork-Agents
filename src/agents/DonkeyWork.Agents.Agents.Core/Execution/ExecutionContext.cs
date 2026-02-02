@@ -1,3 +1,4 @@
+    using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution;
@@ -20,13 +21,13 @@ public class ExecutionContext : IExecutionContext
     public object Input { get; private set; } = null!;
 
     /// <inheritdoc />
-    public string InputSchema { get; private set; } = null!;
+    public JsonDocument InputSchema { get; private set; } = null!;
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, object> NodeOutputs => _nodeOutputs;
 
     /// <inheritdoc />
-    public void Hydrate(Guid executionId, Guid userId, object input, string inputSchema)
+    public void Hydrate(Guid executionId, Guid userId, object input, JsonDocument inputSchema)
     {
         if (_isHydrated)
         {

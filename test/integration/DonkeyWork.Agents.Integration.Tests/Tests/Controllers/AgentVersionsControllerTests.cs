@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models;
 using DonkeyWork.Agents.Integration.Tests.Base;
 using DonkeyWork.Agents.Integration.Tests.Helpers;
@@ -80,23 +81,26 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     {
         // Arrange
         var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
-        var reactFlowData = """
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
+        var edgeId = Guid.NewGuid();
+        var reactFlowData = $$"""
         {
             "nodes": [
-                { "id": "node-1", "type": "start", "position": { "x": 100, "y": 200 }, "data": { "label": "Start" } },
-                { "id": "node-2", "type": "end", "position": { "x": 500, "y": 200 }, "data": { "label": "End" } }
+                { "id": "{{startNodeId}}", "type": "start", "position": { "x": 100, "y": 200 }, "data": { "nodeType": "Start", "label": "Start", "displayName": "Start" } },
+                { "id": "{{endNodeId}}", "type": "end", "position": { "x": 500, "y": 200 }, "data": { "nodeType": "End", "label": "End", "displayName": "End" } }
             ],
             "edges": [
-                { "id": "edge-1", "source": "node-1", "target": "node-2" }
+                { "id": "{{edgeId}}", "source": "{{startNodeId}}", "target": "{{endNodeId}}" }
             ],
             "viewport": { "x": 50, "y": 100, "zoom": 1.5 }
         }
         """;
         // Node configurations must match the node IDs in reactFlowData
-        var nodeConfigurations = """
+        var nodeConfigurations = $$"""
         {
-            "node-1": { "name": "start-node", "inputSchema": { "type": "object" } },
-            "node-2": { "name": "end-node" }
+            "{{startNodeId}}": { "type": "Start", "name": "start-node", "inputSchema": { "type": "object" } },
+            "{{endNodeId}}": { "type": "End", "name": "end-node" }
         }
         """;
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest(reactFlowData: reactFlowData, nodeConfigurations: nodeConfigurations);
@@ -106,10 +110,10 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
 
         // Assert
         Assert.NotNull(version);
-        var reactFlowJson = version.ReactFlowData.GetRawText();
-        Assert.Contains("node-1", reactFlowJson);
-        Assert.Contains("node-2", reactFlowJson);
-        Assert.Contains("edge-1", reactFlowJson);
+        var reactFlowJson = JsonSerializer.Serialize(version.ReactFlowData);
+        Assert.Contains(startNodeId.ToString(), reactFlowJson);
+        Assert.Contains(endNodeId.ToString(), reactFlowJson);
+        Assert.Contains(edgeId.ToString(), reactFlowJson);
         Assert.Contains("1.5", reactFlowJson); // zoom
     }
 
@@ -119,22 +123,25 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
         // Arrange
         var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
         // Custom reactFlowData and nodeConfigurations must match
-        var reactFlowData = """
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
+        var edgeId = Guid.NewGuid();
+        var reactFlowData = $$"""
         {
             "nodes": [
-                { "id": "node-1", "type": "start", "position": { "x": 100, "y": 100 }, "data": {} },
-                { "id": "node-2", "type": "end", "position": { "x": 400, "y": 100 }, "data": {} }
+                { "id": "{{startNodeId}}", "type": "start", "position": { "x": 100, "y": 100 }, "data": { "nodeType": "Start", "label": "Start", "displayName": "Start" } },
+                { "id": "{{endNodeId}}", "type": "end", "position": { "x": 400, "y": 100 }, "data": { "nodeType": "End", "label": "End", "displayName": "End" } }
             ],
             "edges": [
-                { "id": "e1", "source": "node-1", "target": "node-2" }
+                { "id": "{{edgeId}}", "source": "{{startNodeId}}", "target": "{{endNodeId}}" }
             ],
             "viewport": { "x": 0, "y": 0, "zoom": 1 }
         }
         """;
-        var nodeConfigurations = """
+        var nodeConfigurations = $$"""
         {
-            "node-1": { "name": "start-node", "inputSchema": { "type": "object" }, "customSetting": "value" },
-            "node-2": { "name": "end-node", "enabled": true }
+            "{{startNodeId}}": { "type": "Start", "name": "start-node", "inputSchema": { "type": "object" } },
+            "{{endNodeId}}": { "type": "End", "name": "end-node" }
         }
         """;
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest(reactFlowData: reactFlowData, nodeConfigurations: nodeConfigurations);
@@ -145,8 +152,8 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
         // Assert
         Assert.NotNull(version);
         var nodeConfigJson = version.NodeConfigurations.GetRawText();
-        Assert.Contains("node-1", nodeConfigJson);
-        Assert.Contains("customSetting", nodeConfigJson);
+        Assert.Contains(startNodeId.ToString(), nodeConfigJson);
+        Assert.Contains("start-node", nodeConfigJson);
     }
 
     [Fact]

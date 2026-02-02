@@ -24,11 +24,32 @@ internal class ProviderMiddleware : IModelMiddleware
     {
         var aiClient = await _aiClientFactory.CreateClientAsync(context.Model, cancellationToken);
 
-        await foreach (var message in aiClient.StreamCompletionAsync(
-            context.Messages,
-            context.ToolContext?.Tools,
-            context.ProviderParameters,
-            cancellationToken))
+        // Check if streaming is enabled (default is true for backward compatibility)
+        var shouldStream = true;
+        if (context.ProviderParameters.TryGetValue("stream", out var streamValue))
+        {
+            shouldStream = streamValue switch
+            {
+                bool b => b,
+                string s => !string.Equals(s, "false", StringComparison.OrdinalIgnoreCase),
+                _ => true
+            };
+        }
+
+        // Select the appropriate completion method based on streaming preference
+        var responseStream = shouldStream
+            ? aiClient.StreamCompletionAsync(
+                context.Messages,
+                context.ToolContext?.Tools,
+                context.ProviderParameters,
+                cancellationToken)
+            : aiClient.CompleteAsync(
+                context.Messages,
+                context.ToolContext?.Tools,
+                context.ProviderParameters,
+                cancellationToken);
+
+        await foreach (var message in responseStream)
         {
             yield return new ModelMiddlewareMessage
             {

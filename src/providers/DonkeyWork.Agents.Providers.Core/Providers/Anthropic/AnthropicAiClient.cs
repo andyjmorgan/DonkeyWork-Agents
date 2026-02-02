@@ -137,6 +137,101 @@ internal sealed class AnthropicAiClient : IAiClient
         }
     }
 
+    public async IAsyncEnumerable<ModelResponseBase> CompleteAsync(
+        IReadOnlyList<InternalMessage> messages,
+        IReadOnlyList<InternalToolDefinition>? tools,
+        IReadOnlyDictionary<string, object>? providerParameters,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var (systemPrompt, messageParams) = MapMessages(messages);
+
+        var maxTokens = 4096L;
+        if (providerParameters?.TryGetValue("max_tokens", out var mt) == true)
+            maxTokens = Convert.ToInt64(mt);
+
+        double? temperature = null;
+        double? topP = null;
+
+        if (providerParameters is not null)
+        {
+            if (providerParameters.TryGetValue("temperature", out var temp))
+                temperature = Convert.ToDouble(temp);
+
+            if (providerParameters.TryGetValue("top_p", out var tp))
+                topP = Convert.ToDouble(tp);
+        }
+
+        var parameters = new MessageCreateParams
+        {
+            Model = _modelId,
+            MaxTokens = maxTokens,
+            Messages = messageParams,
+            System = !string.IsNullOrEmpty(systemPrompt) ? systemPrompt : null,
+            Temperature = temperature,
+            TopP = topP
+        };
+
+        // Non-streaming API call
+        var response = await _client.Messages.Create(parameters, cancellationToken);
+
+        // Emit block start
+        yield return new ModelResponseBlockStart
+        {
+            BlockIndex = 0,
+            Type = InternalContentBlockType.Text
+        };
+
+        // Extract text content from response
+        var textContent = new System.Text.StringBuilder();
+        foreach (var block in response.Content)
+        {
+            if (block.TryPickText(out var textBlock))
+            {
+                textContent.Append(textBlock.Text);
+            }
+        }
+
+        // Emit the complete text as a single chunk
+        if (textContent.Length > 0)
+        {
+            yield return new ModelResponseTextContent { Content = textContent.ToString() };
+        }
+
+        // Emit block end
+        yield return new ModelResponseBlockEnd { BlockIndex = 0 };
+
+        // Emit usage
+        if (response.Usage is not null)
+        {
+            yield return new ModelResponseUsage
+            {
+                InputTokens = (int)response.Usage.InputTokens,
+                OutputTokens = (int)response.Usage.OutputTokens
+            };
+        }
+
+        // Emit stream end - map StopReason to internal reason
+        var stopReason = InternalStopReason.EndTurn;
+        var stopReasonStr = response.StopReason?.ToString();
+        if (stopReasonStr?.Contains("max_tokens", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            stopReason = InternalStopReason.MaxTokens;
+        }
+        else if (stopReasonStr?.Contains("tool_use", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            stopReason = InternalStopReason.ToolUse;
+        }
+
+        yield return new ModelResponseStreamEnd
+        {
+            Reason = stopReason,
+            Metadata = new Dictionary<string, object>
+            {
+                ["provider"] = "anthropic"
+            }
+        };
+    }
+
     private static (string? systemPrompt, MessageParam[] messages) MapMessages(
         IReadOnlyList<InternalMessage> messages)
     {

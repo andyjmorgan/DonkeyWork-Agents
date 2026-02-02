@@ -28,7 +28,7 @@ public class GenericNodeExecutor : INodeExecutor
     }
 
     public async Task<NodeOutput> ExecuteAsync(
-        string nodeId,
+        Guid nodeId,
         object config,
         CancellationToken cancellationToken)
     {

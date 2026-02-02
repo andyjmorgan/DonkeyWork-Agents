@@ -15,7 +15,7 @@ public interface INodeExecutor
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The node output.</returns>
     Task<NodeOutput> ExecuteAsync(
-        string nodeId,
+        Guid nodeId,
         object config,
         CancellationToken cancellationToken);
 }

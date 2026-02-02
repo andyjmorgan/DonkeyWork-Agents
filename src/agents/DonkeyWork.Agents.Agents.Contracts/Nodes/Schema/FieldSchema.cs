@@ -112,4 +112,25 @@ public sealed class FieldSchema
     [JsonPropertyName("reliesUpon")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ReliesUponSchema? ReliesUpon { get; init; }
+
+    /// <summary>
+    /// Whether this field is read-only (set on creation, not editable).
+    /// </summary>
+    [JsonPropertyName("immutable")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Immutable { get; init; }
+
+    /// <summary>
+    /// Model IDs that support this field. If null, field is available for all models.
+    /// </summary>
+    [JsonPropertyName("supportedBy")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? SupportedBy { get; init; }
+
+    /// <summary>
+    /// Visual grouping within a tab.
+    /// </summary>
+    [JsonPropertyName("group")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Group { get; init; }
 }

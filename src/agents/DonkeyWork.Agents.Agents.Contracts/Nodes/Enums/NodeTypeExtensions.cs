@@ -6,21 +6,31 @@ namespace DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 public static class NodeTypeExtensions
 {
     /// <summary>
-    /// Maps a ReactFlow node type string (lowercase) to the NodeType enum.
+    /// Maps a ReactFlow node type string to the NodeType enum.
+    /// Handles both old format (lowercase) and new format (PascalCase from data.nodeType).
     /// </summary>
-    /// <param name="reactFlowType">The ReactFlow node type string (e.g., "start", "model").</param>
+    /// <param name="reactFlowType">The ReactFlow node type string (e.g., "start", "Start", "MultimodalChatModel").</param>
     /// <returns>The corresponding NodeType enum value.</returns>
     /// <exception cref="ArgumentException">If the node type is not recognized.</exception>
     public static NodeType ToNodeType(this string reactFlowType)
     {
         return reactFlowType switch
         {
+            // Old format (lowercase)
             "start" => NodeType.Start,
             "end" => NodeType.End,
             "model" => NodeType.Model,
             "messageFormatter" => NodeType.MessageFormatter,
             "httpRequest" => NodeType.HttpRequest,
             "sleep" => NodeType.Sleep,
+            // New format (PascalCase - from data.nodeType)
+            nameof(NodeType.Start) => NodeType.Start,
+            nameof(NodeType.End) => NodeType.End,
+            nameof(NodeType.Model) => NodeType.Model,
+            nameof(NodeType.MultimodalChatModel) => NodeType.MultimodalChatModel,
+            nameof(NodeType.MessageFormatter) => NodeType.MessageFormatter,
+            nameof(NodeType.HttpRequest) => NodeType.HttpRequest,
+            nameof(NodeType.Sleep) => NodeType.Sleep,
             _ => throw new ArgumentException($"Unknown ReactFlow node type: {reactFlowType}", nameof(reactFlowType))
         };
     }
@@ -53,12 +63,13 @@ public static class NodeTypeExtensions
     {
         return nodeType switch
         {
-            NodeType.Start => "Start",
-            NodeType.End => "End",
-            NodeType.Model => "Model",
-            NodeType.MessageFormatter => "MessageFormatter",
-            NodeType.HttpRequest => "HttpRequest",
-            NodeType.Sleep => "Sleep",
+            NodeType.Start => nameof(NodeType.Start),
+            NodeType.End => nameof(NodeType.End),
+            NodeType.Model => nameof(NodeType.Model),
+            NodeType.MultimodalChatModel => nameof(NodeType.MultimodalChatModel),
+            NodeType.MessageFormatter => nameof(NodeType.MessageFormatter),
+            NodeType.HttpRequest => nameof(NodeType.HttpRequest),
+            NodeType.Sleep => nameof(NodeType.Sleep),
             _ => throw new ArgumentException($"Unknown node type: {nodeType}", nameof(nodeType))
         };
     }

@@ -19,6 +19,7 @@ public class GenericNodeExecutorTests
     private readonly Mock<IExecutionStreamWriter> _streamWriterMock;
     private readonly NodeMethodRegistry _methodRegistry;
     private readonly IServiceProvider _serviceProvider;
+    private readonly Guid _testNodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     public GenericNodeExecutorTests()
     {
@@ -40,16 +41,16 @@ public class GenericNodeExecutorTests
     {
         // Arrange
         var executor = new GenericNodeExecutor(_methodRegistry, _serviceProvider, _streamWriterMock.Object);
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10 };
 
         // Act
-        var result = await executor.ExecuteAsync("node-1", config, CancellationToken.None);
+        var result = await executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
         Assert.IsType<SleepNodeOutput>(result);
         var sleepOutput = (SleepNodeOutput)result;
-        Assert.Equal(10, sleepOutput.DurationMs);
+        Assert.Equal(10, sleepOutput.DurationSeconds);
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class GenericNodeExecutorTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteAsync("node-1", new { invalid = "config" }, CancellationToken.None)
+            async () => await executor.ExecuteAsync(_testNodeId, new { invalid = "config" }, CancellationToken.None)
         );
 
         Assert.Contains("must be a NodeConfiguration", exception.Message);
@@ -72,11 +73,11 @@ public class GenericNodeExecutorTests
         // Arrange
         var emptyRegistry = new NodeMethodRegistry();
         var executor = new GenericNodeExecutor(emptyRegistry, _serviceProvider, _streamWriterMock.Object);
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10 };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await executor.ExecuteAsync("node-1", config, CancellationToken.None)
+            async () => await executor.ExecuteAsync(_testNodeId, config, CancellationToken.None)
         );
 
         Assert.Contains("No method registered", exception.Message);
@@ -88,11 +89,11 @@ public class GenericNodeExecutorTests
         // Arrange
         var emptyServices = new ServiceCollection().BuildServiceProvider();
         var executor = new GenericNodeExecutor(_methodRegistry, emptyServices, _streamWriterMock.Object);
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10 };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteAsync("node-1", config, CancellationToken.None)
+            async () => await executor.ExecuteAsync(_testNodeId, config, CancellationToken.None)
         );
 
         Assert.Contains("not registered in DI", exception.Message);
@@ -103,10 +104,10 @@ public class GenericNodeExecutorTests
     {
         // Arrange
         var executor = new GenericNodeExecutor(_methodRegistry, _serviceProvider, _streamWriterMock.Object);
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10 };
 
         // Act
-        await executor.ExecuteAsync("test-node-id", config, CancellationToken.None);
+        await executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         _streamWriterMock.Verify(
@@ -119,10 +120,10 @@ public class GenericNodeExecutorTests
     {
         // Arrange
         var executor = new GenericNodeExecutor(_methodRegistry, _serviceProvider, _streamWriterMock.Object);
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10 };
 
         // Act
-        await executor.ExecuteAsync("test-node-id", config, CancellationToken.None);
+        await executor.ExecuteAsync(_testNodeId, config, CancellationToken.None);
 
         // Assert
         _streamWriterMock.Verify(
@@ -142,11 +143,11 @@ public class GenericNodeExecutorTests
         var serviceProvider = services.BuildServiceProvider();
 
         var executor = new GenericNodeExecutor(failingRegistry, serviceProvider, _streamWriterMock.Object);
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10 };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteAsync("node-1", config, CancellationToken.None)
+            async () => await executor.ExecuteAsync(_testNodeId, config, CancellationToken.None)
         );
 
         Assert.Contains("Node execution failed", exception.Message);
@@ -168,11 +169,11 @@ public class GenericNodeExecutorTests
         var serviceProvider = services.BuildServiceProvider();
 
         var executor = new GenericNodeExecutor(cancellationRegistry, serviceProvider, _streamWriterMock.Object);
-        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationMs = 10000 };
+        var config = new SleepNodeConfiguration { Name = "sleep_1", DurationSeconds = 10000 };
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await executor.ExecuteAsync("node-1", config, cts.Token)
+            async () => await executor.ExecuteAsync(_testNodeId, config, cts.Token)
         );
     }
 
@@ -186,7 +187,7 @@ public class GenericNodeExecutorTests
         [NodeMethod(NodeType.Sleep)]
         public Task<SleepNodeOutput> ExecuteSleepAsync(SleepNodeConfiguration config, CancellationToken ct)
         {
-            return Task.FromResult(new SleepNodeOutput { DurationMs = config.DurationMs });
+            return Task.FromResult(new SleepNodeOutput { DurationSeconds = config.DurationSeconds });
         }
     }
 
@@ -208,7 +209,7 @@ public class GenericNodeExecutorTests
         {
             ct.ThrowIfCancellationRequested();
             await Task.Delay(1000, ct);
-            return new SleepNodeOutput { DurationMs = config.DurationMs };
+            return new SleepNodeOutput { DurationSeconds = config.DurationSeconds };
         }
     }
 

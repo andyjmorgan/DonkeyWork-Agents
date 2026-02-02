@@ -59,7 +59,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -82,7 +82,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -98,7 +98,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert
         var startOutput = (StartNodeOutput)result;
@@ -116,7 +116,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert - should succeed, validation is not the executor's job
         Assert.NotNull(result);
@@ -137,7 +137,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert
         var startOutput = (StartNodeOutput)result;
@@ -155,7 +155,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        var result = await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        var result = await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert
         var startOutput = (StartNodeOutput)result;
@@ -178,7 +178,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert
         _streamWriterMock.Verify(
@@ -195,7 +195,7 @@ public class StartNodeExecutorTests
         _contextMock.Setup(c => c.Input).Returns(input);
 
         // Act
-        await _executor.ExecuteAsync("start_1", config, CancellationToken.None);
+        await _executor.ExecuteAsync(Guid.NewGuid(), config, CancellationToken.None);
 
         // Assert
         _streamWriterMock.Verify(

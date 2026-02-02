@@ -1,3 +1,7 @@
+using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Agents.Contracts.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+
 namespace DonkeyWork.Agents.Agents.Contracts.Models;
 
 /// <summary>
@@ -13,12 +17,13 @@ public class NodeExecutionV1
     /// <summary>
     /// Node ID from the agent configuration.
     /// </summary>
-    public string NodeId { get; set; } = string.Empty;
+    public Guid NodeId { get; set; }
 
     /// <summary>
-    /// Node type (start, model, end, action).
+    /// Node type.
     /// </summary>
-    public string NodeType { get; set; } = string.Empty;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public NodeType NodeType { get; set; }
 
     /// <summary>
     /// Node name from configuration (user-friendly name).
@@ -33,7 +38,8 @@ public class NodeExecutionV1
     /// <summary>
     /// Execution status.
     /// </summary>
-    public string Status { get; set; } = string.Empty;
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public ExecutionStatus Status { get; set; }
 
     /// <summary>
     /// Input to this node (if available).

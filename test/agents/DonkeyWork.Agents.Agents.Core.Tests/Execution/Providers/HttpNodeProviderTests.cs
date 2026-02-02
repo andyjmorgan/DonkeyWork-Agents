@@ -16,21 +16,21 @@ namespace DonkeyWork.Agents.Agents.Core.Tests.Execution.Providers;
 public class HttpNodeProviderTests
 {
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
-    private readonly Mock<IExecutionContext> _executionContextMock;
+    private readonly Mock<ITemplateRenderer> _templateRendererMock;
     private readonly Mock<ILogger<HttpNodeProvider>> _loggerMock;
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
 
     public HttpNodeProviderTests()
     {
         _httpClientFactoryMock = new Mock<IHttpClientFactory>();
-        _executionContextMock = new Mock<IExecutionContext>();
+        _templateRendererMock = new Mock<ITemplateRenderer>();
         _loggerMock = new Mock<ILogger<HttpNodeProvider>>();
         _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
 
-        _executionContextMock.Setup(c => c.ExecutionId).Returns(Guid.NewGuid());
-        _executionContextMock.Setup(c => c.UserId).Returns(Guid.NewGuid());
-        _executionContextMock.Setup(c => c.Input).Returns(new { });
-        _executionContextMock.Setup(c => c.NodeOutputs).Returns(new Dictionary<string, object>());
+        // Default template renderer setup - returns input unchanged
+        _templateRendererMock
+            .Setup(r => r.RenderAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>((template, _) => Task.FromResult(template));
     }
 
     private HttpNodeProvider CreateProvider(HttpResponseMessage response)
@@ -46,7 +46,7 @@ public class HttpNodeProviderTests
         var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
         _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        return new HttpNodeProvider(_httpClientFactoryMock.Object, _executionContextMock.Object, _loggerMock.Object);
+        return new HttpNodeProvider(_httpClientFactoryMock.Object, _templateRendererMock.Object, _loggerMock.Object);
     }
 
     #region ExecuteHttpRequestAsync Tests
@@ -94,7 +94,7 @@ public class HttpNodeProviderTests
         var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
         _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _executionContextMock.Object, _loggerMock.Object);
+        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _templateRendererMock.Object, _loggerMock.Object);
 
         var config = new HttpRequestNodeConfiguration
         {
@@ -132,7 +132,7 @@ public class HttpNodeProviderTests
         var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
         _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _executionContextMock.Object, _loggerMock.Object);
+        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _templateRendererMock.Object, _loggerMock.Object);
 
         var config = new HttpRequestNodeConfiguration
         {
@@ -160,10 +160,12 @@ public class HttpNodeProviderTests
     }
 
     [Fact]
-    public async Task ExecuteHttpRequestAsync_WithTemplateInUrl_ResolvesTemplate()
+    public async Task ExecuteHttpRequestAsync_WithTemplateInUrl_CallsTemplateRenderer()
     {
         // Arrange
-        _executionContextMock.Setup(c => c.Input).Returns(new { id = "123" });
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("https://api.example.com/items/{{ Input.id }}", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("https://api.example.com/items/123");
 
         HttpRequestMessage? capturedRequest = null;
         _httpMessageHandlerMock
@@ -178,13 +180,13 @@ public class HttpNodeProviderTests
         var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
         _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _executionContextMock.Object, _loggerMock.Object);
+        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _templateRendererMock.Object, _loggerMock.Object);
 
         var config = new HttpRequestNodeConfiguration
         {
             Name = "http_1",
             Method = Contracts.Nodes.Enums.HttpMethod.Get,
-            Url = "https://api.example.com/items/{{ input.id }}",
+            Url = "https://api.example.com/items/{{ Input.id }}",
             TimeoutSeconds = 30
         };
 
@@ -194,6 +196,53 @@ public class HttpNodeProviderTests
         // Assert
         Assert.NotNull(capturedRequest);
         Assert.Equal("https://api.example.com/items/123", capturedRequest!.RequestUri!.ToString());
+        _templateRendererMock.Verify(
+            r => r.RenderAsync("https://api.example.com/items/{{ Input.id }}", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteHttpRequestAsync_WithTemplateInBody_CallsTemplateRenderer()
+    {
+        // Arrange
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("https://api.example.com/data", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("https://api.example.com/data");
+        _templateRendererMock
+            .Setup(r => r.RenderAsync("{\"name\": \"{{ Input.name }}\"}", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("{\"name\": \"Claude\"}");
+
+        HttpRequestMessage? capturedRequest = null;
+        _httpMessageHandlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") });
+
+        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+
+        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _templateRendererMock.Object, _loggerMock.Object);
+
+        var config = new HttpRequestNodeConfiguration
+        {
+            Name = "http_1",
+            Method = Contracts.Nodes.Enums.HttpMethod.Post,
+            Url = "https://api.example.com/data",
+            Body = "{\"name\": \"{{ Input.name }}\"}",
+            TimeoutSeconds = 30
+        };
+
+        // Act
+        await provider.ExecuteHttpRequestAsync(config, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(capturedRequest);
+        var body = await capturedRequest!.Content!.ReadAsStringAsync();
+        Assert.Equal("{\"name\": \"Claude\"}", body);
     }
 
     [Fact]
@@ -245,7 +294,7 @@ public class HttpNodeProviderTests
         var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
         _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _executionContextMock.Object, _loggerMock.Object);
+        var provider = new HttpNodeProvider(_httpClientFactoryMock.Object, _templateRendererMock.Object, _loggerMock.Object);
 
         var config = new HttpRequestNodeConfiguration
         {

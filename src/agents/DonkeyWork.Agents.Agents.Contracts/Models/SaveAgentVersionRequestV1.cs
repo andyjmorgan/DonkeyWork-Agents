@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
 
 namespace DonkeyWork.Agents.Agents.Contracts.Models;
 
@@ -14,10 +15,11 @@ public sealed class SaveAgentVersionRequestV1
     /// </summary>
     [JsonPropertyName("reactFlowData")]
     [Required]
-    public required JsonElement ReactFlowData { get; init; }
+    public required ReactFlowData ReactFlowData { get; init; }
 
     /// <summary>
     /// Node configurations keyed by node ID.
+    /// Kept as JsonElement to allow polymorphic deserialization via NodeConfigurationRegistry.
     /// </summary>
     [JsonPropertyName("nodeConfigurations")]
     [Required]
@@ -28,13 +30,13 @@ public sealed class SaveAgentVersionRequestV1
     /// </summary>
     [JsonPropertyName("inputSchema")]
     [Required]
-    public required JsonElement InputSchema { get; init; }
+    public required JsonDocument InputSchema { get; init; }
 
     /// <summary>
     /// Optional JSON Schema for output.
     /// </summary>
     [JsonPropertyName("outputSchema")]
-    public JsonElement? OutputSchema { get; init; }
+    public JsonDocument? OutputSchema { get; init; }
 
     /// <summary>
     /// Credential mappings (node ID to credential ID).
@@ -49,11 +51,11 @@ public sealed class SaveAgentVersionRequestV1
 public sealed class CredentialMappingV1
 {
     /// <summary>
-    /// Node ID (GUID string).
+    /// Node ID.
     /// </summary>
     [JsonPropertyName("nodeId")]
     [Required]
-    public required string NodeId { get; init; }
+    public required Guid NodeId { get; init; }
 
     /// <summary>
     /// Credential ID.

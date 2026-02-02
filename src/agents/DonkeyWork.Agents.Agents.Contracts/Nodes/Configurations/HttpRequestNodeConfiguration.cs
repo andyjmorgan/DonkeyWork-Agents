@@ -8,6 +8,12 @@ namespace DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 /// <summary>
 /// Configuration for the HttpRequest node - makes HTTP requests to external APIs.
 /// </summary>
+[Node(
+    DisplayName = "HTTP Request",
+    Description = "Make HTTP requests to external APIs",
+    Category = "Integration",
+    Icon = "globe",
+    Color = "purple")]
 public sealed class HttpRequestNodeConfiguration : NodeConfiguration
 {
     /// <inheritdoc />

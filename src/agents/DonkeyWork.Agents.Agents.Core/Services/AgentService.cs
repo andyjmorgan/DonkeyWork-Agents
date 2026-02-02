@@ -1,5 +1,8 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Agents.Contracts.Models;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Agents;
@@ -25,57 +28,80 @@ public class AgentService : IAgentService
 
         var agentId = Guid.NewGuid();
         var versionId = Guid.NewGuid();
-        var startNodeId = Guid.NewGuid().ToString();
-        var endNodeId = Guid.NewGuid().ToString();
+        var startNodeId = Guid.NewGuid();
+        var endNodeId = Guid.NewGuid();
 
         // Create default template: Start -> End
-        var defaultReactFlowData = new
-        {
-            nodes = new[]
+        var defaultInputSchema = JsonDocument.Parse("""
             {
-                new
-                {
-                    id = startNodeId,
-                    type = "start",
-                    position = new { x = 250, y = 50 },
-                    data = new { label = "start" }
+                "type": "object",
+                "properties": {
+                    "input": { "type": "string" }
                 },
-                new
+                "required": ["input"]
+            }
+            """);
+
+        var defaultReactFlowData = new ReactFlowData
+        {
+            Nodes =
+            [
+                new ReactFlowNode
                 {
-                    id = endNodeId,
-                    type = "end",
-                    position = new { x = 250, y = 250 },
-                    data = new { label = "end" }
-                }
-            },
-            edges = new[]
-            {
-                new
+                    Id = startNodeId,
+                    Type = "schemaNode",
+                    Position = new ReactFlowPosition { X = 250, Y = 50 },
+                    Data = new ReactFlowNodeData
+                    {
+                        NodeType = NodeType.Start,
+                        Label = "start",
+                        DisplayName = "Start",
+                        Icon = "play",
+                        Color = "green",
+                        HasInputHandle = false,
+                        CanDelete = false
+                    }
+                },
+                new ReactFlowNode
                 {
-                    id = Guid.NewGuid().ToString(),
-                    source = startNodeId,
-                    target = endNodeId,
-                    type = "smoothstep",
-                    animated = true
+                    Id = endNodeId,
+                    Type = "schemaNode",
+                    Position = new ReactFlowPosition { X = 250, Y = 250 },
+                    Data = new ReactFlowNodeData
+                    {
+                        NodeType = NodeType.End,
+                        Label = "end",
+                        DisplayName = "End",
+                        Icon = "flag",
+                        Color = "orange",
+                        HasOutputHandle = false,
+                        CanDelete = false
+                    }
                 }
-            },
-            viewport = new { x = 0, y = 0, zoom = 1 }
+            ],
+            Edges =
+            [
+                new ReactFlowEdge
+                {
+                    Id = Guid.NewGuid(),
+                    Source = startNodeId,
+                    Target = endNodeId
+                }
+            ],
+            Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        var defaultNodeConfigurations = new Dictionary<string, object>
+        var defaultNodeConfigurations = new Dictionary<Guid, NodeConfiguration>
         {
-            [startNodeId] = new { type = "start", name = "start_1" },
-            [endNodeId] = new { type = "end", name = "end_1" }
-        };
-
-        var defaultInputSchema = new
-        {
-            type = "object",
-            properties = new
+            [startNodeId] = new StartNodeConfiguration
             {
-                input = new { type = "string" }
+                Name = "start",
+                InputSchema = defaultInputSchema.RootElement.Clone()
             },
-            required = new[] { "input" }
+            [endNodeId] = new EndNodeConfiguration
+            {
+                Name = "end"
+            }
         };
 
         var agent = new AgentEntity
@@ -95,9 +121,9 @@ public class AgentService : IAgentService
             AgentId = agentId,
             VersionNumber = 1,
             IsDraft = true,
-            InputSchema = JsonSerializer.Serialize(defaultInputSchema),
-            ReactFlowData = JsonSerializer.Serialize(defaultReactFlowData),
-            NodeConfigurations = JsonSerializer.Serialize(defaultNodeConfigurations),
+            InputSchema = defaultInputSchema,
+            ReactFlowData = defaultReactFlowData,
+            NodeConfigurations = defaultNodeConfigurations,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };

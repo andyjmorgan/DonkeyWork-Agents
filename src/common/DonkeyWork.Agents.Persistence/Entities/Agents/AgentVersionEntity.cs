@@ -1,3 +1,7 @@
+using System.Text.Json;
+using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
+
 namespace DonkeyWork.Agents.Persistence.Entities.Agents;
 
 /// <summary>
@@ -23,22 +27,22 @@ public class AgentVersionEntity : BaseEntity
     /// <summary>
     /// JSON Schema for input validation. Stored as JSONB.
     /// </summary>
-    public string InputSchema { get; set; } = string.Empty;
+    public JsonDocument InputSchema { get; set; } = JsonDocument.Parse("{}");
 
     /// <summary>
     /// Optional JSON Schema for output. Stored as JSONB.
     /// </summary>
-    public string? OutputSchema { get; set; }
+    public JsonDocument? OutputSchema { get; set; }
 
     /// <summary>
-    /// Complete ReactFlow export data. Stored as JSONB.
+    /// Complete ReactFlow graph data. Stored as JSONB.
     /// </summary>
-    public string ReactFlowData { get; set; } = string.Empty;
+    public ReactFlowData ReactFlowData { get; set; } = new();
 
     /// <summary>
     /// Dictionary of node configurations keyed by node ID. Stored as JSONB.
     /// </summary>
-    public string NodeConfigurations { get; set; } = string.Empty;
+    public Dictionary<Guid, NodeConfiguration> NodeConfigurations { get; set; } = new();
 
     /// <summary>
     /// Timestamp when this version was published. Null for drafts.

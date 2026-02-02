@@ -1,3 +1,6 @@
+using DonkeyWork.Agents.Agents.Contracts.Enums;
+using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+
 namespace DonkeyWork.Agents.Persistence.Entities.Agents;
 
 /// <summary>
@@ -11,14 +14,14 @@ public class AgentNodeExecutionEntity : BaseEntity
     public Guid AgentExecutionId { get; set; }
 
     /// <summary>
-    /// Node ID (GUID string) from the agent version configuration.
+    /// Node ID from the agent version configuration.
     /// </summary>
-    public string NodeId { get; set; } = string.Empty;
+    public Guid NodeId { get; set; }
 
     /// <summary>
-    /// Node type (start, model, end, action).
+    /// Node type.
     /// </summary>
-    public string NodeType { get; set; } = string.Empty;
+    public NodeType NodeType { get; set; }
 
     /// <summary>
     /// Node name from configuration (user-friendly name).
@@ -33,7 +36,7 @@ public class AgentNodeExecutionEntity : BaseEntity
     /// <summary>
     /// Node execution status.
     /// </summary>
-    public string Status { get; set; } = string.Empty;
+    public ExecutionStatus Status { get; set; } = ExecutionStatus.Pending;
 
     /// <summary>
     /// Input to this node. Stored as JSONB.

@@ -5,7 +5,6 @@ using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Agents.Contracts.Nodes.Providers;
 using Microsoft.Extensions.Logging;
-using Scriban;
 
 namespace DonkeyWork.Agents.Agents.Core.Execution.Providers;
 
@@ -16,16 +15,16 @@ namespace DonkeyWork.Agents.Agents.Core.Execution.Providers;
 public class HttpNodeProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IExecutionContext _executionContext;
+    private readonly ITemplateRenderer _templateRenderer;
     private readonly ILogger<HttpNodeProvider> _logger;
 
     public HttpNodeProvider(
         IHttpClientFactory httpClientFactory,
-        IExecutionContext executionContext,
+        ITemplateRenderer templateRenderer,
         ILogger<HttpNodeProvider> logger)
     {
         _httpClientFactory = httpClientFactory;
-        _executionContext = executionContext;
+        _templateRenderer = templateRenderer;
         _logger = logger;
     }
 
@@ -34,21 +33,8 @@ public class HttpNodeProvider
         HttpRequestNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Build template context for Scriban resolution
-        var templateContext = new
-        {
-            Input = _executionContext.Input,
-            input = _executionContext.Input,
-            Steps = _executionContext.NodeOutputs,
-            steps = _executionContext.NodeOutputs,
-            ExecutionId = _executionContext.ExecutionId,
-            executionId = _executionContext.ExecutionId,
-            UserId = _executionContext.UserId,
-            userId = _executionContext.UserId
-        };
-
-        // Resolve URL with Scriban
-        var resolvedUrl = await ResolveTemplateAsync(config.Url, templateContext);
+        // Resolve URL with template renderer
+        var resolvedUrl = await _templateRenderer.RenderAsync(config.Url, cancellationToken);
 
         _logger.LogDebug("HTTP Request: {Method} {Url}", config.Method, resolvedUrl);
 
@@ -74,7 +60,7 @@ public class HttpNodeProvider
         {
             foreach (var header in config.Headers.Items)
             {
-                var resolvedValue = await ResolveTemplateAsync(header.Value, templateContext);
+                var resolvedValue = await _templateRenderer.RenderAsync(header.Value, cancellationToken);
                 request.Headers.TryAddWithoutValidation(header.Key, resolvedValue);
             }
         }
@@ -82,7 +68,7 @@ public class HttpNodeProvider
         // Add body if present
         if (!string.IsNullOrEmpty(config.Body))
         {
-            var resolvedBody = await ResolveTemplateAsync(config.Body, templateContext);
+            var resolvedBody = await _templateRenderer.RenderAsync(config.Body, cancellationToken);
             var contentType = "application/json";
             if (request.Headers.TryGetValues("Content-Type", out var contentTypes))
             {
@@ -110,22 +96,5 @@ public class HttpNodeProvider
             Body = responseBody,
             Headers = responseHeaders
         };
-    }
-
-    private static async Task<string> ResolveTemplateAsync(string template, object context)
-    {
-        if (string.IsNullOrEmpty(template))
-        {
-            return template;
-        }
-
-        var parsedTemplate = Template.Parse(template);
-        if (parsedTemplate.HasErrors)
-        {
-            var errors = string.Join("; ", parsedTemplate.Messages.Select(m => m.Message));
-            throw new InvalidOperationException($"Template parsing errors: {errors}");
-        }
-
-        return await parsedTemplate.RenderAsync(context);
     }
 }

@@ -16,6 +16,7 @@ namespace DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
 [JsonDerivedType(typeof(MessageFormatterNodeConfiguration), typeDiscriminator: "MessageFormatter")]
 [JsonDerivedType(typeof(HttpRequestNodeConfiguration), typeDiscriminator: "HttpRequest")]
 [JsonDerivedType(typeof(SleepNodeConfiguration), typeDiscriminator: "Sleep")]
+[JsonDerivedType(typeof(MultimodalChatModelNodeConfiguration), typeDiscriminator: "MultimodalChatModel")]
 public abstract class NodeConfiguration
 {
     /// <summary>
@@ -23,7 +24,6 @@ public abstract class NodeConfiguration
     /// </summary>
     [JsonPropertyName("name")]
     [Required]
-    [RegularExpression(@"^[a-z0-9_-]+$", ErrorMessage = "Name must be lowercase a-z, 0-9, hyphens, or underscores")]
     public required string Name { get; init; }
 
     /// <summary>
