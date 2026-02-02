@@ -25,8 +25,7 @@ public class ProjectsControllerTests : ControllerIntegrationTestBase
         // Arrange
         var request = TestDataBuilder.CreateProjectRequest(
             name: "My Test Project",
-            description: "A project for testing",
-            body: "Project body content",
+            content: "A project for testing",
             successCriteria: "All tests pass",
             status: ProjectStatus.NotStarted);
 
@@ -40,8 +39,7 @@ public class ProjectsControllerTests : ControllerIntegrationTestBase
         Assert.NotNull(project);
         Assert.NotEqual(Guid.Empty, project.Id);
         Assert.Equal(request.Name, project.Name);
-        Assert.Equal(request.Description, project.Description);
-        Assert.Equal(request.Body, project.Body);
+        Assert.Equal(request.Content, project.Content);
         Assert.Equal(request.SuccessCriteria, project.SuccessCriteria);
         Assert.Equal(request.Status, project.Status);
     }
@@ -141,7 +139,7 @@ public class ProjectsControllerTests : ControllerIntegrationTestBase
 
         var updateRequest = TestDataBuilder.UpdateProjectRequest(
             name: "Updated Name",
-            description: "Updated description",
+            content: "Updated content",
             status: ProjectStatus.InProgress);
 
         // Act
@@ -151,7 +149,7 @@ public class ProjectsControllerTests : ControllerIntegrationTestBase
         Assert.NotNull(updated);
         Assert.Equal(created.Id, updated.Id);
         Assert.Equal("Updated Name", updated.Name);
-        Assert.Equal("Updated description", updated.Description);
+        Assert.Equal("Updated content", updated.Content);
         Assert.Equal(ProjectStatus.InProgress, updated.Status);
     }
 

@@ -11,21 +11,15 @@ import {
   Calendar,
   FolderKanban,
   ChevronRight,
+  Save,
   Pencil,
+  LayoutDashboard,
+  StickyNote,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import {
   Select,
   SelectContent,
@@ -47,11 +41,11 @@ import {
   type ProjectDetails,
   type MilestoneDetails,
   type Todo,
-  type CreateTodoRequest,
   type MilestoneStatus,
-  type TodoStatus,
   type TodoPriority,
 } from '@/lib/api'
+
+type TabType = 'overview' | 'notes' | 'tasks'
 
 export function MilestoneDetailPage() {
   const { projectId, milestoneId } = useParams<{ projectId: string; milestoneId: string }>()
@@ -60,23 +54,22 @@ export function MilestoneDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [milestone, setMilestone] = useState<MilestoneDetails | null>(null)
+  const [activeTab, setActiveTab] = useState<TabType>('overview')
 
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isTodoDialogOpen, setIsTodoDialogOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  // Name editing
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState('')
+  const [isSavingName, setIsSavingName] = useState(false)
 
-  const [editForm, setEditForm] = useState({
-    name: '',
-    description: '',
-    dueDate: '',
-    status: 'NotStarted' as MilestoneStatus,
-  })
+  // Content editing - start in edit mode by default
+  const [isEditingContent, setIsEditingContent] = useState(true)
+  const [contentValue, setContentValue] = useState('')
+  const [isSavingContent, setIsSavingContent] = useState(false)
 
-  const [todoForm, setTodoForm] = useState<CreateTodoRequest>({
-    title: '',
-    description: '',
-    priority: 'Medium',
-  })
+  // Inline editing for status and dueDate
+  const [statusValue, setStatusValue] = useState<MilestoneStatus>('NotStarted')
+  const [dueDateValue, setDueDateValue] = useState('')
+
 
   useEffect(() => {
     if (projectId && milestoneId) {
@@ -95,6 +88,10 @@ export function MilestoneDetailPage() {
       ])
       setProject(projectData)
       setMilestone(milestoneData)
+      setNameValue(milestoneData.name)
+      setContentValue(milestoneData.content || '')
+      setStatusValue(milestoneData.status)
+      setDueDateValue(milestoneData.dueDate || '')
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -102,54 +99,84 @@ export function MilestoneDetailPage() {
     }
   }
 
-  const openEditDialog = () => {
-    if (!milestone) return
-    setEditForm({
-      name: milestone.name,
-      description: milestone.description || '',
-      dueDate: milestone.dueDate || '',
-      status: milestone.status,
-    })
-    setIsEditDialogOpen(true)
-  }
-
-  const handleUpdateMilestone = async () => {
-    if (!projectId || !milestone || !editForm.name.trim()) return
+  const handleSaveName = async () => {
+    if (!projectId || !milestone || !nameValue.trim()) return
 
     try {
-      setIsSubmitting(true)
+      setIsSavingName(true)
       await milestones.update(projectId, milestone.id, {
-        name: editForm.name,
-        description: editForm.description || undefined,
-        dueDate: editForm.dueDate || undefined,
-        status: editForm.status,
+        name: nameValue.trim(),
+        content: milestone.content,
+        status: milestone.status,
+        dueDate: milestone.dueDate || undefined,
         sortOrder: milestone.sortOrder,
       })
-      setIsEditDialogOpen(false)
-      await loadData()
+      setMilestone({ ...milestone, name: nameValue.trim() })
+      setIsEditingName(false)
     } catch (error) {
-      console.error('Failed to update milestone:', error)
+      console.error('Failed to save milestone name:', error)
     } finally {
-      setIsSubmitting(false)
+      setIsSavingName(false)
     }
   }
 
-  const handleCreateTodo = async () => {
-    if (!milestoneId || !todoForm.title.trim()) return
+  const handleSaveContent = async () => {
+    if (!projectId || !milestone) return
 
     try {
-      setIsSubmitting(true)
-      await todos.create({
-        ...todoForm,
-        milestoneId,
+      setIsSavingContent(true)
+      await milestones.update(projectId, milestone.id, {
+        name: milestone.name,
+        content: contentValue,
+        status: statusValue,
+        dueDate: dueDateValue || undefined,
+        sortOrder: milestone.sortOrder,
       })
-      setIsTodoDialogOpen(false)
-      setTodoForm({ title: '', description: '', priority: 'Medium' })
-      await loadData()
+      setMilestone({ ...milestone, content: contentValue })
+      setIsEditingContent(false)
     } catch (error) {
-      console.error('Failed to create todo:', error)
+      console.error('Failed to save milestone content:', error)
     } finally {
-      setIsSubmitting(false)
+      setIsSavingContent(false)
+    }
+  }
+
+  const handleStatusChange = async (newStatus: MilestoneStatus) => {
+    if (!projectId || !milestone) return
+
+    try {
+      setStatusValue(newStatus)
+      await milestones.update(projectId, milestone.id, {
+        name: milestone.name,
+        content: milestone.content,
+        status: newStatus,
+        dueDate: milestone.dueDate || undefined,
+        sortOrder: milestone.sortOrder,
+      })
+      setMilestone({ ...milestone, status: newStatus })
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      setStatusValue(milestone.status)
+    }
+  }
+
+  const handleDueDateChange = async (newDueDate: string) => {
+    if (!projectId || !milestone) return
+
+    try {
+      const dueDate = newDueDate ? new Date(newDueDate).toISOString() : undefined
+      setDueDateValue(dueDate || '')
+      await milestones.update(projectId, milestone.id, {
+        name: milestone.name,
+        content: milestone.content,
+        status: milestone.status,
+        dueDate,
+        sortOrder: milestone.sortOrder,
+      })
+      setMilestone({ ...milestone, dueDate })
+    } catch (error) {
+      console.error('Failed to update due date:', error)
+      setDueDateValue(milestone.dueDate || '')
     }
   }
 
@@ -164,7 +191,6 @@ export function MilestoneDetailPage() {
     })
 
     try {
-      setIsSubmitting(true)
       const newNote = await notes.create({
         title: `Untitled Note - ${timestamp}`,
         content: '',
@@ -173,21 +199,47 @@ export function MilestoneDetailPage() {
       navigate(`/notes/${newNote.id}`)
     } catch (error) {
       console.error('Failed to create note:', error)
-    } finally {
-      setIsSubmitting(false)
+    }
+  }
+
+  const createAndEditTask = async () => {
+    if (!milestoneId) return
+
+    const timestamp = new Date().toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    })
+
+    try {
+      const newTask = await todos.create({
+        title: `Untitled Task - ${timestamp}`,
+        description: '',
+        priority: 'Medium',
+        milestoneId,
+      })
+      navigate(`/tasks/${newTask.id}`)
+    } catch (error) {
+      console.error('Failed to create task:', error)
     }
   }
 
   const handleToggleTodoStatus = async (todo: Todo) => {
     try {
-      const newStatus: TodoStatus = todo.status === 'Completed' ? 'Pending' : 'Completed'
-      await todos.update(todo.id, {
-        title: todo.title,
-        description: todo.description,
-        priority: todo.priority,
-        status: newStatus,
-        sortOrder: todo.sortOrder,
-      })
+      if (todo.status === 'Completed') {
+        // Toggle back to Pending
+        await todos.update(todo.id, {
+          title: todo.title,
+          description: todo.description,
+          priority: todo.priority,
+          status: 'Pending',
+          sortOrder: todo.sortOrder,
+        })
+      } else {
+        // Delete the todo when completing
+        await todos.delete(todo.id)
+      }
       await loadData()
     } catch (error) {
       console.error('Failed to update todo:', error)
@@ -216,17 +268,6 @@ export function MilestoneDetailPage() {
     }
   }
 
-  const getStatusBadge = (status: MilestoneStatus) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      NotStarted: 'secondary',
-      InProgress: 'default',
-      Completed: 'outline',
-      OnHold: 'destructive',
-      Cancelled: 'destructive',
-    }
-    return <Badge variant={variants[status] || 'secondary'}>{status.replace(/([A-Z])/g, ' $1').trim()}</Badge>
-  }
-
   const getPriorityBadge = (priority: TodoPriority) => {
     const variants: Record<TodoPriority, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       Low: 'secondary',
@@ -236,6 +277,9 @@ export function MilestoneDetailPage() {
     }
     return <Badge variant={variants[priority]}>{priority}</Badge>
   }
+
+  const pendingTodos = milestone?.todos.filter(t => t.status !== 'Completed').length || 0
+  const completedTodos = milestone?.todos.filter(t => t.status === 'Completed').length || 0
 
   if (isLoading) {
     return (
@@ -256,6 +300,25 @@ export function MilestoneDetailPage() {
       </div>
     )
   }
+
+  const TabButton = ({ tab, icon: Icon, iconColor, label, count }: { tab: TabType; icon: React.ElementType; iconColor?: string; label: string; count?: number }) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+        activeTab === tab
+          ? 'bg-primary/10 text-primary border border-primary/30'
+          : 'text-muted-foreground hover:bg-muted'
+      }`}
+    >
+      <Icon className={`h-4 w-4 ${iconColor || ''}`} />
+      {label}
+      {count !== undefined && count > 0 && (
+        <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab ? 'bg-primary/20' : 'bg-muted'}`}>
+          {count}
+        </span>
+      )}
+    </button>
+  )
 
   return (
     <div className="space-y-6">
@@ -288,290 +351,332 @@ export function MilestoneDetailPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsTodoDialogOpen(true)}>
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Todo
+            <DropdownMenuItem onClick={() => createAndEditTask()}>
+              <CheckSquare className="h-4 w-4 mr-2 text-emerald-500" />
+              Task
             </DropdownMenuItem>
             <DropdownMenuItem onClick={createAndEditNote}>
-              <FileText className="h-4 w-4 mr-2" />
+              <FileText className="h-4 w-4 mr-2 text-blue-500" />
               Note
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Milestone Info */}
+      {/* Milestone Header with inline editing */}
       <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold">{milestone.name}</h1>
-              {getStatusBadge(milestone.status)}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {isEditingName ? (
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                className="text-xl font-bold h-10 max-w-md"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName()
+                  if (e.key === 'Escape') {
+                    setNameValue(milestone.name)
+                    setIsEditingName(false)
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                onClick={handleSaveName}
+                disabled={isSavingName || !nameValue.trim()}
+              >
+                {isSavingName && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                <Save className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setNameValue(milestone.name)
+                  setIsEditingName(false)
+                }}
+              >
+                Cancel
+              </Button>
             </div>
-            {milestone.dueDate && (
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Due: {new Date(milestone.dueDate).toLocaleDateString()}
-              </div>
-            )}
-            {milestone.description && (
-              <p className="text-sm text-muted-foreground">{milestone.description}</p>
-            )}
+          ) : (
+            <div className="flex items-center gap-2 group">
+              <h1 className="text-xl font-bold">{milestone.name}</h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => setIsEditingName(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Select value={statusValue} onValueChange={(value) => handleStatusChange(value as MilestoneStatus)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NotStarted">Not Started</SelectItem>
+                <SelectItem value="InProgress">In Progress</SelectItem>
+                <SelectItem value="OnHold">On Hold</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                className="w-[150px]"
+                value={dueDateValue ? new Date(dueDateValue).toISOString().split('T')[0] : ''}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+              />
+            </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={openEditDialog}>
-            <Pencil className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
-      {/* Todos */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <CheckSquare className="h-5 w-5" />
-            Todos ({milestone.todos.length})
-          </h2>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <TabButton tab="overview" icon={LayoutDashboard} iconColor="text-slate-500" label="Overview" />
+        <TabButton tab="notes" icon={StickyNote} iconColor="text-blue-500" label="Notes" count={milestone.notes.length} />
+        <TabButton tab="tasks" icon={CheckSquare} iconColor="text-emerald-500" label="Tasks" count={milestone.todos.length} />
+      </div>
 
-        {milestone.todos.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-8 text-center">
-            <CheckSquare className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">No todos yet</p>
-            <Button variant="outline" className="mt-4" onClick={() => setIsTodoDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Todo
-            </Button>
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="text-3xl font-bold text-amber-500">{pendingTodos}</div>
+              <div className="text-sm text-muted-foreground">Pending</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="text-3xl font-bold text-emerald-500">{completedTodos}</div>
+              <div className="text-sm text-muted-foreground">Completed</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="text-3xl font-bold text-blue-500">{milestone.notes.length}</div>
+              <div className="text-sm text-muted-foreground">Notes</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="text-3xl font-bold text-primary">
+                {milestone.todos.length > 0
+                  ? Math.round((completedTodos / milestone.todos.length) * 100)
+                  : 0}%
+              </div>
+              <div className="text-sm text-muted-foreground">Progress</div>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {milestone.todos.map((todo) => (
-              <div
-                key={todo.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
-              >
-                <button
-                  onClick={() => handleToggleTodoStatus(todo)}
-                  className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
-                    todo.status === 'Completed'
-                      ? 'bg-primary border-primary text-primary-foreground'
-                      : 'border-muted-foreground hover:border-primary'
-                  }`}
-                >
-                  {todo.status === 'Completed' && (
-                    <CheckSquare className="h-3 w-3" />
-                  )}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-medium ${
-                        todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''
-                      }`}
-                    >
-                      {todo.title}
-                    </span>
-                    {getPriorityBadge(todo.priority)}
-                  </div>
-                  {todo.description && (
-                    <p className="text-sm text-muted-foreground truncate">{todo.description}</p>
-                  )}
-                </div>
+
+          {/* Milestone Content */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Milestone Content
+              </h2>
+              {!isEditingContent ? (
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive"
-                  onClick={() => handleDeleteTodo(todo.id)}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingContent(true)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
                 </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Notes */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Notes ({milestone.notes.length})
-          </h2>
-        </div>
-
-        {milestone.notes.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-8 text-center">
-            <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">No notes yet</p>
-            <Button variant="outline" className="mt-4" onClick={createAndEditNote}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Note
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {milestone.notes.map((note) => (
-              <div
-                key={note.id}
-                className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigate(`/notes/${note.id}`)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <h4 className="font-medium truncate">{note.title}</h4>
+              ) : (
+                <div className="flex items-center gap-2">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteNote(note.id)
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setContentValue(milestone.content || '')
+                      setIsEditingContent(false)
                     }}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveContent}
+                    disabled={isSavingContent}
+                  >
+                    {isSavingContent && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
                   </Button>
                 </div>
-                {note.content && (
-                  <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{note.content}</p>
+              )}
+            </div>
+            {isEditingContent ? (
+              <div className="rounded-lg border border-border flex flex-col" style={{ height: 'calc(100vh - 450px)', minHeight: '300px' }}>
+                <MarkdownEditor
+                  content={contentValue}
+                  onChange={setContentValue}
+                  placeholder="Write your milestone content here..."
+                  className="flex-1 h-full"
+                />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-card p-4">
+                {milestone.content ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                    {milestone.content}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No content yet. Click Edit to add some.</p>
                 )}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Edit Milestone Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Milestone</DialogTitle>
-            <DialogDescription>Update milestone details.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                placeholder="Milestone name"
-              />
+      {activeTab === 'notes' && (
+        <div className="space-y-4">
+          {milestone.notes.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border p-8 text-center">
+              <StickyNote className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">No notes yet</p>
+              <Button variant="outline" className="mt-4" onClick={createAndEditNote}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Note
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                placeholder="Milestone description"
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-due-date">Due Date</Label>
-                <Input
-                  id="edit-due-date"
-                  type="date"
-                  value={editForm.dueDate ? new Date(editForm.dueDate).toISOString().split('T')[0] : ''}
-                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value ? new Date(e.target.value).toISOString() : '' })}
-                />
+          ) : (
+            <>
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={createAndEditNote}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Note
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={editForm.status}
-                  onValueChange={(value) => setEditForm({ ...editForm, status: value as MilestoneStatus })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NotStarted">Not Started</SelectItem>
-                    <SelectItem value="InProgress">In Progress</SelectItem>
-                    <SelectItem value="OnHold">On Hold</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {milestone.notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer min-h-[140px] flex flex-col"
+                    onClick={() => navigate(`/notes/${note.id}`)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-medium truncate">{note.title}</h4>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteNote(note.id)
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {note.content && (
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-5 flex-1">{note.content}</p>
+                    )}
+                    <div className="mt-auto pt-2 text-xs text-muted-foreground">
+                      {new Date(note.updatedAt || note.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateMilestone} disabled={isSubmitting || !editForm.name.trim()}>
-              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Update
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </>
+          )}
+        </div>
+      )}
 
-      {/* Todo Dialog */}
-      <Dialog open={isTodoDialogOpen} onOpenChange={setIsTodoDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Todo</DialogTitle>
-            <DialogDescription>Add a new todo to this milestone.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="todo-title">Title</Label>
-              <Input
-                id="todo-title"
-                value={todoForm.title}
-                onChange={(e) => setTodoForm({ ...todoForm, title: e.target.value })}
-                placeholder="Todo title"
-              />
+      {activeTab === 'tasks' && (
+        <div className="space-y-4">
+          {milestone.todos.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border p-8 text-center">
+              <CheckSquare className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">No tasks yet</p>
+              <Button variant="outline" className="mt-4" onClick={() => createAndEditTask()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Task
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="todo-description">Description (Markdown)</Label>
-              <Textarea
-                id="todo-description"
-                value={todoForm.description || ''}
-                onChange={(e) => setTodoForm({ ...todoForm, description: e.target.value })}
-                placeholder="Write your todo description here (supports markdown)"
-                rows={8}
-                className="font-mono text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="todo-priority">Priority</Label>
-                <Select
-                  value={todoForm.priority}
-                  onValueChange={(value) => setTodoForm({ ...todoForm, priority: value as TodoPriority })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
+          ) : (
+            <>
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => createAndEditTask()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Task
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="todo-due-date">Due Date</Label>
-                <Input
-                  id="todo-due-date"
-                  type="date"
-                  value={todoForm.dueDate ? new Date(todoForm.dueDate).toISOString().split('T')[0] : ''}
-                  onChange={(e) => setTodoForm({ ...todoForm, dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {milestone.todos.map((todo) => (
+                  <div
+                    key={todo.id}
+                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer min-h-[140px] flex flex-col"
+                    onClick={() => navigate(`/tasks/${todo.id}`)}
+                  >
+                    {/* Header with badges */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {getPriorityBadge(todo.priority)}
+                      <Badge variant={todo.status === 'Completed' ? 'default' : 'secondary'}>
+                        {todo.status}
+                      </Badge>
+                      {todo.dueDate && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(todo.dueDate).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    {/* Title and actions */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleTodoStatus(todo) }}
+                          className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors shrink-0 ${
+                            todo.status === 'Completed'
+                              ? 'bg-primary border-primary text-primary-foreground'
+                              : 'border-muted-foreground hover:border-primary'
+                          }`}
+                        >
+                          {todo.status === 'Completed' && (
+                            <CheckSquare className="h-3 w-3" />
+                          )}
+                        </button>
+                        <h4 className={`font-medium truncate ${todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
+                          {todo.title}
+                        </h4>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteTodo(todo.id)
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {/* Description */}
+                    {todo.description && (
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-3 flex-1">{todo.description}</p>
+                    )}
+                    {/* Footer */}
+                    <div className="mt-auto pt-2 text-xs text-muted-foreground">
+                      {new Date(todo.updatedAt || todo.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTodoDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateTodo} disabled={isSubmitting || !todoForm.title.trim()}>
-              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </>
+          )}
+        </div>
+      )}
+
     </div>
   )
 }

@@ -37,8 +37,7 @@ public class ProjectService : IProjectService
             Id = projectId,
             UserId = userId,
             Name = request.Name,
-            Description = request.Description,
-            Body = request.Body,
+            Content = request.Content,
             SuccessCriteria = request.SuccessCriteria,
             Status = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status,
             CreatedAt = now,
@@ -138,8 +137,7 @@ public class ProjectService : IProjectService
         var now = DateTimeOffset.UtcNow;
 
         project.Name = request.Name;
-        project.Description = request.Description;
-        project.Body = request.Body;
+        project.Content = request.Content;
         project.SuccessCriteria = request.SuccessCriteria;
         project.Status = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status;
         project.UpdatedAt = now;
@@ -221,7 +219,6 @@ public class ProjectService : IProjectService
         {
             Id = project.Id,
             Name = project.Name,
-            Description = project.Description,
             Status = (Contracts.Models.ProjectStatus)(int)project.Status,
             Tags = project.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             MilestoneCount = project.Milestones.Count,
@@ -238,8 +235,7 @@ public class ProjectService : IProjectService
         {
             Id = project.Id,
             Name = project.Name,
-            Description = project.Description,
-            Body = project.Body,
+            Content = project.Content,
             SuccessCriteria = project.SuccessCriteria,
             Status = (Contracts.Models.ProjectStatus)(int)project.Status,
             Tags = project.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
@@ -256,7 +252,7 @@ public class ProjectService : IProjectService
                 Id = m.Id,
                 ProjectId = m.ProjectId,
                 Name = m.Name,
-                Description = m.Description,
+                Content = m.Content,
                 Status = (Contracts.Models.MilestoneStatus)(int)m.Status,
                 DueDate = m.DueDate,
                 SortOrder = m.SortOrder,

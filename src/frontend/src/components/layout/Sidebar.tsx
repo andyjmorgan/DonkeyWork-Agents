@@ -13,6 +13,7 @@ interface NavItem {
   name: string
   href: string
   icon: React.ComponentType<{ className?: string }>
+  iconColor?: string
 }
 
 interface NavGroup {
@@ -26,24 +27,24 @@ const navigationGroups: NavGroup[] = [
     name: 'Agents',
     icon: Bot,
     items: [
-      { name: 'All Agents', href: '/agents', icon: List },
-      { name: 'Executions', href: '/executions', icon: PlayCircle },
+      { name: 'All Agents', href: '/agents', icon: List, iconColor: 'text-cyan-500' },
+      { name: 'Executions', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
     ],
   },
   {
     name: 'Projects',
     icon: FolderKanban,
     items: [
-      { name: 'All Projects', href: '/projects', icon: Folder },
-      { name: 'Todos', href: '/todos', icon: CheckSquare },
-      { name: 'Notes', href: '/notes', icon: StickyNote },
+      { name: 'All Projects', href: '/projects', icon: Folder, iconColor: 'text-amber-500' },
+      { name: 'Todos', href: '/todos', icon: CheckSquare, iconColor: 'text-emerald-500' },
+      { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
     ],
   },
 ]
 
 const standaloneNavigation: NavItem[] = [
-  { name: 'API Keys', href: '/api-keys', icon: Key },
-  { name: 'Secrets', href: '/secrets', icon: Lock },
+  { name: 'API Keys', href: '/api-keys', icon: Key, iconColor: 'text-yellow-500' },
+  { name: 'Secrets', href: '/secrets', icon: Lock, iconColor: 'text-rose-500' },
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {
@@ -102,7 +103,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         )
                       }
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className={cn('h-4 w-4', item.iconColor)} />
                       {item.name}
                     </NavLink>
                   ))}
@@ -126,7 +127,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                     )
                   }
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon className={cn('h-5 w-5', item.iconColor)} />
                   {item.name}
                 </NavLink>
               ))}

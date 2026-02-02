@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -57,7 +56,6 @@ export function ProjectsPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [newProject, setNewProject] = useState<CreateProjectRequest>({
     name: '',
-    description: '',
     status: 'NotStarted',
   })
 
@@ -84,7 +82,7 @@ export function ProjectsPage() {
       setIsCreating(true)
       const created = await projects.create(newProject)
       setIsDialogOpen(false)
-      setNewProject({ name: '', description: '', status: 'NotStarted' })
+      setNewProject({ name: '', status: 'NotStarted' })
       navigate(`/projects/${created.id}`)
     } catch (error) {
       console.error('Failed to create project:', error)
@@ -160,11 +158,6 @@ export function ProjectsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="font-medium">{project.name}</div>
-                    {project.description && (
-                      <div className="text-sm text-muted-foreground line-clamp-2">
-                        {project.description}
-                      </div>
-                    )}
                   </div>
                   <Badge variant="outline" className={`${statusColors[project.status]} text-white border-0`}>
                     {statusLabels[project.status]}
@@ -230,14 +223,7 @@ export function ProjectsPage() {
                 {projectsList.map((project) => (
                   <TableRow key={project.id} className="cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{project.name}</div>
-                        {project.description && (
-                          <div className="text-sm text-muted-foreground line-clamp-1">
-                            {project.description}
-                          </div>
-                        )}
-                      </div>
+                      <div className="font-medium">{project.name}</div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={`${statusColors[project.status]} text-white border-0`}>
@@ -306,16 +292,6 @@ export function ProjectsPage() {
                 value={newProject.name}
                 onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                 placeholder="Project name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={newProject.description || ''}
-                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                placeholder="Project description (optional)"
-                rows={3}
               />
             </div>
             <div className="space-y-2">

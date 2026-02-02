@@ -103,8 +103,7 @@ public class TestDataSeeder
     public async Task<ProjectEntity> SeedProjectAsync(
         Guid userId,
         string name,
-        string? description = null,
-        string? body = null,
+        string? content = null,
         ProjectStatus status = ProjectStatus.NotStarted)
     {
         var project = new ProjectEntity
@@ -112,8 +111,7 @@ public class TestDataSeeder
             Id = Guid.NewGuid(),
             UserId = userId,
             Name = name,
-            Description = description ?? "Test project description",
-            Body = body,
+            Content = content ?? "Test project content",
             Status = status
         };
 
@@ -126,7 +124,7 @@ public class TestDataSeeder
         Guid projectId,
         Guid userId,
         string name,
-        string? description = null,
+        string? content = null,
         MilestoneStatus status = MilestoneStatus.NotStarted)
     {
         var milestone = new MilestoneEntity
@@ -135,7 +133,7 @@ public class TestDataSeeder
             ProjectId = projectId,
             UserId = userId,
             Name = name,
-            Description = description ?? "Test milestone description",
+            Content = content ?? "Test milestone content",
             Status = status,
             SortOrder = 0
         };

@@ -11,9 +11,9 @@ public class MilestoneEntity : BaseEntity
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Milestone description (markdown supported).
+    /// Milestone content - a write-up of the milestone's scope (markdown supported).
     /// </summary>
-    public string? Description { get; set; }
+    public string? Content { get; set; }
 
     /// <summary>
     /// Success criteria for the milestone (markdown supported).

@@ -46,7 +46,7 @@ public class MilestoneService : IMilestoneService
             UserId = userId,
             ProjectId = projectId,
             Name = request.Name,
-            Description = request.Description,
+            Content = request.Content,
             SuccessCriteria = request.SuccessCriteria,
             Status = (Persistence.Entities.Projects.MilestoneStatus)(int)request.Status,
             DueDate = request.DueDate,
@@ -146,7 +146,7 @@ public class MilestoneService : IMilestoneService
         var now = DateTimeOffset.UtcNow;
 
         milestone.Name = request.Name;
-        milestone.Description = request.Description;
+        milestone.Content = request.Content;
         milestone.SuccessCriteria = request.SuccessCriteria;
         milestone.Status = (Persistence.Entities.Projects.MilestoneStatus)(int)request.Status;
         milestone.DueDate = request.DueDate;
@@ -225,7 +225,7 @@ public class MilestoneService : IMilestoneService
             Id = milestone.Id,
             ProjectId = milestone.ProjectId,
             Name = milestone.Name,
-            Description = milestone.Description,
+            Content = milestone.Content,
             Status = (Contracts.Models.MilestoneStatus)(int)milestone.Status,
             DueDate = milestone.DueDate,
             SortOrder = milestone.SortOrder,
@@ -244,7 +244,7 @@ public class MilestoneService : IMilestoneService
             Id = milestone.Id,
             ProjectId = milestone.ProjectId,
             Name = milestone.Name,
-            Description = milestone.Description,
+            Content = milestone.Content,
             SuccessCriteria = milestone.SuccessCriteria,
             Status = (Contracts.Models.MilestoneStatus)(int)milestone.Status,
             DueDate = milestone.DueDate,

@@ -13,11 +13,8 @@ public sealed class CreateProjectRequestV1
     [StringLength(255, MinimumLength = 1)]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
-
-    [JsonPropertyName("body")]
-    public string? Body { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }
@@ -42,11 +39,8 @@ public sealed class UpdateProjectRequestV1
     [StringLength(255, MinimumLength = 1)]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
-
-    [JsonPropertyName("body")]
-    public string? Body { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }
@@ -71,9 +65,6 @@ public sealed class ProjectSummaryV1
 
     [JsonPropertyName("name")]
     public required string Name { get; init; }
-
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
 
     [JsonPropertyName("status")]
     public ProjectStatus Status { get; init; }
@@ -108,11 +99,8 @@ public sealed class ProjectDetailsV1
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
-
-    [JsonPropertyName("body")]
-    public string? Body { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }

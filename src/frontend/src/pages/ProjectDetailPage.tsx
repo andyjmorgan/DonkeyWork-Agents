@@ -28,6 +28,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import {
   Select,
   SelectContent,
@@ -50,14 +51,12 @@ import {
   type MilestoneSummary,
   type Todo,
   type CreateMilestoneRequest,
-  type CreateTodoRequest,
   type ProjectStatus,
   type MilestoneStatus,
-  type TodoStatus,
   type TodoPriority,
 } from '@/lib/api'
 
-type DialogType = 'milestone' | 'todo' | null
+type DialogType = 'milestone' | null
 type TabType = 'overview' | 'milestones' | 'notes' | 'tasks'
 
 export function ProjectDetailPage() {
@@ -69,25 +68,19 @@ export function ProjectDetailPage() {
   const [projectMilestones, setProjectMilestones] = useState<MilestoneSummary[]>([])
   const [activeTab, setActiveTab] = useState<TabType>('overview')
 
-  // Project body editing
-  const [isEditingBody, setIsEditingBody] = useState(false)
-  const [bodyContent, setBodyContent] = useState('')
-  const [isSavingBody, setIsSavingBody] = useState(false)
+  // Project content editing - start in edit mode by default
+  const [isEditingContent, setIsEditingContent] = useState(true)
+  const [contentValue, setContentValue] = useState('')
+  const [isSavingContent, setIsSavingContent] = useState(false)
 
   const [dialogType, setDialogType] = useState<DialogType>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null)
   const [editingMilestone, setEditingMilestone] = useState<MilestoneSummary | null>(null)
 
   // Form states
   const [milestoneForm, setMilestoneForm] = useState<CreateMilestoneRequest>({
     name: '',
-    description: '',
-  })
-  const [todoForm, setTodoForm] = useState<CreateTodoRequest>({
-    title: '',
-    description: '',
-    priority: 'Medium',
+    content: '',
   })
 
   useEffect(() => {
@@ -107,7 +100,7 @@ export function ProjectDetailPage() {
       ])
       setProject(projectData)
       setProjectMilestones(milestonesData)
-      setBodyContent(projectData.body || '')
+      setContentValue(projectData.content || '')
     } catch (error) {
       console.error('Failed to load project:', error)
     } finally {
@@ -115,45 +108,41 @@ export function ProjectDetailPage() {
     }
   }
 
-  const handleSaveBody = async () => {
+  const handleSaveContent = async () => {
     if (!id || !project) return
 
     try {
-      setIsSavingBody(true)
+      setIsSavingContent(true)
       await projects.update(id, {
         name: project.name,
-        description: project.description,
         status: project.status,
         successCriteria: project.successCriteria,
-        body: bodyContent,
+        content: contentValue,
       })
-      setProject({ ...project, body: bodyContent })
-      setIsEditingBody(false)
+      setProject({ ...project, content: contentValue })
+      setIsEditingContent(false)
     } catch (error) {
-      console.error('Failed to save project body:', error)
+      console.error('Failed to save project content:', error)
     } finally {
-      setIsSavingBody(false)
+      setIsSavingContent(false)
     }
   }
 
-  const openDialog = (type: DialogType, milestoneId: string | null = null) => {
+  const openDialog = (type: DialogType) => {
     setDialogType(type)
-    setSelectedMilestoneId(milestoneId)
   }
 
   const closeDialog = () => {
     setDialogType(null)
-    setSelectedMilestoneId(null)
     setEditingMilestone(null)
-    setMilestoneForm({ name: '', description: '' })
-    setTodoForm({ title: '', description: '', priority: 'Medium' })
+    setMilestoneForm({ name: '', content: '' })
   }
 
   const openEditMilestone = (milestone: MilestoneSummary) => {
     setEditingMilestone(milestone)
     setMilestoneForm({
       name: milestone.name,
-      description: milestone.description,
+      content: milestone.content,
       dueDate: milestone.dueDate,
       status: milestone.status,
     })
@@ -186,6 +175,33 @@ export function ProjectDetailPage() {
     }
   }
 
+  const createAndEditTask = async (milestoneId: string | null = null) => {
+    if (!id) return
+
+    const timestamp = new Date().toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    })
+
+    try {
+      setIsSubmitting(true)
+      const newTask = await todos.create({
+        title: `Untitled Task - ${timestamp}`,
+        description: '',
+        priority: 'Medium',
+        projectId: milestoneId ? undefined : id,
+        milestoneId: milestoneId || undefined,
+      })
+      navigate(`/tasks/${newTask.id}`)
+    } catch (error) {
+      console.error('Failed to create task:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleCreateMilestone = async () => {
     if (!id || !milestoneForm.name.trim()) return
 
@@ -208,7 +224,7 @@ export function ProjectDetailPage() {
       setIsSubmitting(true)
       await milestones.update(id, editingMilestone.id, {
         name: milestoneForm.name,
-        description: milestoneForm.description,
+        content: milestoneForm.content,
         dueDate: milestoneForm.dueDate,
         status: milestoneForm.status || editingMilestone.status,
         sortOrder: editingMilestone.sortOrder,
@@ -217,25 +233,6 @@ export function ProjectDetailPage() {
       await loadProject()
     } catch (error) {
       console.error('Failed to update milestone:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleCreateTodo = async () => {
-    if (!id || !todoForm.title.trim()) return
-
-    try {
-      setIsSubmitting(true)
-      await todos.create({
-        ...todoForm,
-        projectId: selectedMilestoneId ? undefined : id,
-        milestoneId: selectedMilestoneId || undefined,
-      })
-      closeDialog()
-      await loadProject()
-    } catch (error) {
-      console.error('Failed to create todo:', error)
     } finally {
       setIsSubmitting(false)
     }
@@ -276,15 +273,19 @@ export function ProjectDetailPage() {
 
   const handleToggleTodoStatus = async (todo: Todo) => {
     try {
-      const newStatus: TodoStatus = todo.status === 'Completed' ? 'Pending' : 'Completed'
-      await todos.update(todo.id, {
-        title: todo.title,
-        description: todo.description,
-        priority: todo.priority,
-        status: newStatus,
-        sortOrder: todo.sortOrder,
-        completionNotes: newStatus === 'Completed' ? todo.completionNotes : undefined,
-      })
+      if (todo.status === 'Completed') {
+        // Toggle back to Pending
+        await todos.update(todo.id, {
+          title: todo.title,
+          description: todo.description,
+          priority: todo.priority,
+          status: 'Pending',
+          sortOrder: todo.sortOrder,
+        })
+      } else {
+        // Delete the todo when completing
+        await todos.delete(todo.id)
+      }
       await loadProject()
     } catch (error) {
       console.error('Failed to update todo:', error)
@@ -335,7 +336,7 @@ export function ProjectDetailPage() {
     )
   }
 
-  const TabButton = ({ tab, icon: Icon, label, count }: { tab: TabType; icon: React.ElementType; label: string; count?: number }) => (
+  const TabButton = ({ tab, icon: Icon, iconColor, label, count }: { tab: TabType; icon: React.ElementType; iconColor?: string; label: string; count?: number }) => (
     <button
       onClick={() => setActiveTab(tab)}
       className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -344,7 +345,7 @@ export function ProjectDetailPage() {
           : 'text-muted-foreground hover:bg-muted'
       }`}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className={`h-4 w-4 ${iconColor || ''}`} />
       {label}
       {count !== undefined && count > 0 && (
         <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab ? 'bg-primary/20' : 'bg-muted'}`}>
@@ -367,9 +368,6 @@ export function ProjectDetailPage() {
               <h1 className="text-2xl font-bold">{project.name}</h1>
               {getStatusBadge(project.status)}
             </div>
-            {project.description && (
-              <p className="mt-1 text-muted-foreground">{project.description}</p>
-            )}
           </div>
         </div>
         <DropdownMenu>
@@ -381,15 +379,15 @@ export function ProjectDetailPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => { openDialog('milestone'); setActiveTab('milestones') }}>
-              <Target className="h-4 w-4 mr-2" />
+              <Target className="h-4 w-4 mr-2 text-purple-500" />
               Milestone
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { openDialog('todo'); setActiveTab('tasks') }}>
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Todo
+            <DropdownMenuItem onClick={() => { createAndEditTask(null); setActiveTab('tasks') }}>
+              <CheckSquare className="h-4 w-4 mr-2 text-emerald-500" />
+              Task
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => createAndEditNote(null)}>
-              <FileText className="h-4 w-4 mr-2" />
+              <FileText className="h-4 w-4 mr-2 text-blue-500" />
               Note
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -398,10 +396,10 @@ export function ProjectDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
-        <TabButton tab="overview" icon={LayoutDashboard} label="Overview" />
-        <TabButton tab="milestones" icon={Target} label="Milestones" count={projectMilestones.length} />
-        <TabButton tab="notes" icon={StickyNote} label="Notes" count={project.notes.length} />
-        <TabButton tab="tasks" icon={CheckSquare} label="Tasks" count={project.todos.length} />
+        <TabButton tab="overview" icon={LayoutDashboard} iconColor="text-slate-500" label="Overview" />
+        <TabButton tab="milestones" icon={Target} iconColor="text-purple-500" label="Milestones" count={projectMilestones.length} />
+        <TabButton tab="notes" icon={StickyNote} iconColor="text-blue-500" label="Notes" count={project.notes.length} />
+        <TabButton tab="tasks" icon={CheckSquare} iconColor="text-emerald-500" label="Tasks" count={project.todos.length} />
       </div>
 
       {/* Tab Content */}
@@ -446,18 +444,18 @@ export function ProjectDetailPage() {
             </div>
           )}
 
-          {/* Project Body/Description */}
+          {/* Project Content */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Description
+                Project Scope
               </h2>
-              {!isEditingBody ? (
+              {!isEditingContent ? (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsEditingBody(true)}
+                  onClick={() => setIsEditingContent(true)}
                 >
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
@@ -468,39 +466,41 @@ export function ProjectDetailPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setBodyContent(project.body || '')
-                      setIsEditingBody(false)
+                      setContentValue(project.content || '')
+                      setIsEditingContent(false)
                     }}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleSaveBody}
-                    disabled={isSavingBody}
+                    onClick={handleSaveContent}
+                    disabled={isSavingContent}
                   >
-                    {isSavingBody && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {isSavingContent && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                     <Save className="h-4 w-4 mr-2" />
                     Save
                   </Button>
                 </div>
               )}
             </div>
-            {isEditingBody ? (
-              <Textarea
-                value={bodyContent}
-                onChange={(e) => setBodyContent(e.target.value)}
-                placeholder="Write your project description here (supports markdown)..."
-                className="min-h-[300px] resize-none font-mono text-sm"
-              />
+            {isEditingContent ? (
+              <div className="rounded-lg border border-border flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
+                <MarkdownEditor
+                  content={contentValue}
+                  onChange={setContentValue}
+                  placeholder="Write your project scope here..."
+                  className="flex-1 h-full"
+                />
+              </div>
             ) : (
               <div className="rounded-lg border border-border bg-card p-4">
-                {project.body ? (
+                {project.content ? (
                   <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                    {project.body}
+                    {project.content}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No description yet. Click Edit to add one.</p>
+                  <p className="text-sm text-muted-foreground italic">No project scope yet. Click Edit to add one.</p>
                 )}
               </div>
             )}
@@ -591,15 +591,15 @@ export function ProjectDetailPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditMilestone(milestone) }}>
-                              <Pencil className="h-4 w-4 mr-2" />
+                              <Pencil className="h-4 w-4 mr-2 text-amber-500" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openDialog('todo', milestone.id) }}>
-                              <CheckSquare className="h-4 w-4 mr-2" />
-                              Add Todo
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); createAndEditTask(milestone.id) }}>
+                              <CheckSquare className="h-4 w-4 mr-2 text-emerald-500" />
+                              Add Task
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); createAndEditNote(milestone.id) }}>
-                              <FileText className="h-4 w-4 mr-2" />
+                              <FileText className="h-4 w-4 mr-2 text-blue-500" />
                               Add Note
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -644,7 +644,7 @@ export function ProjectDetailPage() {
                 {project.notes.map((note) => (
                   <div
                     key={note.id}
-                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer"
+                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer min-h-[140px] flex flex-col"
                     onClick={() => navigate(`/notes/${note.id}`)}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -662,8 +662,11 @@ export function ProjectDetailPage() {
                       </Button>
                     </div>
                     {note.content && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{note.content}</p>
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-5 flex-1">{note.content}</p>
                     )}
+                    <div className="mt-auto pt-2 text-xs text-muted-foreground">
+                      {new Date(note.updatedAt || note.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -673,68 +676,140 @@ export function ProjectDetailPage() {
       )}
 
       {activeTab === 'tasks' && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {project.todos.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center">
               <CheckSquare className="h-8 w-8 mx-auto text-muted-foreground" />
-              <p className="mt-2 text-sm text-muted-foreground">No todos yet</p>
-              <Button variant="outline" className="mt-4" onClick={() => openDialog('todo')}>
+              <p className="mt-2 text-sm text-muted-foreground">No tasks yet</p>
+              <Button variant="outline" className="mt-4" onClick={() => createAndEditTask(null)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Todo
+                Add Task
               </Button>
             </div>
           ) : (
             <>
               <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => openDialog('todo')}>
+                <Button variant="outline" size="sm" onClick={() => createAndEditTask(null)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Todo
+                  Add Task
                 </Button>
               </div>
-              <div className="space-y-2">
-                {project.todos.map((todo) => (
-                  <div
-                    key={todo.id}
-                    className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
-                  >
-                    <button
-                      onClick={() => handleToggleTodoStatus(todo)}
-                      className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
-                        todo.status === 'Completed'
-                          ? 'bg-primary border-primary text-primary-foreground'
-                          : 'border-muted-foreground hover:border-primary'
-                      }`}
-                    >
-                      {todo.status === 'Completed' && (
-                        <CheckSquare className="h-3 w-3" />
-                      )}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`font-medium ${
-                            todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''
-                          }`}
-                        >
-                          {todo.title}
-                        </span>
-                        {getPriorityBadge(todo.priority)}
+
+              {/* Pending Tasks */}
+              {pendingTodos > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                    Pending
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500">
+                      {pendingTodos}
+                    </span>
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {project.todos.filter(t => t.status !== 'Completed').map((todo) => (
+                      <div
+                        key={todo.id}
+                        className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer min-h-[140px] flex flex-col"
+                        onClick={() => navigate(`/tasks/${todo.id}`)}
+                      >
+                        {/* Header with badges */}
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {getPriorityBadge(todo.priority)}
+                          <Badge variant="secondary">{todo.status}</Badge>
+                          {todo.dueDate && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(todo.dueDate).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        {/* Title and actions */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleTodoStatus(todo) }}
+                              className="h-5 w-5 rounded border-2 border-muted-foreground hover:border-primary flex items-center justify-center transition-colors shrink-0"
+                              title="Complete task"
+                            />
+                            <h4 className="font-medium truncate">{todo.title}</h4>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive shrink-0"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteTodo(todo.id) }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {/* Description */}
+                        {todo.description && (
+                          <p className="mt-2 text-sm text-muted-foreground line-clamp-3 flex-1">{todo.description}</p>
+                        )}
+                        {/* Footer */}
+                        <div className="mt-auto pt-2 text-xs text-muted-foreground">
+                          {new Date(todo.updatedAt || todo.createdAt).toLocaleDateString()}
+                        </div>
                       </div>
-                      {todo.description && (
-                        <p className="text-sm text-muted-foreground truncate">{todo.description}</p>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => handleDeleteTodo(todo.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {/* Completed Tasks */}
+              {completedTodos > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                    Completed
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500">
+                      {completedTodos}
+                    </span>
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {project.todos.filter(t => t.status === 'Completed').map((todo) => (
+                      <div
+                        key={todo.id}
+                        className="rounded-lg border border-border bg-card/50 p-4 hover:shadow-md transition-shadow cursor-pointer min-h-[140px] flex flex-col opacity-75"
+                        onClick={() => navigate(`/tasks/${todo.id}`)}
+                      >
+                        {/* Header with badges */}
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {getPriorityBadge(todo.priority)}
+                          <Badge variant="default" className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Completed</Badge>
+                        </div>
+                        {/* Title and actions */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleTodoStatus(todo) }}
+                              className="h-5 w-5 rounded border-2 bg-primary border-primary text-primary-foreground flex items-center justify-center transition-colors shrink-0"
+                              title="Mark as pending"
+                            >
+                              <CheckSquare className="h-3 w-3" />
+                            </button>
+                            <h4 className="font-medium truncate line-through text-muted-foreground">{todo.title}</h4>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive shrink-0"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteTodo(todo.id) }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {/* Description */}
+                        {todo.description && (
+                          <p className="mt-2 text-sm text-muted-foreground line-clamp-3 flex-1">{todo.description}</p>
+                        )}
+                        {/* Footer */}
+                        <div className="mt-auto pt-2 text-xs text-muted-foreground">
+                          {new Date(todo.updatedAt || todo.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -760,12 +835,12 @@ export function ProjectDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="milestone-description">Description</Label>
+              <Label htmlFor="milestone-content">Content</Label>
               <Textarea
-                id="milestone-description"
-                value={milestoneForm.description || ''}
-                onChange={(e) => setMilestoneForm({ ...milestoneForm, description: e.target.value })}
-                placeholder="Milestone description"
+                id="milestone-content"
+                value={milestoneForm.content || ''}
+                onChange={(e) => setMilestoneForm({ ...milestoneForm, content: e.target.value })}
+                placeholder="Milestone content"
                 rows={3}
               />
             </div>
@@ -814,74 +889,6 @@ export function ProjectDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Todo Dialog */}
-      <Dialog open={dialogType === 'todo'} onOpenChange={closeDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Todo</DialogTitle>
-            <DialogDescription>
-              Add a new todo to {selectedMilestoneId ? 'this milestone' : 'this project'}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="todo-title">Title</Label>
-              <Input
-                id="todo-title"
-                value={todoForm.title}
-                onChange={(e) => setTodoForm({ ...todoForm, title: e.target.value })}
-                placeholder="Todo title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="todo-description">Description (Markdown)</Label>
-              <Textarea
-                id="todo-description"
-                value={todoForm.description || ''}
-                onChange={(e) => setTodoForm({ ...todoForm, description: e.target.value })}
-                placeholder="Write your todo description here (supports markdown)"
-                rows={8}
-                className="font-mono text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="todo-priority">Priority</Label>
-                <Select
-                  value={todoForm.priority}
-                  onValueChange={(value) => setTodoForm({ ...todoForm, priority: value as TodoPriority })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="todo-due-date">Due Date</Label>
-                <Input
-                  id="todo-due-date"
-                  type="date"
-                  value={todoForm.dueDate ? new Date(todoForm.dueDate).toISOString().split('T')[0] : ''}
-                  onChange={(e) => setTodoForm({ ...todoForm, dueDate: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-            <Button onClick={handleCreateTodo} disabled={isSubmitting || !todoForm.title.trim()}>
-              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

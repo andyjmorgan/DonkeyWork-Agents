@@ -526,7 +526,6 @@ export interface FileReferenceRequest {
 export interface ProjectSummary {
   id: string
   name: string
-  description?: string
   status: ProjectStatus
   tags: Tag[]
   milestoneCount: number
@@ -539,8 +538,7 @@ export interface ProjectSummary {
 export interface ProjectDetails {
   id: string
   name: string
-  description?: string
-  body?: string
+  content?: string
   successCriteria?: string
   status: ProjectStatus
   tags: Tag[]
@@ -554,8 +552,7 @@ export interface ProjectDetails {
 
 export interface CreateProjectRequest {
   name: string
-  description?: string
-  body?: string
+  content?: string
   successCriteria?: string
   status?: ProjectStatus
   tags?: TagRequest[]
@@ -564,8 +561,7 @@ export interface CreateProjectRequest {
 
 export interface UpdateProjectRequest {
   name: string
-  description?: string
-  body?: string
+  content?: string
   successCriteria?: string
   status: ProjectStatus
   tags?: TagRequest[]
@@ -576,7 +572,7 @@ export interface MilestoneSummary {
   id: string
   projectId: string
   name: string
-  description?: string
+  content?: string
   status: MilestoneStatus
   dueDate?: string
   sortOrder: number
@@ -591,7 +587,7 @@ export interface MilestoneDetails {
   id: string
   projectId: string
   name: string
-  description?: string
+  content?: string
   successCriteria?: string
   status: MilestoneStatus
   dueDate?: string
@@ -606,7 +602,7 @@ export interface MilestoneDetails {
 
 export interface CreateMilestoneRequest {
   name: string
-  description?: string
+  content?: string
   successCriteria?: string
   status?: MilestoneStatus
   dueDate?: string
@@ -617,7 +613,7 @@ export interface CreateMilestoneRequest {
 
 export interface UpdateMilestoneRequest {
   name: string
-  description?: string
+  content?: string
   successCriteria?: string
   status: MilestoneStatus
   dueDate?: string

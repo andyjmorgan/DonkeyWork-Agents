@@ -25,8 +25,8 @@ public class MilestoneConfiguration : IEntityTypeConfiguration<MilestoneEntity>
             .IsRequired()
             .HasMaxLength(255);
 
-        builder.Property(e => e.Description)
-            .HasColumnName("description");
+        builder.Property(e => e.Content)
+            .HasColumnName("content");
 
         builder.Property(e => e.SuccessCriteria)
             .HasColumnName("success_criteria");

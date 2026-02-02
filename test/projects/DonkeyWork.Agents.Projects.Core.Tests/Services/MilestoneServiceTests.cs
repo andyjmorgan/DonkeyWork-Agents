@@ -43,7 +43,7 @@ public class MilestoneServiceTests : IDisposable
         var request = new CreateMilestoneRequestV1
         {
             Name = "test-milestone",
-            Description = "Test description",
+            Content = "Test content",
             DueDate = DateTimeOffset.UtcNow.AddDays(30)
         };
 
@@ -54,7 +54,7 @@ public class MilestoneServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.Id);
         Assert.Equal(request.Name, result.Name);
-        Assert.Equal(request.Description, result.Description);
+        Assert.Equal(request.Content, result.Content);
         Assert.Equal(project.Id, result.ProjectId);
         Assert.Equal(MilestoneStatus.NotStarted, result.Status);
 
@@ -240,7 +240,7 @@ public class MilestoneServiceTests : IDisposable
         var updateRequest = new UpdateMilestoneRequestV1
         {
             Name = "updated-milestone",
-            Description = "Updated description",
+            Content = "Updated content",
             Status = MilestoneStatus.InProgress,
             SortOrder = 5,
             DueDate = DateTimeOffset.UtcNow.AddDays(60)
@@ -253,7 +253,7 @@ public class MilestoneServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(milestone.Id, result.Id);
         Assert.Equal(updateRequest.Name, result.Name);
-        Assert.Equal(updateRequest.Description, result.Description);
+        Assert.Equal(updateRequest.Content, result.Content);
         Assert.Equal(updateRequest.Status, result.Status);
         Assert.Equal(updateRequest.SortOrder, result.SortOrder);
     }

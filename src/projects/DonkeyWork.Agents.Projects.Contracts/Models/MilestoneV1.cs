@@ -13,8 +13,8 @@ public sealed class CreateMilestoneRequestV1
     [StringLength(255, MinimumLength = 1)]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }
@@ -45,8 +45,8 @@ public sealed class UpdateMilestoneRequestV1
     [StringLength(255, MinimumLength = 1)]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }
@@ -81,8 +81,8 @@ public sealed class MilestoneSummaryV1
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     [JsonPropertyName("status")]
     public MilestoneStatus Status { get; init; }
@@ -123,8 +123,8 @@ public sealed class MilestoneDetailsV1
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }

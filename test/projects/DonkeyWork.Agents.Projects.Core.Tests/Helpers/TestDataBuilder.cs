@@ -27,13 +27,13 @@ public class TestDataBuilder
     /// </summary>
     public static CreateProjectRequestV1 CreateProjectRequest(
         string name = "test-project",
-        string? description = "Test description",
+        string? content = "Test content",
         string? successCriteria = null)
     {
         return new CreateProjectRequestV1
         {
             Name = name,
-            Description = description,
+            Content = content,
             SuccessCriteria = successCriteria
         };
     }
@@ -52,7 +52,7 @@ public class TestDataBuilder
             Id = id ?? Guid.NewGuid(),
             UserId = userId ?? _defaultUserId,
             Name = name,
-            Description = "Test description",
+            Content = "Test content",
             Status = status,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
@@ -68,13 +68,13 @@ public class TestDataBuilder
     /// </summary>
     public static CreateMilestoneRequestV1 CreateMilestoneRequest(
         string name = "test-milestone",
-        string? description = "Test milestone description",
+        string? content = "Test milestone content",
         DateTimeOffset? dueDate = null)
     {
         return new CreateMilestoneRequestV1
         {
             Name = name,
-            Description = description,
+            Content = content,
             DueDate = dueDate
         };
     }
@@ -96,7 +96,7 @@ public class TestDataBuilder
             ProjectId = projectId ?? Guid.NewGuid(),
             UserId = userId ?? _defaultUserId,
             Name = name,
-            Description = "Test milestone description",
+            Content = "Test milestone content",
             Status = status,
             SortOrder = sortOrder,
             CreatedAt = DateTimeOffset.UtcNow,

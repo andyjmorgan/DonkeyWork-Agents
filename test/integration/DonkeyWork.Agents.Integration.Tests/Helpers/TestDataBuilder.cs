@@ -27,16 +27,14 @@ public static class TestDataBuilder
 
     public static CreateProjectRequestV1 CreateProjectRequest(
         string? name = null,
-        string? description = null,
-        string? body = null,
+        string? content = null,
         string? successCriteria = null,
         ProjectStatus status = ProjectStatus.NotStarted)
     {
         return new CreateProjectRequestV1
         {
             Name = name ?? $"Test Project {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Test project description",
-            Body = body,
+            Content = content ?? "Test project content",
             SuccessCriteria = successCriteria,
             Status = status
         };
@@ -44,16 +42,14 @@ public static class TestDataBuilder
 
     public static UpdateProjectRequestV1 UpdateProjectRequest(
         string? name = null,
-        string? description = null,
-        string? body = null,
+        string? content = null,
         string? successCriteria = null,
         ProjectStatus status = ProjectStatus.InProgress)
     {
         return new UpdateProjectRequestV1
         {
             Name = name ?? $"Updated Project {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Updated project description",
-            Body = body,
+            Content = content ?? "Updated project content",
             SuccessCriteria = successCriteria,
             Status = status
         };
@@ -168,26 +164,26 @@ public static class TestDataBuilder
 
     public static CreateMilestoneRequestV1 CreateMilestoneRequest(
         string? name = null,
-        string? description = null,
+        string? content = null,
         MilestoneStatus status = MilestoneStatus.NotStarted)
     {
         return new CreateMilestoneRequestV1
         {
             Name = name ?? $"Test Milestone {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Test milestone description",
+            Content = content ?? "Test milestone content",
             Status = status
         };
     }
 
     public static UpdateMilestoneRequestV1 UpdateMilestoneRequest(
         string? name = null,
-        string? description = null,
+        string? content = null,
         MilestoneStatus status = MilestoneStatus.InProgress)
     {
         return new UpdateMilestoneRequestV1
         {
             Name = name ?? $"Updated Milestone {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Updated milestone description",
+            Content = content ?? "Updated milestone content",
             Status = status
         };
     }

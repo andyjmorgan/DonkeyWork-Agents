@@ -40,7 +40,7 @@ public class ProjectServiceTests : IDisposable
         var request = new CreateProjectRequestV1
         {
             Name = "test-project",
-            Description = "Test description",
+            Content = "Test content",
             SuccessCriteria = "Must pass all tests"
         };
 
@@ -51,7 +51,7 @@ public class ProjectServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.Id);
         Assert.Equal(request.Name, result.Name);
-        Assert.Equal(request.Description, result.Description);
+        Assert.Equal(request.Content, result.Content);
         Assert.Equal(request.SuccessCriteria, result.SuccessCriteria);
         Assert.Equal(ProjectStatus.NotStarted, result.Status);
         Assert.True(result.CreatedAt <= DateTimeOffset.UtcNow);
@@ -87,13 +87,13 @@ public class ProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_WithNullDescription_CreatesSuccessfully()
+    public async Task CreateAsync_WithNullContent_CreatesSuccessfully()
     {
         // Arrange
         var request = new CreateProjectRequestV1
         {
             Name = "test-project",
-            Description = null
+            Content = null
         };
 
         // Act
@@ -101,7 +101,7 @@ public class ProjectServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.Description);
+        Assert.Null(result.Content);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class ProjectServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(project.Id, result.Id);
         Assert.Equal(project.Name, result.Name);
-        Assert.Equal(project.Description, result.Description);
+        Assert.Equal(project.Content, result.Content);
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public class ProjectServiceTests : IDisposable
         var updateRequest = new UpdateProjectRequestV1
         {
             Name = "updated-name",
-            Description = "Updated description",
+            Content = "Updated content",
             SuccessCriteria = "New criteria",
             Status = ProjectStatus.InProgress
         };
@@ -242,7 +242,7 @@ public class ProjectServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(project.Id, result.Id);
         Assert.Equal(updateRequest.Name, result.Name);
-        Assert.Equal(updateRequest.Description, result.Description);
+        Assert.Equal(updateRequest.Content, result.Content);
         Assert.Equal(updateRequest.SuccessCriteria, result.SuccessCriteria);
         Assert.Equal(updateRequest.Status, result.Status);
 
@@ -363,7 +363,7 @@ public class ProjectServiceTests : IDisposable
         var request = new CreateProjectRequestV1
         {
             Name = "",
-            Description = "Test"
+            Content = "Test"
         };
 
         // Act & Assert - service should accept it (validation is controller's job)

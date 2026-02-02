@@ -33,7 +33,7 @@ public class MilestonesControllerTests : ControllerIntegrationTestBase
         var project = await CreateProjectAsync();
         var request = TestDataBuilder.CreateMilestoneRequest(
             name: "Sprint 1",
-            description: "First sprint milestone");
+            content: "First sprint milestone");
 
         // Act
         var response = await PostResponseAsync(MilestonesUrl(project.Id), request);
@@ -46,7 +46,7 @@ public class MilestonesControllerTests : ControllerIntegrationTestBase
         Assert.NotEqual(Guid.Empty, milestone.Id);
         Assert.Equal(project.Id, milestone.ProjectId);
         Assert.Equal("Sprint 1", milestone.Name);
-        Assert.Equal("First sprint milestone", milestone.Description);
+        Assert.Equal("First sprint milestone", milestone.Content);
         Assert.Equal(MilestoneStatus.NotStarted, milestone.Status);
     }
 
@@ -168,7 +168,7 @@ public class MilestonesControllerTests : ControllerIntegrationTestBase
 
         var updateRequest = TestDataBuilder.UpdateMilestoneRequest(
             name: "Updated Sprint",
-            description: "Updated description",
+            content: "Updated content",
             status: MilestoneStatus.InProgress);
 
         // Act
@@ -178,7 +178,7 @@ public class MilestonesControllerTests : ControllerIntegrationTestBase
         Assert.NotNull(updated);
         Assert.Equal(created.Id, updated.Id);
         Assert.Equal("Updated Sprint", updated.Name);
-        Assert.Equal("Updated description", updated.Description);
+        Assert.Equal("Updated content", updated.Content);
         Assert.Equal(MilestoneStatus.InProgress, updated.Status);
     }
 
