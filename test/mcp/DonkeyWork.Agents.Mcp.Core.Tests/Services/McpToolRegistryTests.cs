@@ -52,8 +52,8 @@ public class McpToolRegistryTests
         // Assert
         var tools = registry.GetAllTools();
 
-        // TestMcpTools has 2 tools, AnotherTestMcpTools has 1 tool
-        Assert.True(tools.Count >= 3, $"Expected at least 3 tools, found {tools.Count}");
+        // TestMcpTools has 3 tools, AnotherTestMcpTools has 2 tools
+        Assert.True(tools.Count >= 5, $"Expected at least 5 tools, found {tools.Count}");
     }
 
     [Fact]
