@@ -37,10 +37,11 @@ public class AuthController : ControllerBase
     /// Initiates the OAuth2 authorization code flow with PKCE.
     /// Redirects the user to Keycloak for authentication.
     /// </summary>
+    /// <param name="idpHint">Optional identity provider hint (e.g., "github") to skip Keycloak login screen.</param>
     /// <returns>Redirect to Keycloak authorization endpoint.</returns>
     [HttpGet("login")]
     [ProducesResponseType(StatusCodes.Status302Found)]
-    public IActionResult Login()
+    public IActionResult Login([FromQuery] string? idpHint = null)
     {
         // Generate PKCE code verifier and challenge
         var codeVerifier = GenerateCodeVerifier();
@@ -66,6 +67,12 @@ public class AuthController : ControllerBase
             $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
             $"&code_challenge={Uri.EscapeDataString(codeChallenge)}" +
             $"&code_challenge_method=S256";
+
+        // Add identity provider hint if specified (e.g., "github" to skip Keycloak login screen)
+        if (!string.IsNullOrEmpty(idpHint))
+        {
+            authorizationUrl += $"&kc_idp_hint={Uri.EscapeDataString(idpHint)}";
+        }
 
         return Redirect(authorizationUrl);
     }

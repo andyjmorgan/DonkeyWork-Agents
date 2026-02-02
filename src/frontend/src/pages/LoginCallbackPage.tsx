@@ -63,7 +63,7 @@ export function LoginCallbackPage() {
     window.history.replaceState(null, '', window.location.pathname)
 
     // Redirect to the app
-    navigate('/agents', { replace: true })
+    navigate('/orchestrations', { replace: true })
   }, [navigate, setTokens, setUser])
 
   if (error) {

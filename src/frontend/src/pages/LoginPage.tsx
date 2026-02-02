@@ -1,21 +1,15 @@
 import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { Logo } from '@/components/branding/Logo'
+import { Github } from 'lucide-react'
 
 export function LoginPage() {
-  const handleLogin = () => {
-    // Redirect to backend auth endpoint which handles PKCE and Keycloak redirect
-    window.location.href = '/api/v1/auth/login'
+  const handleGitHubLogin = () => {
+    // Redirect to backend auth endpoint with GitHub identity provider hint
+    window.location.href = '/api/v1/auth/login?idpHint=github'
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4">
-        <Logo size="sm" />
-        <ThemeToggle />
-      </header>
-
       {/* Main content */}
       <main className="flex flex-1 flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-6 text-center">
@@ -32,9 +26,10 @@ export function LoginPage() {
           <Button
             size="lg"
             className="w-full"
-            onClick={handleLogin}
+            onClick={handleGitHubLogin}
           >
-            Sign In
+            <Github className="mr-2 h-5 w-5" />
+            Sign in with GitHub
           </Button>
         </div>
       </main>
