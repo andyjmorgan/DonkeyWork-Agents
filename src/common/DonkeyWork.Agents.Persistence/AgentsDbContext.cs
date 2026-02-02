@@ -1,5 +1,6 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence.Entities;
+using DonkeyWork.Agents.Persistence.Entities.Conversations;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Mcp;
 using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
@@ -59,6 +60,10 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<NoteTagEntity> NoteTags => Set<NoteTagEntity>();
     public DbSet<ProjectFileReferenceEntity> ProjectFileReferences => Set<ProjectFileReferenceEntity>();
     public DbSet<MilestoneFileReferenceEntity> MilestoneFileReferences => Set<MilestoneFileReferenceEntity>();
+
+    // Conversations module
+    public DbSet<ConversationEntity> Conversations => Set<ConversationEntity>();
+    public DbSet<ConversationMessageEntity> ConversationMessages => Set<ConversationMessageEntity>();
 
     // MCP module (system-level logging, no user scoping)
     public DbSet<McpToolInvocationLogEntity> McpToolInvocationLogs => Set<McpToolInvocationLogEntity>();

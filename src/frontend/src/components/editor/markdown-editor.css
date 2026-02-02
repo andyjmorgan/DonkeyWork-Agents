@@ -284,3 +284,246 @@
   --tw-prose-th-borders: hsl(var(--border));
   --tw-prose-td-borders: hsl(var(--border));
 }
+
+/* ===========================================
+   Syntax Highlighting (lowlight/highlight.js)
+   GitHub Dark-inspired theme
+   =========================================== */
+
+/* Keywords: if, else, return, function, class, etc. */
+.markdown-editor .hljs-keyword,
+.markdown-editor .hljs-selector-tag,
+.markdown-editor .hljs-built_in,
+.markdown-editor .hljs-name {
+  color: #ff7b72;
+}
+
+/* Strings */
+.markdown-editor .hljs-string,
+.markdown-editor .hljs-attr,
+.markdown-editor .hljs-template-variable,
+.markdown-editor .hljs-template-tag {
+  color: #a5d6ff;
+}
+
+/* Numbers */
+.markdown-editor .hljs-number,
+.markdown-editor .hljs-literal {
+  color: #79c0ff;
+}
+
+/* Types: class names, types, etc. */
+.markdown-editor .hljs-type,
+.markdown-editor .hljs-title,
+.markdown-editor .hljs-class .hljs-title,
+.markdown-editor .hljs-title.class_,
+.markdown-editor .hljs-section {
+  color: #ffa657;
+}
+
+/* Functions */
+.markdown-editor .hljs-title.function_,
+.markdown-editor .hljs-function .hljs-title {
+  color: #d2a8ff;
+}
+
+/* Variables and params */
+.markdown-editor .hljs-variable,
+.markdown-editor .hljs-params,
+.markdown-editor .hljs-property {
+  color: #c9d1d9;
+}
+
+/* Comments */
+.markdown-editor .hljs-comment,
+.markdown-editor .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+
+/* Attributes in HTML/XML */
+.markdown-editor .hljs-attribute {
+  color: #79c0ff;
+}
+
+/* Tags in HTML/XML */
+.markdown-editor .hljs-tag {
+  color: #7ee787;
+}
+
+/* Regex, special */
+.markdown-editor .hljs-regexp,
+.markdown-editor .hljs-symbol {
+  color: #7ee787;
+}
+
+/* Meta, preprocessor */
+.markdown-editor .hljs-meta,
+.markdown-editor .hljs-meta .hljs-keyword,
+.markdown-editor .hljs-meta .hljs-string {
+  color: #79c0ff;
+}
+
+/* Deletion (diff) */
+.markdown-editor .hljs-deletion {
+  color: #ffa198;
+  background-color: rgba(255, 123, 114, 0.15);
+}
+
+/* Addition (diff) */
+.markdown-editor .hljs-addition {
+  color: #7ee787;
+  background-color: rgba(63, 185, 80, 0.15);
+}
+
+/* Bold/Strong */
+.markdown-editor .hljs-strong {
+  font-weight: bold;
+}
+
+/* Emphasis */
+.markdown-editor .hljs-emphasis {
+  font-style: italic;
+}
+
+/* Punctuation */
+.markdown-editor .hljs-punctuation {
+  color: #8b949e;
+}
+
+/* Operator */
+.markdown-editor .hljs-operator {
+  color: #ff7b72;
+}
+
+/* Light mode overrides */
+.markdown-editor:not(.dark) .hljs-keyword,
+.markdown-editor:not(.dark) .hljs-selector-tag,
+.markdown-editor:not(.dark) .hljs-built_in,
+.markdown-editor:not(.dark) .hljs-name {
+  color: #cf222e;
+}
+
+.markdown-editor:not(.dark) .hljs-string,
+.markdown-editor:not(.dark) .hljs-attr,
+.markdown-editor:not(.dark) .hljs-template-variable,
+.markdown-editor:not(.dark) .hljs-template-tag {
+  color: #0a3069;
+}
+
+.markdown-editor:not(.dark) .hljs-number,
+.markdown-editor:not(.dark) .hljs-literal {
+  color: #0550ae;
+}
+
+.markdown-editor:not(.dark) .hljs-type,
+.markdown-editor:not(.dark) .hljs-title,
+.markdown-editor:not(.dark) .hljs-class .hljs-title,
+.markdown-editor:not(.dark) .hljs-title.class_,
+.markdown-editor:not(.dark) .hljs-section {
+  color: #953800;
+}
+
+.markdown-editor:not(.dark) .hljs-title.function_,
+.markdown-editor:not(.dark) .hljs-function .hljs-title {
+  color: #8250df;
+}
+
+.markdown-editor:not(.dark) .hljs-variable,
+.markdown-editor:not(.dark) .hljs-params,
+.markdown-editor:not(.dark) .hljs-property {
+  color: #24292f;
+}
+
+.markdown-editor:not(.dark) .hljs-comment,
+.markdown-editor:not(.dark) .hljs-quote {
+  color: #6e7781;
+}
+
+.markdown-editor:not(.dark) .hljs-attribute {
+  color: #0550ae;
+}
+
+.markdown-editor:not(.dark) .hljs-tag {
+  color: #116329;
+}
+
+.markdown-editor:not(.dark) .hljs-regexp,
+.markdown-editor:not(.dark) .hljs-symbol {
+  color: #116329;
+}
+
+.markdown-editor:not(.dark) .hljs-deletion {
+  color: #82071e;
+  background-color: rgba(255, 129, 130, 0.15);
+}
+
+.markdown-editor:not(.dark) .hljs-addition {
+  color: #116329;
+  background-color: rgba(46, 160, 67, 0.15);
+}
+
+.markdown-editor:not(.dark) .hljs-operator {
+  color: #cf222e;
+}
+
+/* ===========================================
+   Mermaid Diagram Styling
+   =========================================== */
+
+.markdown-editor .mermaid-block-wrapper {
+  margin: 1rem 0;
+}
+
+.markdown-editor .mermaid-block-container {
+  position: relative;
+  background: hsl(var(--muted));
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.markdown-editor .mermaid-block-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: hsl(var(--muted) / 0.8);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.markdown-editor .mermaid-block-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.markdown-editor .mermaid-diagram {
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  background: hsl(var(--background));
+}
+
+.markdown-editor .mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-editor .mermaid-error {
+  padding: 1rem;
+  color: hsl(var(--destructive));
+  font-size: 0.875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.markdown-editor .mermaid-source {
+  padding: 0.75rem 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: hsl(var(--foreground));
+}

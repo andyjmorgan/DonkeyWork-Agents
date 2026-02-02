@@ -83,7 +83,7 @@ export function ProjectsPage() {
       const created = await projects.create(newProject)
       setIsDialogOpen(false)
       setNewProject({ name: '', status: 'NotStarted' })
-      navigate(`/projects/${created.id}`)
+      navigate(`/workspace/${created.id}`)
     } catch (error) {
       console.error('Failed to create project:', error)
     } finally {
@@ -183,7 +183,7 @@ export function ProjectsPage() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => navigate(`/projects/${project.id}`)}
+                      onClick={() => navigate(`/workspace/${project.id}`)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -221,7 +221,7 @@ export function ProjectsPage() {
               </TableHeader>
               <TableBody>
                 {projectsList.map((project) => (
-                  <TableRow key={project.id} className="cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
+                  <TableRow key={project.id} className="cursor-pointer" onClick={() => navigate(`/workspace/${project.id}`)}>
                     <TableCell>
                       <div className="font-medium">{project.name}</div>
                     </TableCell>
@@ -248,7 +248,7 @@ export function ProjectsPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => navigate(`/projects/${project.id}`)}
+                          onClick={() => navigate(`/workspace/${project.id}`)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>

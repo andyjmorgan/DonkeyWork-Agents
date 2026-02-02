@@ -9,12 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MermaidBlock } from './MermaidBlock'
 
 const COPY_SUCCESS_DURATION = 2000
 
 // Common programming languages supported by lowlight
 const LANGUAGES = [
   { value: 'plaintext', label: 'Plain Text' },
+  { value: 'mermaid', label: 'Mermaid Diagram' },
   { value: 'javascript', label: 'JavaScript' },
   { value: 'typescript', label: 'TypeScript' },
   { value: 'python', label: 'Python' },
@@ -41,10 +43,16 @@ const LANGUAGES = [
   { value: 'dockerfile', label: 'Dockerfile' },
 ]
 
-export function CodeBlockWithCopy({ node, updateAttributes }: NodeViewProps) {
+export function CodeBlockWithCopy(props: NodeViewProps) {
+  const { node, updateAttributes } = props
   const [copied, setCopied] = useState(false)
   const preRef = useRef<HTMLPreElement>(null)
   const currentLanguage = node.attrs.language || 'plaintext'
+
+  // Render MermaidBlock for mermaid language
+  if (currentLanguage === 'mermaid') {
+    return <MermaidBlock {...props} />
+  }
 
   const handleCopy = async () => {
     if (preRef.current) {

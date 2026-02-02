@@ -293,7 +293,7 @@ export function MilestoneDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <p className="text-muted-foreground">Milestone not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/projects')}>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/workspace')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Projects
         </Button>
@@ -325,21 +325,21 @@ export function MilestoneDetailPage() {
       {/* Breadcrumb Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/projects/${projectId}`)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/workspace/${projectId}`)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
             <button
-              onClick={() => navigate(`/projects/${projectId}`)}
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+              onClick={() => navigate(`/workspace/${projectId}`)}
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors min-w-0"
             >
               <FolderKanban className="h-4 w-4 shrink-0" />
-              <span className="truncate max-w-[200px]">{project.name}</span>
+              <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{project.name}</span>
             </button>
             <ChevronRight className="h-4 w-4 shrink-0" />
-            <span className="flex items-center gap-1.5 text-foreground font-medium">
+            <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
               <Target className="h-4 w-4 shrink-0" />
-              <span className="truncate">{milestone.name}</span>
+              <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{milestone.name}</span>
             </span>
           </div>
         </div>

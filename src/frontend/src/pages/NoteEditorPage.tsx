@@ -59,7 +59,7 @@ export function NoteEditorPage() {
       })
       // Navigate back
       if (project) {
-        navigate(`/projects/${project.id}`)
+        navigate(`/workspace/${project.id}`)
       } else {
         navigate('/notes')
       }
@@ -76,7 +76,7 @@ export function NoteEditorPage() {
     try {
       await notes.delete(note.id)
       if (project) {
-        navigate(`/projects/${project.id}`)
+        navigate(`/workspace/${project.id}`)
       } else {
         navigate('/notes')
       }
@@ -87,7 +87,7 @@ export function NoteEditorPage() {
 
   const handleBack = () => {
     if (project) {
-      navigate(`/projects/${project.id}`)
+      navigate(`/workspace/${project.id}`)
     } else {
       navigate('/notes')
     }
@@ -125,16 +125,16 @@ export function NoteEditorPage() {
             {project ? (
               <>
                 <button
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                  onClick={() => navigate(`/workspace/${project.id}`)}
+                  className="flex items-center gap-1.5 hover:text-foreground transition-colors min-w-0"
                 >
                   <FolderKanban className="h-4 w-4 shrink-0" />
-                  <span className="truncate max-w-[200px]">{project.name}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{project.name}</span>
                 </button>
                 <ChevronRight className="h-4 w-4 shrink-0" />
-                <span className="flex items-center gap-1.5 text-foreground font-medium">
+                <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
                   <FileText className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{note.title}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{note.title}</span>
                 </span>
               </>
             ) : (
@@ -147,9 +147,9 @@ export function NoteEditorPage() {
                   <span>Notes</span>
                 </button>
                 <ChevronRight className="h-4 w-4 shrink-0" />
-                <span className="flex items-center gap-1.5 text-foreground font-medium">
+                <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
                   <FileText className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{note.title}</span>
+                  <span className="truncate max-w-[100px] sm:max-w-[150px] md:max-w-[250px]">{note.title}</span>
                 </span>
               </>
             )}

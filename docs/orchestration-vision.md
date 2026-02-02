@@ -15,12 +15,12 @@ This document outlines the vision for evolving the current agent system into a c
 | **Chat** | Conversational interface with multi-turn memory | ✓ |
 | **Webhook** | Inbound HTTP triggers for deterministic flows | ✗ |
 
-### Terminology Change
+### Terminology Change ✓
 
-| Old | New |
-|-----|-----|
-| Agent | Orchestration |
-| Agent Version | Orchestration Version |
+| Old | New | Status |
+|-----|-----|--------|
+| Agent | Orchestration | ✓ Done |
+| Agent Version | Orchestration Version | ✓ Done |
 
 ---
 
@@ -44,7 +44,7 @@ Orchestration
     └── Webhook {name, description, enabled}  [post-MVP]
 ```
 
-### Interface Configuration
+### Interface Configuration ✓
 
 Each orchestration can enable multiple interfaces. Each interface has its own:
 
@@ -56,7 +56,7 @@ Each orchestration can enable multiple interfaces. Each interface has its own:
 
 This allows one orchestration to have different names and descriptions depending on how it's accessed.
 
-### Execution Context
+### Execution Context ✓
 
 The execution context tracks which interface triggered the run:
 
@@ -107,11 +107,11 @@ Users can build bespoke orchestration workflows and expose them as MCP tools to 
 
 ### Authentication
 
-| Method | MVP | Description |
-|--------|-----|-------------|
-| API Key | ✓ | Simple programmatic access |
-| JWT | ✓ | Token-based authentication |
-| MCP OAuth | ✓ | MCP spec OAuth dance compliance |
+| Method | MVP | Description | Status |
+|--------|-----|-------------|--------|
+| API Key | ✓ | Simple programmatic access | ✓ Done |
+| JWT | ✓ | Token-based authentication | ✓ Done |
+| MCP OAuth | ✓ | MCP spec OAuth dance compliance | Not started |
 
 ### Tool Schema Generation
 
@@ -123,11 +123,11 @@ Users can build bespoke orchestration workflows and expose them as MCP tools to 
 
 ### MCP Feature Scope
 
-| Feature | MVP | Later |
-|---------|-----|-------|
-| Tools | ✓ | |
-| Resources | | ✓ |
-| Prompts | | ✓ |
+| Feature | MVP | Later | Status |
+|---------|-----|-------|--------|
+| Tools | ✓ | | ✓ Done (native tools) |
+| Resources | | ✓ | Not started |
+| Prompts | | ✓ | Not started |
 
 ---
 
@@ -229,15 +229,15 @@ Messages contain **parts** (content segments):
 
 ### A2A Scope
 
-| Feature | MVP | Later |
-|---------|-----|-------|
-| Agent Card generation | ✓ | |
-| Be called via A2A (server role) | ✓ | |
-| Task lifecycle management | ✓ | |
-| Streaming responses | ✓ | |
-| Call external A2A agents (client role) | | ✓ |
-| Push notifications | | ✓ |
-| gRPC transport | | ✓ |
+| Feature | MVP | Later | Status |
+|---------|-----|-------|--------|
+| Agent Card generation | ✓ | | Not started |
+| Be called via A2A (server role) | ✓ | | Not started |
+| Task lifecycle management | ✓ | | Not started |
+| Streaming responses | ✓ | | Not started |
+| Call external A2A agents (client role) | | ✓ | Not started |
+| Push notifications | | ✓ | Not started |
+| gRPC transport | | ✓ | Not started |
 
 ---
 
@@ -418,17 +418,17 @@ This ensures:
 
 ### Chat Scope
 
-| Feature | MVP | Later |
-|---------|-----|-------|
-| Multi-turn conversations | ✓ | |
-| Text messages | ✓ | |
-| Image messages | ✓ | |
-| Audio messages | | ✓ |
-| File/document messages | | ✓ |
-| Server-side tools (tasks, milestones, notes) | ✓ | |
-| User orchestrations as tools | | ✓ |
-| Tool call summaries in history | ✓ | |
-| Streaming responses | ✓ | |
+| Feature | MVP | Later | Status |
+|---------|-----|-------|--------|
+| Multi-turn conversations | ✓ | | Not started |
+| Text messages | ✓ | | Not started |
+| Image messages | ✓ | | Not started |
+| Audio messages | | ✓ | Not started |
+| File/document messages | | ✓ | Not started |
+| Server-side tools (tasks, milestones, notes) | ✓ | | ✓ Done (tools exist) |
+| User orchestrations as tools | | ✓ | Not started |
+| Tool call summaries in history | ✓ | | Not started |
+| Streaming responses | ✓ | | Not started |
 
 ---
 
@@ -459,17 +459,17 @@ Orchestrations with Webhook interface enabled can be triggered by external HTTP 
 
 ## Node Palette
 
-### Current Nodes
+### Current Nodes ✓
 
-| Node | Description |
-|------|-------------|
-| Start | Entry point, input validation against InputSchema |
-| End | Exit point, returns output |
-| Model | LLM call with prompts |
-| MultimodalChatModel | Multimodal LLM call |
-| HttpRequest | HTTP requests (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS) |
-| Sleep | Pause execution |
-| MessageFormatter | Scriban template-based formatting |
+| Node | Description | Status |
+|------|-------------|--------|
+| Start | Entry point, input validation against InputSchema | ✓ Done |
+| End | Exit point, returns output | ✓ Done |
+| Model | LLM call with prompts | ✓ Done |
+| MultimodalChatModel | Multimodal LLM call | ✓ Done |
+| HttpRequest | HTTP requests (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS) | ✓ Done |
+| Sleep | Pause execution | ✓ Done |
+| MessageFormatter | Scriban template-based formatting | ✓ Done |
 
 ### Future Nodes (Post-MVP)
 
@@ -609,19 +609,19 @@ See [milestones/](./milestones/) for detailed implementation plans.
 
 ### MVP
 
-| # | Milestone | Dependencies |
-|---|-----------|--------------|
-| M1 | [Orchestration Rename & Interfaces](./milestones/m1-orchestration-rename.md) | — |
-| M2 | [MCP Server — Native Tools](./milestones/m2-mcp-server-native-tools.md) | M1 |
-| M3 | [MCP Server — User Orchestrations](./milestones/m3-mcp-server-user-orchestrations.md) | M1, M2 |
-| M5 | [A2A Server](./milestones/m5-a2a-server.md) | M1 |
-| M6 | [Chat Interface](./milestones/m6-chat-interface.md) | M1, M2 |
+| # | Milestone | Dependencies | Status |
+|---|-----------|--------------|--------|
+| M1 | [Orchestration Rename & Interfaces](./milestones/m1-orchestration-rename.md) | — | ✓ Done |
+| M2 | [MCP Server — Native Tools](./milestones/m2-mcp-server-native-tools.md) | M1 | ✓ Done |
+| M3 | [Chat Interface](./milestones/m3-chat-interface.md) | M1, M2 | Not started |
+| M5 | [A2A Server](./milestones/m5-a2a-server.md) | M1 | Not started |
+| M7 | [MCP Server — User Orchestrations](./milestones/m7-mcp-server-user-orchestrations.md) | M1, M2 | Not started |
 
 ### Post-MVP
 
-| # | Milestone | Dependencies |
-|---|-----------|--------------|
-| M4 | [MCP OAuth](./milestones/m4-mcp-oauth.md) | M2, M3 |
+| # | Milestone | Dependencies | Status |
+|---|-----------|--------------|--------|
+| M4 | [MCP OAuth](./milestones/m4-mcp-oauth.md) | M2, M7 | Not started |
 
 ---
 
@@ -629,26 +629,26 @@ See [milestones/](./milestones/) for detailed implementation plans.
 
 ### Authentication Strategy
 
-| Interface | MVP Auth | Post-MVP |
-|-----------|----------|----------|
-| MCP Server | API Key | JWT, MCP OAuth |
-| A2A Server | API Key | Bearer, OAuth 2.0, OIDC |
-| Chat API | JWT (existing) | — |
-| Direct Execute | JWT (existing) | — |
+| Interface | MVP Auth | Post-MVP | Status |
+|-----------|----------|----------|--------|
+| MCP Server | API Key | JWT, MCP OAuth | ✓ API Key done |
+| A2A Server | API Key | Bearer, OAuth 2.0, OIDC | Not started |
+| Chat API | JWT (existing) | — | ✓ JWT exists |
+| Direct Execute | JWT (existing) | — | ✓ Done |
 
-### User Isolation
+### User Isolation ✓
 
 All interfaces enforce strict user isolation:
-- Orchestrations filtered by `UserId` via DbContext global query filter
-- No cross-user access to orchestrations, conversations, or executions
-- API keys scoped to individual users
+- ✓ Orchestrations filtered by `UserId` via DbContext global query filter
+- ✓ No cross-user access to orchestrations, conversations, or executions
+- ✓ API keys scoped to individual users
 
-### Execution Tracking
+### Execution Tracking ✓
 
 All interfaces route through the same execution engine:
-- `ExecutionInterface` enum tracks invocation source
-- Unified execution logging and metrics
-- Same streaming infrastructure (RabbitMQ → SSE)
+- ✓ `ExecutionInterface` enum tracks invocation source
+- ✓ Unified execution logging and metrics
+- ✓ Same streaming infrastructure (RabbitMQ → SSE)
 
 ### Hosting & Endpoints
 
@@ -661,7 +661,7 @@ All interfaces route through the same execution engine:
 
 All hosted in the monolith, exposed via k3s ingress. Separate subdomains used because main domain routes `/` → frontend, `/api` → backend.
 
-### MCP Tool Metadata
+### MCP Tool Metadata ✓
 
 Native MCP tools use custom attributes for provider tracking and OAuth scope requirements:
 

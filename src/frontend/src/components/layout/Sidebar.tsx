@@ -32,11 +32,11 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    name: 'Projects',
+    name: 'Workspace',
     icon: FolderKanban,
     items: [
-      { name: 'All Projects', href: '/projects', icon: Folder, iconColor: 'text-amber-500' },
-      { name: 'Todos', href: '/todos', icon: CheckSquare, iconColor: 'text-emerald-500' },
+      { name: 'Projects', href: '/workspace', icon: Folder, iconColor: 'text-amber-500' },
+      { name: 'Tasks', href: '/tasks', icon: CheckSquare, iconColor: 'text-emerald-500' },
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
     ],
   },

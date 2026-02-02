@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport } from '@xyflow/react'
+import type { OrchestrationInterfaces } from '@/lib/api'
 
 /**
  * Schema lookup for node display properties.
@@ -73,6 +74,7 @@ interface EditorState {
   // Version data
   versionId: string | null
   isDraft: boolean
+  interfaces: OrchestrationInterfaces | null
 
   // ReactFlow state
   nodes: Node[]
@@ -110,7 +112,8 @@ interface EditorState {
     versionId?: string,
     isDraft?: boolean,
     reactFlowData?: { nodes: Node[], edges: Edge[], viewport: Viewport },
-    nodeConfigurations?: Record<string, NodeConfig>
+    nodeConfigurations?: Record<string, NodeConfig>,
+    interfaces?: OrchestrationInterfaces | null
   ) => void
 
   // Persistence
@@ -161,6 +164,7 @@ const createInitialState = () => {
     orchestrationDescription: '',
     versionId: null,
     isDraft: true,
+    interfaces: null,
     nodes: [
       {
         id: startId,
@@ -420,7 +424,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set(createInitialState())
   },
 
-  loadOrchestration: (orchestrationId, orchestrationName, orchestrationDescription, versionId, isDraft, reactFlowData, nodeConfigurations) => {
+  loadOrchestration: (orchestrationId, orchestrationName, orchestrationDescription, versionId, isDraft, reactFlowData, nodeConfigurations, interfaces) => {
     if (reactFlowData && nodeConfigurations) {
       // Enrich nodes with schema data (for backward compatibility with old saved nodes)
       const enrichedNodes = reactFlowData.nodes.map(node => {
@@ -434,6 +438,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         orchestrationDescription,
         versionId: versionId || null,
         isDraft: isDraft ?? true,
+        interfaces: interfaces ?? null,
         nodes: enrichedNodes,
         edges: reactFlowData.edges,
         viewport: reactFlowData.viewport,

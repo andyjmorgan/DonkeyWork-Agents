@@ -4,7 +4,6 @@ import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, CheckSqua
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import {
   Select,
@@ -18,8 +17,9 @@ import { todos, projects, type Todo, type ProjectDetails, type TodoPriority, typ
 export function TaskEditorPage() {
   const { taskId } = useParams<{ taskId: string }>()
   const navigate = useNavigate()
+  const isNewTask = taskId === 'new'
 
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!isNewTask)
   const [isSaving, setIsSaving] = useState(false)
   const [task, setTask] = useState<Todo | null>(null)
   const [project, setProject] = useState<ProjectDetails | null>(null)
@@ -32,13 +32,13 @@ export function TaskEditorPage() {
   const [dueDate, setDueDate] = useState('')
 
   useEffect(() => {
-    if (taskId) {
+    if (taskId && !isNewTask) {
       loadTask()
     }
   }, [taskId])
 
   const loadTask = async () => {
-    if (!taskId) return
+    if (!taskId || isNewTask) return
 
     try {
       setIsLoading(true)
@@ -63,22 +63,37 @@ export function TaskEditorPage() {
   }
 
   const handleSave = async () => {
-    if (!task || !title.trim()) return
+    if (!title.trim()) return
 
     try {
       setIsSaving(true)
-      await todos.update(task.id, {
-        title,
-        description,
-        priority,
-        status,
-        dueDate: dueDate || undefined,
-        sortOrder: task.sortOrder,
-        projectId: task.projectId,
-        milestoneId: task.milestoneId,
-      })
-      // Navigate back
-      handleBack()
+
+      if (isNewTask) {
+        // Create new task
+        const newTask = await todos.create({
+          title,
+          description,
+          priority,
+          status,
+          dueDate: dueDate || undefined,
+        })
+        // Navigate to the created task
+        navigate(`/tasks/${newTask.id}`, { replace: true })
+      } else if (task) {
+        // Update existing task
+        await todos.update(task.id, {
+          title,
+          description,
+          priority,
+          status,
+          dueDate: dueDate || undefined,
+          sortOrder: task.sortOrder,
+          projectId: task.projectId,
+          milestoneId: task.milestoneId,
+        })
+        // Navigate back
+        handleBack()
+      }
     } catch (error) {
       console.error('Failed to save task:', error)
     } finally {
@@ -99,22 +114,12 @@ export function TaskEditorPage() {
 
   const handleBack = () => {
     if (task?.milestoneId && project) {
-      navigate(`/projects/${project.id}/milestones/${task.milestoneId}`)
+      navigate(`/workspace/${project.id}/milestones/${task.milestoneId}`)
     } else if (project) {
-      navigate(`/projects/${project.id}`)
+      navigate(`/workspace/${project.id}`)
     } else {
-      navigate('/todos')
+      navigate('/tasks')
     }
-  }
-
-  const getPriorityColor = (p: TodoPriority) => {
-    const colors: Record<TodoPriority, string> = {
-      Low: 'bg-slate-500/20 text-slate-500',
-      Medium: 'bg-blue-500/20 text-blue-500',
-      High: 'bg-amber-500/20 text-amber-500',
-      Critical: 'bg-red-500/20 text-red-500',
-    }
-    return colors[p]
   }
 
   if (isLoading) {
@@ -125,11 +130,11 @@ export function TaskEditorPage() {
     )
   }
 
-  if (!task) {
+  if (!isNewTask && !task) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <p className="text-muted-foreground">Task not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/todos')}>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/tasks')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Tasks
         </Button>
@@ -149,49 +154,51 @@ export function TaskEditorPage() {
             {project ? (
               <>
                 <button
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                  onClick={() => navigate(`/workspace/${project.id}`)}
+                  className="flex items-center gap-1.5 hover:text-foreground transition-colors min-w-0"
                 >
                   <FolderKanban className="h-4 w-4 shrink-0" />
-                  <span className="truncate max-w-[200px]">{project.name}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{project.name}</span>
                 </button>
                 <ChevronRight className="h-4 w-4 shrink-0" />
-                <span className="flex items-center gap-1.5 text-foreground font-medium">
+                <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
                   <CheckSquare className="h-4 w-4 shrink-0 text-emerald-500" />
-                  <span className="truncate">{task.title}</span>
+                  <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{isNewTask ? 'New Task' : task?.title}</span>
                 </span>
               </>
             ) : (
               <>
                 <button
-                  onClick={() => navigate('/todos')}
+                  onClick={() => navigate('/tasks')}
                   className="flex items-center gap-1.5 hover:text-foreground transition-colors"
                 >
                   <CheckSquare className="h-4 w-4 shrink-0 text-emerald-500" />
                   <span>Tasks</span>
                 </button>
                 <ChevronRight className="h-4 w-4 shrink-0" />
-                <span className="flex items-center gap-1.5 text-foreground font-medium">
+                <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
                   <CheckSquare className="h-4 w-4 shrink-0 text-emerald-500" />
-                  <span className="truncate">{task.title}</span>
+                  <span className="truncate max-w-[100px] sm:max-w-[150px] md:max-w-[250px]">{isNewTask ? 'New Task' : task?.title}</span>
                 </span>
               </>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-destructive"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {!isNewTask && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
             {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             <Save className="h-4 w-4 mr-2" />
-            Save
+            {isNewTask ? 'Create' : 'Save'}
           </Button>
         </div>
       </div>
@@ -241,11 +248,6 @@ export function TaskEditorPage() {
             />
           </div>
 
-          {/* Preview badges */}
-          <div className="flex items-center gap-2 ml-auto">
-            <Badge className={getPriorityColor(priority)}>{priority}</Badge>
-            <Badge variant={status === 'Completed' ? 'default' : 'secondary'}>{status}</Badge>
-          </div>
         </div>
       </div>
 

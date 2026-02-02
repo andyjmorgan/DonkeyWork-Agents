@@ -3,15 +3,15 @@ import { Play, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useExecutionStream } from '@/hooks/useExecutionStream'
 import { StreamingOutput } from './StreamingOutput'
-import { ExecutionLogs } from './ExecutionLogs'
-import type { JSONSchema } from '@/lib/api'
+import { ChatInterface } from './ChatInterface'
+import type { JSONSchema, OrchestrationInterfaces, ChatInterfaceConfig } from '@/lib/api'
 
 interface TestPanelProps {
   orchestrationId: string
   inputSchema?: JSONSchema
+  interfaces?: OrchestrationInterfaces
 }
 
 // Generate example JSON from schema
@@ -65,25 +65,28 @@ function generateExampleFromSchema(schema: JSONSchema): any {
   return example
 }
 
-export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
+export function TestPanel({ orchestrationId, inputSchema, interfaces }: TestPanelProps) {
   const [input, setInput] = useState('{\n  \n}')
   const [hasLoadedSchema, setHasLoadedSchema] = useState(false)
   const [output, setOutput] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState('stream')
 
-  const { events, isStreaming, error, executionId, startStream } = useExecutionStream({
+  const { events, isStreaming, error, startStream } = useExecutionStream({
     onComplete: (result) => setOutput(result),
     onError: (err) => console.error('Execution error:', err)
   })
 
-  // Generate template from schema when available
+  // Check if chat interface is enabled
+  const isChatEnabled = interfaces?.chat?.enabled === true
+  const chatConfig: ChatInterfaceConfig | undefined = interfaces?.chat
+
+  // Generate template from schema when available (only for non-chat mode)
   useEffect(() => {
-    if (inputSchema && !hasLoadedSchema) {
+    if (!isChatEnabled && inputSchema && !hasLoadedSchema) {
       const example = generateExampleFromSchema(inputSchema)
       setInput(JSON.stringify(example, null, 2))
       setHasLoadedSchema(true)
     }
-  }, [inputSchema, hasLoadedSchema])
+  }, [inputSchema, hasLoadedSchema, isChatEnabled])
 
   const handleResetTemplate = () => {
     if (inputSchema) {
@@ -102,6 +105,19 @@ export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
     }
   }
 
+  // Render chat interface when chat is enabled
+  if (isChatEnabled) {
+    return (
+      <div className="flex h-full flex-col">
+        <ChatInterface
+          orchestrationId={orchestrationId}
+          chatConfig={chatConfig}
+        />
+      </div>
+    )
+  }
+
+  // Render regular test interface when chat is not enabled
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="space-y-2">
@@ -147,23 +163,13 @@ export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="stream">Stream</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-          </TabsList>
-          <TabsContent value="stream" className="flex-1 overflow-hidden mt-2">
-            <StreamingOutput
-              events={events}
-              output={output}
-              error={error}
-              isStreaming={isStreaming}
-            />
-          </TabsContent>
-          <TabsContent value="logs" className="flex-1 overflow-hidden mt-2">
-            <ExecutionLogs executionId={executionId} />
-          </TabsContent>
-        </Tabs>
+        <Label className="mb-2 block">Output</Label>
+        <StreamingOutput
+          events={events}
+          output={output}
+          error={error}
+          isStreaming={isStreaming}
+        />
       </div>
     </div>
   )

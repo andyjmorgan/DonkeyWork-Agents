@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using DonkeyWork.Agents.Conversations.Api;
 using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
@@ -69,6 +70,9 @@ builder.Services.AddIdentityApi(builder.Configuration);
 
 // Add Projects module
 builder.Services.AddProjectsApi();
+
+// Add Conversations module
+builder.Services.AddConversationsApi();
 
 builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly);
 

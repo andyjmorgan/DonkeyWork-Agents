@@ -328,7 +328,7 @@ export function ProjectDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <p className="text-muted-foreground">Project not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/projects')}>
+        <Button variant="outline" className="mt-4" onClick={() => navigate('/workspace')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Projects
         </Button>
@@ -360,7 +360,7 @@ export function ProjectDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/projects')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/workspace')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -561,7 +561,7 @@ export function ProjectDetailPage() {
                   <div
                     key={milestone.id}
                     className="rounded-lg border border-border bg-card hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/projects/${id}/milestones/${milestone.id}`)}
+                    onClick={() => navigate(`/workspace/${id}/milestones/${milestone.id}`)}
                   >
                     <div className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-3">

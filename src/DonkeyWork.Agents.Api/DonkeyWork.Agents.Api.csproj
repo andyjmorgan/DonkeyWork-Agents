@@ -19,6 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\conversations\DonkeyWork.Agents.Conversations.Api\DonkeyWork.Agents.Conversations.Api.csproj" />
         <ProjectReference Include="..\mcp\DonkeyWork.Agents.Mcp.Core\DonkeyWork.Agents.Mcp.Core.csproj" />
         <ProjectReference Include="..\orchestrations\DonkeyWork.Agents.Orchestrations.Api\DonkeyWork.Agents.Orchestrations.Api.csproj" />
         <ProjectReference Include="..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />

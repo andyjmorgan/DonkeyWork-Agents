@@ -24,6 +24,7 @@ export function OrchestrationEditorPage() {
     orchestrationDescription,
     isDraft,
     versionId,
+    interfaces,
     nodes,
     nodeConfigurations,
     loadOrchestration,
@@ -82,7 +83,8 @@ export function OrchestrationEditorPage() {
               currentVersion.id,
               currentVersion.isDraft,
               currentVersion.reactFlowData,
-              nodeConfigurations
+              nodeConfigurations,
+              currentVersion.interfaces
             )
           } else {
             // No versions yet (shouldn't happen but handle it)
@@ -210,7 +212,8 @@ export function OrchestrationEditorPage() {
         publishedVersion.id,
         false, // isDraft = false (now published)
         publishedVersion.reactFlowData,
-        nodeConfigurations
+        nodeConfigurations,
+        publishedVersion.interfaces
       )
 
       // TODO: Show success toast "Version published! The next save will create a new draft."
@@ -243,7 +246,8 @@ export function OrchestrationEditorPage() {
       version.id,
       version.isDraft,
       version.reactFlowData,
-      nodeConfigurations
+      nodeConfigurations,
+      version.interfaces
     )
   }, [orchestrationId, orchestrationName, orchestrationDescription])
 
@@ -269,7 +273,8 @@ export function OrchestrationEditorPage() {
       undefined, // No version ID yet (will be created on save)
       true, // Mark as draft
       version.reactFlowData,
-      nodeConfigurations
+      nodeConfigurations,
+      version.interfaces
     )
     // TODO: Show success toast "Draft created from version X. Save to persist."
   }, [orchestrationId, orchestrationName, orchestrationDescription])
@@ -417,7 +422,7 @@ export function OrchestrationEditorPage() {
             <SheetTitle>Test Orchestration</SheetTitle>
           </SheetHeader>
           <div className="mt-6 h-[calc(100vh-8rem)]">
-            {orchestrationId && <TestPanel orchestrationId={orchestrationId} inputSchema={inputSchema} />}
+            {orchestrationId && <TestPanel orchestrationId={orchestrationId} inputSchema={inputSchema} interfaces={interfaces ?? undefined} />}
           </div>
         </SheetContent>
       </Sheet>

@@ -248,6 +248,25 @@ export interface Orchestration {
   createdAt: string
 }
 
+// Interface configuration types
+export interface InterfaceConfig {
+  enabled: boolean
+  name?: string
+  description?: string
+}
+
+export interface ChatInterfaceConfig extends InterfaceConfig {
+  systemPrompt?: string
+  welcomeMessage?: string
+}
+
+export interface OrchestrationInterfaces {
+  mcp?: InterfaceConfig
+  a2a?: InterfaceConfig
+  chat?: ChatInterfaceConfig
+  webhook?: InterfaceConfig
+}
+
 export interface OrchestrationVersion {
   id: string
   orchestrationId: string
@@ -257,6 +276,7 @@ export interface OrchestrationVersion {
   outputSchema?: JSONSchema
   reactFlowData: { nodes: any[], edges: any[], viewport: any }
   nodeConfigurations: Record<string, any>
+  interfaces?: OrchestrationInterfaces
   createdAt: string
   publishedAt?: string
 }
@@ -821,3 +841,151 @@ export const multimodalChat = {
     return response.schema
   },
 }
+
+// Conversation Types
+export type MessageRole = 'User' | 'Assistant' | 'System'
+
+// Content part types (polymorphic, type discriminator)
+export interface TextContentPart {
+  type: 'text'
+  text: string
+}
+
+// Union type for all content parts (extend as more types are added)
+export type ContentPart = TextContentPart
+
+export interface ConversationMessage {
+  id: string
+  role: MessageRole
+  content: ContentPart[]
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  provider?: string
+  model?: string
+  createdAt: string
+}
+
+export interface ConversationSummary {
+  id: string
+  orchestrationId: string
+  orchestrationName: string
+  title: string
+  messageCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface ConversationDetails {
+  id: string
+  orchestrationId: string
+  orchestrationName: string
+  title: string
+  messages: ConversationMessage[]
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateConversationRequest {
+  orchestrationId: string
+  title?: string
+}
+
+export interface UpdateConversationRequest {
+  title: string
+}
+
+export interface SendMessageRequest {
+  content: ContentPart[]
+}
+
+// SSE Event types for conversation streaming
+export type ConversationStreamEventType =
+  | 'response_start'
+  | 'part_start'
+  | 'part_delta'
+  | 'part_end'
+  | 'token_usage'
+  | 'response_error'
+  | 'response_end'
+
+export interface ConversationStreamEvent {
+  type: ConversationStreamEventType
+  [key: string]: unknown
+}
+
+export interface ResponseStartEvent extends ConversationStreamEvent {
+  type: 'response_start'
+  messageId: string
+}
+
+export interface PartStartEvent extends ConversationStreamEvent {
+  type: 'part_start'
+  partType: string
+  partIndex: number
+}
+
+export interface PartDeltaEvent extends ConversationStreamEvent {
+  type: 'part_delta'
+  partIndex: number
+  content: string
+}
+
+export interface PartEndEvent extends ConversationStreamEvent {
+  type: 'part_end'
+  partIndex: number
+}
+
+export interface TokenUsageEvent extends ConversationStreamEvent {
+  type: 'token_usage'
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+}
+
+export interface ResponseErrorEvent extends ConversationStreamEvent {
+  type: 'response_error'
+  error: string
+}
+
+export interface ResponseEndEvent extends ConversationStreamEvent {
+  type: 'response_end'
+  message: ConversationMessage
+}
+
+// Conversations API
+export const conversations = {
+  // List conversations (paginated, newest first)
+  list: (offset = 0, limit = 20) =>
+    api.get<PaginatedResponse<ConversationSummary>>(`/api/v1/conversations?offset=${offset}&limit=${limit}`),
+
+  // Create a new conversation
+  create: (data: CreateConversationRequest) =>
+    api.post<ConversationDetails>('/api/v1/conversations', data),
+
+  // Get conversation with all messages
+  get: (id: string) =>
+    api.get<ConversationDetails>(`/api/v1/conversations/${id}`),
+
+  // Update conversation title
+  updateTitle: (id: string, data: UpdateConversationRequest) =>
+    fetchWithAuth(`/api/v1/conversations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    }).then(r => r.json() as Promise<ConversationDetails>),
+
+  // Delete conversation
+  delete: (id: string) =>
+    api.delete(`/api/v1/conversations/${id}`),
+
+  // Send message (returns created user message - streaming happens via SSE)
+  sendMessage: (conversationId: string, content: ContentPart[]) =>
+    api.post<ConversationMessage>(`/api/v1/conversations/${conversationId}/messages`, { content }),
+
+  // Delete message
+  deleteMessage: (conversationId: string, messageId: string) =>
+    api.delete(`/api/v1/conversations/${conversationId}/messages/${messageId}`),
+}
+
+// Export fetchWithAuth for hooks that need raw fetch access (e.g., SSE streaming)
+export { fetchWithAuth }

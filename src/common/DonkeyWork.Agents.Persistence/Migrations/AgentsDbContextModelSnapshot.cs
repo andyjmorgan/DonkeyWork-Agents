@@ -22,6 +22,120 @@ namespace DonkeyWork.Agents.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Conversations.ConversationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("OrchestrationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("orchestration_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_conversations_created_at");
+
+                    b.HasIndex("OrchestrationId")
+                        .HasDatabaseName("ix_conversations_orchestration_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_conversations_user_id");
+
+                    b.ToTable("conversations", "conversations");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Conversations.ConversationMessageEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("content");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("InputTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("input_tokens");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("model");
+
+                    b.Property<int?>("OutputTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("output_tokens");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("role");
+
+                    b.Property<int?>("TotalTokens")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_tokens");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId")
+                        .HasDatabaseName("ix_conversation_messages_conversation_id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_conversation_messages_created_at");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_conversation_messages_user_id");
+
+                    b.ToTable("conversation_messages", "conversations");
+                });
+
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Credentials.ExternalApiKeyEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1461,6 +1575,28 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.ToTable("data_protection_keys", "system");
                 });
 
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Conversations.ConversationEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Orchestrations.OrchestrationEntity", "Orchestration")
+                        .WithMany()
+                        .HasForeignKey("OrchestrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Orchestration");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Conversations.ConversationMessageEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Conversations.ConversationEntity", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Orchestrations.OrchestrationEntity", b =>
                 {
                     b.HasOne("DonkeyWork.Agents.Persistence.Entities.Orchestrations.OrchestrationVersionEntity", "CurrentVersion")
@@ -1654,6 +1790,11 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("File");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Conversations.ConversationEntity", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Orchestrations.OrchestrationEntity", b =>
