@@ -101,6 +101,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Mcp.Contr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Mcp.Core", "src\mcp\DonkeyWork.Agents.Mcp.Core\DonkeyWork.Agents.Mcp.Core.csproj", "{74A5996D-145A-44EC-8BB9-466C685F7D9B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Mcp.Core.Tests", "test\mcp\DonkeyWork.Agents.Mcp.Core.Tests\DonkeyWork.Agents.Mcp.Core.Tests.csproj", "{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -507,6 +509,18 @@ Global
 		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|x64.Build.0 = Release|Any CPU
 		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|x86.ActiveCfg = Release|Any CPU
 		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|x86.Build.0 = Release|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Debug|x64.Build.0 = Debug|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Debug|x86.Build.0 = Debug|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Release|x64.ActiveCfg = Release|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Release|x64.Build.0 = Release|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Release|x86.ActiveCfg = Release|Any CPU
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -558,5 +572,6 @@ Global
 		{F3846736-565B-9EA7-873C-5ACF842A7768} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46} = {F3846736-565B-9EA7-873C-5ACF842A7768}
 		{74A5996D-145A-44EC-8BB9-466C685F7D9B} = {F3846736-565B-9EA7-873C-5ACF842A7768}
+		{5B0D5FFC-9F8D-4177-AE7D-3E5888FB7356} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 	EndGlobalSection
 EndGlobal
