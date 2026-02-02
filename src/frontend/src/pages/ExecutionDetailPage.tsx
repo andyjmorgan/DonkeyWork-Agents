@@ -22,14 +22,14 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { JsonViewer } from '@/components/ui/json-viewer'
-import { executions, agents, type AgentExecution, type NodeExecution, type Agent } from '@/lib/api'
+import { executions, orchestrations, type OrchestrationExecution, type NodeExecution, type Orchestration } from '@/lib/api'
 
 export function ExecutionDetailPage() {
   const { executionId } = useParams<{ executionId: string }>()
   const navigate = useNavigate()
-  const [execution, setExecution] = useState<AgentExecution | null>(null)
+  const [execution, setExecution] = useState<OrchestrationExecution | null>(null)
   const [nodeExecutions, setNodeExecutions] = useState<NodeExecution[]>([])
-  const [agent, setAgent] = useState<Agent | null>(null)
+  const [orchestration, setOrchestration] = useState<Orchestration | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -54,12 +54,12 @@ export function ExecutionDetailPage() {
       const nodeExecResponse = await executions.getNodeExecutions(executionId)
       setNodeExecutions(nodeExecResponse.nodeExecutions)
 
-      // Load agent info
+      // Load orchestration info
       try {
-        const agentData = await agents.get(exec.agentId)
-        setAgent(agentData)
+        const orchestrationData = await orchestrations.get(exec.orchestrationId)
+        setOrchestration(orchestrationData)
       } catch {
-        // Agent might have been deleted
+        // Orchestration might have been deleted
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load execution')
@@ -167,11 +167,11 @@ export function ExecutionDetailPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Agent</CardDescription>
+            <CardDescription>Orchestration</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-lg font-semibold">
-              {agent?.name || execution.agentId.slice(0, 8)}
+              {orchestration?.name || execution.orchestrationId.slice(0, 8)}
             </div>
           </CardContent>
         </Card>

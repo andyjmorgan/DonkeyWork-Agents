@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Storage", "Storage", "{A1B2C3D4-0001-0001-0001-000000000005}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Agents", "Agents", "{A1B2C3D4-0001-0001-0001-000000000006}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orchestrations", "Orchestrations", "{A1B2C3D4-0001-0001-0001-000000000006}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projects", "Projects", "{A1B2C3D4-0001-0001-0001-000000000008}"
 EndProject
@@ -24,8 +24,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Providers", "test-Providers", "{B1B2C3D4-0001-0001-0001-000000000002}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Storage", "test-Storage", "{B1B2C3D4-0001-0001-0001-000000000003}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Agents", "test-Agents", "{B1B2C3D4-0001-0001-0001-000000000004}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Credentials", "test-Credentials", "{B1B2C3D4-0001-0001-0001-000000000005}"
 EndProject
@@ -61,11 +59,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Storage.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Storage.Core", "src\storage\DonkeyWork.Agents.Storage.Core\DonkeyWork.Agents.Storage.Core.csproj", "{00000001-0001-0001-0001-00000000000F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Api", "src\agents\DonkeyWork.Agents.Agents.Api\DonkeyWork.Agents.Agents.Api.csproj", "{00000002-0001-0001-0001-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Orchestrations.Api", "src\orchestrations\DonkeyWork.Agents.Orchestrations.Api\DonkeyWork.Agents.Orchestrations.Api.csproj", "{00000002-0001-0001-0001-000000000001}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Contracts", "src\agents\DonkeyWork.Agents.Agents.Contracts\DonkeyWork.Agents.Agents.Contracts.csproj", "{00000002-0001-0001-0001-000000000002}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Orchestrations.Contracts", "src\orchestrations\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj", "{00000002-0001-0001-0001-000000000002}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Core", "src\agents\DonkeyWork.Agents.Agents.Core\DonkeyWork.Agents.Agents.Core.csproj", "{00000002-0001-0001-0001-000000000003}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Orchestrations.Core", "src\orchestrations\DonkeyWork.Agents.Orchestrations.Core\DonkeyWork.Agents.Orchestrations.Core.csproj", "{00000002-0001-0001-0001-000000000003}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Projects.Api", "src\projects\DonkeyWork.Agents.Projects.Api\DonkeyWork.Agents.Projects.Api.csproj", "{00000002-0001-0001-0001-000000000007}"
 EndProject
@@ -83,8 +81,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Providers
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Storage.Tests", "test\storage\DonkeyWork.Agents.Storage.Tests\DonkeyWork.Agents.Storage.Tests.csproj", "{00000001-0001-0001-0001-000000000012}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Agents.Core.Tests", "test\agents\DonkeyWork.Agents.Agents.Core.Tests\DonkeyWork.Agents.Agents.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000003}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Api.Tests", "test\credentials\DonkeyWork.Agents.Credentials.Api.Tests\DonkeyWork.Agents.Credentials.Api.Tests.csproj", "{00000003-0001-0001-0001-000000000005}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Credentials.Core.Tests", "test\credentials\DonkeyWork.Agents.Credentials.Core.Tests\DonkeyWork.Agents.Credentials.Core.Tests.csproj", "{00000003-0001-0001-0001-000000000006}"
@@ -96,6 +92,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Common.Sdk", "src\common\DonkeyWork.Agents.Common.Sdk\DonkeyWork.Agents.Common.Sdk.csproj", "{0CD5DD32-7880-49E4-AFC5-9A8E210FFE3F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Integration.Tests", "test\integration\DonkeyWork.Agents.Integration.Tests\DonkeyWork.Agents.Integration.Tests.csproj", "{F28FC9FA-E62C-431A-8846-18F3291E8BCF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mcp", "mcp", "{F3846736-565B-9EA7-873C-5ACF842A7768}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Mcp.Contracts", "src\mcp\DonkeyWork.Agents.Mcp.Contracts\DonkeyWork.Agents.Mcp.Contracts.csproj", "{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Mcp.Core", "src\mcp\DonkeyWork.Agents.Mcp.Core\DonkeyWork.Agents.Mcp.Core.csproj", "{74A5996D-145A-44EC-8BB9-466C685F7D9B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -419,18 +423,6 @@ Global
 		{00000001-0001-0001-0001-000000000012}.Release|x64.Build.0 = Release|Any CPU
 		{00000001-0001-0001-0001-000000000012}.Release|x86.ActiveCfg = Release|Any CPU
 		{00000001-0001-0001-0001-000000000012}.Release|x86.Build.0 = Release|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Debug|x64.Build.0 = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Debug|x86.Build.0 = Debug|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Release|Any CPU.Build.0 = Release|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Release|x64.ActiveCfg = Release|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Release|x64.Build.0 = Release|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Release|x86.ActiveCfg = Release|Any CPU
-		{00000003-0001-0001-0001-000000000003}.Release|x86.Build.0 = Release|Any CPU
 		{00000003-0001-0001-0001-000000000005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{00000003-0001-0001-0001-000000000005}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00000003-0001-0001-0001-000000000005}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -491,6 +483,30 @@ Global
 		{F28FC9FA-E62C-431A-8846-18F3291E8BCF}.Release|x64.Build.0 = Release|Any CPU
 		{F28FC9FA-E62C-431A-8846-18F3291E8BCF}.Release|x86.ActiveCfg = Release|Any CPU
 		{F28FC9FA-E62C-431A-8846-18F3291E8BCF}.Release|x86.Build.0 = Release|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Debug|x64.Build.0 = Debug|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Debug|x86.Build.0 = Debug|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Release|x64.ActiveCfg = Release|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Release|x64.Build.0 = Release|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Release|x86.ActiveCfg = Release|Any CPU
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46}.Release|x86.Build.0 = Release|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Debug|x64.Build.0 = Debug|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Debug|x86.Build.0 = Debug|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|x64.ActiveCfg = Release|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|x64.Build.0 = Release|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|x86.ActiveCfg = Release|Any CPU
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -506,7 +522,6 @@ Global
 		{B1B2C3D4-0001-0001-0001-000000000001} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000002} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000003} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
-		{B1B2C3D4-0001-0001-0001-000000000004} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000005} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{B1B2C3D4-0001-0001-0001-000000000007} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
 		{00000001-0001-0001-0001-000000000001} = {969CE16F-65FD-4301-A916-0C128FB84EA5}
@@ -535,11 +550,13 @@ Global
 		{00000001-0001-0001-0001-000000000011} = {B1B2C3D4-0001-0001-0001-000000000002}
 		{00000003-0001-0001-0001-000000000002} = {B1B2C3D4-0001-0001-0001-000000000002}
 		{00000001-0001-0001-0001-000000000012} = {B1B2C3D4-0001-0001-0001-000000000003}
-		{00000003-0001-0001-0001-000000000003} = {B1B2C3D4-0001-0001-0001-000000000004}
 		{00000003-0001-0001-0001-000000000005} = {B1B2C3D4-0001-0001-0001-000000000005}
 		{00000003-0001-0001-0001-000000000006} = {B1B2C3D4-0001-0001-0001-000000000005}
 		{00000003-0001-0001-0001-000000000008} = {B1B2C3D4-0001-0001-0001-000000000007}
 		{0CD5DD32-7880-49E4-AFC5-9A8E210FFE3F} = {881589EE-639B-0A35-DBCE-5D94E4FC90C0}
 		{F28FC9FA-E62C-431A-8846-18F3291E8BCF} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
+		{F3846736-565B-9EA7-873C-5ACF842A7768} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{45AF11A8-0EE8-4F26-B3BC-8BD42FAE8A46} = {F3846736-565B-9EA7-873C-5ACF842A7768}
+		{74A5996D-145A-44EC-8BB9-466C685F7D9B} = {F3846736-565B-9EA7-873C-5ACF842A7768}
 	EndGlobalSection
 EndGlobal

@@ -63,7 +63,7 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
   const abortControllerRef = useRef<AbortController | null>(null)
   const executionIdRef = useRef<string | null>(null)
 
-  const startStream = useCallback(async (agentId: string, input: any, isTest = false) => {
+  const startStream = useCallback(async (orchestrationId: string, input: any, isTest = false) => {
     // Cancel any existing stream
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -83,7 +83,7 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
       const endpoint = isTest ? 'test' : 'execute'
 
       const response = await fetchWithTokenRefresh(
-        `/api/v1/agents/${agentId}/${endpoint}`,
+        `/api/v1/orchestrations/${orchestrationId}/${endpoint}`,
         {
           method: 'POST',
           headers: {

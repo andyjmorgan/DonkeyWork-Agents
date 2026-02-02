@@ -24,10 +24,10 @@ interface NavGroup {
 
 const navigationGroups: NavGroup[] = [
   {
-    name: 'Agents',
+    name: 'Orchestrations',
     icon: Bot,
     items: [
-      { name: 'All Agents', href: '/agents', icon: List, iconColor: 'text-cyan-500' },
+      { name: 'All Orchestrations', href: '/orchestrations', icon: List, iconColor: 'text-cyan-500' },
       { name: 'Executions', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
     ],
   },

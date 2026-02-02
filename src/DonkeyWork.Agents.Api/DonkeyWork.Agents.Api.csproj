@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\agents\DonkeyWork.Agents.Agents.Api\DonkeyWork.Agents.Agents.Api.csproj" />
+        <ProjectReference Include="..\orchestrations\DonkeyWork.Agents.Orchestrations.Api\DonkeyWork.Agents.Orchestrations.Api.csproj" />
         <ProjectReference Include="..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\credentials\DonkeyWork.Agents.Credentials.Api\DonkeyWork.Agents.Credentials.Api.csproj" />
         <ProjectReference Include="..\identity\DonkeyWork.Agents.Identity.Api\DonkeyWork.Agents.Identity.Api.csproj" />

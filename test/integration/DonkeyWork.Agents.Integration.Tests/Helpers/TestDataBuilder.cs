@@ -1,7 +1,7 @@
 using System.Text.Json;
-using DonkeyWork.Agents.Agents.Contracts.Models;
-using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -12,9 +12,9 @@ public static class TestDataBuilder
 {
     #region Agent Builders
 
-    public static CreateAgentRequestV1 CreateAgentRequest(string? name = null, string? description = null)
+    public static CreateOrchestrationRequestV1 CreateAgentRequest(string? name = null, string? description = null)
     {
-        return new CreateAgentRequestV1
+        return new CreateOrchestrationRequestV1
         {
             Name = name ?? $"test-agent-{Guid.NewGuid().ToString("N")[..8]}",
             Description = description ?? "Test agent description"
@@ -89,7 +89,7 @@ public static class TestDataBuilder
 
     #region Agent Version Builders
 
-    public static SaveAgentVersionRequestV1 CreateSaveVersionRequest(
+    public static SaveOrchestrationVersionRequestV1 CreateSaveVersionRequest(
         string? inputSchema = null,
         string? reactFlowData = null,
         string? nodeConfigurations = null)
@@ -150,7 +150,7 @@ public static class TestDataBuilder
             }
             """;
 
-        return new SaveAgentVersionRequestV1
+        return new SaveOrchestrationVersionRequestV1
         {
             InputSchema = JsonDocument.Parse(inputSchemaJson),
             ReactFlowData = parsedReactFlowData,

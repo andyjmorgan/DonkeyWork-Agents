@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text.Json;
-using DonkeyWork.Agents.Agents.Contracts.Enums;
-using DonkeyWork.Agents.Agents.Contracts.Models;
-using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Integration.Tests.Base;
 using DonkeyWork.Agents.Integration.Tests.Helpers;
 using DonkeyWork.Agents.Integration.Tests.Infrastructure.Containers;
@@ -17,7 +17,7 @@ namespace DonkeyWork.Agents.Integration.Tests.Tests.Controllers;
 [Trait("Category", "Integration")]
 public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 {
-    private const string AgentsBaseUrl = "/api/v1/agents";
+    private const string AgentsBaseUrl = "/api/v1/orchestrations";
 
     public AgentExecutionIntegrationTests(InfrastructureFixture infrastructure)
         : base(infrastructure)
@@ -74,7 +74,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.True(result.Status == ExecutionStatus.Completed, $"Expected Completed but got {result.Status}. Error: {result.Error}");
             Assert.NotNull(result.Output);
@@ -135,7 +135,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.Equal(ExecutionStatus.Completed, result.Status);
             Assert.Contains("Name: John Doe", result.Output);
@@ -201,7 +201,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.Equal(ExecutionStatus.Completed, result.Status);
             // Should take at least 100ms due to sleep
@@ -276,7 +276,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.Equal(ExecutionStatus.Completed, result.Status);
             Assert.Contains("Slept for", result.Output);
@@ -354,7 +354,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.Equal(ExecutionStatus.Completed, result.Status);
             // The output should show the chained transformation
@@ -429,7 +429,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.Equal(ExecutionStatus.Completed, result.Status);
             Assert.Contains("After", result.Output);
@@ -474,7 +474,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.Equal(ExecutionStatus.Completed, result.Status);
         }
@@ -536,7 +536,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
             // Assert - The template should use the default value
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
             Assert.NotNull(result);
             Assert.Equal(ExecutionStatus.Completed, result.Status);
             Assert.Contains("Hello, default!", result.Output);
@@ -607,7 +607,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
             // Act
             var executeRequest = new { input = new { value = "test" } };
             var response = await PostResponseAsync($"{AgentsBaseUrl}/{agentId}/test", executeRequest);
-            var result = await response.Content.ReadFromJsonAsync<ExecuteAgentResponseV1>(JsonOptions);
+            var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
 
             // Get node executions
             var nodeExecutionsResponse = await GetAsync<GetNodeExecutionsResponseV1>($"{AgentsBaseUrl}/executions/{result!.ExecutionId}/nodes");
@@ -635,11 +635,11 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
     private async Task<Guid> CreateAgentAsync(string name)
     {
         var request = TestDataBuilder.CreateAgentRequest(name);
-        var response = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, request);
+        var response = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, request);
         return response!.Id;
     }
 
-    private async Task SaveVersionAsync(Guid agentId, SaveAgentVersionRequestV1 versionRequest)
+    private async Task SaveVersionAsync(Guid agentId, SaveOrchestrationVersionRequestV1 versionRequest)
     {
         var response = await PostResponseAsync($"{AgentsBaseUrl}/{agentId}/versions", versionRequest);
         response.EnsureSuccessStatusCode();
@@ -650,7 +650,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
         await DeleteAsync($"{AgentsBaseUrl}/{agentId}");
     }
 
-    private static SaveAgentVersionRequestV1 CreateVersionWithNodes(
+    private static SaveOrchestrationVersionRequestV1 CreateVersionWithNodes(
         Guid startNodeId,
         Guid endNodeId,
         string inputSchema,
@@ -709,7 +709,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
 
         var nodeConfigsJson = JsonSerializer.Serialize(nodeConfigs);
 
-        return new SaveAgentVersionRequestV1
+        return new SaveOrchestrationVersionRequestV1
         {
             InputSchema = JsonDocument.Parse(inputSchema),
             ReactFlowData = reactFlowData,

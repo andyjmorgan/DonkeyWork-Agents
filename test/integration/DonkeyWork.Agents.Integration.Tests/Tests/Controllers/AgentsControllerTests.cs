@@ -1,5 +1,5 @@
 using System.Net;
-using DonkeyWork.Agents.Agents.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Integration.Tests.Base;
 using DonkeyWork.Agents.Integration.Tests.Helpers;
 using DonkeyWork.Agents.Integration.Tests.Infrastructure.Authentication;
@@ -10,7 +10,7 @@ namespace DonkeyWork.Agents.Integration.Tests.Tests.Controllers;
 [Trait("Category", "Integration")]
 public class AgentsControllerTests : ControllerIntegrationTestBase
 {
-    private const string BaseUrl = "/api/v1/agents";
+    private const string BaseUrl = "/api/v1/orchestrations";
 
     public AgentsControllerTests(InfrastructureFixture infrastructure)
         : base(infrastructure)
@@ -31,7 +31,7 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        var agent = await response.Content.ReadFromJsonAsync<CreateAgentResponseV1>(JsonOptions);
+        var agent = await response.Content.ReadFromJsonAsync<CreateOrchestrationResponseV1>(JsonOptions);
         Assert.NotNull(agent);
         Assert.NotEqual(Guid.Empty, agent.Id);
         Assert.Equal(request.Name, agent.Name);
@@ -55,7 +55,7 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     public async Task Create_WithEmptyName_ReturnsBadRequest()
     {
         // Arrange
-        var request = new CreateAgentRequestV1
+        var request = new CreateOrchestrationRequestV1
         {
             Name = "",
             Description = "Test description"
@@ -77,10 +77,10 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     {
         // Arrange
         var createRequest = TestDataBuilder.CreateAgentRequest();
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, createRequest);
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, createRequest);
 
         // Act
-        var agent = await GetAsync<GetAgentResponseV1>($"{BaseUrl}/{created!.Id}");
+        var agent = await GetAsync<GetOrchestrationResponseV1>($"{BaseUrl}/{created!.Id}");
 
         // Assert
         Assert.NotNull(agent);
@@ -105,12 +105,13 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     [Fact]
     public async Task List_ReturnsAllUserAgents()
     {
-        // Arrange
-        await PostAsync<CreateAgentResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("agent-one"));
-        await PostAsync<CreateAgentResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("agent-two"));
+        // Arrange - use a fresh user to ensure isolation
+        SetTestUser(TestUser.CreateRandom());
+        await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("agent-one"));
+        await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("agent-two"));
 
         // Act
-        var agents = await GetAsync<List<GetAgentResponseV1>>(BaseUrl);
+        var agents = await GetAsync<List<GetOrchestrationResponseV1>>(BaseUrl);
 
         // Assert
         Assert.NotNull(agents);
@@ -120,8 +121,11 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     [Fact]
     public async Task List_WithNoAgents_ReturnsEmptyList()
     {
+        // Arrange - use a fresh user with no agents
+        SetTestUser(TestUser.CreateRandom());
+
         // Act
-        var agents = await GetAsync<List<GetAgentResponseV1>>(BaseUrl);
+        var agents = await GetAsync<List<GetOrchestrationResponseV1>>(BaseUrl);
 
         // Assert
         Assert.NotNull(agents);
@@ -137,12 +141,12 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     {
         // Arrange
         var createRequest = TestDataBuilder.CreateAgentRequest("original-name");
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, createRequest);
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, createRequest);
 
         var updateRequest = TestDataBuilder.CreateAgentRequest("updated-name", "Updated description");
 
         // Act
-        var updated = await PutAsync<GetAgentResponseV1>($"{BaseUrl}/{created!.Id}", updateRequest);
+        var updated = await PutAsync<GetOrchestrationResponseV1>($"{BaseUrl}/{created!.Id}", updateRequest);
 
         // Assert
         Assert.NotNull(updated);
@@ -173,7 +177,7 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     {
         // Arrange
         var createRequest = TestDataBuilder.CreateAgentRequest();
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, createRequest);
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, createRequest);
 
         // Act
         var response = await DeleteAsync($"{BaseUrl}/{created!.Id}");
@@ -201,7 +205,7 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     {
         // Arrange - Create agent and save a draft version
         var createRequest = TestDataBuilder.CreateAgentRequest();
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, createRequest);
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, createRequest);
 
         // Save a draft version
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest();
@@ -233,10 +237,10 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
             "A detailed description for round trip testing");
 
         // Act - Create
-        var createResponse = await PostAsync<CreateAgentResponseV1>(BaseUrl, request);
+        var createResponse = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, request);
 
         // Act - Get
-        var getResponse = await GetAsync<GetAgentResponseV1>($"{BaseUrl}/{createResponse!.Id}");
+        var getResponse = await GetAsync<GetOrchestrationResponseV1>($"{BaseUrl}/{createResponse!.Id}");
 
         // Assert - All data preserved
         Assert.NotNull(getResponse);
@@ -254,9 +258,9 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
     {
         // Arrange
         var createRequest = TestDataBuilder.CreateAgentRequest();
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, createRequest);
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, createRequest);
 
-        var updateRequest = new CreateAgentRequestV1
+        var updateRequest = new CreateOrchestrationRequestV1
         {
             Name = "Invalid-Name-With-Uppercase",
             Description = "Updated description"
@@ -280,7 +284,7 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
         var user1 = TestUser.CreateRandom();
         SetTestUser(user1);
         var createRequest = TestDataBuilder.CreateAgentRequest();
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, createRequest);
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, createRequest);
 
         // Act - Try to get as user 2
         var user2 = TestUser.CreateRandom();
@@ -297,15 +301,15 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
         // Arrange - Create agents for user 1
         var user1 = TestUser.CreateRandom();
         SetTestUser(user1);
-        await PostAsync<CreateAgentResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("user1-agent"));
+        await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("user1-agent"));
 
         // Create agents for user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
-        await PostAsync<CreateAgentResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("user2-agent"));
+        await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("user2-agent"));
 
         // Act - List as user 2
-        var agents = await GetAsync<List<GetAgentResponseV1>>(BaseUrl);
+        var agents = await GetAsync<List<GetOrchestrationResponseV1>>(BaseUrl);
 
         // Assert
         Assert.NotNull(agents);
@@ -319,7 +323,7 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
         // Arrange - Create agent as user 1
         var user1 = TestUser.CreateRandom();
         SetTestUser(user1);
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest());
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest());
 
         // Act - Try to update as user 2
         var user2 = TestUser.CreateRandom();
@@ -337,7 +341,7 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
         // Arrange - Create agent as user 1
         var user1 = TestUser.CreateRandom();
         SetTestUser(user1);
-        var created = await PostAsync<CreateAgentResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest());
+        var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest());
 
         // Act - Try to delete as user 2
         var user2 = TestUser.CreateRandom();

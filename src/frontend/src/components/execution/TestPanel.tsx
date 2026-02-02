@@ -10,7 +10,7 @@ import { ExecutionLogs } from './ExecutionLogs'
 import type { JSONSchema } from '@/lib/api'
 
 interface TestPanelProps {
-  agentId: string
+  orchestrationId: string
   inputSchema?: JSONSchema
 }
 
@@ -65,7 +65,7 @@ function generateExampleFromSchema(schema: JSONSchema): any {
   return example
 }
 
-export function TestPanel({ agentId, inputSchema }: TestPanelProps) {
+export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
   const [input, setInput] = useState('{\n  \n}')
   const [hasLoadedSchema, setHasLoadedSchema] = useState(false)
   const [output, setOutput] = useState<any>(null)
@@ -96,7 +96,7 @@ export function TestPanel({ agentId, inputSchema }: TestPanelProps) {
     try {
       const parsedInput = JSON.parse(input)
       setOutput(null)
-      startStream(agentId, parsedInput, true)
+      startStream(orchestrationId, parsedInput, true)
     } catch (e) {
       alert('Invalid JSON input')
     }
@@ -140,7 +140,7 @@ export function TestPanel({ agentId, inputSchema }: TestPanelProps) {
           ) : (
             <>
               <Play className="h-4 w-4" />
-              Test Agent
+              Test Orchestration
             </>
           )}
         </Button>

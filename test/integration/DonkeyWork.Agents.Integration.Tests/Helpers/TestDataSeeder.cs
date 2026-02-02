@@ -1,9 +1,9 @@
 using System.Text.Json;
-using DonkeyWork.Agents.Agents.Contracts.Models.ReactFlow;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Configurations;
-using DonkeyWork.Agents.Agents.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
+using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Persistence;
-using DonkeyWork.Agents.Persistence.Entities.Agents;
+using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 
@@ -20,12 +20,12 @@ public class TestDataSeeder
 
     #region Agent Seeding
 
-    public async Task<AgentEntity> SeedAgentAsync(
+    public async Task<OrchestrationEntity> SeedAgentAsync(
         Guid userId,
         string name,
         string? description = null)
     {
-        var agent = new AgentEntity
+        var agent = new OrchestrationEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
@@ -33,12 +33,12 @@ public class TestDataSeeder
             Description = description ?? "Test agent description"
         };
 
-        _dbContext.Agents.Add(agent);
+        _dbContext.Orchestrations.Add(agent);
         await _dbContext.SaveChangesAsync();
         return agent;
     }
 
-    public async Task<AgentVersionEntity> SeedAgentVersionAsync(
+    public async Task<OrchestrationVersionEntity> SeedAgentVersionAsync(
         Guid agentId,
         Guid userId,
         int versionNumber = 1,
@@ -79,10 +79,10 @@ public class TestDataSeeder
             [endNodeId] = new EndNodeConfiguration { Name = "end_1" }
         };
 
-        var version = new AgentVersionEntity
+        var version = new OrchestrationVersionEntity
         {
             Id = Guid.NewGuid(),
-            AgentId = agentId,
+            OrchestrationId = agentId,
             UserId = userId,
             VersionNumber = versionNumber,
             IsDraft = isDraft,
@@ -91,7 +91,7 @@ public class TestDataSeeder
             NodeConfigurations = nodeConfigurations
         };
 
-        _dbContext.AgentVersions.Add(version);
+        _dbContext.OrchestrationVersions.Add(version);
         await _dbContext.SaveChangesAsync();
         return version;
     }

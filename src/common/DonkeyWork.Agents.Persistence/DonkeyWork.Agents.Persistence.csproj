@@ -9,7 +9,7 @@
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
-        <ProjectReference Include="..\..\agents\DonkeyWork.Agents.Agents.Contracts\DonkeyWork.Agents.Agents.Contracts.csproj" />
+        <ProjectReference Include="..\..\orchestrations\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -24,6 +24,7 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.0" />
     </ItemGroup>
 
 </Project>

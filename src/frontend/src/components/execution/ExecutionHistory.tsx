@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react'
 import { Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { executions, type AgentExecution } from '@/lib/api'
+import { executions, type OrchestrationExecution } from '@/lib/api'
 
 interface ExecutionHistoryProps {
-  agentId: string
+  orchestrationId: string
 }
 
-export function ExecutionHistory({ agentId }: ExecutionHistoryProps) {
-  const [items, setItems] = useState<AgentExecution[]>([])
+export function ExecutionHistory({ orchestrationId }: ExecutionHistoryProps) {
+  const [items, setItems] = useState<OrchestrationExecution[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadExecutions()
-  }, [agentId])
+  }, [orchestrationId])
 
   const loadExecutions = async () => {
     try {
       setLoading(true)
-      const response = await executions.list(agentId)
+      const response = await executions.list(orchestrationId)
       setItems(response.executions)
     } catch (error) {
       console.error('Failed to load executions:', error)

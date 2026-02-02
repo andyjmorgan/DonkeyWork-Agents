@@ -9,39 +9,39 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { agents, type AgentVersion } from '@/lib/api'
+import { orchestrations, type OrchestrationVersion } from '@/lib/api'
 
 interface VersionHistorySheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  agentId: string
+  orchestrationId: string
   currentVersionId: string | null
-  onLoadVersion: (version: AgentVersion) => void
-  onCreateDraftFromVersion: (version: AgentVersion) => void
+  onLoadVersion: (version: OrchestrationVersion) => void
+  onCreateDraftFromVersion: (version: OrchestrationVersion) => void
 }
 
 export function VersionHistorySheet({
   open,
   onOpenChange,
-  agentId,
+  orchestrationId,
   currentVersionId,
   onLoadVersion,
   onCreateDraftFromVersion,
 }: VersionHistorySheetProps) {
-  const [versions, setVersions] = useState<AgentVersion[]>([])
+  const [versions, setVersions] = useState<OrchestrationVersion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [loadingVersionId, setLoadingVersionId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (open && agentId) {
+    if (open && orchestrationId) {
       loadVersions()
     }
-  }, [open, agentId])
+  }, [open, orchestrationId])
 
   const loadVersions = async () => {
     try {
       setIsLoading(true)
-      const data = await agents.listVersions(agentId)
+      const data = await orchestrations.listVersions(orchestrationId)
       setVersions(data)
     } catch (error) {
       console.error('Failed to load versions:', error)
@@ -51,7 +51,7 @@ export function VersionHistorySheet({
     }
   }
 
-  const handleLoadVersion = async (version: AgentVersion) => {
+  const handleLoadVersion = async (version: OrchestrationVersion) => {
     setLoadingVersionId(version.id)
     try {
       await onLoadVersion(version)
@@ -64,7 +64,7 @@ export function VersionHistorySheet({
     }
   }
 
-  const handleCreateDraft = async (version: AgentVersion) => {
+  const handleCreateDraft = async (version: OrchestrationVersion) => {
     setLoadingVersionId(version.id)
     try {
       await onCreateDraftFromVersion(version)
@@ -83,7 +83,7 @@ export function VersionHistorySheet({
         <SheetHeader>
           <SheetTitle>Version History</SheetTitle>
           <SheetDescription>
-            View and manage all versions of this agent
+            View and manage all versions of this orchestration
           </SheetDescription>
         </SheetHeader>
 

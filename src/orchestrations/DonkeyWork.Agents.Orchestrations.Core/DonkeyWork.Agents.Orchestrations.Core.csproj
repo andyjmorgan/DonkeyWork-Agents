@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NJsonSchema" Version="11.1.0" />
+        <PackageReference Include="RabbitMQ.Stream.Client" Version="1.10.0" />
+        <PackageReference Include="Scriban" Version="5.10.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Sdk\DonkeyWork.Agents.Common.Sdk.csproj" />
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+        <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
+        <ProjectReference Include="..\..\credentials\DonkeyWork.Agents.Credentials.Contracts\DonkeyWork.Agents.Credentials.Contracts.csproj" />
+        <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
+    </ItemGroup>
+
+</Project>

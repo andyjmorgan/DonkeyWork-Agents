@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { AgentsPage, AgentEditorPage, ApiKeysPage, SecretsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TodosPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, SecretsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TodosPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage } from '@/pages'
 import { useAuthStore } from '@/store/auth'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -27,12 +27,12 @@ export default function App() {
           {isAuthenticated ? (
             <>
               {/* Editor page - full screen, no layout wrapper */}
-              <Route path="/agents/:id/edit" element={<AgentEditorPage />} />
+              <Route path="/orchestrations/:id/edit" element={<OrchestrationEditorPage />} />
 
               {/* Regular pages with layout */}
               <Route element={<AppLayout />}>
-                <Route path="/" element={<Navigate to="/agents" replace />} />
-                <Route path="/agents" element={<AgentsPage />} />
+                <Route path="/" element={<Navigate to="/orchestrations" replace />} />
+                <Route path="/orchestrations" element={<OrchestrationsPage />} />
                 <Route path="/executions" element={<ExecutionsPage />} />
                 <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />

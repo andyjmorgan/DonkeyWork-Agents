@@ -6,11 +6,13 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.7.0-preview.1" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Projects.Contracts\DonkeyWork.Agents.Projects.Contracts.csproj" />
         <ProjectReference Include="..\DonkeyWork.Agents.Projects.Core\DonkeyWork.Agents.Projects.Core.csproj" />
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+        <ProjectReference Include="..\..\mcp\DonkeyWork.Agents.Mcp.Contracts\DonkeyWork.Agents.Mcp.Contracts.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
     </ItemGroup>
     <ItemGroup>

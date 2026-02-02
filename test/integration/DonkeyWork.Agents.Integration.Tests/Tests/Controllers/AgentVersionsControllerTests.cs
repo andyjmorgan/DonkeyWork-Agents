@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using DonkeyWork.Agents.Agents.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Integration.Tests.Base;
 using DonkeyWork.Agents.Integration.Tests.Helpers;
 using DonkeyWork.Agents.Integration.Tests.Infrastructure.Authentication;
@@ -11,7 +11,7 @@ namespace DonkeyWork.Agents.Integration.Tests.Tests.Controllers;
 [Trait("Category", "Integration")]
 public class AgentVersionsControllerTests : ControllerIntegrationTestBase
 {
-    private const string AgentsBaseUrl = "/api/v1/agents";
+    private const string AgentsBaseUrl = "/api/v1/orchestrations";
 
     public AgentVersionsControllerTests(InfrastructureFixture infrastructure)
         : base(infrastructure)
@@ -26,31 +26,31 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task SaveDraft_WithNewAgent_CreatesDraftVersion()
     {
         // Arrange - Create agent
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest();
 
         // Act
-        var version = await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
+        var version = await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
 
         // Assert
         Assert.NotNull(version);
         Assert.Equal(1, version.VersionNumber);
         Assert.True(version.IsDraft);
-        Assert.Equal(agent.Id, version.AgentId);
+        Assert.Equal(agent.Id, version.OrchestrationId);
     }
 
     [Fact]
     public async Task SaveDraft_MultipleTimes_UpdatesSameVersion()
     {
         // Arrange
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
 
         // Act - Save draft twice
-        var version1 = await PostAsync<GetAgentVersionResponseV1>(
+        var version1 = await PostAsync<GetOrchestrationVersionResponseV1>(
             VersionsUrl(agent!.Id),
             TestDataBuilder.CreateSaveVersionRequest(inputSchema: """{"type": "object", "properties": {"v1": {}}}"""));
 
-        var version2 = await PostAsync<GetAgentVersionResponseV1>(
+        var version2 = await PostAsync<GetOrchestrationVersionResponseV1>(
             VersionsUrl(agent.Id),
             TestDataBuilder.CreateSaveVersionRequest(inputSchema: """{"type": "object", "properties": {"v2": {}}}"""));
 
@@ -80,7 +80,7 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task SaveDraft_PreservesReactFlowDataStructure()
     {
         // Arrange
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
         var startNodeId = Guid.NewGuid();
         var endNodeId = Guid.NewGuid();
         var edgeId = Guid.NewGuid();
@@ -106,7 +106,7 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest(reactFlowData: reactFlowData, nodeConfigurations: nodeConfigurations);
 
         // Act
-        var version = await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
+        var version = await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
 
         // Assert
         Assert.NotNull(version);
@@ -121,7 +121,7 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task SaveDraft_PreservesNodeConfigurations()
     {
         // Arrange
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
         // Custom reactFlowData and nodeConfigurations must match
         var startNodeId = Guid.NewGuid();
         var endNodeId = Guid.NewGuid();
@@ -147,7 +147,7 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest(reactFlowData: reactFlowData, nodeConfigurations: nodeConfigurations);
 
         // Act
-        var version = await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
+        var version = await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
 
         // Assert
         Assert.NotNull(version);
@@ -160,12 +160,12 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task SaveDraft_PreservesInputSchema()
     {
         // Arrange
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
         var inputSchema = """{"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "number"}}}""";
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest(inputSchema: inputSchema);
 
         // Act
-        var version = await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
+        var version = await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), versionRequest);
 
         // Assert
         Assert.NotNull(version);
@@ -182,11 +182,11 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task Publish_WithDraftVersion_PublishesSuccessfully()
     {
         // Arrange - Create agent and save draft
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
-        await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
 
         // Act
-        var published = await PostAsync<GetAgentVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
+        var published = await PostAsync<GetOrchestrationVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
 
         // Assert
         Assert.NotNull(published);
@@ -199,8 +199,8 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task Publish_WithoutDraft_ReturnsNotFound()
     {
         // Arrange - Create agent (which has initial draft), publish it, then try to publish again
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
-        await PostAsync<GetAgentVersionResponseV1>($"{VersionsUrl(agent!.Id)}/publish", new { }); // Publish initial draft
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        await PostAsync<GetOrchestrationVersionResponseV1>($"{VersionsUrl(agent!.Id)}/publish", new { }); // Publish initial draft
 
         // Act - Try to publish when there's no draft
         var response = await PostResponseAsync($"{VersionsUrl(agent.Id)}/publish", new { });
@@ -226,12 +226,12 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task PublishWorkflow_SavePublishSave_CreatesNewDraftVersion()
     {
         // Arrange - Create agent
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
 
         // Act - Save v1, publish, save v2
-        await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
-        var publishedV1 = await PostAsync<GetAgentVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
-        var draftV2 = await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent.Id), TestDataBuilder.CreateSaveVersionRequest());
+        await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
+        var publishedV1 = await PostAsync<GetOrchestrationVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
+        var draftV2 = await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent.Id), TestDataBuilder.CreateSaveVersionRequest());
 
         // Assert
         Assert.NotNull(publishedV1);
@@ -250,11 +250,11 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task GetVersion_WithExistingVersion_ReturnsVersion()
     {
         // Arrange
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
-        var saved = await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var saved = await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
 
         // Act
-        var version = await GetAsync<GetAgentVersionResponseV1>($"{VersionsUrl(agent.Id)}/{saved!.Id}");
+        var version = await GetAsync<GetOrchestrationVersionResponseV1>($"{VersionsUrl(agent.Id)}/{saved!.Id}");
 
         // Assert
         Assert.NotNull(version);
@@ -266,7 +266,7 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task GetVersion_WithNonExistentVersion_ReturnsNotFound()
     {
         // Arrange
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
         var nonExistentVersionId = Guid.NewGuid();
 
         // Act
@@ -284,13 +284,13 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task ListVersions_WithMultipleVersions_ReturnsAllVersionsDescending()
     {
         // Arrange - Create agent, publish v1, save v2
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
-        await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
-        await PostAsync<GetAgentVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
-        await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent.Id), TestDataBuilder.CreateSaveVersionRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
+        await PostAsync<GetOrchestrationVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
+        await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent.Id), TestDataBuilder.CreateSaveVersionRequest());
 
         // Act
-        var versions = await GetAsync<List<GetAgentVersionResponseV1>>(VersionsUrl(agent.Id));
+        var versions = await GetAsync<List<GetOrchestrationVersionResponseV1>>(VersionsUrl(agent.Id));
 
         // Assert
         Assert.NotNull(versions);
@@ -303,10 +303,10 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task ListVersions_WithNewAgent_ReturnsInitialDraftVersion()
     {
         // Arrange - Create agent (which includes an initial draft version)
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
 
         // Act
-        var versions = await GetAsync<List<GetAgentVersionResponseV1>>(VersionsUrl(agent!.Id));
+        var versions = await GetAsync<List<GetOrchestrationVersionResponseV1>>(VersionsUrl(agent!.Id));
 
         // Assert - New agents start with a draft version
         Assert.NotNull(versions);
@@ -323,11 +323,11 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
     public async Task VersionTimestamps_AreCorrect()
     {
         // Arrange
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
 
         // Act - Save draft
         var beforeSave = DateTimeOffset.UtcNow;
-        var draft = await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
+        var draft = await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
         var afterSave = DateTimeOffset.UtcNow;
 
         // Assert - CreatedAt set, PublishedAt null
@@ -338,7 +338,7 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
 
         // Act - Publish
         var beforePublish = DateTimeOffset.UtcNow;
-        var published = await PostAsync<GetAgentVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
+        var published = await PostAsync<GetOrchestrationVersionResponseV1>($"{VersionsUrl(agent.Id)}/publish", new { });
         var afterPublish = DateTimeOffset.UtcNow;
 
         // Assert - PublishedAt set
@@ -358,7 +358,7 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
         // Arrange - Create agent as user 1
         var user1 = TestUser.CreateRandom();
         SetTestUser(user1);
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
 
         // Act - Try to save draft as user 2
         var user2 = TestUser.CreateRandom();
@@ -375,13 +375,13 @@ public class AgentVersionsControllerTests : ControllerIntegrationTestBase
         // Arrange - Create agent and version as user 1
         var user1 = TestUser.CreateRandom();
         SetTestUser(user1);
-        var agent = await PostAsync<CreateAgentResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
-        await PostAsync<GetAgentVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
+        var agent = await PostAsync<CreateOrchestrationResponseV1>(AgentsBaseUrl, TestDataBuilder.CreateAgentRequest());
+        await PostAsync<GetOrchestrationVersionResponseV1>(VersionsUrl(agent!.Id), TestDataBuilder.CreateSaveVersionRequest());
 
         // Act - Try to list as user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
-        var versions = await GetAsync<List<GetAgentVersionResponseV1>>(VersionsUrl(agent.Id));
+        var versions = await GetAsync<List<GetOrchestrationVersionResponseV1>>(VersionsUrl(agent.Id));
 
         // Assert - Should return empty list (agent not found for user 2)
         Assert.NotNull(versions);

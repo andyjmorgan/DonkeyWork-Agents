@@ -1,5 +1,5 @@
 using Asp.Versioning;
-using DonkeyWork.Agents.Agents.Api;
+using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
 using DonkeyWork.Agents.Persistence;
@@ -7,6 +7,7 @@ using DonkeyWork.Agents.Persistence.Services;
 using DonkeyWork.Agents.Projects.Api;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Scalar.AspNetCore;
 using Serilog;
@@ -55,8 +56,8 @@ builder.Services.AddOpenApi();
 // Add Persistence module (provides DbContext)
 builder.Services.AddPersistence(builder.Configuration);
 
-// Add Agents module
-builder.Services.AddAgentsApi();
+// Add Orchestrations module
+builder.Services.AddOrchestrationsApi();
 
 // Add Credentials module
 builder.Services.AddCredentialsApi();
@@ -72,6 +73,11 @@ builder.Services.AddProvidersApi();
 
 // Add Storage module
 builder.Services.AddStorageApi(builder.Configuration);
+
+// Configure Data Protection with PostgreSQL storage
+builder.Services.AddDataProtection()
+    .SetApplicationName("DonkeyWork.Agents")
+    .PersistKeysToDbContext<AgentsDbContext>();
 
 builder.Services.AddHealthChecks();
 

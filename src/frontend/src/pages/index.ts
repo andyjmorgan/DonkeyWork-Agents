@@ -1,5 +1,5 @@
-export { AgentsPage } from './AgentsPage'
-export { AgentEditorPage } from './AgentEditorPage'
+export { OrchestrationsPage } from './OrchestrationsPage'
+export { OrchestrationEditorPage } from './OrchestrationEditorPage'
 export { ApiKeysPage } from './ApiKeysPage'
 export { SecretsPage } from './SecretsPage'
 export { ExecutionsPage } from './ExecutionsPage'

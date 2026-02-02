@@ -11,21 +11,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { executions, agents, type AgentExecution, type Agent } from '@/lib/api'
+import { executions, orchestrations, type OrchestrationExecution, type Orchestration } from '@/lib/api'
 
 const PAGE_SIZE = 20
 
 export function ExecutionsPage() {
   const navigate = useNavigate()
-  const [items, setItems] = useState<AgentExecution[]>([])
-  const [agentMap, setAgentMap] = useState<Record<string, Agent>>({})
+  const [items, setItems] = useState<OrchestrationExecution[]>([])
+  const [orchestrationMap, setOrchestrationMap] = useState<Record<string, Orchestration>>({})
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     loadExecutions()
-    loadAgents()
+    loadOrchestrations()
   }, [page])
 
   const loadExecutions = async () => {
@@ -41,14 +41,14 @@ export function ExecutionsPage() {
     }
   }
 
-  const loadAgents = async () => {
+  const loadOrchestrations = async () => {
     try {
-      const agentList = await agents.list()
-      const map: Record<string, Agent> = {}
-      agentList.forEach(a => { map[a.id] = a })
-      setAgentMap(map)
+      const orchestrationList = await orchestrations.list()
+      const map: Record<string, Orchestration> = {}
+      orchestrationList.forEach(o => { map[o.id] = o })
+      setOrchestrationMap(map)
     } catch (error) {
-      console.error('Failed to load agents:', error)
+      console.error('Failed to load orchestrations:', error)
     }
   }
 
@@ -119,7 +119,7 @@ export function ExecutionsPage() {
           <PlayCircle className="mx-auto h-12 w-12 text-muted-foreground/50" />
           <h3 className="mt-4 text-lg font-medium">No executions yet</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Run an agent to see execution history here.
+            Run an orchestration to see execution history here.
           </p>
         </div>
       ) : (
@@ -141,9 +141,9 @@ export function ExecutionsPage() {
                       </Badge>
                     </div>
                     <div className="text-sm">
-                      <span className="text-muted-foreground">Agent: </span>
+                      <span className="text-muted-foreground">Orchestration: </span>
                       <span className="font-medium">
-                        {agentMap[execution.agentId]?.name || execution.agentId.slice(0, 8)}
+                        {orchestrationMap[execution.orchestrationId]?.name || execution.orchestrationId.slice(0, 8)}
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground flex items-center gap-1">
@@ -170,7 +170,7 @@ export function ExecutionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Status</TableHead>
-                  <TableHead>Agent</TableHead>
+                  <TableHead>Orchestration</TableHead>
                   <TableHead>Started</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead className="w-[100px]">Actions</TableHead>
@@ -192,7 +192,7 @@ export function ExecutionsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">
-                      {agentMap[execution.agentId]?.name || execution.agentId.slice(0, 8)}
+                      {orchestrationMap[execution.orchestrationId]?.name || execution.orchestrationId.slice(0, 8)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(execution.startedAt).toLocaleString()}

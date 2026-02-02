@@ -30,8 +30,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\DonkeyWork.Agents.Api\DonkeyWork.Agents.Api.csproj" />
-    <ProjectReference Include="..\..\..\src\agents\DonkeyWork.Agents.Agents.Api\DonkeyWork.Agents.Agents.Api.csproj" />
-    <ProjectReference Include="..\..\..\src\agents\DonkeyWork.Agents.Agents.Contracts\DonkeyWork.Agents.Agents.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\src\orchestrations\DonkeyWork.Agents.Orchestrations.Api\DonkeyWork.Agents.Orchestrations.Api.csproj" />
+    <ProjectReference Include="..\..\..\src\orchestrations\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />
     <ProjectReference Include="..\..\..\src\projects\DonkeyWork.Agents.Projects.Contracts\DonkeyWork.Agents.Projects.Contracts.csproj" />
     <ProjectReference Include="..\..\..\src\credentials\DonkeyWork.Agents.Credentials.Contracts\DonkeyWork.Agents.Credentials.Contracts.csproj" />
     <ProjectReference Include="..\..\..\src\identity\DonkeyWork.Agents.Identity.Api\DonkeyWork.Agents.Identity.Api.csproj" />

@@ -1,5 +1,5 @@
 using System.Net;
-using DonkeyWork.Agents.Agents.Api.Options;
+using DonkeyWork.Agents.Orchestrations.Api.Options;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Identity.Core.Services;
 using DonkeyWork.Agents.Integration.Tests.Infrastructure.Authentication;

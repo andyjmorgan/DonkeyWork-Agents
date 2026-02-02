@@ -66,9 +66,9 @@ export interface ValidationResult {
 
 interface EditorState {
   // Agent metadata
-  agentId: string | null
-  agentName: string
-  agentDescription: string
+  orchestrationId: string | null
+  orchestrationName: string
+  orchestrationDescription: string
 
   // Version data
   versionId: string | null
@@ -88,7 +88,7 @@ interface EditorState {
   isPropertiesOpen: boolean
 
   // Actions
-  setAgentMetadata: (name: string, description: string) => void
+  setOrchestrationMetadata: (name: string, description: string) => void
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
   onNodesChange: (changes: any[]) => void
@@ -103,10 +103,10 @@ interface EditorState {
   toggleProperties: () => void
   setViewport: (viewport: Viewport) => void
   reset: () => void
-  loadAgent: (
-    agentId: string,
-    agentName: string,
-    agentDescription: string,
+  loadOrchestration: (
+    orchestrationId: string,
+    orchestrationName: string,
+    orchestrationDescription: string,
     versionId?: string,
     isDraft?: boolean,
     reactFlowData?: { nodes: Node[], edges: Edge[], viewport: Viewport },
@@ -116,7 +116,7 @@ interface EditorState {
   // Persistence
   extractCredentialMappings: () => Array<{ nodeId: string; credentialId: string }>
   save: () => Promise<void>
-  load: (agentId: string, versionId: string) => Promise<void>
+  load: (orchestrationId: string, versionId: string) => Promise<void>
   exportToJson: () => string
 
   // Validation
@@ -156,9 +156,9 @@ const createInitialState = () => {
   const endId = generateGuid()
 
   return {
-    agentId: null,
-    agentName: 'Untitled Agent',
-    agentDescription: '',
+    orchestrationId: null,
+    orchestrationName: 'Untitled Orchestration',
+    orchestrationDescription: '',
     versionId: null,
     isDraft: true,
     nodes: [
@@ -223,8 +223,8 @@ const createInitialState = () => {
 export const useEditorStore = create<EditorState>((set, get) => ({
   ...createInitialState(),
 
-  setAgentMetadata: (name, description) => {
-    set({ agentName: name, agentDescription: description })
+  setOrchestrationMetadata: (name, description) => {
+    set({ orchestrationName: name, orchestrationDescription: description })
   },
 
   setNodes: (nodes) => {
@@ -420,7 +420,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set(createInitialState())
   },
 
-  loadAgent: (agentId, agentName, agentDescription, versionId, isDraft, reactFlowData, nodeConfigurations) => {
+  loadOrchestration: (orchestrationId, orchestrationName, orchestrationDescription, versionId, isDraft, reactFlowData, nodeConfigurations) => {
     if (reactFlowData && nodeConfigurations) {
       // Enrich nodes with schema data (for backward compatibility with old saved nodes)
       const enrichedNodes = reactFlowData.nodes.map(node => {
@@ -429,9 +429,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       })
 
       set({
-        agentId,
-        agentName,
-        agentDescription,
+        orchestrationId,
+        orchestrationName,
+        orchestrationDescription,
         versionId: versionId || null,
         isDraft: isDraft ?? true,
         nodes: enrichedNodes,
@@ -446,9 +446,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const initial = createInitialState()
       set({
         ...initial,
-        agentId,
-        agentName,
-        agentDescription
+        orchestrationId,
+        orchestrationName,
+        orchestrationDescription
       })
     }
   },
@@ -680,10 +680,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   save: async () => {
-    const { agentId, nodes, edges, viewport, nodeConfigurations } = get()
+    const { orchestrationId, nodes, edges, viewport, nodeConfigurations } = get()
 
-    if (!agentId) {
-      throw new Error('No agent ID - create agent first')
+    if (!orchestrationId) {
+      throw new Error('No orchestration ID - create orchestration first')
     }
 
     // Find start node and get input schema
@@ -694,9 +694,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const reactFlowData = { nodes, edges, viewport }
     const credentialMappings = get().extractCredentialMappings()
 
-    const { agents } = await import('@/lib/api')
+    const { orchestrations } = await import('@/lib/api')
 
-    await agents.saveVersion(agentId, {
+    await orchestrations.saveVersion(orchestrationId, {
       reactFlowData,
       nodeConfigurations,
       inputSchema,
@@ -705,10 +705,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })
   },
 
-  load: async (agentId: string, versionId: string) => {
-    const { agents } = await import('@/lib/api')
+  load: async (orchestrationId: string, versionId: string) => {
+    const { orchestrations } = await import('@/lib/api')
 
-    const version = await agents.getVersion(agentId, versionId)
+    const version = await orchestrations.getVersion(orchestrationId, versionId)
 
     // Enrich nodes with schema data (for backward compatibility with old saved nodes)
     const enrichedNodes = version.reactFlowData.nodes.map((node: Node) => {
@@ -717,7 +717,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })
 
     set({
-      agentId,
+      orchestrationId,
       versionId,
       nodes: enrichedNodes,
       edges: version.reactFlowData.edges,
@@ -728,17 +728,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   exportToJson: () => {
-    const { agentId, agentName, agentDescription, nodes, edges, viewport, nodeConfigurations } = get()
+    const { orchestrationId, orchestrationName, orchestrationDescription, nodes, edges, viewport, nodeConfigurations } = get()
 
     const startNode = nodes.find(n => n.data?.nodeType === 'Start')
     const startConfig = startNode ? nodeConfigurations[startNode.id] : null
     const inputSchema = (startConfig?.inputSchema as Record<string, unknown>) || defaultInputSchema
 
     return JSON.stringify({
-      agent: {
-        id: agentId,
-        name: agentName,
-        description: agentDescription
+      orchestration: {
+        id: orchestrationId,
+        name: orchestrationName,
+        description: orchestrationDescription
       },
       version: {
         reactFlowData: { nodes, edges, viewport },

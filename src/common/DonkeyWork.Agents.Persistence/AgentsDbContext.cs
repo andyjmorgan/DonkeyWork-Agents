@@ -1,14 +1,16 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence.Entities;
-using DonkeyWork.Agents.Persistence.Entities.Agents;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
+using DonkeyWork.Agents.Persistence.Entities.Mcp;
+using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Persistence.Entities.Storage;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace DonkeyWork.Agents.Persistence;
 
-public class AgentsDbContext : DbContext
+public class AgentsDbContext : DbContext, IDataProtectionKeyContext
 {
     private readonly IIdentityContext? _identityContext;
 
@@ -38,13 +40,13 @@ public class AgentsDbContext : DbContext
     public DbSet<StoredFileEntity> StoredFiles => Set<StoredFileEntity>();
     public DbSet<FileShareEntity> FileShares => Set<FileShareEntity>();
 
-    // Agents module
-    public DbSet<AgentEntity> Agents => Set<AgentEntity>();
-    public DbSet<AgentVersionEntity> AgentVersions => Set<AgentVersionEntity>();
-    public DbSet<AgentVersionCredentialMappingEntity> AgentVersionCredentialMappings => Set<AgentVersionCredentialMappingEntity>();
-    public DbSet<AgentExecutionEntity> AgentExecutions => Set<AgentExecutionEntity>();
-    public DbSet<AgentNodeExecutionEntity> AgentNodeExecutions => Set<AgentNodeExecutionEntity>();
-    public DbSet<AgentExecutionLogEntity> AgentExecutionLogs => Set<AgentExecutionLogEntity>();
+    // Orchestrations module
+    public DbSet<OrchestrationEntity> Orchestrations => Set<OrchestrationEntity>();
+    public DbSet<OrchestrationVersionEntity> OrchestrationVersions => Set<OrchestrationVersionEntity>();
+    public DbSet<OrchestrationVersionCredentialMappingEntity> OrchestrationVersionCredentialMappings => Set<OrchestrationVersionCredentialMappingEntity>();
+    public DbSet<OrchestrationExecutionEntity> OrchestrationExecutions => Set<OrchestrationExecutionEntity>();
+    public DbSet<OrchestrationNodeExecutionEntity> OrchestrationNodeExecutions => Set<OrchestrationNodeExecutionEntity>();
+    public DbSet<OrchestrationExecutionLogEntity> OrchestrationExecutionLogs => Set<OrchestrationExecutionLogEntity>();
 
     // Projects module
     public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
@@ -57,6 +59,12 @@ public class AgentsDbContext : DbContext
     public DbSet<NoteTagEntity> NoteTags => Set<NoteTagEntity>();
     public DbSet<ProjectFileReferenceEntity> ProjectFileReferences => Set<ProjectFileReferenceEntity>();
     public DbSet<MilestoneFileReferenceEntity> MilestoneFileReferences => Set<MilestoneFileReferenceEntity>();
+
+    // MCP module (system-level logging, no user scoping)
+    public DbSet<McpToolInvocationLogEntity> McpToolInvocationLogs => Set<McpToolInvocationLogEntity>();
+
+    // Data Protection keys (system-level, no user scoping)
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

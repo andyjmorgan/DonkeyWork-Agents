@@ -239,8 +239,8 @@ export const credentials = {
   delete: (id: string) => api.delete(`/api/v1/credentials/${id}`),
 }
 
-// Agent types
-export interface Agent {
+// Orchestration types
+export interface Orchestration {
   id: string
   name: string
   description: string
@@ -248,9 +248,9 @@ export interface Agent {
   createdAt: string
 }
 
-export interface AgentVersion {
+export interface OrchestrationVersion {
   id: string
-  agentId: string
+  orchestrationId: string
   versionNumber: number
   isDraft: boolean
   inputSchema: JSONSchema
@@ -268,7 +268,7 @@ export interface JSONSchema {
   [key: string]: unknown
 }
 
-export interface CreateAgentRequest {
+export interface CreateOrchestrationRequest {
   name: string
   description: string
 }
@@ -281,7 +281,7 @@ export interface SaveVersionRequest {
   credentialMappings: Array<{ nodeId: string; credentialId: string }>
 }
 
-export interface CreateAgentResponse {
+export interface CreateOrchestrationResponse {
   id: string
   name: string
   description: string | null
@@ -289,27 +289,27 @@ export interface CreateAgentResponse {
   createdAt: string
 }
 
-export const agents = {
-  list: () => api.get<Agent[]>('/api/v1/agents'),
-  create: (data: CreateAgentRequest) => api.post<CreateAgentResponse>('/api/v1/agents', data),
-  get: (id: string) => api.get<Agent>(`/api/v1/agents/${id}`),
-  update: (id: string, data: CreateAgentRequest) => fetchWithAuth(`/api/v1/agents/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.json() as Promise<Agent>),
-  delete: (id: string) => api.delete(`/api/v1/agents/${id}`),
+export const orchestrations = {
+  list: () => api.get<Orchestration[]>('/api/v1/orchestrations'),
+  create: (data: CreateOrchestrationRequest) => api.post<CreateOrchestrationResponse>('/api/v1/orchestrations', data),
+  get: (id: string) => api.get<Orchestration>(`/api/v1/orchestrations/${id}`),
+  update: (id: string, data: CreateOrchestrationRequest) => fetchWithAuth(`/api/v1/orchestrations/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.json() as Promise<Orchestration>),
+  delete: (id: string) => api.delete(`/api/v1/orchestrations/${id}`),
 
   // Versions
-  listVersions: (agentId: string) => api.get<AgentVersion[]>(`/api/v1/agents/${agentId}/versions`),
-  getVersion: (agentId: string, versionId: string) => api.get<AgentVersion>(`/api/v1/agents/${agentId}/versions/${versionId}`),
-  saveVersion: (agentId: string, data: SaveVersionRequest) => api.post<AgentVersion>(`/api/v1/agents/${agentId}/versions`, data),
-  publish: (agentId: string) => api.post<AgentVersion>(`/api/v1/agents/${agentId}/versions/publish`, {}),
+  listVersions: (orchestrationId: string) => api.get<OrchestrationVersion[]>(`/api/v1/orchestrations/${orchestrationId}/versions`),
+  getVersion: (orchestrationId: string, versionId: string) => api.get<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions/${versionId}`),
+  saveVersion: (orchestrationId: string, data: SaveVersionRequest) => api.post<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions`, data),
+  publish: (orchestrationId: string) => api.post<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions/publish`, {}),
 }
 
 // Execution types
-export interface ExecuteAgentRequest {
+export interface ExecuteOrchestrationRequest {
   input: any
   versionId?: string
 }
 
-export interface ExecuteAgentResponse {
+export interface ExecuteOrchestrationResponse {
   executionId: string
   status: 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
   output?: any
@@ -323,9 +323,9 @@ export interface ExecutionEvent {
   [key: string]: any
 }
 
-export interface AgentExecution {
+export interface OrchestrationExecution {
   id: string
-  agentId: string
+  orchestrationId: string
   versionId: string
   status: 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
   input: any
@@ -366,23 +366,23 @@ export interface NodeExecution {
 
 // Execution API functions
 export const executions = {
-  // Execute agent (production)
-  execute: async (agentId: string, input: any, versionId?: string) =>
-    api.post<ExecuteAgentResponse>(`/api/v1/agents/${agentId}/execute`, { input, versionId }),
+  // Execute orchestration (production)
+  execute: async (orchestrationId: string, input: any, versionId?: string) =>
+    api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/execute`, { input, versionId }),
 
-  // Test agent (playground)
-  test: async (agentId: string, input: any, versionId?: string) =>
-    api.post<ExecuteAgentResponse>(`/api/v1/agents/${agentId}/test`, { input, versionId }),
+  // Test orchestration (playground)
+  test: async (orchestrationId: string, input: any, versionId?: string) =>
+    api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/test`, { input, versionId }),
 
   // Get execution details
-  get: (executionId: string) => api.get<AgentExecution>(`/api/v1/agents/executions/${executionId}`),
+  get: (executionId: string) => api.get<OrchestrationExecution>(`/api/v1/orchestrations/executions/${executionId}`),
 
   // List executions
-  list: (agentId?: string, offset = 0, limit = 20) => {
+  list: (orchestrationId?: string, offset = 0, limit = 20) => {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
-    if (agentId) params.append('agentId', agentId)
-    return api.get<{ executions: AgentExecution[], totalCount: number }>(
-      `/api/v1/agents/executions?${params}`
+    if (orchestrationId) params.append('orchestrationId', orchestrationId)
+    return api.get<{ executions: OrchestrationExecution[], totalCount: number }>(
+      `/api/v1/orchestrations/executions?${params}`
     )
   },
 
@@ -390,7 +390,7 @@ export const executions = {
   getLogs: (executionId: string, offset = 0, limit = 100) => {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
     return api.get<{ logs: ExecutionLog[], totalCount: number }>(
-      `/api/v1/agents/executions/${executionId}/logs?${params}`
+      `/api/v1/orchestrations/executions/${executionId}/logs?${params}`
     )
   },
 
@@ -398,7 +398,7 @@ export const executions = {
   getNodeExecutions: (executionId: string, offset = 0, limit = 100) => {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
     return api.get<{ nodeExecutions: NodeExecution[], totalCount: number }>(
-      `/api/v1/agents/executions/${executionId}/nodes?${params}`
+      `/api/v1/orchestrations/executions/${executionId}/nodes?${params}`
     )
   },
 }
@@ -804,7 +804,7 @@ export interface GetNodeTypesResponse {
 // Node Types API
 export const nodeTypes = {
   list: async () => {
-    const response = await api.get<GetNodeTypesResponse>('/api/v1/agents/node-types')
+    const response = await api.get<GetNodeTypesResponse>('/api/v1/orchestrations/node-types')
     return response.nodeTypes
   },
   getSchema: async (nodeType: string) => {
