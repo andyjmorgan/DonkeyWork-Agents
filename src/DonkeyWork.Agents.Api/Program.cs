@@ -2,9 +2,11 @@ using Asp.Versioning;
 using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
+using DonkeyWork.Agents.Mcp.Core;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Services;
 using DonkeyWork.Agents.Projects.Api;
+using DonkeyWork.Agents.Projects.Api.McpTools;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
 using Microsoft.AspNetCore.DataProtection;
@@ -68,6 +70,8 @@ builder.Services.AddIdentityApi(builder.Configuration);
 // Add Projects module
 builder.Services.AddProjectsApi();
 
+builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly);
+
 // Add Providers module
 builder.Services.AddProvidersApi();
 
@@ -114,6 +118,8 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+app.MapMcp().RequireAuthorization();
 
 app.MapHealthChecks("/healthz");
 

@@ -9,11 +9,24 @@ using ModelContextProtocol.Server;
 
 namespace DonkeyWork.Agents.Mcp.Core;
 
+using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Builder;
+
 /// <summary>
 /// Extension methods for MCP server configuration.
 /// </summary>
 public static class DependencyInjection
 {
+    /// <summary>
+    /// Maps the dynamic MCP server to the web application.
+    /// </summary>
+    /// <param name="app">The app</param>
+    /// <returns></returns>
+    public static void MapDynamicMcpServer(this WebApplication app)
+    {
+        app.MapMcp().RequireAuthorization();
+    }
+
     /// <summary>
     /// Adds MCP server with HTTP transport and discovers tools from the specified assemblies.
     /// Uses custom handlers for tool listing and invocation with support for filtering and logging.
@@ -21,7 +34,7 @@ public static class DependencyInjection
     /// <param name="services">The service collection.</param>
     /// <param name="toolAssemblies">Assemblies to scan for MCP tools.</param>
     /// <returns>The MCP server builder for further configuration.</returns>
-    public static IMcpServerBuilder AddMcpServer(this IServiceCollection services, params Assembly[] toolAssemblies)
+    public static IMcpServerBuilder AddDynamicMcpServer(this IServiceCollection services, params Assembly[] toolAssemblies)
     {
         // Register the singleton tool registry and initialize it
         services.AddSingleton<McpToolRegistry>();
