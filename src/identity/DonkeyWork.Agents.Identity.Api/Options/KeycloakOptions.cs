@@ -35,6 +35,16 @@ public sealed class KeycloakOptions
     public string Audience { get; set; } = string.Empty;
 
     /// <summary>
+    /// The OAuth client ID. If not set, defaults to Audience.
+    /// </summary>
+    public string? ClientId { get; set; }
+
+    /// <summary>
+    /// The OAuth client secret. Required for confidential clients.
+    /// </summary>
+    public string? ClientSecret { get; set; }
+
+    /// <summary>
     /// Whether to require HTTPS for metadata retrieval. Default is true.
     /// </summary>
     public bool RequireHttpsMetadata { get; set; } = true;

@@ -15,12 +15,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
 {
     private readonly IIdentityContext? _identityContext;
 
-    public AgentsDbContext(DbContextOptions<AgentsDbContext> options)
-        : base(options)
-    {
-    }
-
-    public AgentsDbContext(DbContextOptions<AgentsDbContext> options, IIdentityContext identityContext)
+    public AgentsDbContext(DbContextOptions<AgentsDbContext> options, IIdentityContext? identityContext = null)
         : base(options)
     {
         _identityContext = identityContext;

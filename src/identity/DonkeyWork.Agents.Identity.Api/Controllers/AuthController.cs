@@ -34,6 +34,13 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Gets the effective OAuth client ID (ClientId if set, otherwise Audience).
+    /// </summary>
+    private string EffectiveClientId => !string.IsNullOrEmpty(_keycloakOptions.ClientId)
+        ? _keycloakOptions.ClientId
+        : _keycloakOptions.Audience;
+
+    /// <summary>
     /// Initiates the OAuth2 authorization code flow with PKCE.
     /// Redirects the user to Keycloak for authentication.
     /// </summary>
@@ -61,7 +68,7 @@ public class AuthController : ControllerBase
 
         // Build the Keycloak authorization URL
         var authorizationUrl = $"{_keycloakOptions.Authority}/protocol/openid-connect/auth?" +
-            $"client_id={Uri.EscapeDataString(_keycloakOptions.Audience)}" +
+            $"client_id={Uri.EscapeDataString(EffectiveClientId)}" +
             $"&response_type=code" +
             $"&scope={Uri.EscapeDataString("openid profile email")}" +
             $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
@@ -129,11 +136,17 @@ public class AuthController : ControllerBase
         var tokenRequest = new Dictionary<string, string>
         {
             ["grant_type"] = "authorization_code",
-            ["client_id"] = _keycloakOptions.Audience,
+            ["client_id"] = EffectiveClientId,
             ["code"] = code,
             ["redirect_uri"] = redirectUri,
             ["code_verifier"] = codeVerifier
         };
+
+        // Add client_secret if configured (required for confidential clients)
+        if (!string.IsNullOrEmpty(_keycloakOptions.ClientSecret))
+        {
+            tokenRequest["client_secret"] = _keycloakOptions.ClientSecret;
+        }
 
         var httpClient = _httpClientFactory.CreateClient();
         var tokenResponse = await httpClient.PostAsync(tokenEndpoint, new FormUrlEncodedContent(tokenRequest));
@@ -191,9 +204,15 @@ public class AuthController : ControllerBase
         var tokenRequest = new Dictionary<string, string>
         {
             ["grant_type"] = "refresh_token",
-            ["client_id"] = _keycloakOptions.Audience,
+            ["client_id"] = EffectiveClientId,
             ["refresh_token"] = request.RefreshToken
         };
+
+        // Add client_secret if configured (required for confidential clients)
+        if (!string.IsNullOrEmpty(_keycloakOptions.ClientSecret))
+        {
+            tokenRequest["client_secret"] = _keycloakOptions.ClientSecret;
+        }
 
         var httpClient = _httpClientFactory.CreateClient();
         var tokenResponse = await httpClient.PostAsync(tokenEndpoint, new FormUrlEncodedContent(tokenRequest));
