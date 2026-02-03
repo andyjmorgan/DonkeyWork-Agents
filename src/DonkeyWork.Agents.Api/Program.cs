@@ -8,6 +8,7 @@ using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Services;
 using DonkeyWork.Agents.Projects.Api;
 using DonkeyWork.Agents.Projects.Api.McpTools;
+using DonkeyWork.Agents.Identity.Api.McpTools;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
 using Microsoft.AspNetCore.DataProtection;
@@ -74,7 +75,7 @@ builder.Services.AddProjectsApi();
 // Add Conversations module
 builder.Services.AddConversationsApi();
 
-builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly);
+builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly, typeof(IdentityTools).Assembly);
 
 // Add Providers module
 builder.Services.AddProvidersApi();
