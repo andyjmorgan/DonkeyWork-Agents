@@ -22,6 +22,7 @@ import {
   Eye,
   Columns,
   GitBranch,
+  Table,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -253,6 +254,13 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange }: Markdown
           tooltip="Horizontal Rule"
         >
           <Minus className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          isActive={editor.isActive('table')}
+          tooltip="Insert Table"
+        >
+          <Table className="h-4 w-4" />
         </ToolbarButton>
 
         <Separator orientation="vertical" className="mx-1 h-6" />

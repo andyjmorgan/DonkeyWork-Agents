@@ -78,7 +78,7 @@ export function RawMarkdownEditor({ value, onChange, className = '' }: RawMarkdo
   const isDark = theme === 'dark'
 
   return (
-    <div className={`raw-markdown-editor ${className}`}>
+    <div className={`raw-markdown-editor h-full ${className}`}>
       <CodeMirror
         value={value}
         onChange={onChange}
@@ -96,7 +96,7 @@ export function RawMarkdownEditor({ value, onChange, className = '' }: RawMarkdo
           autocompletion: true,
           searchKeymap: true,
         }}
-        className="min-h-[200px]"
+        className="min-h-[200px] h-full"
       />
     </div>
   )

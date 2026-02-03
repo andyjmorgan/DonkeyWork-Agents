@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { useAuthStore } from '@/store/auth'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import type {
   ContentPart,
   ConversationMessage,
@@ -29,53 +29,6 @@ interface StreamingMessage {
   totalTokens?: number
 }
 
-async function fetchWithTokenRefresh(
-  url: string,
-  options: RequestInit,
-  retryOnUnauthorized = true
-): Promise<Response> {
-  const state = useAuthStore.getState()
-  const { shouldRefreshToken, refreshTokens, logout } = state
-
-  // Proactively refresh token if it's about to expire
-  if (shouldRefreshToken() && retryOnUnauthorized) {
-    const refreshed = await refreshTokens()
-    if (!refreshed) {
-      logout()
-      window.location.href = '/login'
-      throw new Error('Session expired')
-    }
-  }
-
-  // Get potentially updated token after refresh
-  const currentToken = useAuthStore.getState().accessToken
-
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...options.headers,
-      'Authorization': `Bearer ${currentToken}`,
-    },
-  })
-
-  if (response.status === 401 && retryOnUnauthorized) {
-    // Try to refresh the token
-    const refreshed = await refreshTokens()
-
-    if (refreshed) {
-      // Retry the request with the new token (don't retry again on 401)
-      return fetchWithTokenRefresh(url, options, false)
-    }
-
-    // Refresh failed - logout and redirect
-    logout()
-    window.location.href = '/login'
-    throw new Error('Session expired')
-  }
-
-  return response
-}
-
 export function useConversationStream(options: UseConversationStreamOptions = {}) {
   const [streamingMessage, setStreamingMessage] = useState<StreamingMessage | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -102,7 +55,7 @@ export function useConversationStream(options: UseConversationStreamOptions = {}
     let finalMessage: ConversationMessage | null = null
 
     try {
-      const response = await fetchWithTokenRefresh(
+      const response = await fetchWithAuth(
         `/api/v1/conversations/${conversationId}/messages`,
         {
           method: 'POST',

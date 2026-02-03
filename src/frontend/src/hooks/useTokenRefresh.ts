@@ -12,26 +12,31 @@ const TOKEN_REFRESH_INTERVAL = 60000 // Check every minute
  */
 export function useTokenRefresh() {
   const intervalRef = useRef<number | null>(null)
-  const {
-    isAuthenticated,
-    shouldRefreshToken,
-    refreshTokens,
-    logout,
-  } = useAuthStore()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   const checkAndRefreshToken = useCallback(async () => {
-    if (!isAuthenticated) return
+    // Always get fresh state to avoid stale closures
+    const state = useAuthStore.getState()
+    if (!state.isAuthenticated) return
 
-    if (shouldRefreshToken()) {
-      const refreshed = await refreshTokens()
-
+    // Also check if token is expired (not just should refresh)
+    if (state.isTokenExpired()) {
+      const refreshed = await state.refreshTokens()
       if (!refreshed) {
         // Refresh failed - log the user out
-        logout()
+        state.logout()
+        window.location.href = '/login'
+      }
+    } else if (state.shouldRefreshToken()) {
+      // Proactively refresh before expiry
+      const refreshed = await state.refreshTokens()
+      if (!refreshed) {
+        // Refresh failed - log the user out
+        state.logout()
         window.location.href = '/login'
       }
     }
-  }, [isAuthenticated, shouldRefreshToken, refreshTokens, logout])
+  }, [])
 
   useEffect(() => {
     if (!isAuthenticated) {

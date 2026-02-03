@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Node, Edge, Viewport } from '@xyflow/react'
+import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
 import type { OrchestrationInterfaces } from '@/lib/api'
 
 /**
@@ -93,13 +93,13 @@ interface EditorState {
   setOrchestrationMetadata: (name: string, description: string) => void
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
-  onNodesChange: (changes: any[]) => void
-  onEdgesChange: (changes: any[]) => void
-  onConnect: (connection: any) => void
+  onNodesChange: (changes: NodeChange[]) => void
+  onEdgesChange: (changes: EdgeChange[]) => void
+  onConnect: (connection: Connection) => void
   addNode: (position: { x: number; y: number }, schemaInfo: Record<string, unknown>) => void
   removeNode: (nodeId: string) => void
   updateNodeConfig: (nodeId: string, config: Partial<NodeConfig>) => void
-  updateNodeData: (nodeId: string, data: any) => void
+  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
   selectNode: (nodeId: string | null) => void
   togglePalette: () => void
   toggleProperties: () => void
@@ -133,6 +133,13 @@ interface EditorState {
 
   // Graph helpers
   getReachablePredecessors: (nodeId: string) => Array<{ nodeId: string; nodeName: string; nodeType: string }>
+
+  // Interfaces
+  setInterfaces: (interfaces: OrchestrationInterfaces) => void
+  updateInterface: <K extends keyof OrchestrationInterfaces>(
+    interfaceType: K,
+    config: OrchestrationInterfaces[K]
+  ) => void
 }
 
 // Default input schema for Start node
@@ -242,13 +249,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   onNodesChange: (changes) => {
     const { nodes } = get()
     set({ nodes: nodes.map(node => {
-      const change = changes.find((c: any) => c.id === node.id)
+      const change = changes.find((c) => 'id' in c && c.id === node.id)
       if (!change) return node
 
-      if (change.type === 'position' && change.position) {
+      if (change.type === 'position' && 'position' in change && change.position) {
         return { ...node, position: change.position }
       }
-      if (change.type === 'select') {
+      if (change.type === 'select' && 'selected' in change) {
         return { ...node, selected: change.selected }
       }
       if (change.type === 'remove') {
@@ -261,10 +268,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   onEdgesChange: (changes) => {
     const { edges } = get()
     set({ edges: edges.map(edge => {
-      const change = changes.find((c: any) => c.id === edge.id)
+      const change = changes.find((c) => 'id' in c && c.id === edge.id)
       if (!change) return edge
 
-      if (change.type === 'select') {
+      if (change.type === 'select' && 'selected' in change) {
         return { ...edge, selected: change.selected }
       }
       if (change.type === 'remove') {
@@ -685,7 +692,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   save: async () => {
-    const { orchestrationId, nodes, edges, viewport, nodeConfigurations } = get()
+    const { orchestrationId, nodes, edges, viewport, nodeConfigurations, interfaces } = get()
 
     if (!orchestrationId) {
       throw new Error('No orchestration ID - create orchestration first')
@@ -706,7 +713,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nodeConfigurations,
       inputSchema,
       outputSchema: null,
-      credentialMappings
+      credentialMappings,
+      interfaces: interfaces ?? undefined
     })
   },
 
@@ -733,7 +741,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   exportToJson: () => {
-    const { orchestrationId, orchestrationName, orchestrationDescription, nodes, edges, viewport, nodeConfigurations } = get()
+    const { orchestrationId, orchestrationName, orchestrationDescription, nodes, edges, viewport, nodeConfigurations, interfaces } = get()
 
     const startNode = nodes.find(n => n.data?.nodeType === 'Start')
     const startConfig = startNode ? nodeConfigurations[startNode.id] : null
@@ -749,8 +757,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         reactFlowData: { nodes, edges, viewport },
         nodeConfigurations,
         inputSchema,
+        interfaces,
         credentialMappings: get().extractCredentialMappings()
       }
     }, null, 2)
+  },
+
+  setInterfaces: (interfaces) => {
+    set({ interfaces })
+  },
+
+  updateInterface: (interfaceType, config) => {
+    const { interfaces } = get()
+    set({
+      interfaces: {
+        ...interfaces,
+        [interfaceType]: config
+      }
+    })
   }
 }))

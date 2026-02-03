@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, Save, Loader2, History, Play } from 'lucide-react'
+import { ArrowLeft, Download, Save, Loader2, History, Play, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -10,6 +10,7 @@ import { PropertiesPanel } from '@/components/editor/PropertiesPanel'
 import { OrchestrationMetadataDialog } from '@/components/editor/OrchestrationMetadataDialog'
 import { VersionHistorySheet } from '@/components/editor/VersionHistorySheet'
 import { ExportJsonDialog } from '@/components/editor/ExportJsonDialog'
+import { InterfacesPanel } from '@/components/editor/InterfacesPanel'
 import { TestPanel } from '@/components/execution/TestPanel'
 import { useEditorStore } from '@/store/editor'
 import type { OrchestrationVersion } from '@/lib/api'
@@ -38,6 +39,7 @@ export function OrchestrationEditorPage() {
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
   const [isTestPanelOpen, setIsTestPanelOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
+  const [isInterfacesPanelOpen, setIsInterfacesPanelOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -342,6 +344,21 @@ export function OrchestrationEditorPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setIsInterfacesPanelOpen(true)}
+            className="relative"
+          >
+            <Settings2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Interfaces</span>
+            {/* Show indicator if any interface is enabled */}
+            {(interfaces?.chat?.enabled || interfaces?.mcp?.enabled || interfaces?.a2a?.enabled || interfaces?.webhook?.enabled) && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-foreground">
+                {[interfaces?.chat?.enabled, interfaces?.mcp?.enabled, interfaces?.a2a?.enabled, interfaces?.webhook?.enabled].filter(Boolean).length}
+              </span>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setIsVersionHistoryOpen(true)}
           >
             <History className="h-4 w-4" />
@@ -433,6 +450,12 @@ export function OrchestrationEditorPage() {
         onOpenChange={setIsExportDialogOpen}
         json={exportToJson()}
         filename={`${orchestrationName || 'orchestration'}_export.json`}
+      />
+
+      {/* Interfaces Panel */}
+      <InterfacesPanel
+        open={isInterfacesPanelOpen}
+        onOpenChange={setIsInterfacesPanelOpen}
       />
     </div>
   )

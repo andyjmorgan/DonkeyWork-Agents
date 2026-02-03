@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
 
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Models;
@@ -43,6 +44,12 @@ public sealed class SaveOrchestrationVersionRequestV1
     /// </summary>
     [JsonPropertyName("credentialMappings")]
     public IReadOnlyList<CredentialMappingV1>? CredentialMappings { get; init; }
+
+    /// <summary>
+    /// Interface configurations for this version (MCP, A2A, Chat, Webhook).
+    /// </summary>
+    [JsonPropertyName("interfaces")]
+    public OrchestrationInterfaces? Interfaces { get; init; }
 }
 
 /// <summary>

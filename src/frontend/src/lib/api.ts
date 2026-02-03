@@ -1,48 +1,19 @@
-import { useAuthStore } from '@/store/auth'
+import { fetchWithAuth as baseFetchWithAuth } from '@/lib/fetchWithAuth'
 
 const BASE_URL = ''
 
 async function fetchWithAuth(url: string, options: RequestInit = {}, retryOnUnauthorized = true): Promise<Response> {
-  const { logout, refreshTokens, shouldRefreshToken } = useAuthStore.getState()
-
-  // Proactively refresh token if it's about to expire
-  if (shouldRefreshToken() && retryOnUnauthorized) {
-    const refreshed = await refreshTokens()
-    if (!refreshed) {
-      logout()
-      window.location.href = '/login'
-      throw new Error('Session expired')
-    }
-  }
-
-  // Get potentially updated token after refresh
-  const currentToken = useAuthStore.getState().accessToken
-
-  const response = await fetch(`${BASE_URL}${url}`, {
-    ...options,
-    headers: {
-      ...options.headers,
-      'Authorization': `Bearer ${currentToken}`,
-      'Content-Type': 'application/json',
+  return baseFetchWithAuth(
+    `${BASE_URL}${url}`,
+    {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Content-Type': 'application/json',
+      },
     },
-  })
-
-  if (response.status === 401 && retryOnUnauthorized) {
-    // Try to refresh the token
-    const refreshed = await refreshTokens()
-
-    if (refreshed) {
-      // Retry the request with the new token (don't retry again on 401)
-      return fetchWithAuth(url, options, false)
-    }
-
-    // Refresh failed - logout and redirect
-    logout()
-    window.location.href = '/login'
-    throw new Error('Session expired')
-  }
-
-  return response
+    retryOnUnauthorized
+  )
 }
 
 export const api = {
@@ -255,16 +226,30 @@ export interface InterfaceConfig {
   description?: string
 }
 
+export interface McpInterfaceConfig extends InterfaceConfig {
+  toolName?: string
+}
+
+export interface A2aInterfaceConfig extends InterfaceConfig {
+  agentId?: string
+  capabilities?: string[]
+}
+
 export interface ChatInterfaceConfig extends InterfaceConfig {
   systemPrompt?: string
   welcomeMessage?: string
 }
 
+export interface WebhookInterfaceConfig extends InterfaceConfig {
+  allowedMethods?: string[]
+  requireSignature?: boolean
+}
+
 export interface OrchestrationInterfaces {
-  mcp?: InterfaceConfig
-  a2a?: InterfaceConfig
+  mcp?: McpInterfaceConfig
+  a2a?: A2aInterfaceConfig
   chat?: ChatInterfaceConfig
-  webhook?: InterfaceConfig
+  webhook?: WebhookInterfaceConfig
 }
 
 export interface OrchestrationVersion {
@@ -299,6 +284,7 @@ export interface SaveVersionRequest {
   inputSchema: JSONSchema
   outputSchema?: JSONSchema | null
   credentialMappings: Array<{ nodeId: string; credentialId: string }>
+  interfaces?: OrchestrationInterfaces
 }
 
 export interface CreateOrchestrationResponse {

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
@@ -51,6 +52,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             existingDraft.OutputSchema = request.OutputSchema;
             existingDraft.ReactFlowData = request.ReactFlowData;
             existingDraft.NodeConfigurations = nodeConfigurations;
+            existingDraft.Interfaces = request.Interfaces ?? new OrchestrationInterfaces();
             existingDraft.UpdatedAt = DateTimeOffset.UtcNow;
 
             version = existingDraft;
@@ -78,6 +80,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
                 OutputSchema = request.OutputSchema,
                 ReactFlowData = request.ReactFlowData,
                 NodeConfigurations = nodeConfigurations,
+                Interfaces = request.Interfaces ?? new OrchestrationInterfaces(),
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -282,6 +285,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             OutputSchema = version.OutputSchema?.RootElement.Clone(),
             ReactFlowData = version.ReactFlowData,
             NodeConfigurations = JsonSerializer.SerializeToElement(version.NodeConfigurations, registry.JsonOptions),
+            Interfaces = version.Interfaces,
             CreatedAt = version.CreatedAt,
             PublishedAt = version.PublishedAt
         };

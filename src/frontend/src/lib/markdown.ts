@@ -25,7 +25,33 @@ export function parseMarkdown(markdown: string): string {
     }
   )
 
-  return html
+  // Convert task lists UL to have data-type="taskList"
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+
+  // Find all list items that contain task list checkboxes
+  const listItems = doc.querySelectorAll('li')
+  listItems.forEach((li) => {
+    const checkbox = li.querySelector('input[type="checkbox"]')
+    if (checkbox) {
+      const ul = li.parentElement
+      if (ul && ul.tagName === 'UL') {
+        ul.setAttribute('data-type', 'taskList')
+        li.setAttribute('data-type', 'taskItem')
+        li.setAttribute('data-checked', checkbox.hasAttribute('checked') ? 'true' : 'false')
+      }
+    }
+  })
+
+  // Remove trailing newlines from code blocks
+  const codeBlocks = doc.querySelectorAll('pre code')
+  codeBlocks.forEach((code) => {
+    if (code.textContent) {
+      code.textContent = code.textContent.replace(/\n+$/, '')
+    }
+  })
+
+  return doc.body.innerHTML
 }
 
 // Configure turndown for HTML to markdown conversion
@@ -62,6 +88,56 @@ turndownService.addRule('strikethrough', {
 turndownService.addRule('underline', {
   filter: 'u',
   replacement: (content) => `_${content}_`,
+})
+
+// Custom rule for code blocks to remove trailing newlines
+turndownService.addRule('codeBlock', {
+  filter: (node) => {
+    return node.nodeName === 'PRE' && node.firstChild?.nodeName === 'CODE'
+  },
+  replacement: (content, node) => {
+    const preElement = node as HTMLElement
+    const codeElement = node.firstChild as HTMLElement
+
+    // Check for language in data-language attribute or class
+    const dataLanguage = preElement.getAttribute('data-language')
+    const classLanguage = codeElement?.className.replace('language-', '')
+    const language = dataLanguage || classLanguage || ''
+
+    const trimmedContent = content.replace(/\n+$/, '') // Remove trailing newlines
+    return `\n\`\`\`${language}\n${trimmedContent}\n\`\`\`\n`
+  },
+})
+
+// Custom rule for GFM-style tables
+turndownService.addRule('table', {
+  filter: 'table',
+  replacement: (_content, node) => {
+    const table = node as HTMLTableElement
+    const rows = Array.from(table.querySelectorAll('tr'))
+
+    if (rows.length === 0) return ''
+
+    let markdown = '\n'
+
+    rows.forEach((row, rowIndex) => {
+      const cells = Array.from(row.querySelectorAll('th, td'))
+      const cellContents = cells.map(cell => {
+        return cell.textContent?.trim().replace(/\n/g, ' ') || ''
+      })
+
+      markdown += '| ' + cellContents.join(' | ') + ' |\n'
+
+      // Add separator row after header
+      if (rowIndex === 0 && row.querySelector('th')) {
+        const separator = cells.map(() => '---').join(' | ')
+        markdown += '| ' + separator + ' |\n'
+      }
+    })
+
+    markdown += '\n'
+    return markdown
+  },
 })
 
 /**

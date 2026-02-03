@@ -7,16 +7,31 @@ import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableHeader } from '@tiptap/extension-table-header'
+import { TableCell } from '@tiptap/extension-table-cell'
 import { common, createLowlight } from 'lowlight'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { parseMarkdown, serializeMarkdown } from '@/lib/markdown'
 import { MarkdownToolbar } from './MarkdownToolbar'
 import { RawMarkdownEditor } from './RawMarkdownEditor'
 import { CodeBlockWithCopy } from './CodeBlockWithCopy'
+import { TableWithControls } from './TableWithControls'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import './markdown-editor.css'
 
 // Create lowlight instance with common languages
 const lowlight = createLowlight(common)
+
+// Custom Table extension with controls
+const CustomTable = Table.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(TableWithControls, {
+      contentDOMElementTag: 'table',
+    })
+  },
+})
 
 export type ViewMode = 'preview' | 'code' | 'split'
 
@@ -42,41 +57,52 @@ export function MarkdownEditor({
   const isUpdatingFromRaw = useRef(false)
   const lastContent = useRef(content)
 
+  const extensions = useMemo(() => [
+    StarterKit.configure({
+      heading: {
+        levels: [1, 2, 3],
+      },
+      codeBlock: false, // Use CodeBlockLowlight instead
+    }),
+    CodeBlockLowlight.extend({
+      addNodeView() {
+        return ReactNodeViewRenderer(CodeBlockWithCopy)
+      },
+    }).configure({
+      lowlight,
+      defaultLanguage: 'plaintext',
+    }),
+    Link.configure({
+      openOnClick: false,
+      HTMLAttributes: {
+        class: 'text-primary underline cursor-pointer',
+      },
+    }),
+    Underline,
+    TaskList,
+    TaskItem.configure({
+      nested: true,
+    }),
+    Placeholder.configure({
+      placeholder,
+    }),
+    Image.configure({
+      inline: false,
+      allowBase64: true,
+    }),
+    CustomTable.configure({
+      resizable: true,
+      HTMLAttributes: {
+        class: 'editor-table',
+      },
+    }),
+    TableRow,
+    TableHeader,
+    TableCell,
+  ], [placeholder])
+
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-        codeBlock: false, // Use CodeBlockLowlight instead
-      }),
-      CodeBlockLowlight.extend({
-        addNodeView() {
-          return ReactNodeViewRenderer(CodeBlockWithCopy)
-        },
-      }).configure({
-        lowlight,
-        defaultLanguage: 'plaintext',
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline cursor-pointer',
-        },
-      }),
-      Underline,
-      TaskList,
-      TaskItem.configure({
-        nested: true,
-      }),
-      Placeholder.configure({
-        placeholder,
-      }),
-      Image.configure({
-        inline: false,
-        allowBase64: true,
-      }),
-    ],
+    extensions,
     content: parseMarkdown(content),
     editorProps: {
       attributes: {
@@ -133,31 +159,38 @@ export function MarkdownEditor({
     }
   }, [autoFocus, editor])
 
+  // Keyboard shortcuts
+  useKeyboardShortcuts({ editor })
+
   if (!editor) {
     return null
   }
 
   return (
-    <div className={`markdown-editor rounded-md border border-input bg-background ${className}`}>
+    <div className={`markdown-editor flex flex-col rounded-md border border-input bg-background ${className}`}>
       <MarkdownToolbar
         editor={editor}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
 
-      <div className={`markdown-editor-content ${viewMode === 'split' ? 'grid grid-cols-2 divide-x divide-border' : ''}`}>
+      <div className={`markdown-editor-content flex-1 min-h-0 ${viewMode === 'split' ? 'grid grid-cols-2 divide-x divide-border' : ''}`}>
         {/* Raw markdown editor */}
         {(viewMode === 'code' || viewMode === 'split') && (
-          <RawMarkdownEditor
-            value={content}
-            onChange={handleRawChange}
-            className={viewMode === 'split' ? 'border-r border-border' : ''}
-          />
+          <div className="overflow-auto">
+            <RawMarkdownEditor
+              value={content}
+              onChange={handleRawChange}
+              className={viewMode === 'split' ? 'border-r border-border' : ''}
+            />
+          </div>
         )}
 
         {/* WYSIWYG preview */}
         {(viewMode === 'preview' || viewMode === 'split') && (
-          <EditorContent editor={editor} />
+          <div className="overflow-auto">
+            <EditorContent editor={editor} />
+          </div>
         )}
       </div>
     </div>

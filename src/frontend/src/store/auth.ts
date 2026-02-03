@@ -19,6 +19,7 @@ interface AuthState {
   accessToken: string | null
   refreshToken: string | null
   expiresAt: number | null
+  tokenIssuedAt: number | null
   user: User | null
   isAuthenticated: boolean
   isRefreshing: boolean
@@ -38,17 +39,20 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       expiresAt: null,
+      tokenIssuedAt: null,
       user: null,
       isAuthenticated: false,
       isRefreshing: false,
       refreshPromise: null,
 
       setTokens: (accessToken, refreshToken, expiresIn) => {
-        const expiresAt = Date.now() + expiresIn * 1000
+        const now = Date.now()
+        const expiresAt = now + expiresIn * 1000
         set({
           accessToken,
           refreshToken,
           expiresAt,
+          tokenIssuedAt: now,
           isAuthenticated: true,
         })
       },
@@ -62,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           expiresAt: null,
+          tokenIssuedAt: null,
           user: null,
           isAuthenticated: false,
           isRefreshing: false,
@@ -77,10 +82,22 @@ export const useAuthStore = create<AuthState>()(
       },
 
       shouldRefreshToken: () => {
-        const { expiresAt, refreshToken } = get()
+        const { expiresAt, tokenIssuedAt, refreshToken } = get()
         if (!expiresAt || !refreshToken) return false
-        // Refresh if less than 2 minutes remaining
-        return Date.now() > expiresAt - 120000
+
+        const now = Date.now()
+        const timeRemaining = expiresAt - now
+
+        // If we have the issue time, calculate 80% of token lifetime
+        if (tokenIssuedAt) {
+          const tokenLifetime = expiresAt - tokenIssuedAt
+          const refreshThreshold = tokenLifetime * 0.2 // Refresh when 20% of lifetime remains (80% elapsed)
+          return timeRemaining <= refreshThreshold
+        }
+
+        // Fallback: refresh if less than 2 minutes remaining
+        const minRefreshBuffer = 120000 // 2 minutes minimum buffer
+        return timeRemaining <= minRefreshBuffer
       },
 
       refreshTokens: async () => {
@@ -118,11 +135,13 @@ export const useAuthStore = create<AuthState>()(
             const data: RefreshTokenResponse = await response.json()
 
             // Update tokens
-            const expiresAt = Date.now() + data.expiresIn * 1000
+            const now = Date.now()
+            const expiresAt = now + data.expiresIn * 1000
             set({
               accessToken: data.accessToken,
               refreshToken: data.refreshToken ?? refreshToken,
               expiresAt,
+              tokenIssuedAt: now,
               isRefreshing: false,
               refreshPromise: null,
             })
@@ -144,6 +163,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         expiresAt: state.expiresAt,
+        tokenIssuedAt: state.tokenIssuedAt,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
