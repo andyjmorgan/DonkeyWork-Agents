@@ -7,10 +7,6 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models;
 /// </summary>
 public sealed class TextContentPart : ContentPart
 {
-    /// <inheritdoc />
-    [JsonPropertyName("type")]
-    public override string Type => "text";
-
     /// <summary>
     /// The text content.
     /// </summary>

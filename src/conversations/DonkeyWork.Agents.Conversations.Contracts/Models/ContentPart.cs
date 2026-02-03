@@ -10,9 +10,4 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models;
 [JsonDerivedType(typeof(TextContentPart), "text")]
 public abstract class ContentPart
 {
-    /// <summary>
-    /// Type discriminator for JSON serialization.
-    /// </summary>
-    [JsonPropertyName("type")]
-    public abstract string Type { get; }
 }
