@@ -138,6 +138,21 @@ export function MarkdownEditor({
     isUpdatingFromRaw.current = false
   }, [editor, onChange])
 
+  // Insert markdown at the end of the content (for code mode toolbar actions)
+  const handleInsertMarkdown = useCallback((markdown: string) => {
+    const newContent = content + markdown
+    lastContent.current = newContent
+    onChange(newContent)
+
+    // Also update TipTap so it stays in sync
+    if (editor) {
+      isUpdatingFromRaw.current = true
+      const html = parseMarkdown(newContent)
+      editor.commands.setContent(html, { emitUpdate: false })
+      isUpdatingFromRaw.current = false
+    }
+  }, [content, onChange, editor])
+
   // Update editor content when props change
   useEffect(() => {
     if (!editor) return
@@ -172,6 +187,7 @@ export function MarkdownEditor({
         editor={editor}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        onInsertMarkdown={handleInsertMarkdown}
       />
 
       <div className={`markdown-editor-content flex-1 min-h-0 ${viewMode === 'split' ? 'grid grid-cols-2 divide-x divide-border' : ''}`}>

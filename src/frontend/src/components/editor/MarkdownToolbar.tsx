@@ -44,11 +44,13 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCallback, useState } from 'react'
 import type { ViewMode } from './MarkdownEditor'
+import { TableDialog } from './TableDialog'
 
 interface MarkdownToolbarProps {
   editor: Editor
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
+  onInsertMarkdown?: (markdown: string) => void
 }
 
 interface ToolbarButtonProps {
@@ -82,14 +84,18 @@ function ToolbarButton({ onClick, isActive, disabled, tooltip, children }: Toolb
   )
 }
 
-export function MarkdownToolbar({ editor, viewMode, onViewModeChange }: MarkdownToolbarProps) {
+export function MarkdownToolbar({ editor, viewMode, onViewModeChange, onInsertMarkdown }: MarkdownToolbarProps) {
   const [showImageDialog, setShowImageDialog] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
   const [showMermaidDialog, setShowMermaidDialog] = useState(false)
+  const [showTableDialog, setShowTableDialog] = useState(false)
   const [imageUrl, setImageUrl] = useState('')
   const [imageAlt, setImageAlt] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
   const [mermaidCode, setMermaidCode] = useState('')
+
+  // Check if we're in code-only mode (no TipTap visible)
+  const isCodeMode = viewMode === 'code'
 
   const openLinkDialog = useCallback(() => {
     const previousUrl = editor.getAttributes('link').href || ''
@@ -118,11 +124,26 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange }: Markdown
 
   const insertMermaid = useCallback(() => {
     if (mermaidCode) {
-      editor.chain().focus().insertContent(`\n\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n`).run()
+      const mermaidMarkdown = `\n\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n`
+      if (isCodeMode && onInsertMarkdown) {
+        onInsertMarkdown(mermaidMarkdown)
+      } else {
+        editor.chain().focus().insertContent(mermaidMarkdown).run()
+      }
     }
     setShowMermaidDialog(false)
     setMermaidCode('')
-  }, [editor, mermaidCode])
+  }, [editor, mermaidCode, isCodeMode, onInsertMarkdown])
+
+  const handleInsertTable = useCallback((rows: number, cols: number, markdown: string) => {
+    if (isCodeMode && onInsertMarkdown) {
+      // Insert raw markdown in code mode
+      onInsertMarkdown('\n' + markdown + '\n')
+    } else {
+      // Insert via TipTap in preview/split mode
+      editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+    }
+  }, [editor, isCodeMode, onInsertMarkdown])
 
   return (
     <>
@@ -256,7 +277,7 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange }: Markdown
           <Minus className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          onClick={() => setShowTableDialog(true)}
           isActive={editor.isActive('table')}
           tooltip="Insert Table"
         >
@@ -418,6 +439,13 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange }: Markdown
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Table Dialog */}
+      <TableDialog
+        open={showTableDialog}
+        onOpenChange={setShowTableDialog}
+        onInsertTable={handleInsertTable}
+      />
     </>
   )
 }
