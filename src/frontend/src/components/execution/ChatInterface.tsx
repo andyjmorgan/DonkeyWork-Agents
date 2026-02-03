@@ -212,7 +212,7 @@ export function ChatInterface({
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                   message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-user-chat text-user-chat-foreground'
                     : 'bg-muted text-muted-foreground'
                 }`}
               >
@@ -227,7 +227,7 @@ export function ChatInterface({
               <div
                 className={`rounded-2xl px-4 py-2 ${
                   message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-user-chat text-user-chat-foreground'
                     : 'bg-muted'
                 }`}
               >
@@ -244,7 +244,7 @@ export function ChatInterface({
                 <p
                   className={`mt-1 text-xs ${
                     message.role === 'user'
-                      ? 'text-primary-foreground/70'
+                      ? 'text-user-chat-foreground/70'
                       : 'text-muted-foreground'
                   }`}
                 >

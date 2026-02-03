@@ -56,6 +56,10 @@ export default {
   				DEFAULT: 'hsl(var(--warning))',
   				foreground: 'hsl(var(--warning-foreground))'
   			},
+  			'user-chat': {
+  				DEFAULT: 'hsl(var(--user-chat))',
+  				foreground: 'hsl(var(--user-chat-foreground))'
+  			},
   			/* DonkeyWork Node Colors */
   			node: {
   				start: '#22c55e',

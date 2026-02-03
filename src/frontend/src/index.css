@@ -17,6 +17,10 @@
     --primary: 187 86% 53%;
     --primary-foreground: 0 0% 100%;
 
+    /* User chat: darker blue for light mode readability */
+    --user-chat: 210 70% 45%;
+    --user-chat-foreground: 0 0% 100%;
+
     /* Secondary: #f8fafc bg, dark text */
     --secondary: 210 40% 98%;
     --secondary-foreground: 222 47% 11%;
@@ -71,6 +75,10 @@
     /* Primary button: gradient cyan-to-blue, white text */
     --primary: 187 86% 53%;
     --primary-foreground: 0 0% 100%;
+
+    /* User chat: same as primary in dark mode */
+    --user-chat: 210 70% 50%;
+    --user-chat-foreground: 0 0% 100%;
 
     /* Secondary: #151a21 bg, light text */
     --secondary: 216 20% 11%;
