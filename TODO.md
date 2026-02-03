@@ -2,20 +2,7 @@
 
 ## Tasks
 
-### Hide MCP, A2A, Webhook interfaces from UI
-
-**Priority:** Medium
-
-For now, only show Chat interface in the orchestration editor. Hide:
-- MCP interface config
-- A2A interface config
-- Webhook interface config
-
-Also: `welcomeMessage` and `systemPrompt` in ChatInterfaceConfig should not be required fields.
-
-**Files to update:**
-- Frontend orchestration editor interface config UI
-- Backend validation (if any requires these fields)
+*No open tasks*
 
 ---
 

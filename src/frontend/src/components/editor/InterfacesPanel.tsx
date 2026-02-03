@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { MessageSquare, Webhook, Bot, Wrench, HelpCircle } from 'lucide-react'
+import { MessageSquare, HelpCircle } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -19,12 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useEditorStore } from '@/store/editor'
-import type {
-  ChatInterfaceConfig,
-  McpInterfaceConfig,
-  A2aInterfaceConfig,
-  WebhookInterfaceConfig
-} from '@/lib/api'
+import type { ChatInterfaceConfig } from '@/lib/api'
 
 interface InterfacesPanelProps {
   open: boolean
@@ -39,21 +34,6 @@ export function InterfacesPanel({ open, onOpenChange }: InterfacesPanelProps) {
   const updateChatConfig = useCallback((updates: Partial<ChatInterfaceConfig>) => {
     const current = interfaces?.chat ?? { enabled: false }
     updateInterface('chat', { ...current, ...updates })
-  }, [interfaces, updateInterface])
-
-  const updateMcpConfig = useCallback((updates: Partial<McpInterfaceConfig>) => {
-    const current = interfaces?.mcp ?? { enabled: false }
-    updateInterface('mcp', { ...current, ...updates })
-  }, [interfaces, updateInterface])
-
-  const updateA2aConfig = useCallback((updates: Partial<A2aInterfaceConfig>) => {
-    const current = interfaces?.a2a ?? { enabled: false }
-    updateInterface('a2a', { ...current, ...updates })
-  }, [interfaces, updateInterface])
-
-  const updateWebhookConfig = useCallback((updates: Partial<WebhookInterfaceConfig>) => {
-    const current = interfaces?.webhook ?? { enabled: false }
-    updateInterface('webhook', { ...current, ...updates })
   }, [interfaces, updateInterface])
 
   return (
@@ -99,164 +79,6 @@ export function InterfacesPanel({ open, onOpenChange }: InterfacesPanelProps) {
                     value={interfaces?.chat?.description ?? ''}
                     onChange={(e) => updateChatConfig({ description: e.target.value })}
                     rows={2}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="chat-welcome">Welcome Message</Label>
-                  <Textarea
-                    id="chat-welcome"
-                    placeholder="e.g., Hello! How can I help you today?"
-                    value={interfaces?.chat?.welcomeMessage ?? ''}
-                    onChange={(e) => updateChatConfig({ welcomeMessage: e.target.value })}
-                    rows={2}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Shown when users start a new conversation
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="chat-system">System Prompt</Label>
-                  <Textarea
-                    id="chat-system"
-                    placeholder="e.g., You are a helpful assistant..."
-                    value={interfaces?.chat?.systemPrompt ?? ''}
-                    onChange={(e) => updateChatConfig({ systemPrompt: e.target.value })}
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Instructions for the AI model (optional, may override node-level prompts)
-                  </p>
-                </div>
-              </div>
-            )}
-          </InterfaceCard>
-
-          {/* MCP Interface */}
-          <InterfaceCard
-            icon={<Wrench className="h-5 w-5 text-blue-500" />}
-            title="MCP (Model Context Protocol)"
-            description="Expose as a tool for AI assistants via MCP"
-            enabled={interfaces?.mcp?.enabled ?? false}
-            onToggle={(enabled) => updateMcpConfig({ enabled })}
-            helpText="MCP allows AI assistants like Claude to use this orchestration as a tool. The orchestration becomes callable with its input schema."
-          >
-            {interfaces?.mcp?.enabled && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label htmlFor="mcp-name">Tool Name</Label>
-                  <Input
-                    id="mcp-name"
-                    placeholder="e.g., search_knowledge_base"
-                    value={interfaces?.mcp?.name ?? ''}
-                    onChange={(e) => updateMcpConfig({ name: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    The name AI assistants will use to call this tool (lowercase, underscores)
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mcp-description">Tool Description</Label>
-                  <Textarea
-                    id="mcp-description"
-                    placeholder="e.g., Searches the knowledge base for relevant information..."
-                    value={interfaces?.mcp?.description ?? ''}
-                    onChange={(e) => updateMcpConfig({ description: e.target.value })}
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Helps AI assistants understand when to use this tool
-                  </p>
-                </div>
-              </div>
-            )}
-          </InterfaceCard>
-
-          {/* A2A Interface */}
-          <InterfaceCard
-            icon={<Bot className="h-5 w-5 text-purple-500" />}
-            title="A2A (Agent-to-Agent)"
-            description="Allow other AI agents to discover and call this orchestration"
-            enabled={interfaces?.a2a?.enabled ?? false}
-            onToggle={(enabled) => updateA2aConfig({ enabled })}
-            helpText="A2A enables agent-to-agent communication following the Google A2A protocol. Other agents can discover and interact with this orchestration."
-          >
-            {interfaces?.a2a?.enabled && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label htmlFor="a2a-name">Agent Name</Label>
-                  <Input
-                    id="a2a-name"
-                    placeholder="e.g., Data Analysis Agent"
-                    value={interfaces?.a2a?.name ?? ''}
-                    onChange={(e) => updateA2aConfig({ name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="a2a-description">Agent Description</Label>
-                  <Textarea
-                    id="a2a-description"
-                    placeholder="e.g., Analyzes data and generates reports..."
-                    value={interfaces?.a2a?.description ?? ''}
-                    onChange={(e) => updateA2aConfig({ description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="a2a-agent-id">Agent ID (optional)</Label>
-                  <Input
-                    id="a2a-agent-id"
-                    placeholder="e.g., data-analysis-agent-v1"
-                    value={interfaces?.a2a?.agentId ?? ''}
-                    onChange={(e) => updateA2aConfig({ agentId: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Unique identifier for A2A discovery (auto-generated if empty)
-                  </p>
-                </div>
-              </div>
-            )}
-          </InterfaceCard>
-
-          {/* Webhook Interface */}
-          <InterfaceCard
-            icon={<Webhook className="h-5 w-5 text-orange-500" />}
-            title="Webhook"
-            description="Trigger this orchestration via HTTP webhooks"
-            enabled={interfaces?.webhook?.enabled ?? false}
-            onToggle={(enabled) => updateWebhookConfig({ enabled })}
-            helpText="Webhooks allow external services to trigger this orchestration via HTTP POST requests. Useful for integrations with Zapier, n8n, or custom applications."
-          >
-            {interfaces?.webhook?.enabled && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-name">Webhook Name</Label>
-                  <Input
-                    id="webhook-name"
-                    placeholder="e.g., Order Processing Webhook"
-                    value={interfaces?.webhook?.name ?? ''}
-                    onChange={(e) => updateWebhookConfig({ name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-description">Description</Label>
-                  <Textarea
-                    id="webhook-description"
-                    placeholder="e.g., Processes incoming order events..."
-                    value={interfaces?.webhook?.description ?? ''}
-                    onChange={(e) => updateWebhookConfig({ description: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Require Signature</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Validate webhook signatures for security
-                    </p>
-                  </div>
-                  <Switch
-                    checked={interfaces?.webhook?.requireSignature ?? false}
-                    onCheckedChange={(checked) => updateWebhookConfig({ requireSignature: checked })}
                   />
                 </div>
               </div>

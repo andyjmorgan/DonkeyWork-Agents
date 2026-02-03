@@ -3,7 +3,7 @@ import { Send, Loader2, User, Bot, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { parseMarkdown } from '@/lib/markdown'
-import { conversations, type ChatInterfaceConfig, type ContentPart, type ConversationMessage } from '@/lib/api'
+import { conversations, type ContentPart, type ConversationMessage } from '@/lib/api'
 import { useConversationStream } from '@/hooks/useConversationStream'
 
 // Internal message type for UI display
@@ -17,7 +17,6 @@ interface DisplayMessage {
 
 interface ChatInterfaceProps {
   orchestrationId: string
-  chatConfig?: ChatInterfaceConfig
   conversationId?: string
   onConversationCreated?: (conversationId: string) => void
 }
@@ -42,7 +41,6 @@ function apiMessageToDisplay(msg: ConversationMessage): DisplayMessage {
 
 export function ChatInterface({
   orchestrationId,
-  chatConfig,
   conversationId: initialConversationId,
   onConversationCreated
 }: ChatInterfaceProps) {
@@ -195,11 +193,7 @@ export function ChatInterface({
         {messages.length === 0 && !isStreaming && (
           <div className="flex h-full items-center justify-center">
             <div className="text-center text-muted-foreground">
-              {chatConfig?.welcomeMessage ? (
-                <p>{chatConfig.welcomeMessage}</p>
-              ) : (
-                <p>Send a message to start the conversation</p>
-              )}
+              <p>Send a message to start the conversation</p>
             </div>
           </div>
         )}

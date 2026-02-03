@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useExecutionStream } from '@/hooks/useExecutionStream'
 import { StreamingOutput } from './StreamingOutput'
 import { ChatInterface } from './ChatInterface'
-import type { JSONSchema, OrchestrationInterfaces, ChatInterfaceConfig } from '@/lib/api'
+import type { JSONSchema, OrchestrationInterfaces } from '@/lib/api'
 
 interface TestPanelProps {
   orchestrationId: string
@@ -77,7 +77,6 @@ export function TestPanel({ orchestrationId, inputSchema, interfaces }: TestPane
 
   // Check if chat interface is enabled
   const isChatEnabled = interfaces?.chat?.enabled === true
-  const chatConfig: ChatInterfaceConfig | undefined = interfaces?.chat
 
   // Generate template from schema when available (only for non-chat mode)
   useEffect(() => {
@@ -111,7 +110,6 @@ export function TestPanel({ orchestrationId, inputSchema, interfaces }: TestPane
       <div className="flex h-full flex-col">
         <ChatInterface
           orchestrationId={orchestrationId}
-          chatConfig={chatConfig}
         />
       </div>
     )

@@ -236,8 +236,6 @@ export interface A2aInterfaceConfig extends InterfaceConfig {
 }
 
 export interface ChatInterfaceConfig extends InterfaceConfig {
-  systemPrompt?: string
-  welcomeMessage?: string
 }
 
 export interface WebhookInterfaceConfig extends InterfaceConfig {
