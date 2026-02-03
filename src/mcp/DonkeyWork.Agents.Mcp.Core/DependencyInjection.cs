@@ -55,7 +55,13 @@ public static class DependencyInjection
 
         var builder = services
             .AddMcpServer()
-            .WithHttpTransport();
+            .WithHttpTransport(options =>
+            {
+                // Use stateless mode so that request-scoped services (like IIdentityContext)
+                // are resolved from HttpContext.RequestServices instead of applicationServices.
+                // This ensures the authenticated user context is available in MCP tool handlers.
+                options.Stateless = true;
+            });
 
         // Configure custom handlers for tool operations
         // The handlers delegate to the scoped services resolved from the request context

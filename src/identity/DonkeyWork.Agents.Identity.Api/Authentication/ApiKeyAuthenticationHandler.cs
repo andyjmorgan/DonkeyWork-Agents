@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Identity.Core.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +16,6 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
     private readonly IUserApiKeyService _apiKeyService;
     private readonly IKeycloakService _keycloakService;
     private readonly IMemoryCache _cache;
-    private readonly IdentityContext _identityContext;
 
     public const string SchemeName = "ApiKey";
     public const string HeaderName = "X-Api-Key";
@@ -26,14 +26,12 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         UrlEncoder encoder,
         IUserApiKeyService apiKeyService,
         IKeycloakService keycloakService,
-        IMemoryCache cache,
-        IdentityContext identityContext)
+        IMemoryCache cache)
         : base(options, logger, encoder)
     {
         _apiKeyService = apiKeyService;
         _keycloakService = keycloakService;
         _cache = cache;
-        _identityContext = identityContext;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -78,8 +76,10 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
             _cache.Set(cacheKey, cachedIdentity, cacheOptions);
         }
 
-        // Populate identity context
-        _identityContext.SetIdentity(
+        // Populate identity context - get the scoped instance from the request services
+        // (auth handlers are singletons, but IdentityContext is scoped per request)
+        var identityContext = Context.RequestServices.GetRequiredService<IdentityContext>();
+        identityContext.SetIdentity(
             cachedIdentity!.UserId,
             cachedIdentity.Email,
             cachedIdentity.Name,
