@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, Trash2, FileText, StickyNote } from 'lucide-react'
+import { Plus, Loader2, FileText, StickyNote } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { ContentCard } from '@/components/workspace/ContentCard'
 import { notes, type Note } from '@/lib/api'
 
 export function NotesPage() {
@@ -114,58 +114,17 @@ export function NotesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {notesList.map((note) => (
-            <div
+            <ContentCard
               key={note.id}
-              className="group rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer"
+              title={note.title}
+              content={note.content}
               onClick={() => navigate(`/notes/${note.id}`)}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <h3 className="font-medium truncate">{note.title}</h3>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(note.id, note.title)
-                  }}
-                  disabled={deletingId === note.id}
-                >
-                  {deletingId === note.id ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
-              {note.content && (
-                <p className="mt-2 text-sm text-muted-foreground line-clamp-3">
-                  {note.content}
-                </p>
-              )}
-              <div className="mt-3 flex items-center gap-2">
-                {note.tags.length > 0 && (
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {note.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag.id} variant="secondary" className="text-xs">
-                        {tag.name}
-                      </Badge>
-                    ))}
-                    {note.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{note.tags.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-                <span className="text-xs text-muted-foreground ml-auto">
-                  {new Date(note.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
+              onDelete={() => handleDelete(note.id, note.title)}
+              isDeleting={deletingId === note.id}
+              date={note.updatedAt || note.createdAt}
+              icon={<FileText className="h-5 w-5 text-muted-foreground" />}
+              tags={note.tags}
+            />
           ))}
         </div>
       )}

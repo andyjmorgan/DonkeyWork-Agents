@@ -85,30 +85,37 @@ public class NotesTools
     }
 
     /// <summary>
-    /// Updates an existing note.
+    /// Updates an existing note. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
     [McpServerTool(Name = "notes_update")]
     [McpTool(
         Name = "notes_update",
         Title = "Update Note",
-        Description = "Update an existing note. You can change its content or move it between standalone/project/milestone associations by setting or clearing the projectId and milestoneId fields.",
+        Description = "Update an existing note. Only provided fields are updated - omit fields to keep their current values. You can move notes between standalone/project/milestone associations by setting projectId and milestoneId.",
         Icon = "edit")]
     public async Task<NoteV1?> UpdateNote(
         [Description("The unique identifier of the note to update")] Guid id,
-        [Description("The new title of the note")] string title,
-        [Description("Optional new content of the note (supports markdown and mermaid diagrams)")] string? content,
-        [Description("Optional new sort order for display")] int? sortOrder,
-        [Description("Project ID - set to associate with a project, or null to make standalone")] Guid? projectId,
-        [Description("Milestone ID - set to associate with a milestone, or null to remove milestone association")] Guid? milestoneId,
-        CancellationToken ct)
+        [Description("New title for the note (omit to keep current)")] string? title = null,
+        [Description("New content (supports markdown, omit to keep current)")] string? content = null,
+        [Description("New sort order for display (omit to keep current)")] int? sortOrder = null,
+        [Description("Project ID to associate with (omit to keep current)")] Guid? projectId = null,
+        [Description("Milestone ID to associate with (omit to keep current)")] Guid? milestoneId = null,
+        CancellationToken ct = default)
     {
+        // Fetch current note to merge with provided values
+        var current = await _noteService.GetByIdAsync(id, ct);
+        if (current == null)
+        {
+            return null;
+        }
+
         var request = new UpdateNoteRequestV1
         {
-            Title = title,
-            Content = content,
-            SortOrder = sortOrder ?? 0,
-            ProjectId = projectId,
-            MilestoneId = milestoneId
+            Title = title ?? current.Title,
+            Content = content ?? current.Content,
+            SortOrder = sortOrder ?? current.SortOrder,
+            ProjectId = projectId ?? current.ProjectId,
+            MilestoneId = milestoneId ?? current.MilestoneId
         };
 
         return await _noteService.UpdateAsync(id, request, ct);

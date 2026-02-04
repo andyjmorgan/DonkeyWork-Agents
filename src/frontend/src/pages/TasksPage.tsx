@@ -1,31 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, Edit, Trash2, CheckSquare, Circle, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import { Plus, Loader2, CheckSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { todos, type Todo, type TodoStatus, type TodoPriority } from '@/lib/api'
-
-const statusIcons: Record<TodoStatus, React.ReactNode> = {
-  Pending: <Circle className="h-4 w-4 text-gray-400" />,
-  InProgress: <Clock className="h-4 w-4 text-blue-500" />,
-  Completed: <CheckCircle2 className="h-4 w-4 text-green-500" />,
-  Cancelled: <AlertCircle className="h-4 w-4 text-red-500" />,
-}
-
-const priorityColors: Record<TodoPriority, string> = {
-  Low: 'bg-gray-500',
-  Medium: 'bg-blue-500',
-  High: 'bg-orange-500',
-  Critical: 'bg-red-500',
-}
+import { ContentCard } from '@/components/workspace/ContentCard'
+import { todos, type Todo, type TodoStatus } from '@/lib/api'
 
 export function TasksPage() {
   const navigate = useNavigate()
@@ -78,6 +56,9 @@ export function TasksPage() {
     }
   }
 
+  const pendingTasks = tasksList.filter(t => t.status !== 'Completed')
+  const completedTasks = tasksList.filter(t => t.status === 'Completed')
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -116,147 +97,67 @@ export function TasksPage() {
           </Button>
         </div>
       ) : (
-        <>
-          {/* Mobile view */}
-          <div className="space-y-3 md:hidden">
-            {tasksList.map((task) => (
-              <div
-                key={task.id}
-                className="rounded-lg border border-border bg-card p-4 space-y-2 cursor-pointer hover:border-accent/50 transition-colors"
-                onClick={() => navigate(`/tasks/${task.id}`)}
-              >
-                <div className="flex items-start gap-3">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleToggleComplete(task) }}
-                    className="mt-1 shrink-0"
-                  >
-                    {statusIcons[task.status]}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-medium ${task.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.title}
-                    </div>
-                    {task.description && (
-                      <div className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                        {task.description}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className={`${priorityColors[task.priority]} text-white border-0 text-xs`}>
-                        {task.priority}
-                      </Badge>
-                      {task.dueDate && (
-                        <span className="text-xs text-muted-foreground">
-                          Due: {new Date(task.dueDate).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/tasks/${task.id}`) }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={(e) => { e.stopPropagation(); handleDelete(task.id, task.title) }}
-                      disabled={deletingId === task.id}
-                    >
-                      {deletingId === task.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop view */}
-          <div className="hidden md:block rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Status</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tasksList.map((task) => (
-                  <TableRow
+        <div className="space-y-6">
+          {/* Pending Tasks */}
+          {pendingTasks.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                Pending
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500">
+                  {pendingTasks.length}
+                </span>
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {pendingTasks.map((task) => (
+                  <ContentCard
                     key={task.id}
-                    className="cursor-pointer"
+                    title={task.title}
+                    content={task.description}
                     onClick={() => navigate(`/tasks/${task.id}`)}
-                  >
-                    <TableCell>
-                      <button onClick={(e) => { e.stopPropagation(); handleToggleComplete(task) }}>
-                        {statusIcons[task.status]}
-                      </button>
-                    </TableCell>
-                    <TableCell>
-                      <div className={task.status === 'Completed' ? 'line-through text-muted-foreground' : ''}>
-                        <div className="font-medium">{task.title}</div>
-                        {task.description && (
-                          <div className="text-sm text-muted-foreground line-clamp-1">
-                            {task.description}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`${priorityColors[task.priority]} text-white border-0`}>
-                        {task.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(task.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/tasks/${task.id}`) }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(task.id, task.title) }}
-                          disabled={deletingId === task.id}
-                        >
-                          {deletingId === task.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    onDelete={() => handleDelete(task.id, task.title)}
+                    isDeleting={deletingId === task.id}
+                    date={task.updatedAt || task.createdAt}
+                    status={task.status}
+                    priority={task.priority}
+                    dueDate={task.dueDate}
+                    onToggleComplete={() => handleToggleComplete(task)}
+                    isCompleted={false}
+                  />
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-        </>
+              </div>
+            </div>
+          )}
+
+          {/* Completed Tasks */}
+          {completedTasks.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                Completed
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500">
+                  {completedTasks.length}
+                </span>
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {completedTasks.map((task) => (
+                  <ContentCard
+                    key={task.id}
+                    title={task.title}
+                    content={task.description}
+                    onClick={() => navigate(`/tasks/${task.id}`)}
+                    onDelete={() => handleDelete(task.id, task.title)}
+                    isDeleting={deletingId === task.id}
+                    date={task.updatedAt || task.createdAt}
+                    status={task.status}
+                    priority={task.priority}
+                    dueDate={task.dueDate}
+                    onToggleComplete={() => handleToggleComplete(task)}
+                    isCompleted={true}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

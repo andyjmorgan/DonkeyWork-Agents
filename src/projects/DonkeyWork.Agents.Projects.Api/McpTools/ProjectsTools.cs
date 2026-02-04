@@ -83,28 +83,35 @@ public class ProjectsTools
     }
 
     /// <summary>
-    /// Updates an existing project.
+    /// Updates an existing project. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
     [McpServerTool(Name = "projects_update")]
     [McpTool(
         Name = "projects_update",
         Title = "Update Project",
-        Description = "Update an existing project's details. Does not affect milestones, tasks, or notes within the project - use the respective tools to manage those.",
+        Description = "Update an existing project's details. Only provided fields are updated - omit fields to keep their current values. Does not affect milestones, tasks, or notes within the project - use the respective tools to manage those.",
         Icon = "edit")]
     public async Task<ProjectDetailsV1?> UpdateProject(
         [Description("The unique identifier of the project to update")] Guid id,
-        [Description("The new name of the project")] string name,
-        [Description("Optional new content/description of the project (supports markdown and mermaid diagrams)")] string? content,
-        [Description("Optional new success criteria for the project")] string? successCriteria,
-        [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled")] ProjectStatus? status,
-        CancellationToken ct)
+        [Description("New name for the project (omit to keep current)")] string? name = null,
+        [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current)")] string? content = null,
+        [Description("New success criteria (omit to keep current)")] string? successCriteria = null,
+        [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled (omit to keep current)")] ProjectStatus? status = null,
+        CancellationToken ct = default)
     {
+        // Fetch current project to merge with provided values
+        var current = await _projectService.GetByIdAsync(id, ct);
+        if (current == null)
+        {
+            return null;
+        }
+
         var request = new UpdateProjectRequestV1
         {
-            Name = name,
-            Content = content,
-            SuccessCriteria = successCriteria,
-            Status = status ?? ProjectStatus.NotStarted
+            Name = name ?? current.Name,
+            Content = content ?? current.Content,
+            SuccessCriteria = successCriteria ?? current.SuccessCriteria,
+            Status = status ?? current.Status
         };
 
         return await _projectService.UpdateAsync(id, request, ct);

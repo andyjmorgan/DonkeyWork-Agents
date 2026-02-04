@@ -90,32 +90,39 @@ public class MilestonesTools
     }
 
     /// <summary>
-    /// Updates an existing milestone.
+    /// Updates an existing milestone. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
     [McpServerTool(Name = "milestones_update")]
     [McpTool(
         Name = "milestones_update",
         Title = "Update Milestone",
-        Description = "Update an existing milestone's details. Does not affect tasks or notes within the milestone - use the respective tools to manage those.",
+        Description = "Update an existing milestone's details. Only provided fields are updated - omit fields to keep their current values. Does not affect tasks or notes within the milestone.",
         Icon = "edit")]
     public async Task<MilestoneDetailsV1?> UpdateMilestone(
         [Description("The unique identifier of the milestone to update")] Guid id,
-        [Description("The new name of the milestone")] string name,
-        [Description("Optional new content/description of the milestone (supports markdown and mermaid diagrams)")] string? content,
-        [Description("Optional new success criteria for the milestone")] string? successCriteria,
-        [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled")] MilestoneStatus? status,
-        [Description("Optional new due date for the milestone")] DateTimeOffset? dueDate,
-        [Description("Optional new sort order for display")] int? sortOrder,
-        CancellationToken ct)
+        [Description("New name for the milestone (omit to keep current)")] string? name = null,
+        [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current)")] string? content = null,
+        [Description("New success criteria (omit to keep current)")] string? successCriteria = null,
+        [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled (omit to keep current)")] MilestoneStatus? status = null,
+        [Description("New due date (omit to keep current)")] DateTimeOffset? dueDate = null,
+        [Description("New sort order for display (omit to keep current)")] int? sortOrder = null,
+        CancellationToken ct = default)
     {
+        // Fetch current milestone to merge with provided values
+        var current = await _milestoneService.GetByIdAsync(id, ct);
+        if (current == null)
+        {
+            return null;
+        }
+
         var request = new UpdateMilestoneRequestV1
         {
-            Name = name,
-            Content = content,
-            SuccessCriteria = successCriteria,
-            Status = status ?? MilestoneStatus.NotStarted,
-            DueDate = dueDate,
-            SortOrder = sortOrder ?? 0
+            Name = name ?? current.Name,
+            Content = content ?? current.Content,
+            SuccessCriteria = successCriteria ?? current.SuccessCriteria,
+            Status = status ?? current.Status,
+            DueDate = dueDate ?? current.DueDate,
+            SortOrder = sortOrder ?? current.SortOrder
         };
 
         return await _milestoneService.UpdateAsync(id, request, ct);

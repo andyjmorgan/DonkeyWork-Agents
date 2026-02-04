@@ -89,36 +89,43 @@ public class TasksTools
     }
 
     /// <summary>
-    /// Updates an existing task.
+    /// Updates an existing task. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
     [McpServerTool(Name = "tasks_update")]
     [McpTool(
         Name = "tasks_update",
         Title = "Update Task",
-        Description = "Update an existing task. You can change its details, status, priority, or move it between standalone/project/milestone associations by setting or clearing the projectId and milestoneId fields.",
+        Description = "Update an existing task. Only provided fields are updated - omit fields to keep their current values. You can move tasks between standalone/project/milestone associations by setting projectId and milestoneId.",
         Icon = "edit")]
     public async Task<TodoV1?> UpdateTask(
         [Description("The unique identifier of the task to update")] Guid id,
-        [Description("The new title of the task")] string title,
-        [Description("Optional new description of the task (supports markdown and mermaid diagrams)")] string? description,
-        [Description("Status: Pending, InProgress, Completed, or Cancelled")] TodoStatus? status,
-        [Description("Priority: Low, Medium, High, or Critical")] TodoPriority? priority,
-        [Description("Optional completion notes (set when marking as Completed)")] string? completionNotes,
-        [Description("Optional new due date for the task")] DateTimeOffset? dueDate,
-        [Description("Project ID - set to associate with a project, or null to make standalone")] Guid? projectId,
-        [Description("Milestone ID - set to associate with a milestone, or null to remove milestone association")] Guid? milestoneId,
-        CancellationToken ct)
+        [Description("New title for the task (omit to keep current)")] string? title = null,
+        [Description("New description (supports markdown, omit to keep current)")] string? description = null,
+        [Description("Status: Pending, InProgress, Completed, or Cancelled (omit to keep current)")] TodoStatus? status = null,
+        [Description("Priority: Low, Medium, High, or Critical (omit to keep current)")] TodoPriority? priority = null,
+        [Description("Completion notes (set when marking as Completed, omit to keep current)")] string? completionNotes = null,
+        [Description("New due date (omit to keep current)")] DateTimeOffset? dueDate = null,
+        [Description("Project ID to associate with (omit to keep current)")] Guid? projectId = null,
+        [Description("Milestone ID to associate with (omit to keep current)")] Guid? milestoneId = null,
+        CancellationToken ct = default)
     {
+        // Fetch current task to merge with provided values
+        var current = await _todoService.GetByIdAsync(id, ct);
+        if (current == null)
+        {
+            return null;
+        }
+
         var request = new UpdateTodoRequestV1
         {
-            Title = title,
-            Description = description,
-            Status = status ?? TodoStatus.Pending,
-            Priority = priority ?? TodoPriority.Medium,
-            CompletionNotes = completionNotes,
-            DueDate = dueDate,
-            ProjectId = projectId,
-            MilestoneId = milestoneId
+            Title = title ?? current.Title,
+            Description = description ?? current.Description,
+            Status = status ?? current.Status,
+            Priority = priority ?? current.Priority,
+            CompletionNotes = completionNotes ?? current.CompletionNotes,
+            DueDate = dueDate ?? current.DueDate,
+            ProjectId = projectId ?? current.ProjectId,
+            MilestoneId = milestoneId ?? current.MilestoneId
         };
 
         return await _todoService.UpdateAsync(id, request, ct);

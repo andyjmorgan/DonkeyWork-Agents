@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   Loader2,
-  Trash2,
   Plus,
   Target,
   CheckSquare,
@@ -17,9 +16,10 @@ import {
   StickyNote,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
+import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
+import { ContentCard } from '@/components/workspace/ContentCard'
 import {
   Select,
   SelectContent,
@@ -42,7 +42,6 @@ import {
   type MilestoneDetails,
   type Todo,
   type MilestoneStatus,
-  type TodoPriority,
 } from '@/lib/api'
 
 type TabType = 'overview' | 'notes' | 'tasks'
@@ -61,8 +60,8 @@ export function MilestoneDetailPage() {
   const [nameValue, setNameValue] = useState('')
   const [isSavingName, setIsSavingName] = useState(false)
 
-  // Content editing - start in edit mode by default
-  const [isEditingContent, setIsEditingContent] = useState(true)
+  // Content editing - start in readonly mode by default
+  const [isEditingContent, setIsEditingContent] = useState(false)
   const [contentValue, setContentValue] = useState('')
   const [isSavingContent, setIsSavingContent] = useState(false)
 
@@ -266,16 +265,6 @@ export function MilestoneDetailPage() {
     } catch (error) {
       console.error('Failed to delete note:', error)
     }
-  }
-
-  const getPriorityBadge = (priority: TodoPriority) => {
-    const variants: Record<TodoPriority, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      Low: 'secondary',
-      Medium: 'outline',
-      High: 'default',
-      Critical: 'destructive',
-    }
-    return <Badge variant={variants[priority]}>{priority}</Badge>
   }
 
   const pendingTodos = milestone?.todos.filter(t => t.status !== 'Completed').length || 0
@@ -525,9 +514,7 @@ export function MilestoneDetailPage() {
             ) : (
               <div className="rounded-lg border border-border bg-card p-4">
                 {milestone.content ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                    {milestone.content}
-                  </div>
+                  <MarkdownViewer content={milestone.content} />
                 ) : (
                   <p className="text-sm text-muted-foreground italic">No content yet. Click Edit to add some.</p>
                 )}
@@ -558,32 +545,15 @@ export function MilestoneDetailPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {milestone.notes.map((note) => (
-                  <div
+                  <ContentCard
                     key={note.id}
-                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer min-h-[140px] flex flex-col"
+                    title={note.title}
+                    content={note.content}
                     onClick={() => navigate(`/notes/${note.id}`)}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-medium truncate">{note.title}</h4>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteNote(note.id)
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    {note.content && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-5 flex-1">{note.content}</p>
-                    )}
-                    <div className="mt-auto pt-2 text-xs text-muted-foreground">
-                      {new Date(note.updatedAt || note.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
+                    onDelete={() => handleDeleteNote(note.id)}
+                    date={note.updatedAt || note.createdAt}
+                    icon={<FileText className="h-5 w-5 text-muted-foreground" />}
+                  />
                 ))}
               </div>
             </>
@@ -612,64 +582,19 @@ export function MilestoneDetailPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {milestone.todos.map((todo) => (
-                  <div
+                  <ContentCard
                     key={todo.id}
-                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer min-h-[140px] flex flex-col"
+                    title={todo.title}
+                    content={todo.description}
                     onClick={() => navigate(`/tasks/${todo.id}`)}
-                  >
-                    {/* Header with badges */}
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      {getPriorityBadge(todo.priority)}
-                      <Badge variant={todo.status === 'Completed' ? 'default' : 'secondary'}>
-                        {todo.status}
-                      </Badge>
-                      {todo.dueDate && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(todo.dueDate).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    {/* Title and actions */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleTodoStatus(todo) }}
-                          className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors shrink-0 ${
-                            todo.status === 'Completed'
-                              ? 'bg-primary border-primary text-primary-foreground'
-                              : 'border-muted-foreground hover:border-primary'
-                          }`}
-                        >
-                          {todo.status === 'Completed' && (
-                            <CheckSquare className="h-3 w-3" />
-                          )}
-                        </button>
-                        <h4 className={`font-medium truncate ${todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
-                          {todo.title}
-                        </h4>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteTodo(todo.id)
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    {/* Description */}
-                    {todo.description && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-3 flex-1">{todo.description}</p>
-                    )}
-                    {/* Footer */}
-                    <div className="mt-auto pt-2 text-xs text-muted-foreground">
-                      {new Date(todo.updatedAt || todo.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
+                    onDelete={() => handleDeleteTodo(todo.id)}
+                    date={todo.updatedAt || todo.createdAt}
+                    status={todo.status}
+                    priority={todo.priority}
+                    dueDate={todo.dueDate}
+                    onToggleComplete={() => handleToggleTodoStatus(todo)}
+                    isCompleted={todo.status === 'Completed'}
+                  />
                 ))}
               </div>
             </>
