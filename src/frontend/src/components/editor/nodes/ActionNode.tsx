@@ -1,6 +1,6 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { Globe, Mail, Database, File, Zap, Clock } from 'lucide-react'
+import { Globe, Mail, Database, File, Zap, Clock, type LucideIcon } from 'lucide-react'
 import { BaseNode } from './BaseNode'
 
 export interface ActionNodeData {
@@ -8,24 +8,15 @@ export interface ActionNodeData {
   actionType: string
   displayName: string
   icon?: string
-  parameters?: Record<string, any>
+  parameters?: Record<string, unknown>
 }
 
-const getActionIcon = (iconName?: string) => {
-  switch (iconName) {
-    case 'globe':
-      return Globe
-    case 'mail':
-      return Mail
-    case 'database':
-      return Database
-    case 'file':
-      return File
-    case 'clock':
-      return Clock
-    default:
-      return Zap
-  }
+const ACTION_ICONS: Record<string, LucideIcon> = {
+  globe: Globe,
+  mail: Mail,
+  database: Database,
+  file: File,
+  clock: Clock,
 }
 
 // Get color scheme based on icon type - using design system gradients
@@ -78,7 +69,7 @@ const getColorScheme = (iconName?: string) => {
 
 export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
   const nodeData = data as unknown as ActionNodeData
-  const Icon = getActionIcon(nodeData.icon)
+  const Icon = useMemo(() => ACTION_ICONS[nodeData.icon || ''] || Zap, [nodeData.icon])
   const colors = getColorScheme(nodeData.icon)
 
   return (

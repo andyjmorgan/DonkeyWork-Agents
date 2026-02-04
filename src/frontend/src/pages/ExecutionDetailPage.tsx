@@ -61,8 +61,8 @@ export function ExecutionDetailPage() {
       } catch {
         // Orchestration might have been deleted
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load execution')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load execution')
     } finally {
       setLoading(false)
     }

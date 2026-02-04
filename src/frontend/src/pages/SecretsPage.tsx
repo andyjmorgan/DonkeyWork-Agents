@@ -94,7 +94,7 @@ export function SecretsPage() {
 
     try {
       await initiateFlow(provider)
-    } catch (error) {
+    } catch {
       alert('Failed to initiate OAuth flow')
     }
   }
@@ -107,7 +107,7 @@ export function SecretsPage() {
     try {
       await disconnect(tokenId)
       loadOAuthData()
-    } catch (error) {
+    } catch {
       alert('Failed to disconnect account')
     }
   }
@@ -116,7 +116,7 @@ export function SecretsPage() {
     try {
       await refresh(tokenId)
       loadOAuthData()
-    } catch (error) {
+    } catch {
       alert('Failed to refresh token')
     }
   }
@@ -129,7 +129,7 @@ export function SecretsPage() {
     try {
       await oauth.deleteConfig(configId)
       loadOAuthData()
-    } catch (error) {
+    } catch {
       alert('Failed to delete OAuth configuration')
     }
   }

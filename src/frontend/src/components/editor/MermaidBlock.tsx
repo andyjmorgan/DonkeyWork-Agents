@@ -1,6 +1,6 @@
 import { NodeViewWrapper, NodeViewContent } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useId } from 'react'
 import { GitBranch, Code, Eye, AlertCircle } from 'lucide-react'
 import mermaid from 'mermaid'
 
@@ -19,7 +19,8 @@ export function MermaidBlock({ node }: NodeViewProps) {
   const [svg, setSvg] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const diagramRef = useRef<HTMLDivElement>(null)
-  const idRef = useRef(`mermaid-${Math.random().toString(36).slice(2, 11)}`)
+  const reactId = useId()
+  const idRef = useRef(`mermaid-${reactId.replace(/:/g, '-')}`)
 
   const code = node.textContent || ''
 

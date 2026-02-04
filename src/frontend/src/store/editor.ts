@@ -722,8 +722,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const version = await orchestrations.getVersion(orchestrationId, versionId)
 
     // Enrich nodes with schema data (for backward compatibility with old saved nodes)
+    // Cast API response to expected types
+    const apiNodeConfigs = version.nodeConfigurations as Record<string, NodeConfig>
     const enrichedNodes = version.reactFlowData.nodes.map((node: Node) => {
-      const config = version.nodeConfigurations[node.id]
+      const config = apiNodeConfigs[node.id]
       return enrichNodeWithSchema(node, config)
     })
 
@@ -733,7 +735,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nodes: enrichedNodes,
       edges: version.reactFlowData.edges,
       viewport: version.reactFlowData.viewport,
-      nodeConfigurations: version.nodeConfigurations,
+      nodeConfigurations: apiNodeConfigs,
       isDraft: version.isDraft
     })
   },

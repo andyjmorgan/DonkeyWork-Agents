@@ -3,9 +3,16 @@ import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { ExecutionEvent } from '@/lib/api'
 
+interface NodeEventData {
+  nodeType?: string
+  nodeId?: string
+  delta?: string
+  errorMessage?: string
+}
+
 interface StreamingOutputProps {
   events: ExecutionEvent[]
-  output?: any
+  output?: unknown
   error?: string | null
   isStreaming: boolean
 }
@@ -40,19 +47,19 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
 
           {event.type === 'node_started' && (
             <div className="flex items-center gap-2 text-sm">
-              <Badge variant="secondary">{(event as any).nodeType || 'node'}</Badge>
-              <span className="text-muted-foreground">{(event as any).nodeId}</span>
+              <Badge variant="secondary">{(event as ExecutionEvent & NodeEventData).nodeType || 'node'}</Badge>
+              <span className="text-muted-foreground">{(event as ExecutionEvent & NodeEventData).nodeId}</span>
             </div>
           )}
 
           {event.type === 'token_delta' && (
-            <span className="text-sm">{(event as any).delta}</span>
+            <span className="text-sm">{(event as ExecutionEvent & NodeEventData).delta}</span>
           )}
 
           {event.type === 'node_completed' && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
-              <span>Node completed: {(event as any).nodeId}</span>
+              <span>Node completed: {(event as ExecutionEvent & NodeEventData).nodeId}</span>
             </div>
           )}
 
@@ -62,7 +69,7 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
                 <CheckCircle2 className="h-4 w-4" />
                 Execution completed
               </div>
-              {output && (
+              {output !== undefined && output !== null && (
                 <pre className="mt-2 text-sm">{JSON.stringify(output, null, 2)}</pre>
               )}
             </div>
@@ -74,7 +81,7 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
                 <XCircle className="h-4 w-4" />
                 Execution failed
               </div>
-              <p className="mt-1 text-sm text-destructive">{(event as any).errorMessage}</p>
+              <p className="mt-1 text-sm text-destructive">{(event as ExecutionEvent & NodeEventData).errorMessage}</p>
             </div>
           )}
         </div>

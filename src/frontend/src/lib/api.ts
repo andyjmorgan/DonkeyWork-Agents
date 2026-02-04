@@ -255,6 +255,10 @@ export interface WebhookInterfaceConfig extends InterfaceConfigBase {
 
 export type InterfaceConfig = DirectInterfaceConfig | ChatInterfaceConfig | McpInterfaceConfig | A2aInterfaceConfig | WebhookInterfaceConfig
 
+// ReactFlow types - using 'any' to maintain compatibility with ReactFlow library types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ReactFlowData = any
+
 export interface OrchestrationVersion {
   id: string
   orchestrationId: string
@@ -262,8 +266,8 @@ export interface OrchestrationVersion {
   isDraft: boolean
   inputSchema: JSONSchema
   outputSchema?: JSONSchema
-  reactFlowData: { nodes: any[], edges: any[], viewport: any }
-  nodeConfigurations: Record<string, any>
+  reactFlowData: ReactFlowData
+  nodeConfigurations: Record<string, Record<string, unknown>>
   interface: InterfaceConfig
   createdAt: string
   publishedAt?: string
@@ -282,8 +286,8 @@ export interface CreateOrchestrationRequest {
 }
 
 export interface SaveVersionRequest {
-  reactFlowData: { nodes: any[], edges: any[], viewport: any }
-  nodeConfigurations: Record<string, any>
+  reactFlowData: ReactFlowData
+  nodeConfigurations: Record<string, Record<string, unknown>>
   inputSchema: JSONSchema
   outputSchema?: JSONSchema | null
   credentialMappings: Array<{ nodeId: string; credentialId: string }>
@@ -314,14 +318,14 @@ export const orchestrations = {
 
 // Execution types
 export interface ExecuteOrchestrationRequest {
-  input: any
+  input: unknown
   versionId?: string
 }
 
 export interface ExecuteOrchestrationResponse {
   executionId: string
   status: 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
-  output?: any
+  output?: unknown
   error?: string
 }
 
@@ -329,7 +333,7 @@ export interface ExecutionEvent {
   type: string
   executionId: string
   timestamp: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface OrchestrationExecution {
@@ -337,8 +341,8 @@ export interface OrchestrationExecution {
   orchestrationId: string
   versionId: string
   status: 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
-  input: any
-  output?: any
+  input: unknown
+  output?: unknown
   errorMessage?: string
   startedAt: string
   completedAt?: string
@@ -376,11 +380,11 @@ export interface NodeExecution {
 // Execution API functions
 export const executions = {
   // Execute orchestration (production)
-  execute: async (orchestrationId: string, input: any, versionId?: string) =>
+  execute: async (orchestrationId: string, input: unknown, versionId?: string) =>
     api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/execute`, { input, versionId }),
 
   // Test orchestration (playground)
-  test: async (orchestrationId: string, input: any, versionId?: string) =>
+  test: async (orchestrationId: string, input: unknown, versionId?: string) =>
     api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/test`, { input, versionId }),
 
   // Get execution details

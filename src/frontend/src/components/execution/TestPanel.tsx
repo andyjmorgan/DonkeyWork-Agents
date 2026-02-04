@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo, useLayoutEffect, useEffect } from 'react'
 import { Play, Loader2, RefreshCw, Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -127,14 +127,15 @@ function ChatTestPanel({ orchestrationId }: { orchestrationId: string }) {
     }
 
     // Build messages array including history
-    const newUserMessage = { role: 'user' as const, content: messageText }
+    const newUserMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: messageText }
     const allMessages = [...messages, newUserMessage]
 
     // Add user message to display
     setMessages(allMessages)
 
-    // Execute with full conversation history via chat endpoint
-    startChatStream(orchestrationId, allMessages, true)
+    // Execute with full conversation history via chat endpoint (send without id for API)
+    const messagesForApi = allMessages.map(({ role, content }) => ({ role, content }))
+    startChatStream(orchestrationId, messagesForApi, true)
   }, [inputValue, isStreaming, orchestrationId, startChatStream, messages])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -261,8 +262,15 @@ function ChatTestPanel({ orchestrationId }: { orchestrationId: string }) {
 
 // Direct JSON test interface
 function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: string; inputSchema?: JSONSchema }) {
-  const [input, setInput] = useState('{\n  \n}')
-  const [hasLoadedSchema, setHasLoadedSchema] = useState(false)
+  // Initialize input from schema if available
+  const initialInput = useMemo(() => {
+    if (inputSchema) {
+      return JSON.stringify(generateExampleFromSchema(inputSchema), null, 2)
+    }
+    return '{\n  \n}'
+  }, [inputSchema])
+
+  const [input, setInput] = useState(initialInput)
   const [output, setOutput] = useState<unknown>(null)
 
   const { events, isStreaming, error, startStream } = useExecutionStream({
@@ -270,13 +278,15 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
     onError: (err) => console.error('Execution error:', err)
   })
 
-  useEffect(() => {
-    if (inputSchema && !hasLoadedSchema) {
+  // Update input when schema changes (for subsequent schema loads)
+  const prevInputSchemaRef = useRef(inputSchema)
+  useLayoutEffect(() => {
+    if (inputSchema && prevInputSchemaRef.current !== inputSchema) {
       const example = generateExampleFromSchema(inputSchema)
       setInput(JSON.stringify(example, null, 2))
-      setHasLoadedSchema(true)
     }
-  }, [inputSchema, hasLoadedSchema])
+    prevInputSchemaRef.current = inputSchema
+  }, [inputSchema])
 
   const handleResetTemplate = () => {
     if (inputSchema) {

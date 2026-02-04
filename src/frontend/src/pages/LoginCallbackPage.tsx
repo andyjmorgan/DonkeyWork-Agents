@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 
@@ -21,20 +21,28 @@ function parseJwt(token: string) {
 export function LoginCallbackPage() {
   const navigate = useNavigate()
   const { setTokens, setUser } = useAuthStore()
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Parse the URL fragment
+  // Parse URL params once on mount - compute initial error state synchronously
+  const initialState = useMemo(() => {
     const hash = window.location.hash.substring(1)
     const params = new URLSearchParams(hash)
-
     const errorParam = params.get('error')
     const errorDescription = params.get('error_description')
 
     if (errorParam) {
-      setError(errorDescription || errorParam)
-      return
+      return { error: errorDescription || errorParam, params: null }
     }
+    return { error: null, params }
+  }, [])
+
+  const [error, setError] = useState<string | null>(initialState.error)
+
+  useEffect(() => {
+    // If we already have an error from initial parsing, don't proceed
+    if (initialState.error) return
+
+    const params = initialState.params
+    if (!params) return
 
     const accessToken = params.get('access_token')
     const refreshToken = params.get('refresh_token')
@@ -64,7 +72,7 @@ export function LoginCallbackPage() {
 
     // Redirect to the app
     navigate('/orchestrations', { replace: true })
-  }, [navigate, setTokens, setUser])
+  }, [navigate, setTokens, setUser, initialState])
 
   if (error) {
     return (

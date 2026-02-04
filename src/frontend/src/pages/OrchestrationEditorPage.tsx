@@ -13,8 +13,15 @@ import { ExportJsonDialog } from '@/components/editor/ExportJsonDialog'
 import { InterfacesPanel } from '@/components/editor/InterfacesPanel'
 import { TestPanel } from '@/components/execution/TestPanel'
 import { useEditorStore } from '@/store/editor'
-import type { OrchestrationVersion } from '@/lib/api'
+import type { OrchestrationVersion, JSONSchema } from '@/lib/api'
 import { toast } from 'sonner'
+
+// Type for nodes in ReactFlowData from API response
+interface ApiNode {
+  id: string
+  type?: string
+  data?: { nodeType?: string }
+}
 
 export function OrchestrationEditorPage() {
   const { id } = useParams<{ id: string }>()
@@ -45,7 +52,7 @@ export function OrchestrationEditorPage() {
 
   // Get input schema from start node
   const startNode = nodes.find(n => n.data?.nodeType === 'Start')
-  const inputSchema = startNode ? (nodeConfigurations[startNode.id] as any)?.inputSchema : undefined
+  const inputSchema = startNode ? (nodeConfigurations[startNode.id] as { inputSchema?: JSONSchema } | undefined)?.inputSchema : undefined
 
   useEffect(() => {
     const loadOrchestrationData = async () => {
@@ -64,7 +71,7 @@ export function OrchestrationEditorPage() {
 
           if (currentVersion) {
             // Merge top-level inputSchema into start node configuration
-            const startNode = currentVersion.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
+            const startNode = currentVersion.reactFlowData.nodes.find((n: ApiNode) => n.type === 'start' || n.data?.nodeType === 'Start')
             const nodeConfigurations = {
               ...currentVersion.nodeConfigurations,
               ...(startNode ? {
@@ -190,7 +197,7 @@ export function OrchestrationEditorPage() {
       const publishedVersion = await orchestrations.publish(orchestrationId)
 
       // Merge top-level inputSchema into start node configuration
-      const startNode = publishedVersion.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
+      const startNode = publishedVersion.reactFlowData.nodes.find((n: ApiNode) => n.type === 'start' || n.data?.nodeType === 'Start')
       const nodeConfigurations = {
         ...publishedVersion.nodeConfigurations,
         ...(startNode ? {
@@ -227,7 +234,7 @@ export function OrchestrationEditorPage() {
 
   const handleLoadVersion = useCallback(async (version: OrchestrationVersion) => {
     // Merge top-level inputSchema into start node configuration
-    const startNode = version.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
+    const startNode = version.reactFlowData.nodes.find((n: ApiNode) => n.type === 'start' || n.data?.nodeType === 'Start')
     const nodeConfigurations = {
       ...version.nodeConfigurations,
       ...(startNode ? {
@@ -253,7 +260,7 @@ export function OrchestrationEditorPage() {
 
   const handleCreateDraftFromVersion = useCallback(async (version: OrchestrationVersion) => {
     // Merge top-level inputSchema into start node configuration
-    const startNode = version.reactFlowData.nodes.find(n => n.type === 'start' || n.data?.nodeType === 'Start')
+    const startNode = version.reactFlowData.nodes.find((n: ApiNode) => n.type === 'start' || n.data?.nodeType === 'Start')
     const nodeConfigurations = {
       ...version.nodeConfigurations,
       ...(startNode ? {

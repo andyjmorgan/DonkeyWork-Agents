@@ -53,7 +53,7 @@ export function CreateCredentialDialog({
         apiKey
       }
 
-      const response = await credentials.create(requestBody as any)
+      const response = await credentials.create(requestBody)
 
       // Reset form
       setName('')
@@ -137,7 +137,7 @@ export function CreateCredentialDialog({
                   <span className="text-sm">{getProviderDisplayName(provider)}</span>
                 </div>
               ) : (
-                <Select value={provider} onValueChange={(value) => setProvider(value as any)}>
+                <Select value={provider} onValueChange={(value) => setProvider(value as 'OpenAi' | 'Anthropic' | 'Google' | 'Azure')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

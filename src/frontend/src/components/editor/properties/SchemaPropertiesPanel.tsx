@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react'
 import { useEditorStore } from '@/store/editor'
 import { nodeTypes, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@/lib/api'
 import { FieldRenderer } from './FieldRenderer'
@@ -33,41 +33,74 @@ export function SchemaPropertiesPanel({
 
   const config = nodeConfigurations[nodeId] as unknown as Record<string, unknown> | undefined
   const predecessors = useMemo(() => getReachablePredecessors(nodeId), [nodeId, getReachablePredecessors])
+  const prevNodeTypeRef = useRef(nodeType)
+  const prevModelIdRef = useRef(modelId)
 
-  // Fetch schema on mount
+  // Fetch schema on mount and nodeType change
   useEffect(() => {
-    setLoading(true)
-    setError(null)
+    let isMounted = true
 
     nodeTypes.getSchema(nodeType)
       .then((fetchedSchema) => {
+        if (!isMounted) return
         if (fetchedSchema) {
           setSchema(fetchedSchema)
+          setError(null)
         } else {
           setError(`No schema found for node type: ${nodeType}`)
         }
       })
       .catch((err) => {
+        if (!isMounted) return
         console.error('Failed to fetch schema:', err)
         setError('Failed to load configuration schema')
       })
       .finally(() => {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       })
+
+    return () => {
+      isMounted = false
+    }
+  }, [nodeType])
+
+  // Set loading state synchronously when nodeType changes
+  useLayoutEffect(() => {
+    if (prevNodeTypeRef.current !== nodeType) {
+      setLoading(true)
+      setError(null)
+      prevNodeTypeRef.current = nodeType
+    }
   }, [nodeType])
 
   // Fetch model definition when modelId changes (for Model nodes)
   useEffect(() => {
+    let isMounted = true
+
     if (modelId) {
       models.get(modelId)
-        .then(setSelectedModel)
+        .then((model) => {
+          if (isMounted) setSelectedModel(model)
+        })
         .catch((err) => {
           console.error('Failed to fetch model:', err)
-          setSelectedModel(null)
+          if (isMounted) setSelectedModel(null)
         })
-    } else {
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [modelId])
+
+  // Clear selected model synchronously when modelId becomes null
+  useLayoutEffect(() => {
+    if (prevModelIdRef.current !== modelId && !modelId) {
       setSelectedModel(null)
     }
+    prevModelIdRef.current = modelId
   }, [modelId])
 
   const handleFieldChange = (fieldName: string, value: unknown) => {

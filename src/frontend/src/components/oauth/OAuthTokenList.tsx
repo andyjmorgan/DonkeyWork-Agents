@@ -48,7 +48,7 @@ export function OAuthTokenList({ tokens, onRefresh, onDisconnect }: OAuthTokenLi
               <div className="space-y-1 min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-medium truncate">{token.provider}</p>
-                  <Badge variant={getStatusVariant(token.status) as any}>
+                  <Badge variant={getStatusVariant(token.status) as 'success' | 'warning' | 'destructive' | 'secondary'}>
                     {token.status}
                   </Badge>
                 </div>

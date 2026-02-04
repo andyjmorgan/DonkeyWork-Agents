@@ -22,7 +22,7 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
   const abortControllerRef = useRef<AbortController | null>(null)
   const executionIdRef = useRef<string | null>(null)
 
-  const startStream = useCallback(async (orchestrationId: string, input: any, isTest = false) => {
+  const startStream = useCallback(async (orchestrationId: string, input: unknown, isTest = false) => {
     // Cancel any existing stream
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -96,14 +96,14 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
               const eventType = event.type
 
               if (eventType === 'TokenDeltaEvent' && 'delta' in event) {
-                options.onToken?.((event as { delta: string }).delta)
+                options.onToken?.((event as unknown as { delta: string }).delta)
               }
 
               if (eventType === 'ExecutionCompletedEvent' || event.type === 'execution_completed') {
-                options.onComplete?.((event as { output?: unknown }).output)
+                options.onComplete?.((event as unknown as { output?: unknown }).output)
                 setIsStreaming(false)
               } else if (eventType === 'ExecutionFailedEvent' || event.type === 'execution_failed') {
-                const errorMsg = (event as { errorMessage?: string }).errorMessage || 'Execution failed'
+                const errorMsg = (event as unknown as { errorMessage?: string }).errorMessage || 'Execution failed'
                 options.onError?.(errorMsg)
                 setError(errorMsg)
                 setIsStreaming(false)
@@ -114,12 +114,12 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
           }
         }
       }
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
         // Stream was intentionally cancelled
         return
       }
-      const errorMsg = err.message || 'Stream failed'
+      const errorMsg = err instanceof Error ? err.message : 'Stream failed'
       setError(errorMsg)
       setIsStreaming(false)
       options.onError?.(errorMsg)
@@ -202,14 +202,14 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
               const eventType = event.type
 
               if (eventType === 'TokenDeltaEvent' && 'delta' in event) {
-                options.onToken?.((event as { delta: string }).delta)
+                options.onToken?.((event as unknown as { delta: string }).delta)
               }
 
               if (eventType === 'ExecutionCompletedEvent' || event.type === 'execution_completed') {
-                options.onComplete?.((event as { output?: unknown }).output)
+                options.onComplete?.((event as unknown as { output?: unknown }).output)
                 setIsStreaming(false)
               } else if (eventType === 'ExecutionFailedEvent' || event.type === 'execution_failed') {
-                const errorMsg = (event as { errorMessage?: string }).errorMessage || 'Execution failed'
+                const errorMsg = (event as unknown as { errorMessage?: string }).errorMessage || 'Execution failed'
                 options.onError?.(errorMsg)
                 setError(errorMsg)
                 setIsStreaming(false)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -20,23 +20,21 @@ interface OrchestrationMetadataDialogProps {
   onSave: (name: string, description: string) => void
 }
 
-export function OrchestrationMetadataDialog({
-  open,
-  onOpenChange,
+// Inner component that resets when key changes
+function OrchestrationMetadataDialogContent({
   name,
   description,
   onSave,
-}: OrchestrationMetadataDialogProps) {
+  onClose,
+}: {
+  name: string
+  description: string
+  onSave: (name: string, description: string) => void
+  onClose: () => void
+}) {
   const [localName, setLocalName] = useState(name)
   const [localDescription, setLocalDescription] = useState(description)
   const [error, setError] = useState('')
-
-  // Update local state when props change
-  useEffect(() => {
-    setLocalName(name)
-    setLocalDescription(description)
-    setError('')
-  }, [name, description, open])
 
   const validateName = (value: string): boolean => {
     // Validate: a-z, 0-9, -, _ only
@@ -56,7 +54,7 @@ export function OrchestrationMetadataDialog({
   const handleSave = () => {
     if (validateName(localName)) {
       onSave(localName, localDescription)
-      onOpenChange(false)
+      onClose()
     }
   }
 
@@ -66,53 +64,74 @@ export function OrchestrationMetadataDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Orchestration Metadata</DialogTitle>
-          <DialogDescription>
-            Update the name and description for this orchestration.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>Orchestration Metadata</DialogTitle>
+        <DialogDescription>
+          Update the name and description for this orchestration.
+        </DialogDescription>
+      </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              placeholder="my_orchestration"
-              value={localName}
-              onChange={(e) => handleNameChange(e.target.value)}
-              className={error ? 'border-destructive' : ''}
-            />
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Only lowercase letters, numbers, hyphens, and underscores
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Describe what this orchestration does..."
-              value={localDescription}
-              onChange={(e) => setLocalDescription(e.target.value)}
-              rows={4}
-            />
-          </div>
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name</Label>
+          <Input
+            id="name"
+            placeholder="my_orchestration"
+            value={localName}
+            onChange={(e) => handleNameChange(e.target.value)}
+            className={error ? 'border-destructive' : ''}
+          />
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Only lowercase letters, numbers, hyphens, and underscores
+          </p>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            Save
-          </Button>
-        </DialogFooter>
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            placeholder="Describe what this orchestration does..."
+            value={localDescription}
+            onChange={(e) => setLocalDescription(e.target.value)}
+            rows={4}
+          />
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave}>
+          Save
+        </Button>
+      </DialogFooter>
+    </>
+  )
+}
+
+export function OrchestrationMetadataDialog({
+  open,
+  onOpenChange,
+  name,
+  description,
+  onSave,
+}: OrchestrationMetadataDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        {/* Use key to reset internal state when props change */}
+        <OrchestrationMetadataDialogContent
+          key={`${name}-${description}-${open}`}
+          name={name}
+          description={description}
+          onSave={onSave}
+          onClose={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )

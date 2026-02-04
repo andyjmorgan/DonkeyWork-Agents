@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useMemo, useState, useEffect } from 'react'
+import React, { useRef, useCallback, useMemo, useState, useEffect, useLayoutEffect } from 'react'
 import { useEditorStore, type NodeConfig } from '@/store/editor'
 
 interface ScribanEditorProps {
@@ -45,11 +45,10 @@ export function ScribanEditor({
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
 
-  const allPredecessors = predecessorsProp ?? (nodeId ? getReachablePredecessors(nodeId) : [])
-  const predecessors = useMemo(() =>
-    allPredecessors.filter(p => p.nodeType !== 'start'),
-    [allPredecessors]
-  )
+  const predecessors = useMemo(() => {
+    const all = predecessorsProp ?? (nodeId ? getReachablePredecessors(nodeId) : [])
+    return all.filter(p => p.nodeType !== 'start')
+  }, [predecessorsProp, nodeId, getReachablePredecessors])
 
   const inputProperties = useMemo(() => {
     const startNode = nodes.find(n => n.data?.nodeType === 'Start')
@@ -181,7 +180,9 @@ export function ScribanEditor({
     }
   }, [value])
 
-  useEffect(() => {
+  // Check suggestions using layout effect to avoid cascading renders
+  // This is intentionally synchronous as it updates UI state based on value
+  useLayoutEffect(() => {
     checkForSuggestions()
   }, [value, checkForSuggestions])
 

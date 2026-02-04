@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useLayoutEffect, useRef } from 'react'
 import { AlertCircle, Info, AlertTriangle, Bug } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { executions, type ExecutionLog } from '@/lib/api'
@@ -11,10 +11,18 @@ export function ExecutionLogs({ executionId }: ExecutionLogsProps) {
   const [logs, setLogs] = useState<ExecutionLog[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const prevExecutionIdRef = useRef(executionId)
+
+  // Clear logs synchronously when executionId becomes null
+  useLayoutEffect(() => {
+    if (prevExecutionIdRef.current !== executionId && !executionId) {
+      setLogs([])
+    }
+    prevExecutionIdRef.current = executionId
+  }, [executionId])
 
   useEffect(() => {
     if (!executionId) {
-      setLogs([])
       return
     }
 
@@ -107,7 +115,7 @@ export function ExecutionLogs({ executionId }: ExecutionLogsProps) {
         <div key={log.id} className="space-y-1 rounded-md border border-border bg-card p-3">
           <div className="flex items-center gap-2">
             {getLogLevelIcon(log.logLevel)}
-            <Badge variant={getLogLevelColor(log.logLevel) as any}>{log.logLevel}</Badge>
+            <Badge variant={getLogLevelColor(log.logLevel) as 'default' | 'secondary' | 'destructive' | 'outline'}>{log.logLevel}</Badge>
             {log.nodeId && (
               <Badge variant="outline" className="text-xs">{log.nodeId}</Badge>
             )}

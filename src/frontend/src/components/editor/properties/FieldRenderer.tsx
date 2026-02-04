@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2, Variable } from 'lucide-react'
-import { KeyValueEditor } from './KeyValueEditor'
+import { KeyValueEditor, type KeyValueCollection } from './KeyValueEditor'
 import { ScribanEditor } from './ScribanEditor'
 import Editor from '@monaco-editor/react'
 import { Label } from '@/components/ui/label'
@@ -383,7 +383,7 @@ export function FieldRenderer({
             label={field.label}
             description={field.description}
             required={field.required}
-            value={value as any ?? null}
+            value={value as KeyValueCollection | null ?? null}
             onChange={(v) => onChange(v)}
           />
         )

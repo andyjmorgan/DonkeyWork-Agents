@@ -19,5 +19,10 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Disable the set-state-in-effect rule as it's too strict for legitimate patterns
+      // like loading states in async effects and syncing local state with props
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

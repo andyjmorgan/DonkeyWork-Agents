@@ -53,7 +53,7 @@ export function CanvasInner() {
 
   // Handle viewport change
   const handleMove = useCallback(
-    (_event: any, viewport: any) => {
+    (_event: MouseEvent | TouchEvent | null, viewport: { x: number; y: number; zoom: number }) => {
       setViewport(viewport)
     },
     [setViewport]
