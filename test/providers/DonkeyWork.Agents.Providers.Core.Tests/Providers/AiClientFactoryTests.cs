@@ -24,7 +24,7 @@ public class AiClientFactoryTests
     }
 
     [Fact]
-    public async Task CreateClientAsync_OpenAI_ReturnsOpenAiClient()
+    public async Task CreateClientAsync_OpenAI_ReturnsOpenAiResponsesClient()
     {
         var config = new InternalModelConfig
         {
@@ -35,7 +35,7 @@ public class AiClientFactoryTests
 
         var client = await _factory.CreateClientAsync(config);
 
-        Assert.IsType<OpenAiClient>(client);
+        Assert.IsType<OpenAiResponsesClient>(client);
     }
 
     [Fact]

@@ -1,25 +1,16 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react'
-import Editor, { type Monaco } from '@monaco-editor/react'
+import React, { useRef, useCallback, useMemo, useState, useEffect } from 'react'
 import { useEditorStore, type NodeConfig } from '@/store/editor'
-import { useThemeStore } from '@/store/theme'
-import type { editor, languages, Position } from 'monaco-editor'
 
 interface ScribanEditorProps {
-  /** Node ID - required for internal predecessor lookup if predecessors not provided */
   nodeId?: string
   value: string
   onChange: (value: string) => void
   height?: string
   placeholder?: string
   className?: string
-  /** Optional predecessors - if provided, overrides internal lookup */
   predecessors?: Array<{ nodeId: string; nodeName: string; nodeType: string }>
 }
 
-// Scriban language definition for Monaco
-const SCRIBAN_LANGUAGE_ID = 'scriban'
-
-// Output properties for each node type
 const NODE_OUTPUT_PROPERTIES: Record<string, string[]> = {
   start: [],
   model: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
@@ -28,70 +19,11 @@ const NODE_OUTPUT_PROPERTIES: Record<string, string[]> = {
   end: []
 }
 
-function registerScribanLanguage(monaco: Monaco) {
-  // Check if already registered
-  if (monaco.languages.getLanguages().some((lang: languages.ILanguageExtensionPoint) => lang.id === SCRIBAN_LANGUAGE_ID)) {
-    return
-  }
-
-  // Register the language
-  monaco.languages.register({ id: SCRIBAN_LANGUAGE_ID })
-
-  // Define tokens
-  monaco.languages.setMonarchTokensProvider(SCRIBAN_LANGUAGE_ID, {
-    tokenizer: {
-      root: [
-        // Scriban expressions {{ ... }}
-        [/\{\{/, { token: 'delimiter.bracket', next: '@scribanExpression' }],
-        // Plain text
-        [/[^{]+/, 'string'],
-        [/\{/, 'string']
-      ],
-      scribanExpression: [
-        [/\}\}/, { token: 'delimiter.bracket', next: '@root' }],
-        // Keywords
-        [/\b(if|else|elseif|end|for|in|while|break|continue|func|ret|capture|readonly|import|with|wrap|include|raw)\b/, 'keyword'],
-        // Built-in variables
-        [/\b(input|steps|executionId|userId|Variables|execution_id|user_id)\b/, 'variable.predefined'],
-        // Operators
-        [/[=!<>]=?|&&|\|\||[+\-*\/%]/, 'operator'],
-        // Numbers
-        [/\d+(\.\d+)?/, 'number'],
-        // Strings
-        [/"[^"]*"/, 'string'],
-        [/'[^']*'/, 'string'],
-        // Identifiers (variable/property names)
-        [/[a-zA-Z_]\w*/, 'identifier'],
-        // Dots for property access
-        [/\./, 'delimiter'],
-        // Pipes
-        [/\|/, 'delimiter'],
-        // Whitespace
-        [/\s+/, 'white']
-      ]
-    }
-  })
-
-  // Define language configuration for brackets and auto-closing
-  monaco.languages.setLanguageConfiguration(SCRIBAN_LANGUAGE_ID, {
-    brackets: [
-      ['{{', '}}'],
-      ['(', ')'],
-      ['[', ']']
-    ],
-    autoClosingPairs: [
-      { open: '{{', close: '}}' },
-      { open: '"', close: '"' },
-      { open: "'", close: "'" },
-      { open: '(', close: ')' },
-      { open: '[', close: ']' }
-    ],
-    surroundingPairs: [
-      { open: '{{', close: '}}' },
-      { open: '"', close: '"' },
-      { open: "'", close: "'" }
-    ]
-  })
+interface SuggestionItem {
+  label: string
+  detail: string
+  insertText: string
+  hasChildren: boolean
 }
 
 export function ScribanEditor({
@@ -106,289 +38,233 @@ export function ScribanEditor({
   const getReachablePredecessors = useEditorStore((state) => state.getReachablePredecessors)
   const nodes = useEditorStore((state) => state.nodes)
   const nodeConfigurations = useEditorStore((state) => state.nodeConfigurations)
-  const { theme } = useThemeStore()
 
-  const monacoRef = useRef<Monaco | null>(null)
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
-  const completionDisposableRef = useRef<{ dispose: () => void } | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const pendingCursorRef = useRef<number | null>(null)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
-  // Get reachable predecessors for autocomplete, excluding start node
-  // Use prop if provided, otherwise get from store via nodeId
   const allPredecessors = predecessorsProp ?? (nodeId ? getReachablePredecessors(nodeId) : [])
   const predecessors = useMemo(() =>
     allPredecessors.filter(p => p.nodeType !== 'start'),
     [allPredecessors]
   )
 
-  // Get input schema properties from the start node
   const inputProperties = useMemo(() => {
-    // Start node uses 'schemaNode' type with nodeType: 'Start' in data
     const startNode = nodes.find(n => n.data?.nodeType === 'Start')
     if (!startNode) return []
-
     const startConfig = nodeConfigurations[startNode.id] as NodeConfig | undefined
     const inputSchema = startConfig?.inputSchema as { properties?: Record<string, unknown> } | undefined
     if (!inputSchema?.properties) return []
-
     return Object.keys(inputSchema.properties)
   }, [nodes, nodeConfigurations])
 
-  // Build completion items based on the current path context
-  const buildCompletionItems = useCallback((monaco: Monaco, currentPath: string): { items: any[], hasCompletions: boolean } => {
-    const items: any[] = []
+  const buildSuggestions = useCallback((currentPath: string): SuggestionItem[] => {
+    const items: SuggestionItem[] = []
     const pathParts = currentPath.split('.').filter(p => p.length > 0)
     const pathLower = pathParts.map(p => p.toLowerCase())
-
-    // Known root-level identifiers
     const rootIdentifiers = ['input', 'steps', 'executionid', 'userid']
-
-    // Determine if we should show root-level completions:
-    // - No path typed yet (pathParts.length === 0)
-    // - OR typing a partial/full first identifier that isn't followed by a dot
-    //   (we show root items and let Monaco filter them)
-    const showRootItems = pathParts.length === 0 ||
-      (pathParts.length === 1 && !rootIdentifiers.includes(pathLower[0]))
+    const showRootItems = pathParts.length === 0 || (pathParts.length === 1 && !rootIdentifiers.includes(pathLower[0]))
 
     if (showRootItems) {
-      items.push({
-        label: 'Input',
-        kind: monaco.languages.CompletionItemKind.Variable,
-        insertText: 'Input',
-        filterText: 'Input',
-        sortText: '0_Input',
-        detail: 'Input provided to the workflow',
-        documentation: 'Access the input object passed to this workflow execution'
-      })
-      items.push({
-        label: 'ExecutionId',
-        kind: monaco.languages.CompletionItemKind.Variable,
-        insertText: 'ExecutionId',
-        filterText: 'ExecutionId',
-        sortText: '1_ExecutionId',
-        detail: 'Current execution ID',
-        documentation: 'The unique identifier for this execution'
-      })
-      items.push({
-        label: 'UserId',
-        kind: monaco.languages.CompletionItemKind.Variable,
-        insertText: 'UserId',
-        filterText: 'UserId',
-        sortText: '2_UserId',
-        detail: 'Current user ID',
-        documentation: 'The ID of the user running this execution'
-      })
-
-      // Add Steps if there are predecessors
+      items.push({ label: 'Input', detail: 'Workflow input', insertText: 'Input', hasChildren: inputProperties.length > 0 })
+      items.push({ label: 'ExecutionId', detail: 'Execution ID', insertText: 'ExecutionId', hasChildren: false })
+      items.push({ label: 'UserId', detail: 'User ID', insertText: 'UserId', hasChildren: false })
       if (predecessors.length > 0) {
-        items.push({
-          label: 'Steps',
-          kind: monaco.languages.CompletionItemKind.Module,
-          insertText: 'Steps',
-          filterText: 'Steps',
-          sortText: '3_Steps',
-          detail: 'Access outputs from previous steps',
-          documentation: 'Contains the outputs from all previous workflow steps'
-        })
+        items.push({ label: 'Steps', detail: 'Previous steps', insertText: 'Steps', hasChildren: true })
       }
-    }
-    // After "Input" - show input schema properties
-    else if (pathLower.length === 1 && pathLower[0] === 'input') {
-      inputProperties.forEach((prop, i) => {
-        items.push({
-          label: prop,
-          kind: monaco.languages.CompletionItemKind.Property,
-          insertText: prop,
-          filterText: prop,
-          sortText: `${i}_${prop}`,
-          detail: `Input property: ${prop}`,
-          documentation: `Access the "${prop}" property from the workflow input`
-        })
+    } else if (pathLower.length === 1 && pathLower[0] === 'input') {
+      inputProperties.forEach(prop => {
+        items.push({ label: prop, detail: 'Input property', insertText: prop, hasChildren: false })
       })
-    }
-    // After "Steps" - show predecessor node names
-    else if (pathLower.length === 1 && pathLower[0] === 'steps') {
-      predecessors.forEach((pred, i) => {
-        items.push({
-          label: pred.nodeName,
-          kind: monaco.languages.CompletionItemKind.Class,
-          insertText: pred.nodeName,
-          filterText: pred.nodeName,
-          sortText: `${i}_${pred.nodeName}`,
-          detail: `${pred.nodeType} node`,
-          documentation: `Access outputs from the "${pred.nodeName}" step`
-        })
+    } else if (pathLower.length === 1 && pathLower[0] === 'steps') {
+      predecessors.forEach(pred => {
+        const hasOutputs = (NODE_OUTPUT_PROPERTIES[pred.nodeType] || []).length > 0
+        items.push({ label: pred.nodeName, detail: pred.nodeType, insertText: pred.nodeName, hasChildren: hasOutputs })
       })
-    }
-    // After "Steps.<nodeName>" - show output properties for that node type
-    else if (pathLower.length === 2 && pathLower[0] === 'steps') {
-      const nodeName = pathParts[1]
-      const pred = predecessors.find(p => p.nodeName.toLowerCase() === nodeName.toLowerCase())
+    } else if (pathLower.length === 2 && pathLower[0] === 'steps') {
+      const pred = predecessors.find(p => p.nodeName.toLowerCase() === pathParts[1].toLowerCase())
       if (pred) {
-        const outputProps = NODE_OUTPUT_PROPERTIES[pred.nodeType] || []
-        outputProps.forEach((prop, i) => {
-          items.push({
-            label: prop,
-            kind: monaco.languages.CompletionItemKind.Property,
-            insertText: prop,
-            filterText: prop,
-            sortText: `${i}_${prop}`,
-            detail: `Output property`,
-            documentation: `The ${prop} output from this step`
-          })
+        (NODE_OUTPUT_PROPERTIES[pred.nodeType] || []).forEach(prop => {
+          items.push({ label: prop, detail: 'Output', insertText: prop, hasChildren: false })
         })
       }
     }
 
-    return { items, hasCompletions: items.length > 0 }
+    const lastPart = pathParts[pathParts.length - 1] || ''
+    if (lastPart && !showRootItems) {
+      return items.filter(i => i.label.toLowerCase().startsWith(lastPart.toLowerCase()))
+    }
+    return items
   }, [predecessors, inputProperties])
 
-  // Setup completion provider
-  const setupCompletionProvider = useCallback((monaco: Monaco) => {
-    // Dispose previous provider if exists
-    if (completionDisposableRef.current) {
-      completionDisposableRef.current.dispose()
+  const checkForSuggestions = useCallback(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const text = value.substring(0, textarea.selectionStart)
+    const lastBrace = text.lastIndexOf('{{')
+
+    if (lastBrace === -1 || text.substring(lastBrace + 2).includes('}}')) {
+      setShowSuggestions(false)
+      return
     }
 
-    completionDisposableRef.current = monaco.languages.registerCompletionItemProvider(SCRIBAN_LANGUAGE_ID, {
-      triggerCharacters: ['.', '{'],
-      provideCompletionItems: (model: editor.ITextModel, position: Position) => {
-        const textUntilPosition = model.getValueInRange({
-          startLineNumber: position.lineNumber,
-          startColumn: 1,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column
-        })
+    const afterBrace = text.substring(lastBrace + 2)
+    const match = afterBrace.match(/^\s*([\w.]*)$/)
+    if (!match) {
+      setShowSuggestions(false)
+      return
+    }
 
-        // Find the last {{ before cursor
-        const lastOpenBrace = textUntilPosition.lastIndexOf('{{')
-        if (lastOpenBrace === -1) {
-          return { suggestions: [] }
-        }
+    const items = buildSuggestions(match[1])
+    if (items.length > 0) {
+      setSuggestions(items)
+      setSelectedIndex(0)
+      setShowSuggestions(true)
+    } else {
+      setShowSuggestions(false)
+    }
+  }, [value, buildSuggestions])
 
-        // Check if we're inside an unclosed {{ }}
-        const afterBrace = textUntilPosition.substring(lastOpenBrace + 2)
-        if (afterBrace.includes('}}')) {
-          return { suggestions: [] }
-        }
+  const insertSuggestion = useCallback((item: SuggestionItem) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
 
-        // Get the current path (e.g., "Steps.MyNode" or "Input")
-        // Use greedy match to capture the full path
-        const pathMatch = afterBrace.match(/^\s*([\w.]*)$/)
-        const currentPath = pathMatch ? pathMatch[1] : ''
+    const pos = textarea.selectionStart
+    const text = value.substring(0, pos)
+    const after = value.substring(pos)
+    const lastBrace = text.lastIndexOf('{{')
+    const afterBrace = text.substring(lastBrace + 2)
+    const match = afterBrace.match(/^\s*([\w.]*)$/)
 
-        // If path ends with a dot, remove it for path parsing but remember we're completing after a dot
-        const normalizedPath = currentPath.endsWith('.') ? currentPath.slice(0, -1) : currentPath
+    if (match) {
+      const path = match[1]
+      const lastDot = path.lastIndexOf('.') + 1
+      const replaceFrom = lastBrace + 2 + afterBrace.indexOf(path) + lastDot
+      const textToInsert = item.hasChildren ? item.insertText + '.' : item.insertText
+      const newValue = value.substring(0, replaceFrom) + textToInsert + after
 
-        const { items } = buildCompletionItems(monaco, normalizedPath)
+      // Set pending cursor position before triggering onChange
+      pendingCursorRef.current = replaceFrom + textToInsert.length
+      onChange(newValue)
+    }
+    setShowSuggestions(false)
+  }, [value, onChange])
 
-        // Calculate the range for replacement
-        const wordInfo = model.getWordUntilPosition(position)
-        const range = {
-          startLineNumber: position.lineNumber,
-          endLineNumber: position.lineNumber,
-          startColumn: wordInfo.startColumn,
-          endColumn: wordInfo.endColumn
-        }
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions) return
 
-        return {
-          incomplete: true, // Keep querying as user types
-          suggestions: items.map(item => ({
-            ...item,
-            range
-          }))
-        }
-      }
-    })
-  }, [buildCompletionItems])
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex(i => Math.min(i + 1, suggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex(i => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      if (suggestions[selectedIndex]) insertSuggestion(suggestions[selectedIndex])
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+    }
+  }, [showSuggestions, suggestions, selectedIndex, insertSuggestion])
 
-  // Cleanup on unmount
+  // Set cursor position after value changes from suggestion insertion
   useEffect(() => {
-    return () => {
-      if (completionDisposableRef.current) {
-        completionDisposableRef.current.dispose()
-      }
+    if (pendingCursorRef.current !== null && textareaRef.current) {
+      const pos = pendingCursorRef.current
+      textareaRef.current.selectionStart = pos
+      textareaRef.current.selectionEnd = pos
+      textareaRef.current.focus()
+      pendingCursorRef.current = null
     }
-  }, [])
+  }, [value])
 
-  const handleEditorDidMount = useCallback((editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-    monacoRef.current = monaco
-    editorRef.current = editor
-
-    registerScribanLanguage(monaco)
-    setupCompletionProvider(monaco)
-
-    // Disable find widget (Ctrl+F / Cmd+F)
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
-      // Do nothing - prevents find dialog
-    })
-
-    // Manually trigger suggestions when {{ is typed
-    // This fixes the issue where typing { triggers completion with no results,
-    // and then the second { doesn't re-trigger
-    editor.onDidChangeModelContent((e) => {
-      for (const change of e.changes) {
-        // Check if the change ends with {{ (user just typed the second brace)
-        if (change.text === '{') {
-          const model = editor.getModel()
-          if (!model) return
-
-          const position = editor.getPosition()
-          if (!position) return
-
-          // Check if the character before is also {
-          const lineContent = model.getLineContent(position.lineNumber)
-          const charBefore = lineContent[position.column - 2] // -1 for 0-index, -1 for previous char
-          if (charBefore === '{') {
-            // Trigger suggestions after a small delay to let Monaco process the change
-            setTimeout(() => {
-              editor.trigger('keyboard', 'editor.action.triggerSuggest', {})
-            }, 10)
-          }
-        }
-      }
-    })
-  }, [setupCompletionProvider])
-
-  // Re-setup completion provider when predecessors change
   useEffect(() => {
-    if (monacoRef.current) {
-      setupCompletionProvider(monacoRef.current)
+    checkForSuggestions()
+  }, [value, checkForSuggestions])
+
+  // Render text with highlighted Scriban expressions
+  const renderHighlightedText = useMemo(() => {
+    if (!value) return null
+
+    const parts: React.ReactNode[] = []
+    let lastIndex = 0
+    const regex = /\{\{[\s\S]*?\}\}/g
+    let match
+
+    while ((match = regex.exec(value)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-${lastIndex}`} className="text-foreground">
+            {value.slice(lastIndex, match.index)}
+          </span>
+        )
+      }
+      // Add the highlighted match
+      parts.push(
+        <span key={`expr-${match.index}`} className="text-cyan-400">
+          {match[0]}
+        </span>
+      )
+      lastIndex = match.index + match[0].length
     }
-  }, [predecessors, inputProperties, setupCompletionProvider])
+
+    // Add remaining text
+    if (lastIndex < value.length) {
+      parts.push(
+        <span key={`text-${lastIndex}`} className="text-foreground">
+          {value.slice(lastIndex)}
+        </span>
+      )
+    }
+
+    return parts
+  }, [value])
 
   return (
-    <div className={`rounded-lg border border-border overflow-hidden ${className ?? ''}`}>
-      <Editor
-        height={height}
-        language={SCRIBAN_LANGUAGE_ID}
-        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+    <div className={`relative rounded-lg border border-border bg-background ${className ?? ''}`}>
+      {/* Highlighted text layer */}
+      <div
+        className="absolute inset-0 p-3 font-mono text-sm whitespace-pre-wrap break-words pointer-events-none select-none overflow-hidden leading-[1.5]"
+        aria-hidden="true"
+      >
+        {renderHighlightedText}
+      </div>
+      {/* Textarea with transparent text */}
+      <textarea
+        ref={textareaRef}
         value={value}
-        onChange={(v) => onChange(v ?? '')}
-        onMount={handleEditorDidMount}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 13,
-          lineNumbers: 'off',
-          glyphMargin: false,
-          folding: false,
-          lineDecorationsWidth: 0,
-          lineNumbersMinChars: 0,
-          scrollBeyondLastLine: false,
-          wordWrap: 'on',
-          wrappingIndent: 'indent',
-          formatOnPaste: true,
-          formatOnType: true,
-          suggestOnTriggerCharacters: true,
-          quickSuggestions: true,
-          tabSize: 2,
-          placeholder: placeholder,
-          find: {
-            addExtraSpaceOnTop: false,
-            autoFindInSelection: 'never',
-            seedSearchStringFromSelection: 'never',
-          },
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="relative w-full bg-transparent p-3 font-mono text-sm resize-none focus:outline-none leading-[1.5]"
+        style={{
+          height,
+          minHeight: height,
+          color: 'transparent',
+          caretColor: 'hsl(var(--foreground))',
+          WebkitTextFillColor: 'transparent',
         }}
+        spellCheck={false}
       />
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute z-50 left-3 top-10 bg-popover border border-border rounded-md shadow-lg min-w-48 max-w-72 overflow-hidden">
+          {suggestions.map((item, i) => (
+            <div
+              key={item.label}
+              className={`px-3 py-1.5 cursor-pointer text-sm flex justify-between gap-4 ${i === selectedIndex ? 'bg-muted' : 'hover:bg-muted/50'}`}
+              onClick={() => insertSuggestion(item)}
+              onMouseEnter={() => setSelectedIndex(i)}
+            >
+              <span className="font-medium">{item.label}</span>
+              <span className="text-xs text-muted-foreground">{item.detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

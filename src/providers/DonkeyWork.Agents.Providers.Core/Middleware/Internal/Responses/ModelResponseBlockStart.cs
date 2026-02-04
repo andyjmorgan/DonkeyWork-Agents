@@ -8,5 +8,9 @@ internal class ModelResponseBlockStart : ModelResponseBase
 
 internal enum InternalContentBlockType
 {
-    Text
+    Text,
+    Thinking,
+    Image,
+    ToolUse,
+    ToolResult
 }

@@ -84,19 +84,19 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
                 v => JsonSerializer.Deserialize<Dictionary<Guid, NodeConfiguration>>(v, RegistryJsonOptions)!)
             .Metadata.SetValueComparer(nodeConfigComparer);
 
-        // Interfaces - stored as JSONB
-        var interfacesComparer = new ValueComparer<OrchestrationInterfaces>(
-            (l, r) => JsonSerializer.Serialize(l, JsonOptions) == JsonSerializer.Serialize(r, JsonOptions),
-            v => JsonSerializer.Serialize(v, JsonOptions).GetHashCode(),
-            v => JsonSerializer.Deserialize<OrchestrationInterfaces>(JsonSerializer.Serialize(v, JsonOptions), JsonOptions)!);
+        // Interface - polymorphic type stored as JSONB
+        var interfaceComparer = new ValueComparer<InterfaceConfig>(
+            (l, r) => JsonSerializer.Serialize(l, InterfaceJsonOptions) == JsonSerializer.Serialize(r, InterfaceJsonOptions),
+            v => JsonSerializer.Serialize(v, InterfaceJsonOptions).GetHashCode(),
+            v => JsonSerializer.Deserialize<InterfaceConfig>(JsonSerializer.Serialize(v, InterfaceJsonOptions), InterfaceJsonOptions)!);
 
-        builder.Property(e => e.Interfaces)
-            .HasColumnName("interfaces")
+        builder.Property(e => e.Interface)
+            .HasColumnName("interface")
             .HasColumnType("jsonb")
             .HasConversion(
-                v => JsonSerializer.Serialize(v, JsonOptions),
-                v => JsonSerializer.Deserialize<OrchestrationInterfaces>(v, JsonOptions) ?? new())
-            .Metadata.SetValueComparer(interfacesComparer);
+                v => JsonSerializer.Serialize(v, InterfaceJsonOptions),
+                v => DeserializeInterface(v))
+            .Metadata.SetValueComparer(interfaceComparer);
 
         builder.Property(e => e.PublishedAt)
             .HasColumnName("published_at");
@@ -140,6 +140,14 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
         WriteIndented = false
     };
 
+    // Options for polymorphic InterfaceConfig serialization
+    private static readonly JsonSerializerOptions InterfaceJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        AllowOutOfOrderMetadataProperties = true
+    };
+
     // Use registry options for polymorphic NodeConfiguration serialization
     private static JsonSerializerOptions RegistryJsonOptions => NodeConfigurationRegistry.Instance.JsonOptions;
 
@@ -150,5 +158,51 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
         doc.WriteTo(writer);
         writer.Flush();
         return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    /// <summary>
+    /// Deserializes InterfaceConfig, handling both new format (with type discriminator)
+    /// and legacy format (OrchestrationInterfaces with mcp/chat/a2a/webhook properties).
+    /// </summary>
+    private static InterfaceConfig DeserializeInterface(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        // Check if this is the new format (has "type" discriminator)
+        if (root.TryGetProperty("type", out _))
+        {
+            return JsonSerializer.Deserialize<InterfaceConfig>(json, InterfaceJsonOptions)
+                ?? new DirectInterfaceConfig();
+        }
+
+        // Legacy format: OrchestrationInterfaces with optional mcp/chat/a2a/webhook properties
+        // Determine which interface was enabled and migrate to new format
+        if (root.TryGetProperty("chat", out var chatProp) && chatProp.ValueKind != JsonValueKind.Null)
+        {
+            return JsonSerializer.Deserialize<ChatInterfaceConfig>(chatProp.GetRawText(), InterfaceJsonOptions)
+                ?? new ChatInterfaceConfig();
+        }
+
+        if (root.TryGetProperty("mcp", out var mcpProp) && mcpProp.ValueKind != JsonValueKind.Null)
+        {
+            return JsonSerializer.Deserialize<McpInterfaceConfig>(mcpProp.GetRawText(), InterfaceJsonOptions)
+                ?? new McpInterfaceConfig();
+        }
+
+        if (root.TryGetProperty("a2a", out var a2aProp) && a2aProp.ValueKind != JsonValueKind.Null)
+        {
+            return JsonSerializer.Deserialize<A2aInterfaceConfig>(a2aProp.GetRawText(), InterfaceJsonOptions)
+                ?? new A2aInterfaceConfig();
+        }
+
+        if (root.TryGetProperty("webhook", out var webhookProp) && webhookProp.ValueKind != JsonValueKind.Null)
+        {
+            return JsonSerializer.Deserialize<WebhookInterfaceConfig>(webhookProp.GetRawText(), InterfaceJsonOptions)
+                ?? new WebhookInterfaceConfig();
+        }
+
+        // Default to Direct interface
+        return new DirectInterfaceConfig();
     }
 }

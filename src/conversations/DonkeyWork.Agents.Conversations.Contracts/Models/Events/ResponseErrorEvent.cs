@@ -7,10 +7,6 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 /// </summary>
 public sealed class ResponseErrorEvent : ConversationStreamEvent
 {
-    /// <inheritdoc />
-    [JsonPropertyName("type")]
-    public override string Type => "response_error";
-
     /// <summary>
     /// Error message.
     /// </summary>

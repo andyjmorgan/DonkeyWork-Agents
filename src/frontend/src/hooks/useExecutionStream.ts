@@ -4,8 +4,14 @@ import type { ExecutionEvent } from '@/lib/api'
 
 interface UseExecutionStreamOptions {
   onEvent?: (event: ExecutionEvent) => void
-  onComplete?: (output: any) => void
+  onToken?: (token: string) => void
+  onComplete?: (output: unknown) => void
   onError?: (error: string) => void
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
 }
 
 export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
@@ -86,11 +92,18 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
                 setExecutionId(event.executionId)
               }
 
-              if (event.type === 'execution_completed') {
-                options.onComplete?.((event as any).output)
+              // Events use type discriminator with PascalCase names
+              const eventType = event.type
+
+              if (eventType === 'TokenDeltaEvent' && 'delta' in event) {
+                options.onToken?.((event as { delta: string }).delta)
+              }
+
+              if (eventType === 'ExecutionCompletedEvent' || event.type === 'execution_completed') {
+                options.onComplete?.((event as { output?: unknown }).output)
                 setIsStreaming(false)
-              } else if (event.type === 'execution_failed') {
-                const errorMsg = (event as any).errorMessage || 'Execution failed'
+              } else if (eventType === 'ExecutionFailedEvent' || event.type === 'execution_failed') {
+                const errorMsg = (event as { errorMessage?: string }).errorMessage || 'Execution failed'
                 options.onError?.(errorMsg)
                 setError(errorMsg)
                 setIsStreaming(false)
@@ -113,6 +126,112 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
     }
   }, [options])
 
+  const startChatStream = useCallback(async (orchestrationId: string, messages: ChatMessage[], isTest = true) => {
+    // Cancel any existing stream
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    setEvents([])
+    setError(null)
+    setExecutionId(null)
+    executionIdRef.current = null
+    setIsStreaming(true)
+
+    // Create new abort controller for this stream
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
+    try {
+      const endpoint = isTest ? 'test-chat' : 'chat'
+
+      const response = await fetchWithAuth(
+        `/api/v1/orchestrations/${orchestrationId}/${endpoint}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+          },
+          body: JSON.stringify({ messages }),
+          signal: abortController.signal
+        }
+      )
+
+      if (!response.ok) {
+        const errorBody = await response.text()
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`)
+      }
+
+      if (!response.body) {
+        throw new Error('No response body')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+
+          // Parse SSE format: "event: EventName\ndata: {...}"
+          const dataMatch = line.match(/^data:\s*(.+)$/m)
+
+          if (dataMatch) {
+            try {
+              const event = JSON.parse(dataMatch[1]) as ExecutionEvent
+              setEvents(prev => [...prev, event])
+              options.onEvent?.(event)
+
+              // Track execution ID from first event
+              if (event.executionId && !executionIdRef.current) {
+                executionIdRef.current = event.executionId
+                setExecutionId(event.executionId)
+              }
+
+              // Handle token events for streaming text
+              // Events use type discriminator with PascalCase names
+              const eventType = event.type
+
+              if (eventType === 'TokenDeltaEvent' && 'delta' in event) {
+                options.onToken?.((event as { delta: string }).delta)
+              }
+
+              if (eventType === 'ExecutionCompletedEvent' || event.type === 'execution_completed') {
+                options.onComplete?.((event as { output?: unknown }).output)
+                setIsStreaming(false)
+              } else if (eventType === 'ExecutionFailedEvent' || event.type === 'execution_failed') {
+                const errorMsg = (event as { errorMessage?: string }).errorMessage || 'Execution failed'
+                options.onError?.(errorMsg)
+                setError(errorMsg)
+                setIsStreaming(false)
+              }
+            } catch (e) {
+              console.error('Failed to parse event:', e)
+            }
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // Stream was intentionally cancelled
+        return
+      }
+      const errorMsg = err instanceof Error ? err.message : 'Stream failed'
+      setError(errorMsg)
+      setIsStreaming(false)
+      options.onError?.(errorMsg)
+    }
+  }, [options])
+
   const stopStream = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -127,6 +246,7 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
     error,
     executionId,
     startStream,
+    startChatStream,
     stopStream
   }
 }

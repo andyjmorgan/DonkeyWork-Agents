@@ -6,8 +6,8 @@ using DonkeyWork.Agents.Conversations.Contracts.Models;
 using DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
-using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Conversations;
@@ -27,7 +27,8 @@ public class ConversationService : IConversationService
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        WriteIndented = false,
+        AllowOutOfOrderMetadataProperties = true
     };
 
     public ConversationService(
@@ -52,6 +53,7 @@ public class ConversationService : IConversationService
         // Verify orchestration exists and belongs to user
         var orchestration = await _dbContext.Orchestrations
             .AsNoTracking()
+            .Include(o => o.CurrentVersion)
             .FirstOrDefaultAsync(o => o.Id == request.OrchestrationId, cancellationToken);
 
         if (orchestration == null)
@@ -59,7 +61,16 @@ public class ConversationService : IConversationService
             throw new InvalidOperationException($"Orchestration {request.OrchestrationId} not found");
         }
 
-        // TODO: Verify orchestration has Chat interface enabled once interfaces are implemented
+        // Verify orchestration has Chat interface
+        if (orchestration.CurrentVersion == null)
+        {
+            throw new InvalidOperationException($"Orchestration {request.OrchestrationId} has no published version");
+        }
+
+        if (orchestration.CurrentVersion.Interface is not ChatInterfaceConfig)
+        {
+            throw new InvalidOperationException($"Orchestration {request.OrchestrationId} does not support Chat interface");
+        }
 
         var conversationId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
@@ -288,21 +299,46 @@ public class ConversationService : IConversationService
         // 5. Emit part_start for the text response
         yield return new PartStartEvent { PartType = "text", PartIndex = 0 };
 
-        // 6. Build input for orchestration - extract text from content parts
-        var inputText = string.Join("", request.Content
+        // 6. Build conversation context from history + new user message
+        var historyMessages = new List<Orchestrations.Contracts.Models.ConversationMessage>();
+
+        // Add existing conversation messages (excluding the one we just added)
+        foreach (var msg in conversation.Messages.Where(m => m.Id != userMessageId))
+        {
+            var content = DeserializeContent(msg.Content);
+            var textContent = string.Join("", content
+                .Where(p => p is TextContentPart)
+                .Cast<TextContentPart>()
+                .Select(p => p.Text));
+
+            historyMessages.Add(new Orchestrations.Contracts.Models.ConversationMessage
+            {
+                Role = msg.Role == Persistence.Entities.Conversations.MessageRole.User
+                    ? Orchestrations.Contracts.Models.ConversationRole.User
+                    : Orchestrations.Contracts.Models.ConversationRole.Assistant,
+                Content = textContent
+            });
+        }
+
+        // Current message text
+        var currentMessage = string.Join("", request.Content
             .Where(p => p is TextContentPart)
             .Cast<TextContentPart>()
             .Select(p => p.Text));
 
-        var input = new { message = inputText, conversationId = conversationId.ToString() };
+        var conversationContext = new Orchestrations.Contracts.Models.ConversationContext
+        {
+            Id = conversationId,
+            Messages = historyMessages,
+            CurrentMessage = currentMessage
+        };
 
         // 7. Fire-and-forget orchestration execution
-        _ = _orchestrationExecutor.ExecuteAsync(
+        _ = _orchestrationExecutor.ExecuteChatAsync(
             executionId,
             userId,
             version.Id,
-            ExecutionInterface.Chat,
-            input,
+            conversationContext,
             cancellationToken);
 
         // 8. Stream events from orchestration execution

@@ -7,10 +7,6 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 /// </summary>
 public sealed class PartDeltaEvent : ConversationStreamEvent
 {
-    /// <inheritdoc />
-    [JsonPropertyName("type")]
-    public override string Type => "part_delta";
-
     /// <summary>
     /// Index of the content part being updated.
     /// </summary>

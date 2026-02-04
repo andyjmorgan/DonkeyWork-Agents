@@ -46,10 +46,12 @@ public sealed class SaveOrchestrationVersionRequestV1
     public IReadOnlyList<CredentialMappingV1>? CredentialMappings { get; init; }
 
     /// <summary>
-    /// Interface configurations for this version (MCP, A2A, Chat, Webhook).
+    /// Interface configuration for this version.
+    /// Each orchestration supports exactly one interface type.
     /// </summary>
-    [JsonPropertyName("interfaces")]
-    public OrchestrationInterfaces? Interfaces { get; init; }
+    [JsonPropertyName("interface")]
+    [Required]
+    public required InterfaceConfig Interface { get; init; }
 }
 
 /// <summary>

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
-import type { OrchestrationInterfaces } from '@/lib/api'
+import type { InterfaceConfig } from '@/lib/api'
 
 /**
  * Schema lookup for node display properties.
@@ -74,7 +74,7 @@ interface EditorState {
   // Version data
   versionId: string | null
   isDraft: boolean
-  interfaces: OrchestrationInterfaces | null
+  interface: InterfaceConfig
 
   // ReactFlow state
   nodes: Node[]
@@ -113,7 +113,7 @@ interface EditorState {
     isDraft?: boolean,
     reactFlowData?: { nodes: Node[], edges: Edge[], viewport: Viewport },
     nodeConfigurations?: Record<string, NodeConfig>,
-    interfaces?: OrchestrationInterfaces | null
+    interfaceConfig?: InterfaceConfig
   ) => void
 
   // Persistence
@@ -134,12 +134,8 @@ interface EditorState {
   // Graph helpers
   getReachablePredecessors: (nodeId: string) => Array<{ nodeId: string; nodeName: string; nodeType: string }>
 
-  // Interfaces
-  setInterfaces: (interfaces: OrchestrationInterfaces) => void
-  updateInterface: <K extends keyof OrchestrationInterfaces>(
-    interfaceType: K,
-    config: OrchestrationInterfaces[K]
-  ) => void
+  // Interface
+  setInterface: (interfaceConfig: InterfaceConfig) => void
 }
 
 // Default input schema for Start node
@@ -171,7 +167,7 @@ const createInitialState = () => {
     orchestrationDescription: '',
     versionId: null,
     isDraft: true,
-    interfaces: null,
+    interface: { type: 'ChatInterfaceConfig' } as InterfaceConfig,
     nodes: [
       {
         id: startId,
@@ -431,7 +427,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set(createInitialState())
   },
 
-  loadOrchestration: (orchestrationId, orchestrationName, orchestrationDescription, versionId, isDraft, reactFlowData, nodeConfigurations, interfaces) => {
+  loadOrchestration: (orchestrationId, orchestrationName, orchestrationDescription, versionId, isDraft, reactFlowData, nodeConfigurations, interfaceConfig) => {
     if (reactFlowData && nodeConfigurations) {
       // Enrich nodes with schema data (for backward compatibility with old saved nodes)
       const enrichedNodes = reactFlowData.nodes.map(node => {
@@ -445,7 +441,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         orchestrationDescription,
         versionId: versionId || null,
         isDraft: isDraft ?? true,
-        interfaces: interfaces ?? null,
+        interface: interfaceConfig ?? { type: 'ChatInterfaceConfig' } as InterfaceConfig,
         nodes: enrichedNodes,
         edges: reactFlowData.edges,
         viewport: reactFlowData.viewport,
@@ -692,7 +688,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   save: async () => {
-    const { orchestrationId, nodes, edges, viewport, nodeConfigurations, interfaces } = get()
+    const state = get()
+    const { orchestrationId, nodes, edges, viewport, nodeConfigurations } = state
+    const interfaceConfig = state.interface
 
     if (!orchestrationId) {
       throw new Error('No orchestration ID - create orchestration first')
@@ -714,7 +712,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       inputSchema,
       outputSchema: null,
       credentialMappings,
-      interfaces: interfaces ?? undefined
+      interface: interfaceConfig
     })
   },
 
@@ -741,7 +739,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   exportToJson: () => {
-    const { orchestrationId, orchestrationName, orchestrationDescription, nodes, edges, viewport, nodeConfigurations, interfaces } = get()
+    const state = get()
+    const { orchestrationId, orchestrationName, orchestrationDescription, nodes, edges, viewport, nodeConfigurations } = state
+    const interfaceConfig = state.interface
 
     const startNode = nodes.find(n => n.data?.nodeType === 'Start')
     const startConfig = startNode ? nodeConfigurations[startNode.id] : null
@@ -757,23 +757,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         reactFlowData: { nodes, edges, viewport },
         nodeConfigurations,
         inputSchema,
-        interfaces,
+        interface: interfaceConfig,
         credentialMappings: get().extractCredentialMappings()
       }
     }, null, 2)
   },
 
-  setInterfaces: (interfaces) => {
-    set({ interfaces })
-  },
-
-  updateInterface: (interfaceType, config) => {
-    const { interfaces } = get()
-    set({
-      interfaces: {
-        ...interfaces,
-        [interfaceType]: config
-      }
-    })
+  setInterface: (interfaceConfig) => {
+    set({ interface: interfaceConfig })
   }
 }))

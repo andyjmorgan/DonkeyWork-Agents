@@ -219,36 +219,41 @@ export interface Orchestration {
   createdAt: string
 }
 
-// Interface configuration types
-export interface InterfaceConfig {
-  enabled: boolean
+// Interface configuration types (polymorphic, 1:1 - each orchestration has exactly one interface)
+export type InterfaceType = 'DirectInterfaceConfig' | 'ChatInterfaceConfig' | 'McpInterfaceConfig' | 'A2aInterfaceConfig' | 'WebhookInterfaceConfig'
+
+export interface InterfaceConfigBase {
+  type: InterfaceType
   name?: string
   description?: string
 }
 
-export interface McpInterfaceConfig extends InterfaceConfig {
+export interface DirectInterfaceConfig extends InterfaceConfigBase {
+  type: 'DirectInterfaceConfig'
+}
+
+export interface ChatInterfaceConfig extends InterfaceConfigBase {
+  type: 'ChatInterfaceConfig'
+}
+
+export interface McpInterfaceConfig extends InterfaceConfigBase {
+  type: 'McpInterfaceConfig'
   toolName?: string
 }
 
-export interface A2aInterfaceConfig extends InterfaceConfig {
+export interface A2aInterfaceConfig extends InterfaceConfigBase {
+  type: 'A2aInterfaceConfig'
   agentId?: string
   capabilities?: string[]
 }
 
-export interface ChatInterfaceConfig extends InterfaceConfig {
-}
-
-export interface WebhookInterfaceConfig extends InterfaceConfig {
+export interface WebhookInterfaceConfig extends InterfaceConfigBase {
+  type: 'WebhookInterfaceConfig'
   allowedMethods?: string[]
   requireSignature?: boolean
 }
 
-export interface OrchestrationInterfaces {
-  mcp?: McpInterfaceConfig
-  a2a?: A2aInterfaceConfig
-  chat?: ChatInterfaceConfig
-  webhook?: WebhookInterfaceConfig
-}
+export type InterfaceConfig = DirectInterfaceConfig | ChatInterfaceConfig | McpInterfaceConfig | A2aInterfaceConfig | WebhookInterfaceConfig
 
 export interface OrchestrationVersion {
   id: string
@@ -259,7 +264,7 @@ export interface OrchestrationVersion {
   outputSchema?: JSONSchema
   reactFlowData: { nodes: any[], edges: any[], viewport: any }
   nodeConfigurations: Record<string, any>
-  interfaces?: OrchestrationInterfaces
+  interface: InterfaceConfig
   createdAt: string
   publishedAt?: string
 }
@@ -282,7 +287,7 @@ export interface SaveVersionRequest {
   inputSchema: JSONSchema
   outputSchema?: JSONSchema | null
   credentialMappings: Array<{ nodeId: string; credentialId: string }>
-  interfaces?: OrchestrationInterfaces
+  interface: InterfaceConfig
 }
 
 export interface CreateOrchestrationResponse {
@@ -885,13 +890,13 @@ export interface SendMessageRequest {
 
 // SSE Event types for conversation streaming
 export type ConversationStreamEventType =
-  | 'response_start'
-  | 'part_start'
-  | 'part_delta'
-  | 'part_end'
-  | 'token_usage'
-  | 'response_error'
-  | 'response_end'
+  | 'ResponseStartEvent'
+  | 'PartStartEvent'
+  | 'PartDeltaEvent'
+  | 'PartEndEvent'
+  | 'TokenUsageEvent'
+  | 'ResponseErrorEvent'
+  | 'ResponseEndEvent'
 
 export interface ConversationStreamEvent {
   type: ConversationStreamEventType
@@ -899,41 +904,41 @@ export interface ConversationStreamEvent {
 }
 
 export interface ResponseStartEvent extends ConversationStreamEvent {
-  type: 'response_start'
+  type: 'ResponseStartEvent'
   messageId: string
 }
 
 export interface PartStartEvent extends ConversationStreamEvent {
-  type: 'part_start'
+  type: 'PartStartEvent'
   partType: string
   partIndex: number
 }
 
 export interface PartDeltaEvent extends ConversationStreamEvent {
-  type: 'part_delta'
+  type: 'PartDeltaEvent'
   partIndex: number
   content: string
 }
 
 export interface PartEndEvent extends ConversationStreamEvent {
-  type: 'part_end'
+  type: 'PartEndEvent'
   partIndex: number
 }
 
 export interface TokenUsageEvent extends ConversationStreamEvent {
-  type: 'token_usage'
+  type: 'TokenUsageEvent'
   inputTokens: number
   outputTokens: number
   totalTokens: number
 }
 
 export interface ResponseErrorEvent extends ConversationStreamEvent {
-  type: 'response_error'
+  type: 'ResponseErrorEvent'
   error: string
 }
 
 export interface ResponseEndEvent extends ConversationStreamEvent {
-  type: 'response_end'
+  type: 'ResponseEndEvent'
   message: ConversationMessage
 }
 

@@ -7,10 +7,6 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 /// </summary>
 public sealed class TokenUsageEvent : ConversationStreamEvent
 {
-    /// <inheritdoc />
-    [JsonPropertyName("type")]
-    public override string Type => "token_usage";
-
     /// <summary>
     /// Number of input tokens used.
     /// </summary>

@@ -7,10 +7,6 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 /// </summary>
 public sealed class ResponseStartEvent : ConversationStreamEvent
 {
-    /// <inheritdoc />
-    [JsonPropertyName("type")]
-    public override string Type => "response_start";
-
     /// <summary>
     /// The message ID being generated.
     /// </summary>

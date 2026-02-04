@@ -72,8 +72,9 @@ public sealed class GetOrchestrationVersionResponseV1
     public DateTimeOffset? PublishedAt { get; init; }
 
     /// <summary>
-    /// Interface configurations for this version (MCP, A2A, Chat, Webhook).
+    /// Interface configuration for this version.
+    /// Each orchestration supports exactly one interface type.
     /// </summary>
-    [JsonPropertyName("interfaces")]
-    public OrchestrationInterfaces? Interfaces { get; init; }
+    [JsonPropertyName("interface")]
+    public required InterfaceConfig Interface { get; init; }
 }

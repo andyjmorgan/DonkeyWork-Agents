@@ -7,10 +7,6 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 /// </summary>
 public sealed class PartEndEvent : ConversationStreamEvent
 {
-    /// <inheritdoc />
-    [JsonPropertyName("type")]
-    public override string Type => "part_end";
-
     /// <summary>
     /// Index of the content part that ended.
     /// </summary>

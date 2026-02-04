@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution;
@@ -22,16 +23,19 @@ public class ExecutionContext : IExecutionContext
     public ExecutionInterface Interface { get; private set; }
 
     /// <inheritdoc />
-    public object Input { get; private set; } = null!;
+    public JsonElement Input { get; private set; }
 
     /// <inheritdoc />
     public JsonDocument InputSchema { get; private set; } = null!;
 
     /// <inheritdoc />
+    public ConversationContext? Conversation { get; private set; }
+
+    /// <inheritdoc />
     public IReadOnlyDictionary<string, object> NodeOutputs => _nodeOutputs;
 
     /// <inheritdoc />
-    public void Hydrate(Guid executionId, Guid userId, ExecutionInterface executionInterface, object input, JsonDocument inputSchema)
+    public void Hydrate(Guid executionId, Guid userId, ExecutionInterface executionInterface, JsonElement input, JsonDocument inputSchema)
     {
         if (_isHydrated)
         {
@@ -43,6 +47,25 @@ public class ExecutionContext : IExecutionContext
         Interface = executionInterface;
         Input = input;
         InputSchema = inputSchema;
+        Conversation = null;
+        _isHydrated = true;
+    }
+
+    /// <inheritdoc />
+    public void HydrateChat(Guid executionId, Guid userId, ConversationContext conversation, JsonDocument inputSchema)
+    {
+        if (_isHydrated)
+        {
+            throw new InvalidOperationException("ExecutionContext has already been hydrated");
+        }
+
+        ExecutionId = executionId;
+        UserId = userId;
+        Interface = ExecutionInterface.Chat;
+        // In Chat mode, use empty object so it can be serialized (actual input comes from Conversation)
+        Input = JsonDocument.Parse("{}").RootElement;
+        InputSchema = inputSchema;
+        Conversation = conversation;
         _isHydrated = true;
     }
 

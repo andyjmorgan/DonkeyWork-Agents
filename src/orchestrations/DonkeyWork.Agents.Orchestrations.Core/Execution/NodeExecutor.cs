@@ -64,7 +64,6 @@ public abstract class NodeExecutor<TConfig, TOutput> : INodeExecutor
         {
             // Execute the node
             var output = await ExecuteInternalAsync(typedConfig, cancellationToken);
-
             stopwatch.Stop();
 
             // Emit NodeCompleted event with output

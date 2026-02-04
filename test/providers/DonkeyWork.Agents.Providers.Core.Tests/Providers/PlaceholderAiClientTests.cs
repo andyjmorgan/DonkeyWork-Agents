@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
 using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
@@ -14,10 +15,10 @@ public class PlaceholderAiClientTests
         var client = new PlaceholderAiClient();
         var messages = new List<InternalMessage>
         {
-            new InternalUserMessage
+            new InternalContentMessage
             {
                 Role = InternalMessageRole.User,
-                Content = "Hello"
+                Content = [new TextChatContentPart { Text = "Hello" }]
             }
         };
 

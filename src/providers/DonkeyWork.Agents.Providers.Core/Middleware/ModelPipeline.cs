@@ -6,6 +6,7 @@ using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Messages;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Providers.Core.Middleware;
 
@@ -14,6 +15,7 @@ namespace DonkeyWork.Agents.Providers.Core.Middleware;
 /// </summary>
 public class ModelPipeline : IModelPipeline
 {
+    private readonly ILogger<ModelPipeline> _logger;
     private static readonly Type[] PipelineOrder =
     [
         typeof(BaseExceptionMiddleware),
@@ -26,9 +28,10 @@ public class ModelPipeline : IModelPipeline
     private readonly IServiceProvider _serviceProvider;
     private readonly Dictionary<Type, IModelMiddleware> _middlewareCache = new();
 
-    public ModelPipeline(IServiceProvider serviceProvider)
+    public ModelPipeline(IServiceProvider serviceProvider, ILogger<ModelPipeline> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     public async IAsyncEnumerable<ModelPipelineEvent> ExecuteAsync(
@@ -58,7 +61,7 @@ public class ModelPipeline : IModelPipeline
     {
         return new ModelMiddlewareContext
         {
-            Messages = request.Messages.Select(m => new InternalUserMessage
+            Messages = request.Messages.Select(m => new InternalContentMessage
             {
                 Role = MapRole(m.Role),
                 Content = m.Content
@@ -140,8 +143,34 @@ public class ModelPipeline : IModelPipeline
                     Success = toolResponse.Success
                 },
 
-            // Ignore block start/end, server tool calls, etc. for now
+            ModelMiddlewareMessage { ModelMessage: ModelResponseBlockStart blockStart } =>
+                new ContentPartStartEvent
+                {
+                    BlockIndex = blockStart.BlockIndex,
+                    Type = MapContentBlockType(blockStart.Type)
+                },
+
+            ModelMiddlewareMessage { ModelMessage: ModelResponseBlockEnd blockEnd } =>
+                new ContentPartEndEvent
+                {
+                    BlockIndex = blockEnd.BlockIndex
+                },
+
+            // Ignore other message types (server tool calls, etc.)
             _ => null
+        };
+    }
+
+    private static ContentPartType MapContentBlockType(InternalContentBlockType type)
+    {
+        return type switch
+        {
+            InternalContentBlockType.Text => ContentPartType.Text,
+            InternalContentBlockType.Thinking => ContentPartType.Thinking,
+            InternalContentBlockType.Image => ContentPartType.Image,
+            InternalContentBlockType.ToolUse => ContentPartType.ToolUse,
+            InternalContentBlockType.ToolResult => ContentPartType.ToolResult,
+            _ => ContentPartType.Text
         };
     }
 
@@ -195,12 +224,4 @@ public class ModelPipeline : IModelPipeline
         await Task.CompletedTask;
         yield break;
     }
-}
-
-/// <summary>
-/// Internal user message implementation.
-/// </summary>
-internal class InternalUserMessage : InternalMessage
-{
-    public required string Content { get; set; }
 }

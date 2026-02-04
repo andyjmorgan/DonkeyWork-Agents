@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader2, User, Bot, AlertCircle } from 'lucide-react'
+import { Send, Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { parseMarkdown } from '@/lib/markdown'
@@ -203,80 +203,46 @@ export function ChatInterface({
             key={message.id}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`flex max-w-[80%] gap-3 ${
-                message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-              }`}
-            >
-              {/* Avatar */}
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                  message.role === 'user'
-                    ? 'bg-user-chat text-user-chat-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {message.role === 'user' ? (
-                  <User className="h-4 w-4" />
-                ) : (
-                  <Bot className="h-4 w-4" />
-                )}
-              </div>
-
-              {/* Message bubble */}
-              <div
-                className={`rounded-2xl px-4 py-2 ${
-                  message.role === 'user'
-                    ? 'bg-user-chat text-user-chat-foreground'
-                    : 'bg-muted'
-                }`}
-              >
-                {message.role === 'assistant' ? (
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{
-                      __html: parseMarkdown(message.content),
-                    }}
-                  />
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                )}
-                <p
-                  className={`mt-1 text-xs ${
-                    message.role === 'user'
-                      ? 'text-user-chat-foreground/70'
-                      : 'text-muted-foreground'
-                  }`}
-                >
+            {message.role === 'user' ? (
+              <div className="max-w-[80%] rounded-2xl px-4 py-2 bg-user-chat text-user-chat-foreground">
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className="mt-1 text-xs text-user-chat-foreground/70">
                   {formatTime(message.timestamp)}
                 </p>
               </div>
-            </div>
+            ) : (
+              <div className="max-w-[90%]">
+                <div
+                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/80"
+                  dangerouslySetInnerHTML={{
+                    __html: parseMarkdown(message.content),
+                  }}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatTime(message.timestamp)}
+                </p>
+              </div>
+            )}
           </div>
         ))}
 
         {/* Streaming message */}
         {isStreaming && streamingMessage && (
           <div className="flex justify-start">
-            <div className="flex max-w-[80%] gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <Bot className="h-4 w-4" />
-              </div>
-              <div className="rounded-2xl bg-muted px-4 py-2">
-                {streamingContent ? (
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{
-                      __html: parseMarkdown(streamingContent),
-                    }}
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Thinking...</span>
-                  </div>
-                )}
-              </div>
+            <div className="max-w-[90%]">
+              {streamingContent ? (
+                <div
+                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/80"
+                  dangerouslySetInnerHTML={{
+                    __html: parseMarkdown(streamingContent),
+                  }}
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Thinking...</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -284,16 +250,9 @@ export function ChatInterface({
         {/* Loading indicator (when not streaming yet) */}
         {isLoading && !isStreaming && (
           <div className="flex justify-start">
-            <div className="flex max-w-[80%] gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <Bot className="h-4 w-4" />
-              </div>
-              <div className="rounded-2xl bg-muted px-4 py-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Thinking...</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Thinking...</span>
             </div>
           </div>
         )}

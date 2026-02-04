@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
@@ -47,13 +49,51 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         _logger = logger;
     }
 
+    /// <inheritdoc />
     public async Task ExecuteAsync(
         Guid executionId,
         Guid userId,
         Guid versionId,
         ExecutionInterface executionInterface,
-        object input,
+        JsonElement input,
         CancellationToken cancellationToken = default)
+    {
+        await ExecuteCoreAsync(
+            executionId,
+            userId,
+            versionId,
+            executionInterface,
+            input,
+            conversation: null,
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task ExecuteChatAsync(
+        Guid executionId,
+        Guid userId,
+        Guid versionId,
+        ConversationContext conversation,
+        CancellationToken cancellationToken = default)
+    {
+        await ExecuteCoreAsync(
+            executionId,
+            userId,
+            versionId,
+            ExecutionInterface.Chat,
+            input: default,
+            conversation,
+            cancellationToken);
+    }
+
+    private async Task ExecuteCoreAsync(
+        Guid executionId,
+        Guid userId,
+        Guid versionId,
+        ExecutionInterface executionInterface,
+        JsonElement input,
+        ConversationContext? conversation,
+        CancellationToken cancellationToken)
     {
         // Create timeout token source
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -71,6 +111,16 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 throw new InvalidOperationException($"Orchestration version not found: {versionId}");
             }
 
+            // Validate interface matches the version's configured interface
+            // Note: Interface validation removed - the interface config determines how the orchestration
+            // is exposed (API, MCP, etc.), not how it can be executed internally. Playground and
+            // internal testing should work regardless of interface setting.
+
+            // Serialize input for storage
+            var inputJson = conversation != null
+                ? JsonSerializer.Serialize(new { conversationId = conversation.Id })
+                : input.GetRawText();
+
             // 1. Create OrchestrationExecution record (Status: Pending)
             var execution = new OrchestrationExecutionEntity
             {
@@ -80,7 +130,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 OrchestrationVersionId = versionId,
                 Interface = executionInterface,
                 Status = ExecutionStatus.Pending,
-                Input = JsonSerializer.Serialize(input),
+                Input = inputJson,
                 StartedAt = DateTimeOffset.UtcNow,
                 StreamName = $"execution-{executionId}"
             };
@@ -109,7 +159,14 @@ public class OrchestrationExecutor : IOrchestrationExecutor
             var nodeConfigurations = version.NodeConfigurations;
 
             // 5. Hydrate execution context
-            _executionContext.Hydrate(executionId, userId, executionInterface, input, version.InputSchema);
+            if (conversation != null)
+            {
+                _executionContext.HydrateChat(executionId, userId, conversation, version.InputSchema);
+            }
+            else
+            {
+                _executionContext.Hydrate(executionId, userId, executionInterface, input, version.InputSchema);
+            }
 
             // 6. For each node in execution order
             var executionStopwatch = Stopwatch.StartNew();
@@ -148,7 +205,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 if (nodeTypeEnum == NodeType.Start)
                 {
                     // Start node input is the execution input
-                    nodeInput = JsonSerializer.Serialize(input);
+                    nodeInput = inputJson;
                 }
                 else
                 {
@@ -235,9 +292,13 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 .OfType<EndNodeOutput>()
                 .FirstOrDefault();
 
+            // Get the raw message output for the event (before any DB serialization)
+            var messageOutput = endNodeOutput?.ToMessageOutput() ?? string.Empty;
+
             if (endNodeOutput != null)
             {
-                execution.Output = JsonSerializer.Serialize(endNodeOutput.FinalOutput);
+                // For DB storage in jsonb column, wrap string in JSON
+                execution.Output = JsonSerializer.Serialize(messageOutput);
             }
 
             // Calculate total tokens
@@ -252,11 +313,11 @@ public class OrchestrationExecutor : IOrchestrationExecutor
             execution.CompletedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync(CancellationToken.None);
 
-            // 9. Emit ExecutionCompleted event
+            // 9. Emit ExecutionCompleted event with raw message (not JSON-wrapped)
             await _streamWriter.WriteEventAsync(
                 new ExecutionCompletedEvent
                 {
-                    Output = execution.Output ?? string.Empty
+                    Output = messageOutput
                 });
         }
         catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
@@ -311,5 +372,4 @@ public class OrchestrationExecutor : IOrchestrationExecutor
             _logger.LogError(ex, "Failed to handle execution failure for {ExecutionId}", executionId);
         }
     }
-
 }

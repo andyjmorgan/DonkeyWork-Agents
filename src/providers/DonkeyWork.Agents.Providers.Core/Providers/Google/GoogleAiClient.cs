@@ -50,7 +50,11 @@ internal sealed class GoogleAiClient : IAiClient
                     blockStarted = true;
                 }
 
-                yield return new ModelResponseTextContent { Content = response.Text };
+                yield return new ModelResponseTextContent
+                {
+                    BlockIndex = blockIndex,
+                    Content = response.Text
+                };
             }
 
             // Usage info
@@ -127,7 +131,11 @@ internal sealed class GoogleAiClient : IAiClient
         // Extract and emit text content
         if (response?.Text is not null)
         {
-            yield return new ModelResponseTextContent { Content = response.Text };
+            yield return new ModelResponseTextContent
+            {
+                BlockIndex = 0,
+                Content = response.Text
+            };
         }
 
         // Emit block end
@@ -194,18 +202,18 @@ internal sealed class GoogleAiClient : IAiClient
 
         foreach (var msg in messages)
         {
-            if (msg is not InternalUserMessage userMsg) continue;
+            if (msg is not InternalContentMessage contentMsg) continue;
 
             switch (msg.Role)
             {
                 case InternalMessageRole.System:
-                    systemInstruction = userMsg.Content;
+                    systemInstruction = contentMsg.GetTextContent();
                     break;
                 case InternalMessageRole.User:
-                    request.Contents.Add(new Content(userMsg.Content, Roles.User));
+                    request.Contents.Add(new Content(contentMsg.GetTextContent(), Roles.User));
                     break;
                 case InternalMessageRole.Assistant:
-                    request.Contents.Add(new Content(userMsg.Content, Roles.Model));
+                    request.Contents.Add(new Content(contentMsg.GetTextContent(), Roles.Model));
                     break;
             }
         }

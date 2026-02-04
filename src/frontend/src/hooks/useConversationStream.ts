@@ -111,7 +111,7 @@ export function useConversationStream(options: UseConversationStreamOptions = {}
               const event = JSON.parse(dataMatch[1]) as ConversationStreamEvent
 
               switch (event.type) {
-                case 'response_start': {
+                case 'ResponseStartEvent': {
                   const startEvent = event as ResponseStartEvent
                   options.onResponseStart?.(startEvent.messageId)
 
@@ -125,13 +125,13 @@ export function useConversationStream(options: UseConversationStreamOptions = {}
                   break
                 }
 
-                case 'part_start': {
+                case 'PartStartEvent': {
                   // A new content part is starting
                   contentParts.push({ type: 'text', text: '' })
                   break
                 }
 
-                case 'part_delta': {
+                case 'PartDeltaEvent': {
                   const deltaEvent = event as PartDeltaEvent
                   const partIndex = deltaEvent.partIndex
                   options.onPartDelta?.(deltaEvent.content, partIndex)
@@ -155,12 +155,12 @@ export function useConversationStream(options: UseConversationStreamOptions = {}
                   break
                 }
 
-                case 'part_end': {
+                case 'PartEndEvent': {
                   // Content part finished
                   break
                 }
 
-                case 'token_usage': {
+                case 'TokenUsageEvent': {
                   const usageEvent = event as TokenUsageEvent
                   options.onTokenUsage?.(
                     usageEvent.inputTokens,
@@ -180,7 +180,7 @@ export function useConversationStream(options: UseConversationStreamOptions = {}
                   break
                 }
 
-                case 'response_error': {
+                case 'ResponseErrorEvent': {
                   const errorEvent = event as ResponseErrorEvent
                   setError(errorEvent.error)
                   options.onError?.(errorEvent.error)
@@ -188,7 +188,7 @@ export function useConversationStream(options: UseConversationStreamOptions = {}
                   return null
                 }
 
-                case 'response_end': {
+                case 'ResponseEndEvent': {
                   const endEvent = event as ResponseEndEvent
                   finalMessage = endEvent.message
                   options.onResponseEnd?.(endEvent.message)

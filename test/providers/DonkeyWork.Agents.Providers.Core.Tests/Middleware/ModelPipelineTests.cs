@@ -8,6 +8,7 @@ using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
 using DonkeyWork.Agents.Providers.Core.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -29,13 +30,13 @@ public class ModelPipelineTests
         services.AddLogging();
         var sp = services.BuildServiceProvider();
 
-        var pipeline = new ModelPipeline(sp);
+        var pipeline = new ModelPipeline(sp, NullLogger<ModelPipeline>.Instance);
 
         var request = new ModelPipelineRequest
         {
             Messages = new List<ChatMessage>
             {
-                new() { Role = ChatMessageRole.User, Content = "Hello" }
+                ChatMessage.FromText(ChatMessageRole.User, "Hello")
             },
             Model = new PipelineModelConfig
             {
@@ -80,14 +81,14 @@ public class ModelPipelineTests
         services.AddLogging();
         var sp = services.BuildServiceProvider();
 
-        var pipeline = new ModelPipeline(sp);
+        var pipeline = new ModelPipeline(sp, NullLogger<ModelPipeline>.Instance);
 
         var request = new ModelPipelineRequest
         {
             Messages = new List<ChatMessage>
             {
-                new() { Role = ChatMessageRole.System, Content = "You are helpful." },
-                new() { Role = ChatMessageRole.User, Content = "Hello" }
+                ChatMessage.FromText(ChatMessageRole.System, "You are helpful."),
+                ChatMessage.FromText(ChatMessageRole.User, "Hello")
             },
             Model = new PipelineModelConfig
             {
@@ -123,13 +124,13 @@ public class ModelPipelineTests
         services.AddLogging();
         var sp = services.BuildServiceProvider();
 
-        var pipeline = new ModelPipeline(sp);
+        var pipeline = new ModelPipeline(sp, NullLogger<ModelPipeline>.Instance);
 
         var request = new ModelPipelineRequest
         {
             Messages = new List<ChatMessage>
             {
-                new() { Role = ChatMessageRole.User, Content = "Hello" }
+                ChatMessage.FromText(ChatMessageRole.User, "Hello")
             },
             Model = new PipelineModelConfig
             {

@@ -31,6 +31,7 @@ internal class PlaceholderAiClient : IAiClient
             await Task.Delay(5, cancellationToken);
             yield return new ModelResponseTextContent
             {
+                BlockIndex = 0,
                 Content = chunk
             };
         }
@@ -77,6 +78,7 @@ internal class PlaceholderAiClient : IAiClient
         // Emit complete response at once (non-streaming)
         yield return new ModelResponseTextContent
         {
+            BlockIndex = 0,
             Content = responseText
         };
 

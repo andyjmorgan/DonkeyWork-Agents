@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Services;
 
@@ -25,15 +26,22 @@ public interface IExecutionContext
     ExecutionInterface Interface { get; }
 
     /// <summary>
-    /// The input provided to the execution.
+    /// The input provided to the execution (for Direct mode).
     /// Validated against the orchestration version's InputSchema.
     /// </summary>
-    object Input { get; }
+    JsonElement Input { get; }
 
     /// <summary>
     /// The JSON Schema for input validation.
     /// </summary>
     JsonDocument InputSchema { get; }
+
+    /// <summary>
+    /// The conversation context (for Chat mode).
+    /// Contains history, ID, and current user message.
+    /// Null when not in Chat mode.
+    /// </summary>
+    ConversationContext? Conversation { get; }
 
     /// <summary>
     /// Dictionary of node outputs keyed by node name.
@@ -42,10 +50,14 @@ public interface IExecutionContext
     IReadOnlyDictionary<string, object> NodeOutputs { get; }
 
     /// <summary>
-    /// Hydrates the context with execution details.
-    /// Called by the executor before execution begins.
+    /// Hydrates the context with execution details for Direct mode.
     /// </summary>
-    void Hydrate(Guid executionId, Guid userId, ExecutionInterface executionInterface, object input, JsonDocument inputSchema);
+    void Hydrate(Guid executionId, Guid userId, ExecutionInterface executionInterface, JsonElement input, JsonDocument inputSchema);
+
+    /// <summary>
+    /// Hydrates the context with execution details for Chat mode.
+    /// </summary>
+    void HydrateChat(Guid executionId, Guid userId, ConversationContext conversation, JsonDocument inputSchema);
 
     /// <summary>
     /// Sets the output for a completed node.

@@ -46,9 +46,10 @@ public class OrchestrationVersionEntity : BaseEntity
     public Dictionary<Guid, NodeConfiguration> NodeConfigurations { get; set; } = new();
 
     /// <summary>
-    /// Interface configurations for this version. Stored as JSONB.
+    /// Interface configuration for this version. Stored as JSONB.
+    /// Each orchestration supports exactly one interface type.
     /// </summary>
-    public OrchestrationInterfaces Interfaces { get; set; } = new();
+    public InterfaceConfig Interface { get; set; } = new DirectInterfaceConfig();
 
     /// <summary>
     /// Timestamp when this version was published. Null for drafts.

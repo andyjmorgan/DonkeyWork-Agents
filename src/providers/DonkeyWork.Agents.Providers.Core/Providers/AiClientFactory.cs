@@ -23,10 +23,10 @@ internal sealed class AiClientFactory : IAiClientFactory
     {
         IAiClient client = modelConfig.Provider switch
         {
-            LlmProvider.OpenAI => new OpenAiClient(
+            LlmProvider.OpenAI => new OpenAiResponsesClient(
                 modelConfig.ApiKey,
                 modelConfig.ModelId,
-                _loggerFactory.CreateLogger<OpenAiClient>()),
+                _loggerFactory.CreateLogger<OpenAiResponsesClient>()),
 
             LlmProvider.Anthropic => new AnthropicAiClient(
                 modelConfig.ApiKey,

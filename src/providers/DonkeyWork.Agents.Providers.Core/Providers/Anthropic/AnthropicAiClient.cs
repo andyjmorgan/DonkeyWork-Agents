@@ -58,9 +58,6 @@ internal sealed class AnthropicAiClient : IAiClient
             TopP = topP
         };
 
-        var blockIndex = 0;
-        var textBlockStarted = false;
-
         await foreach (var streamEvent in _client.Messages.CreateStreaming(parameters, cancellationToken)
             .WithCancellation(cancellationToken))
         {
@@ -74,10 +71,9 @@ internal sealed class AnthropicAiClient : IAiClient
                 {
                     yield return new ModelResponseBlockStart
                     {
-                        BlockIndex = blockIndex,
+                        BlockIndex = (int)blockStart.Index,
                         Type = InternalContentBlockType.Text
                     };
-                    textBlockStarted = true;
                 }
             }
             // Content block delta (text streaming)
@@ -85,18 +81,17 @@ internal sealed class AnthropicAiClient : IAiClient
             {
                 if (blockDelta.Delta.TryPickText(out var textDelta))
                 {
-                    yield return new ModelResponseTextContent { Content = textDelta.Text };
+                    yield return new ModelResponseTextContent
+                    {
+                        BlockIndex = (int)blockDelta.Index,
+                        Content = textDelta.Text
+                    };
                 }
             }
             // Content block stop
-            else if (streamEvent.TryPickContentBlockStop(out _))
+            else if (streamEvent.TryPickContentBlockStop(out var blockStop))
             {
-                if (textBlockStarted)
-                {
-                    yield return new ModelResponseBlockEnd { BlockIndex = blockIndex };
-                    blockIndex++;
-                    textBlockStarted = false;
-                }
+                yield return new ModelResponseBlockEnd { BlockIndex = (int)blockStop.Index };
             }
             // Message delta (usage info)
             else if (streamEvent.TryPickDelta(out var messageDelta))
@@ -194,7 +189,11 @@ internal sealed class AnthropicAiClient : IAiClient
         // Emit the complete text as a single chunk
         if (textContent.Length > 0)
         {
-            yield return new ModelResponseTextContent { Content = textContent.ToString() };
+            yield return new ModelResponseTextContent
+            {
+                BlockIndex = 0,
+                Content = textContent.ToString()
+            };
         }
 
         // Emit block end
@@ -240,18 +239,19 @@ internal sealed class AnthropicAiClient : IAiClient
 
         foreach (var msg in messages)
         {
-            if (msg is not InternalUserMessage userMsg) continue;
+            if (msg is not InternalContentMessage contentMsg) continue;
 
             switch (msg.Role)
             {
                 case InternalMessageRole.System:
-                    systemPrompt = userMsg.Content;
+                    systemPrompt = contentMsg.GetTextContent();
                     break;
                 case InternalMessageRole.User:
-                    result.Add(new MessageParam { Role = Role.User, Content = userMsg.Content });
+                    // TODO: Add multimodal support with ContentBlock array
+                    result.Add(new MessageParam { Role = Role.User, Content = contentMsg.GetTextContent() });
                     break;
                 case InternalMessageRole.Assistant:
-                    result.Add(new MessageParam { Role = Role.Assistant, Content = userMsg.Content });
+                    result.Add(new MessageParam { Role = Role.Assistant, Content = contentMsg.GetTextContent() });
                     break;
             }
         }

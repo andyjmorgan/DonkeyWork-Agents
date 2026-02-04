@@ -57,26 +57,36 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
                     continue;
 
                 var renderedPrompt = await _templateRenderer.RenderAsync(systemPrompt, cancellationToken);
-                messages.Add(new ChatMessage
-                {
-                    Role = ChatMessageRole.System,
-                    Content = renderedPrompt
-                });
+                messages.Add(ChatMessage.FromText(ChatMessageRole.System, renderedPrompt));
             }
         }
 
-        // Render user messages
-        foreach (var userMessage in config.UserMessages)
+        // In Chat mode, use conversation from context
+        if (Context.Conversation != null)
         {
-            if (string.IsNullOrWhiteSpace(userMessage))
-                continue;
-
-            var renderedMessage = await _templateRenderer.RenderAsync(userMessage, cancellationToken);
-            messages.Add(new ChatMessage
+            // Add conversation history
+            foreach (var msg in Context.Conversation.Messages)
             {
-                Role = ChatMessageRole.User,
-                Content = renderedMessage
-            });
+                var role = msg.Role == Contracts.Models.ConversationRole.User
+                    ? ChatMessageRole.User
+                    : ChatMessageRole.Assistant;
+                messages.Add(ChatMessage.FromText(role, msg.Content));
+            }
+
+            // Add current message
+            messages.Add(ChatMessage.FromText(ChatMessageRole.User, Context.Conversation.CurrentMessage));
+        }
+        else
+        {
+            // Render user messages from config (non-chat mode)
+            foreach (var userMessage in config.UserMessages)
+            {
+                if (string.IsNullOrWhiteSpace(userMessage))
+                    continue;
+
+                var renderedMessage = await _templateRenderer.RenderAsync(userMessage, cancellationToken);
+                messages.Add(ChatMessage.FromText(ChatMessageRole.User, renderedMessage));
+            }
         }
 
         if (messages.Count == 0 || messages.All(m => m.Role != ChatMessageRole.User))
@@ -130,6 +140,23 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
         {
             switch (evt)
             {
+                case ContentPartStartEvent contentPartStart:
+                    await _streamWriter.WriteEventAsync(
+                        new ContentPartStartedEvent
+                        {
+                            BlockIndex = contentPartStart.BlockIndex,
+                            ContentType = MapContentPartType(contentPartStart.Type)
+                        });
+                    break;
+
+                case ContentPartEndEvent contentPartEnd:
+                    await _streamWriter.WriteEventAsync(
+                        new ContentPartEndedEvent
+                        {
+                            BlockIndex = contentPartEnd.BlockIndex
+                        });
+                    break;
+
                 case TextDeltaEvent textDelta:
                     responseBuilder.Append(textDelta.Text);
 
@@ -164,6 +191,25 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
             TotalTokens = totalTokens,
             InputTokens = inputTokens,
             OutputTokens = outputTokens
+        };
+    }
+
+    private static Orchestrations.Contracts.Models.Events.ContentPartType MapContentPartType(
+        DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events.ContentPartType type)
+    {
+        return type switch
+        {
+            DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events.ContentPartType.Text =>
+                Orchestrations.Contracts.Models.Events.ContentPartType.Text,
+            DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events.ContentPartType.Thinking =>
+                Orchestrations.Contracts.Models.Events.ContentPartType.Thinking,
+            DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events.ContentPartType.Image =>
+                Orchestrations.Contracts.Models.Events.ContentPartType.Image,
+            DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events.ContentPartType.ToolUse =>
+                Orchestrations.Contracts.Models.Events.ContentPartType.ToolUse,
+            DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events.ContentPartType.ToolResult =>
+                Orchestrations.Contracts.Models.Events.ContentPartType.ToolResult,
+            _ => Orchestrations.Contracts.Models.Events.ContentPartType.Text
         };
     }
 }

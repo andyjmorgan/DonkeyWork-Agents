@@ -95,6 +95,42 @@ services.AddOptions<MyOptions>()
 - Models live in `{Module}.Contracts/Models/` folder
 - One file per class, no more. this applies to all classes in the project.
 
+## JSON Polymorphism
+
+When using `[JsonPolymorphic]` for type hierarchies:
+
+1. **Use `nameof()` for discriminators** - never snake_case strings:
+```csharp
+// CORRECT
+[JsonPolymorphic]
+[JsonDerivedType(typeof(TextContentPart), nameof(TextContentPart))]
+[JsonDerivedType(typeof(ImageContentPart), nameof(ImageContentPart))]
+public abstract class ContentPart { }
+
+// WRONG - do not use snake_case or custom strings
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(TextContentPart), "text")]
+```
+
+2. **Do NOT define explicit Type properties** - the discriminator handles serialization automatically:
+```csharp
+// WRONG - causes conflict with discriminator
+public abstract string Type { get; }
+
+// CORRECT - no Type property needed, [JsonPolymorphic] handles it
+```
+
+3. **Use default `$type` discriminator** - don't customize `TypeDiscriminatorPropertyName` unless required for external API compatibility.
+
+4. **Enable `AllowOutOfOrderMetadataProperties`** - set this on `JsonSerializerOptions` to handle JSON where `$type` isn't the first property:
+```csharp
+var options = new JsonSerializerOptions
+{
+    AllowOutOfOrderMetadataProperties = true
+};
+```
+This is already configured globally in `Program.cs` and in services that use custom `JsonSerializerOptions`.
+
 ## Authentication
 
 - Keycloak with JWT Bearer tokens

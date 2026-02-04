@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Integration.Tests.Base;
@@ -713,7 +714,8 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
         {
             InputSchema = JsonDocument.Parse(inputSchema),
             ReactFlowData = reactFlowData,
-            NodeConfigurations = JsonDocument.Parse(nodeConfigsJson).RootElement.Clone()
+            NodeConfigurations = JsonDocument.Parse(nodeConfigsJson).RootElement.Clone(),
+            Interface = new DirectInterfaceConfig()
         };
     }
 

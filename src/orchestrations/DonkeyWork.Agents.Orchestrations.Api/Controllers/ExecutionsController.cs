@@ -156,6 +156,113 @@ public class ExecutionsController : ControllerBase
     }
 
     /// <summary>
+    /// Execute an agent in chat mode (uses latest published version).
+    /// Accepts conversation history and streams the response.
+    /// </summary>
+    /// <param name="orchestrationId">The agent ID.</param>
+    /// <param name="request">The chat request with message history.</param>
+    /// <response code="200">Returns execution result for non-streaming, or starts SSE stream for streaming.</response>
+    /// <response code="400">Invalid request or no published version available.</response>
+    /// <response code="404">Agent not found.</response>
+    [HttpPost("{orchestrationId:guid}/chat")]
+    [ProducesResponseType<ExecuteOrchestrationResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Chat(Guid orchestrationId, [FromBody] ChatExecuteRequestV1 request)
+    {
+        // 1. Load agent
+        var agent = await _agentService.GetByIdAsync(orchestrationId, _identityContext.UserId);
+        if (agent == null)
+            return NotFound(new { message = "Agent not found" });
+
+        // 2. Determine version
+        GetOrchestrationVersionResponseV1? version;
+        if (request.VersionId.HasValue)
+        {
+            version = await _versionService.GetVersionAsync(orchestrationId, request.VersionId.Value, _identityContext.UserId);
+            if (version == null)
+                return NotFound(new { message = "Version not found" });
+        }
+        else
+        {
+            // Use latest published (CurrentVersionId)
+            if (agent.CurrentVersionId == null)
+                return BadRequest(new { message = "No published version available" });
+
+            version = await _versionService.GetVersionAsync(orchestrationId, agent.CurrentVersionId.Value, _identityContext.UserId);
+            if (version == null)
+                return NotFound(new { message = "Published version not found" });
+        }
+
+        // 3. Build conversation context
+        var conversation = BuildConversationContext(request.Messages);
+
+        // 4. Check Accept header for streaming vs non-streaming
+        var acceptHeader = Request.Headers["Accept"].ToString();
+        if (acceptHeader.Contains("text/event-stream"))
+        {
+            return await StreamChatExecutionAsync(version.Id, conversation);
+        }
+        else
+        {
+            return await ExecuteChatAndWaitAsync(version.Id, conversation);
+        }
+    }
+
+    /// <summary>
+    /// Execute an agent in chat mode for testing (uses draft version if available).
+    /// Accepts conversation history and streams the response.
+    /// </summary>
+    /// <param name="orchestrationId">The agent ID.</param>
+    /// <param name="request">The chat request with message history.</param>
+    /// <response code="200">Returns execution result for non-streaming, or starts SSE stream for streaming.</response>
+    /// <response code="400">Invalid request or no version available.</response>
+    /// <response code="404">Agent not found.</response>
+    [HttpPost("{orchestrationId:guid}/test-chat")]
+    [ProducesResponseType<ExecuteOrchestrationResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> TestChat(Guid orchestrationId, [FromBody] ChatExecuteRequestV1 request)
+    {
+        // 1. Load agent
+        var agent = await _agentService.GetByIdAsync(orchestrationId, _identityContext.UserId);
+        if (agent == null)
+            return NotFound(new { message = "Agent not found" });
+
+        // 2. Determine version - prefer draft, fallback to latest published
+        GetOrchestrationVersionResponseV1? version;
+        if (request.VersionId.HasValue)
+        {
+            version = await _versionService.GetVersionAsync(orchestrationId, request.VersionId.Value, _identityContext.UserId);
+            if (version == null)
+                return NotFound(new { message = "Version not found" });
+        }
+        else
+        {
+            var versions = await _versionService.GetVersionsAsync(orchestrationId, _identityContext.UserId);
+            var draftVersion = versions.FirstOrDefault(v => v.IsDraft);
+            version = draftVersion ?? versions.FirstOrDefault(v => v.Id == agent.CurrentVersionId);
+
+            if (version == null)
+                return BadRequest(new { message = "No version available for testing" });
+        }
+
+        // 3. Build conversation context
+        var conversation = BuildConversationContext(request.Messages);
+
+        // 4. Check Accept header for streaming vs non-streaming
+        var acceptHeader = Request.Headers["Accept"].ToString();
+        if (acceptHeader.Contains("text/event-stream"))
+        {
+            return await StreamChatExecutionAsync(version.Id, conversation);
+        }
+        else
+        {
+            return await ExecuteChatAndWaitAsync(version.Id, conversation);
+        }
+    }
+
+    /// <summary>
     /// Get execution status and result.
     /// </summary>
     /// <param name="executionId">The execution ID.</param>
@@ -321,19 +428,16 @@ public class ExecutionsController : ControllerBase
         });
     }
 
-    private async Task<IActionResult> StreamExecutionAsync(Guid versionId, JsonElement input)
+    private async Task<IActionResult> StreamExecutionAsync(
+        Guid versionId,
+        JsonElement input)
     {
         Response.Headers["Content-Type"] = "text/event-stream";
         Response.Headers["Cache-Control"] = "no-cache";
         Response.Headers["Connection"] = "keep-alive";
-
-        // Generate execution ID here - we control it
         var executionId = Guid.NewGuid();
-
-        // Create the stream first so we can start reading immediately
         await _streamService.CreateStreamAsync(executionId);
 
-        // Fire-and-forget execution - RabbitMQ handles the buffering
         _ = _orchestrator.ExecuteAsync(
             executionId,
             _identityContext.UserId,
@@ -357,7 +461,9 @@ public class ExecutionsController : ControllerBase
         return new EmptyResult();
     }
 
-    private async Task<IActionResult> ExecuteAndWaitAsync(Guid versionId, JsonElement input)
+    private async Task<IActionResult> ExecuteAndWaitAsync(
+        Guid versionId,
+        JsonElement input)
     {
         var executionId = Guid.NewGuid();
 
@@ -369,6 +475,114 @@ public class ExecutionsController : ControllerBase
             versionId,
             ExecutionInterface.Direct,
             input,
+            HttpContext.RequestAborted);
+
+        // Get final execution state from database
+        var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
+
+        if (execution == null)
+        {
+            return StatusCode(500, new { message = "Execution not found" });
+        }
+
+        if (execution.Status == ExecutionStatus.Completed)
+        {
+            var output = execution.Output.HasValue
+                ? JsonSerializer.Serialize(execution.Output.Value)
+                : null;
+
+            return Ok(new ExecuteOrchestrationResponseV1
+            {
+                ExecutionId = executionId,
+                Status = ExecutionStatus.Completed,
+                Output = output
+            });
+        }
+
+        if (execution.Status == ExecutionStatus.Failed)
+        {
+            return Ok(new ExecuteOrchestrationResponseV1
+            {
+                ExecutionId = executionId,
+                Status = ExecutionStatus.Failed,
+                Error = execution.ErrorMessage
+            });
+        }
+
+        return StatusCode(500, new { message = $"Unexpected execution status: {execution.Status}" });
+    }
+
+    private ConversationContext BuildConversationContext(IReadOnlyList<ChatMessageV1> messages)
+    {
+        // Find the last user message as the current message
+        var lastUserMessage = messages.LastOrDefault(m => m.Role.Equals("user", StringComparison.OrdinalIgnoreCase));
+        var currentMessage = lastUserMessage?.Content ?? string.Empty;
+
+        // Convert messages to conversation history (excluding the last user message which is "current")
+        var historyMessages = messages
+            .Take(messages.Count - 1) // Exclude last message (current user message)
+            .Select(m => new ConversationMessage
+            {
+                Role = m.Role.Equals("user", StringComparison.OrdinalIgnoreCase)
+                    ? ConversationRole.User
+                    : ConversationRole.Assistant,
+                Content = m.Content
+            })
+            .ToList();
+
+        return new ConversationContext
+        {
+            Id = Guid.NewGuid(), // Ephemeral conversation ID for playground
+            Messages = historyMessages,
+            CurrentMessage = currentMessage
+        };
+    }
+
+    private async Task<IActionResult> StreamChatExecutionAsync(
+        Guid versionId,
+        ConversationContext conversation)
+    {
+        Response.Headers["Content-Type"] = "text/event-stream";
+        Response.Headers["Cache-Control"] = "no-cache";
+        Response.Headers["Connection"] = "keep-alive";
+        var executionId = Guid.NewGuid();
+        await _streamService.CreateStreamAsync(executionId);
+
+        _ = _orchestrator.ExecuteChatAsync(
+            executionId,
+            _identityContext.UserId,
+            versionId,
+            conversation,
+            HttpContext.RequestAborted);
+
+        // Stream events from RabbitMQ in real-time
+        await foreach (var evt in _streamService.ReadEventsAsync(executionId))
+        {
+            var json = JsonSerializer.Serialize(evt, _jsonOptions);
+            await Response.WriteAsync($"event: {evt.GetType().Name}\n");
+            await Response.WriteAsync($"data: {json}\n\n");
+            await Response.Body.FlushAsync();
+
+            if (evt is ExecutionCompletedEvent || evt is ExecutionFailedEvent)
+                break;
+        }
+
+        return new EmptyResult();
+    }
+
+    private async Task<IActionResult> ExecuteChatAndWaitAsync(
+        Guid versionId,
+        ConversationContext conversation)
+    {
+        var executionId = Guid.NewGuid();
+
+        // Create stream and execute orchestration (blocks until completion)
+        await _streamService.CreateStreamAsync(executionId);
+        await _orchestrator.ExecuteChatAsync(
+            executionId,
+            _identityContext.UserId,
+            versionId,
+            conversation,
             HttpContext.RequestAborted);
 
         // Get final execution state from database

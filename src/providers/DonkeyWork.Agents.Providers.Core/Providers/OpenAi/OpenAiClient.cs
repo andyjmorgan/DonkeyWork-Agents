@@ -8,6 +8,8 @@ using OpenAI.Chat;
 
 namespace DonkeyWork.Agents.Providers.Core.Providers.OpenAi;
 
+using GenerativeAI.Types;
+
 /// <summary>
 /// OpenAI provider client using the official OpenAI C# SDK.
 /// </summary>
@@ -185,22 +187,42 @@ internal sealed class OpenAiClient : IAiClient
 
         foreach (var msg in messages)
         {
-            switch (msg)
+            if (msg is not InternalContentMessage contentMsg) continue;
+
+            if (msg.Role == InternalMessageRole.System)
             {
-                case InternalUserMessage userMsg:
-                    if (msg.Role == InternalMessageRole.System)
+                result.Add(ChatMessage.CreateSystemMessage(contentMsg.GetTextContent()));
+            }
+            else if (msg.Role == InternalMessageRole.Assistant)
+            {
+                result.Add(ChatMessage.CreateAssistantMessage(contentMsg.GetTextContent()));
+            }
+            else
+            {
+                // For user messages, map content parts
+                var parts = new List<ChatMessageContentPart>();
+                foreach (var part in contentMsg.Content)
+                {
+                    switch (part)
                     {
-                        result.Add(ChatMessage.CreateSystemMessage(userMsg.Content));
+                        case Contracts.Models.Pipeline.TextChatContentPart text:
+                            parts.Add(ChatMessageContentPart.CreateTextPart(text.Text));
+                            break;
+                        case Contracts.Models.Pipeline.ImageChatContentPart image:
+                            if (image.SourceType == "base64")
+                            {
+                                parts.Add(ChatMessageContentPart.CreateImagePart(
+                                    BinaryData.FromBytes(Convert.FromBase64String(image.Data)),
+                                    image.MediaType));
+                            }
+                            else
+                            {
+                                parts.Add(ChatMessageContentPart.CreateImagePart(new Uri(image.Data)));
+                            }
+                            break;
                     }
-                    else if (msg.Role == InternalMessageRole.Assistant)
-                    {
-                        result.Add(ChatMessage.CreateAssistantMessage(userMsg.Content));
-                    }
-                    else
-                    {
-                        result.Add(ChatMessage.CreateUserMessage(userMsg.Content));
-                    }
-                    break;
+                }
+                result.Add(ChatMessage.CreateUserMessage(parts));
             }
         }
 

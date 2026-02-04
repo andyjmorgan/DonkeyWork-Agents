@@ -10,6 +10,7 @@ public sealed class ExecuteOrchestrationRequestV1
 {
     /// <summary>
     /// Dynamic JSON input data for the orchestration.
+    /// Validated against the orchestration's input schema.
     /// </summary>
     [JsonPropertyName("input")]
     public required JsonElement Input { get; init; }

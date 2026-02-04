@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { MessageSquare, HelpCircle } from 'lucide-react'
+import { MessageSquare, Zap, Network, Globe, Webhook } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -7,137 +7,157 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useEditorStore } from '@/store/editor'
-import type { ChatInterfaceConfig } from '@/lib/api'
+import type { InterfaceConfig, InterfaceType } from '@/lib/api'
 
 interface InterfacesPanelProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export function InterfacesPanel({ open, onOpenChange }: InterfacesPanelProps) {
-  const interfaces = useEditorStore((state) => state.interfaces)
-  const updateInterface = useEditorStore((state) => state.updateInterface)
+const interfaceOptions: Array<{
+  type: InterfaceType
+  label: string
+  description: string
+  icon: React.ReactNode
+}> = [
+  {
+    type: 'ChatInterfaceConfig',
+    label: 'Chat',
+    description: 'Conversational chat interface with message history',
+    icon: <MessageSquare className="h-4 w-4" />,
+  },
+  {
+    type: 'DirectInterfaceConfig',
+    label: 'Direct',
+    description: 'Single request/response execution via API',
+    icon: <Zap className="h-4 w-4" />,
+  },
+  {
+    type: 'McpInterfaceConfig',
+    label: 'MCP',
+    description: 'Model Context Protocol server interface',
+    icon: <Network className="h-4 w-4" />,
+  },
+  {
+    type: 'A2aInterfaceConfig',
+    label: 'Agent-to-Agent',
+    description: 'Communication with other AI agents',
+    icon: <Globe className="h-4 w-4" />,
+  },
+  {
+    type: 'WebhookInterfaceConfig',
+    label: 'Webhook',
+    description: 'Receive HTTP webhook requests',
+    icon: <Webhook className="h-4 w-4" />,
+  },
+]
 
-  // Helper to update a specific interface
-  const updateChatConfig = useCallback((updates: Partial<ChatInterfaceConfig>) => {
-    const current = interfaces?.chat ?? { enabled: false }
-    updateInterface('chat', { ...current, ...updates })
-  }, [interfaces, updateInterface])
+export function InterfacesPanel({ open, onOpenChange }: InterfacesPanelProps) {
+  const interfaceConfig = useEditorStore((state) => state.interface)
+  const setInterface = useEditorStore((state) => state.setInterface)
+
+  const handleTypeChange = useCallback((type: InterfaceType) => {
+    // Preserve name/description when switching types
+    setInterface({
+      type,
+      name: interfaceConfig.name,
+      description: interfaceConfig.description,
+    } as InterfaceConfig)
+  }, [interfaceConfig, setInterface])
+
+  const handleNameChange = useCallback((name: string) => {
+    setInterface({
+      ...interfaceConfig,
+      name,
+    })
+  }, [interfaceConfig, setInterface])
+
+  const handleDescriptionChange = useCallback((description: string) => {
+    setInterface({
+      ...interfaceConfig,
+      description,
+    })
+  }, [interfaceConfig, setInterface])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Interfaces</SheetTitle>
+          <SheetTitle>Interface</SheetTitle>
           <SheetDescription>
-            Configure how users and other systems can interact with this orchestration.
-            Enable the interfaces you want to expose.
+            Choose how users and systems will interact with this orchestration.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
-          {/* Chat Interface */}
-          <InterfaceCard
-            icon={<MessageSquare className="h-5 w-5 text-green-500" />}
-            title="Chat Interface"
-            description="Allow users to interact via a conversational chat UI"
-            enabled={interfaces?.chat?.enabled ?? false}
-            onToggle={(enabled) => updateChatConfig({ enabled })}
-            helpText="When enabled, users can start conversations with this orchestration using a chat interface. The orchestration will process messages and stream responses back."
-          >
-            {interfaces?.chat?.enabled && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label htmlFor="chat-name">Display Name</Label>
-                  <Input
-                    id="chat-name"
-                    placeholder="e.g., Customer Support Bot"
-                    value={interfaces?.chat?.name ?? ''}
-                    onChange={(e) => updateChatConfig({ name: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    The name shown to users in the chat interface
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="chat-description">Description</Label>
-                  <Textarea
-                    id="chat-description"
-                    placeholder="e.g., I can help answer your questions..."
-                    value={interfaces?.chat?.description ?? ''}
-                    onChange={(e) => updateChatConfig({ description: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-              </div>
-            )}
-          </InterfaceCard>
+        <div className="mt-6 space-y-6">
+          {/* Interface Type Selection */}
+          <div className="space-y-3">
+            <Label>Interface Type</Label>
+            <RadioGroup
+              value={interfaceConfig.type}
+              onValueChange={(value) => handleTypeChange(value as InterfaceType)}
+              className="space-y-2"
+            >
+              {interfaceOptions.map((option) => (
+                <label
+                  key={option.type}
+                  className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors hover:bg-muted/50 ${
+                    interfaceConfig.type === option.type
+                      ? 'border-accent bg-accent/5'
+                      : 'border-border'
+                  }`}
+                >
+                  <RadioGroupItem value={option.type} className="mt-0.5" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {option.icon}
+                      <span className="font-medium text-sm">{option.label}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {option.description}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Common Configuration */}
+          <div className="space-y-4 border-t pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="interface-name">Display Name</Label>
+              <Input
+                id="interface-name"
+                placeholder="e.g., Customer Support Bot"
+                value={interfaceConfig.name ?? ''}
+                onChange={(e) => handleNameChange(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional name shown to users interacting with this interface
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="interface-description">Description</Label>
+              <Textarea
+                id="interface-description"
+                placeholder="e.g., I can help answer your questions..."
+                value={interfaceConfig.description ?? ''}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional description explaining what this orchestration does
+              </p>
+            </div>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
-  )
-}
-
-interface InterfaceCardProps {
-  icon: React.ReactNode
-  title: string
-  description: string
-  enabled: boolean
-  onToggle: (enabled: boolean) => void
-  helpText?: string
-  children?: React.ReactNode
-}
-
-function InterfaceCard({
-  icon,
-  title,
-  description,
-  enabled,
-  onToggle,
-  helpText,
-  children
-}: InterfaceCardProps) {
-  return (
-    <Card className={enabled ? 'border-accent/50' : ''}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5">{icon}</div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-base">{title}</CardTitle>
-                {helpText && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        <p>{helpText}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-              <CardDescription>{description}</CardDescription>
-            </div>
-          </div>
-          <Switch checked={enabled} onCheckedChange={onToggle} />
-        </div>
-      </CardHeader>
-      {children && <CardContent>{children}</CardContent>}
-    </Card>
   )
 }

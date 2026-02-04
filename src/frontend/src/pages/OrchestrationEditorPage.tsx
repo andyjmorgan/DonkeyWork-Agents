@@ -19,21 +19,19 @@ import { toast } from 'sonner'
 export function OrchestrationEditorPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const {
-    orchestrationId,
-    orchestrationName,
-    orchestrationDescription,
-    isDraft,
-    versionId,
-    interfaces,
-    nodes,
-    nodeConfigurations,
-    loadOrchestration,
-    reset,
-    setOrchestrationMetadata,
-    save,
-    exportToJson,
-  } = useEditorStore()
+  const orchestrationId = useEditorStore((state) => state.orchestrationId)
+  const orchestrationName = useEditorStore((state) => state.orchestrationName)
+  const orchestrationDescription = useEditorStore((state) => state.orchestrationDescription)
+  const isDraft = useEditorStore((state) => state.isDraft)
+  const versionId = useEditorStore((state) => state.versionId)
+  const interfaceConfig = useEditorStore((state) => state.interface)
+  const nodes = useEditorStore((state) => state.nodes)
+  const nodeConfigurations = useEditorStore((state) => state.nodeConfigurations)
+  const loadOrchestration = useEditorStore((state) => state.loadOrchestration)
+  const reset = useEditorStore((state) => state.reset)
+  const setOrchestrationMetadata = useEditorStore((state) => state.setOrchestrationMetadata)
+  const save = useEditorStore((state) => state.save)
+  const exportToJson = useEditorStore((state) => state.exportToJson)
 
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
@@ -86,7 +84,7 @@ export function OrchestrationEditorPage() {
               currentVersion.isDraft,
               currentVersion.reactFlowData,
               nodeConfigurations,
-              currentVersion.interfaces
+              currentVersion.interface
             )
           } else {
             // No versions yet (shouldn't happen but handle it)
@@ -215,7 +213,7 @@ export function OrchestrationEditorPage() {
         false, // isDraft = false (now published)
         publishedVersion.reactFlowData,
         nodeConfigurations,
-        publishedVersion.interfaces
+        publishedVersion.interface
       )
 
       // TODO: Show success toast "Version published! The next save will create a new draft."
@@ -249,7 +247,7 @@ export function OrchestrationEditorPage() {
       version.isDraft,
       version.reactFlowData,
       nodeConfigurations,
-      version.interfaces
+      version.interface
     )
   }, [orchestrationId, orchestrationName, orchestrationDescription])
 
@@ -276,7 +274,7 @@ export function OrchestrationEditorPage() {
       true, // Mark as draft
       version.reactFlowData,
       nodeConfigurations,
-      version.interfaces
+      version.interface
     )
     // TODO: Show success toast "Draft created from version X. Save to persist."
   }, [orchestrationId, orchestrationName, orchestrationDescription])
@@ -345,16 +343,9 @@ export function OrchestrationEditorPage() {
             variant="outline"
             size="sm"
             onClick={() => setIsInterfacesPanelOpen(true)}
-            className="relative"
           >
             <Settings2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Interfaces</span>
-            {/* Show indicator if any interface is enabled */}
-            {(interfaces?.chat?.enabled || interfaces?.mcp?.enabled || interfaces?.a2a?.enabled || interfaces?.webhook?.enabled) && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-medium text-accent-foreground">
-                {[interfaces?.chat?.enabled, interfaces?.mcp?.enabled, interfaces?.a2a?.enabled, interfaces?.webhook?.enabled].filter(Boolean).length}
-              </span>
-            )}
+            <span className="hidden sm:inline">Interface</span>
           </Button>
           <Button
             variant="outline"
@@ -439,7 +430,7 @@ export function OrchestrationEditorPage() {
             <SheetTitle>Test Orchestration</SheetTitle>
           </SheetHeader>
           <div className="mt-6 h-[calc(100vh-8rem)]">
-            {orchestrationId && <TestPanel orchestrationId={orchestrationId} inputSchema={inputSchema} interfaces={interfaces ?? undefined} />}
+            {orchestrationId && <TestPanel orchestrationId={orchestrationId} inputSchema={inputSchema} interfaceConfig={interfaceConfig} />}
           </div>
         </SheetContent>
       </Sheet>

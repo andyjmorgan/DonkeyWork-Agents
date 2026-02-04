@@ -6,21 +6,15 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 /// Base class for conversation streaming events.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(ResponseStartEvent), "response_start")]
-[JsonDerivedType(typeof(PartStartEvent), "part_start")]
-[JsonDerivedType(typeof(PartDeltaEvent), "part_delta")]
-[JsonDerivedType(typeof(PartEndEvent), "part_end")]
-[JsonDerivedType(typeof(TokenUsageEvent), "token_usage")]
-[JsonDerivedType(typeof(ResponseErrorEvent), "response_error")]
-[JsonDerivedType(typeof(ResponseEndEvent), "response_end")]
+[JsonDerivedType(typeof(ResponseStartEvent), nameof(ResponseStartEvent))]
+[JsonDerivedType(typeof(PartStartEvent), nameof(PartStartEvent))]
+[JsonDerivedType(typeof(PartDeltaEvent), nameof(PartDeltaEvent))]
+[JsonDerivedType(typeof(PartEndEvent), nameof(PartEndEvent))]
+[JsonDerivedType(typeof(TokenUsageEvent), nameof(TokenUsageEvent))]
+[JsonDerivedType(typeof(ResponseErrorEvent), nameof(ResponseErrorEvent))]
+[JsonDerivedType(typeof(ResponseEndEvent), nameof(ResponseEndEvent))]
 public abstract class ConversationStreamEvent
 {
-    /// <summary>
-    /// Event type discriminator.
-    /// </summary>
-    [JsonPropertyName("type")]
-    public abstract string Type { get; }
-
     /// <summary>
     /// Event timestamp.
     /// </summary>
