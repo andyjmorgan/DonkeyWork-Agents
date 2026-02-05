@@ -28,9 +28,6 @@ public class ProjectConfiguration : IEntityTypeConfiguration<ProjectEntity>
         builder.Property(e => e.Content)
             .HasColumnName("content");
 
-        builder.Property(e => e.SuccessCriteria)
-            .HasColumnName("success_criteria");
-
         builder.Property(e => e.Status)
             .HasColumnName("status")
             .IsRequired();

@@ -16,11 +16,6 @@ public class ProjectEntity : BaseEntity
     public string? Content { get; set; }
 
     /// <summary>
-    /// Success criteria for the project (markdown supported).
-    /// </summary>
-    public string? SuccessCriteria { get; set; }
-
-    /// <summary>
     /// Project status.
     /// </summary>
     public ProjectStatus Status { get; set; } = ProjectStatus.NotStarted;

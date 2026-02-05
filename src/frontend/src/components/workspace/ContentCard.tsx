@@ -77,31 +77,6 @@ export function ContentCard({
       }`}
       onClick={onClick}
     >
-      {/* Header with badges (for tasks) */}
-      {isTask && (
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          {priority && (
-            <Badge variant="outline" className={`${priorityColors[priority]} text-white border-0 text-xs`}>
-              {priority}
-            </Badge>
-          )}
-          {status && (
-            <Badge
-              variant={status === 'Completed' ? 'default' : 'secondary'}
-              className={status === 'Completed' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30' : ''}
-            >
-              {status}
-            </Badge>
-          )}
-          {dueDate && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {new Date(dueDate).toLocaleDateString()}
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Title row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -167,6 +142,35 @@ export function ContentCard({
 
       {/* Footer */}
       <div className="mt-auto pt-3 flex items-center gap-2 flex-wrap border-t border-border/50 -mx-4 px-4 -mb-4 pb-3 bg-muted/30 rounded-b-lg">
+        {/* Task metadata (priority, status, due date) */}
+        {isTask && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {priority && (
+              <Badge variant="outline" className={`${priorityColors[priority]} text-white border-0 text-xs`}>
+                {priority}
+              </Badge>
+            )}
+            {status && (
+              <Badge
+                variant={
+                  status === 'Completed' ? 'success' :
+                  status === 'InProgress' ? 'inProgress' :
+                  status === 'Cancelled' ? 'destructive' :
+                  'pending'
+                }
+              >
+                {status}
+              </Badge>
+            )}
+            {dueDate && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {new Date(dueDate).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Tags (for notes) */}
         {tags && tags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap">

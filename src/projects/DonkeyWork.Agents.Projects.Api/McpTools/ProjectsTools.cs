@@ -67,7 +67,6 @@ public class ProjectsTools
     public async Task<ProjectDetailsV1> CreateProject(
         [Description("The name of the project")] string name,
         [Description("Optional content/description of the project (supports markdown and mermaid diagrams)")] string? content,
-        [Description("Optional success criteria for the project")] string? successCriteria,
         [Description("Status: NotStarted (default), InProgress, OnHold, Completed, or Cancelled")] ProjectStatus? status,
         CancellationToken ct)
     {
@@ -75,7 +74,6 @@ public class ProjectsTools
         {
             Name = name,
             Content = content,
-            SuccessCriteria = successCriteria,
             Status = status ?? ProjectStatus.NotStarted
         };
 
@@ -95,7 +93,6 @@ public class ProjectsTools
         [Description("The unique identifier of the project to update")] Guid id,
         [Description("New name for the project (omit to keep current)")] string? name = null,
         [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current)")] string? content = null,
-        [Description("New success criteria (omit to keep current)")] string? successCriteria = null,
         [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled (omit to keep current)")] ProjectStatus? status = null,
         CancellationToken ct = default)
     {
@@ -110,7 +107,6 @@ public class ProjectsTools
         {
             Name = name ?? current.Name,
             Content = content ?? current.Content,
-            SuccessCriteria = successCriteria ?? current.SuccessCriteria,
             Status = status ?? current.Status
         };
 

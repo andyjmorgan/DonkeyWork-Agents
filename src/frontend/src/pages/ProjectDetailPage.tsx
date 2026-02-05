@@ -117,7 +117,6 @@ export function ProjectDetailPage() {
       await projects.update(id, {
         name: project.name,
         status: project.status,
-        successCriteria: project.successCriteria,
         content: contentValue,
       })
       setProject({ ...project, content: contentValue })
@@ -126,6 +125,21 @@ export function ProjectDetailPage() {
       console.error('Failed to save project content:', error)
     } finally {
       setIsSavingContent(false)
+    }
+  }
+
+  const handleStatusChange = async (newStatus: ProjectStatus) => {
+    if (!id || !project) return
+
+    try {
+      await projects.update(id, {
+        name: project.name,
+        status: newStatus,
+        content: project.content,
+      })
+      setProject({ ...project, status: newStatus })
+    } catch (error) {
+      console.error('Failed to update project status:', error)
     }
   }
 
@@ -294,18 +308,24 @@ export function ProjectDetailPage() {
   }
 
   const getStatusBadge = (status: ProjectStatus | MilestoneStatus) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      NotStarted: 'secondary',
-      InProgress: 'default',
-      Completed: 'outline',
-      OnHold: 'destructive',
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'pending' | 'inProgress' | 'muted'> = {
+      NotStarted: 'pending',
+      InProgress: 'inProgress',
+      Completed: 'success',
+      OnHold: 'warning',
       Cancelled: 'destructive',
     }
     return <Badge variant={variants[status] || 'secondary'}>{status.replace(/([A-Z])/g, ' $1').trim()}</Badge>
   }
 
-  const completedTodos = project?.todos.filter(t => t.status === 'Completed').length || 0
-  const pendingTodos = project?.todos.filter(t => t.status !== 'Completed').length || 0
+  // Task counts
+  const openTodos = project?.todos.filter(t => t.status === 'Pending' || t.status === 'InProgress').length || 0
+  const completedTodos = project?.todos.filter(t => t.status === 'Completed' || t.status === 'Cancelled').length || 0
+
+  // Milestone counts
+  const openMilestones = projectMilestones.filter(m => m.status === 'InProgress' || m.status === 'OnHold').length
+  const inProgressMilestones = projectMilestones.filter(m => m.status === 'InProgress').length
+  const closedMilestones = projectMilestones.filter(m => m.status === 'Completed' || m.status === 'Cancelled').length
 
   if (isLoading) {
     return (
@@ -357,7 +377,21 @@ export function ProjectDetailPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{project.name}</h1>
-              {getStatusBadge(project.status)}
+              <Select
+                value={project.status}
+                onValueChange={(value) => handleStatusChange(value as ProjectStatus)}
+              >
+                <SelectTrigger className="w-[140px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NotStarted">Not Started</SelectItem>
+                  <SelectItem value="InProgress">In Progress</SelectItem>
+                  <SelectItem value="OnHold">On Hold</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -396,33 +430,48 @@ export function ProjectDetailPage() {
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Stats Cards - Milestones and Tasks */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Milestones Card */}
             <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-3xl font-bold text-primary">{projectMilestones.length}</div>
-              <div className="text-sm text-muted-foreground">Milestones</div>
+              <div className="flex items-center gap-2 mb-3">
+                <Target className="h-5 w-5 text-purple-500" />
+                <h3 className="font-semibold">Milestones</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-amber-500">{openMilestones}</div>
+                  <div className="text-xs text-muted-foreground">Open</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-500">{inProgressMilestones}</div>
+                  <div className="text-xs text-muted-foreground">In Progress</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-500">{closedMilestones}</div>
+                  <div className="text-xs text-muted-foreground">Closed</div>
+                </div>
+              </div>
             </div>
+
+            {/* Tasks Card */}
             <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-3xl font-bold text-emerald-500">{completedTodos}</div>
-              <div className="text-sm text-muted-foreground">Completed</div>
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-3xl font-bold text-amber-500">{pendingTodos}</div>
-              <div className="text-sm text-muted-foreground">Pending</div>
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-3xl font-bold text-blue-500">{project.notes.length}</div>
-              <div className="text-sm text-muted-foreground">Notes</div>
+              <div className="flex items-center gap-2 mb-3">
+                <CheckSquare className="h-5 w-5 text-emerald-500" />
+                <h3 className="font-semibold">Tasks</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-amber-500">{openTodos}</div>
+                  <div className="text-xs text-muted-foreground">Open</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-500">{completedTodos}</div>
+                  <div className="text-xs text-muted-foreground">Completed</div>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Success Criteria */}
-          {project.successCriteria && (
-            <div className="rounded-lg border border-border bg-card p-4">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">Success Criteria</h3>
-              <p className="text-sm whitespace-pre-wrap">{project.successCriteria}</p>
-            </div>
-          )}
 
           {/* Tags */}
           {project.tags.length > 0 && (
@@ -570,7 +619,7 @@ export function ProjectDetailPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
-                          {milestone.completedTodoCount}/{milestone.todoCount} todos
+                          {milestone.completedTodoCount}/{milestone.todoCount} tasks
                         </span>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -668,12 +717,12 @@ export function ProjectDetailPage() {
               </div>
 
               {/* Pending Tasks */}
-              {pendingTodos > 0 && (
+              {openTodos > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                     Pending
                     <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500">
-                      {pendingTodos}
+                      {openTodos}
                     </span>
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -6,6 +6,130 @@ Project is a Modular monolith.
 - Install via script: `curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0`
 - After installation, add to PATH: `export PATH="$HOME/.dotnet:$PATH"`
 
+## DonkeyWork Project Management Workflow
+
+When assigned a project or milestone via the DonkeyWork MCP tools, follow this workflow:
+
+### Determining What to Work On
+
+Before starting work, assess the full backlog:
+
+1. **List all projects** - Use `mcp__donkeywork__projects_list` to see all projects
+2. **List milestones and tasks** - For each active project, use `mcp__donkeywork__milestones_list` and `mcp__donkeywork__tasks_list_by_project` to see all work items
+3. **Evaluate priorities** - Consider:
+   - Status (items already `InProgress` take precedence)
+   - Due dates
+   - Dependencies (blocked items wait, blockers come first)
+   - Priority field on tasks (`Critical` > `High` > `Medium` > `Low`)
+   - Sort order
+4. **Adjust priorities** - Use update tools to shift `sortOrder` or `priority` of items as appropriate based on the current state
+5. **Select next item** - Pick the highest priority unblocked item and proceed with the workflow below
+
+### Workflow Steps
+
+1. **Mark as In Progress** - Immediately update the project/milestone/task status to `InProgress` using the appropriate update tool
+2. **Read Requirements** - Use `mcp__donkeywork__projects_get` or `mcp__donkeywork__milestones_get` to read the full content and success criteria
+3. **Research Codebase** - Explore the local codebase to understand existing patterns, related code, and dependencies
+4. **Create Plan** - Document an implementation plan with clear steps
+5. **Add Plan as Note** - Create a note attached to the project/milestone using `mcp__donkeywork__notes_create` with the plan content (use `projectId` or `milestoneId` parameter)
+6. **Execute Plan** - Implement the plan step by step
+7. **Verify** - Run build, test, and lint checks:
+   ```bash
+   dotnet build DonkeyWork.Agents.sln && \
+   dotnet test DonkeyWork.Agents.sln && \
+   cd src/frontend && npm run lint && npx tsc --noEmit && npm run build
+   ```
+8. **Complete** - If all checks pass, update status to `Completed` and commit/push to main
+
+### Key Principles
+
+- **Assess before acting** - Always read all projects, milestones, and tasks to understand the full picture before selecting work
+- **IMMEDIATELY mark InProgress** - Before starting any work on a task, mark it as `InProgress` using `mcp__donkeywork__tasks_update`. This is critical for tracking what's being worked on.
+- **Reprioritize as needed** - Adjust `sortOrder` and `priority` fields based on new information, dependencies, or urgency
+- **Parallelize when safe** - Use the Task tool to spawn parallel agents for independent work streams (see below)
+- **Update progress** - Keep status and notes updated as work progresses
+- **Reference the plan** - Always refer back to the plan note during implementation
+- **Document blockers** - If blocked, add notes explaining the issue and update status to `OnHold` if needed
+- **Complete the loop** - After finishing an item, return to "Determining What to Work On" to select the next item
+
+### Parallel Execution with Agents
+
+When multiple work items can proceed independently without conflicts, use the Task tool to spawn parallel agents:
+
+**Safe to parallelize:**
+- Backend work vs Frontend work (different codebases)
+- Independent modules that don't share files
+- Research/exploration tasks alongside implementation
+- Tests for different modules
+
+**Do NOT parallelize:**
+- Work touching the same files
+- Database migrations (run sequentially)
+- Tasks with dependencies on each other
+- Work in the same module/directory
+
+**How to parallelize:**
+```
+Use a single message with multiple Task tool calls:
+- Task 1: "Implement backend API endpoint for feature X"
+- Task 2: "Implement frontend component for feature X"
+```
+
+Each agent should:
+1. Mark its assigned task/milestone as `InProgress`
+2. Create its own plan note
+3. Execute independently
+4. Run verification for its area (backend OR frontend)
+5. Report back when done (do not mark complete yet)
+
+### Cross-Cutting Concerns
+
+For features that span multiple areas (e.g., new API endpoint + frontend UI + database changes):
+
+1. **Plan for convergence** - Before spawning agents, identify:
+   - What each agent will produce
+   - Integration points between the work streams
+   - What needs to be verified together
+
+2. **Spawn parallel agents** - Each handles its independent portion:
+   ```
+   Agent 1 (Backend): "Add API endpoint for feature X, including migrations"
+   Agent 2 (Frontend): "Add UI components for feature X, mock the API initially"
+   ```
+
+3. **Converge results** - After agents complete:
+   - Review all changes together
+   - Ensure API contracts match between frontend and backend
+   - Update frontend to use real API (remove mocks)
+   - Run full integration verification:
+     ```bash
+     dotnet build DonkeyWork.Agents.sln && \
+     dotnet test DonkeyWork.Agents.sln && \
+     cd src/frontend && npm run lint && npx tsc --noEmit && npm run test:run && npm run build
+     ```
+
+4. **Single commit/push** - Only after convergence verification passes:
+   - Mark all related tasks/milestones as `Completed`
+   - Commit all changes together with a unified commit message
+   - Push to main
+
+### Available MCP Tools
+
+| Tool | Purpose |
+|------|---------|
+| `mcp__donkeywork__projects_list` | List all projects |
+| `mcp__donkeywork__projects_get` | Get project details |
+| `mcp__donkeywork__projects_update` | Update project status/content |
+| `mcp__donkeywork__milestones_list` | List milestones for a project |
+| `mcp__donkeywork__milestones_get` | Get milestone details |
+| `mcp__donkeywork__milestones_update` | Update milestone status/content |
+| `mcp__donkeywork__tasks_list_by_project` | List tasks for a project |
+| `mcp__donkeywork__tasks_list_by_milestone` | List tasks for a milestone |
+| `mcp__donkeywork__tasks_update` | Update task status |
+| `mcp__donkeywork__notes_create` | Create a note (attach to project/milestone via IDs) |
+| `mcp__donkeywork__notes_list_by_project` | List notes for a project |
+| `mcp__donkeywork__notes_list_by_milestone` | List notes for a milestone |
+
 ## Project Structure
 
 ```
@@ -61,6 +185,41 @@ All databases use PostgreSQL with support for pgcrypto and pgvector extensions.
 - Encrypted columns: use `bytea` column type
 - No soft delete - use hard deletes
 - Global query filter on `BaseEntity.UserId` for user isolation (use `IgnoreQueryFilters()` to bypass)
+
+## EF Core Migrations
+
+**IMPORTANT**: NEVER manually write migration files. Always use the EF Core CLI tools.
+
+### Creating Migrations
+
+```bash
+# From repo root - always specify the startup project and project
+dotnet ef migrations add MigrationName \
+  --startup-project src/DonkeyWork.Agents.Api \
+  --project src/common/DonkeyWork.Agents.Persistence
+```
+
+### Applying Migrations
+
+```bash
+# Apply all pending migrations
+dotnet ef database update \
+  --startup-project src/DonkeyWork.Agents.Api \
+  --project src/common/DonkeyWork.Agents.Persistence
+```
+
+### Data-Only Migrations
+
+For migrations that only modify data (TRUNCATE, DELETE, UPDATE), use `migrationBuilder.Sql()`:
+
+```csharp
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.Sql("TRUNCATE TABLE schema.table_name CASCADE;");
+}
+```
+
+The migration file will be auto-generated - only add the SQL statements to the Up/Down methods.
 
 ## Configuration
 

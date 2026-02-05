@@ -38,7 +38,6 @@ public class ProjectService : IProjectService
             UserId = userId,
             Name = request.Name,
             Content = request.Content,
-            SuccessCriteria = request.SuccessCriteria,
             Status = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status,
             CreatedAt = now,
             UpdatedAt = now
@@ -138,7 +137,6 @@ public class ProjectService : IProjectService
 
         project.Name = request.Name;
         project.Content = request.Content;
-        project.SuccessCriteria = request.SuccessCriteria;
         project.Status = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status;
         project.UpdatedAt = now;
 
@@ -236,7 +234,6 @@ public class ProjectService : IProjectService
             Id = project.Id,
             Name = project.Name,
             Content = project.Content,
-            SuccessCriteria = project.SuccessCriteria,
             Status = (Contracts.Models.ProjectStatus)(int)project.Status,
             Tags = project.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             FileReferences = project.FileReferences.OrderBy(f => f.SortOrder).Select(f => new FileReferenceV1

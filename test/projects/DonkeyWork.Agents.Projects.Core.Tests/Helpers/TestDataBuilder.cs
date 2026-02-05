@@ -27,14 +27,12 @@ public class TestDataBuilder
     /// </summary>
     public static CreateProjectRequestV1 CreateProjectRequest(
         string name = "test-project",
-        string? content = "Test content",
-        string? successCriteria = null)
+        string? content = "Test content")
     {
         return new CreateProjectRequestV1
         {
             Name = name,
-            Content = content,
-            SuccessCriteria = successCriteria
+            Content = content
         };
     }
 

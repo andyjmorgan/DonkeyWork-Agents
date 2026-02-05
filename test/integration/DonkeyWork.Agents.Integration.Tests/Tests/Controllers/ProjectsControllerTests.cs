@@ -26,7 +26,6 @@ public class ProjectsControllerTests : ControllerIntegrationTestBase
         var request = TestDataBuilder.CreateProjectRequest(
             name: "My Test Project",
             content: "A project for testing",
-            successCriteria: "All tests pass",
             status: ProjectStatus.NotStarted);
 
         // Act
@@ -40,7 +39,6 @@ public class ProjectsControllerTests : ControllerIntegrationTestBase
         Assert.NotEqual(Guid.Empty, project.Id);
         Assert.Equal(request.Name, project.Name);
         Assert.Equal(request.Content, project.Content);
-        Assert.Equal(request.SuccessCriteria, project.SuccessCriteria);
         Assert.Equal(request.Status, project.Status);
     }
 

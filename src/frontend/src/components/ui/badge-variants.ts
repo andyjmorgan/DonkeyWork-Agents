@@ -18,7 +18,9 @@ export const badgeVariants = cva(
         warning:
           "bg-amber-500/20 text-amber-600 border-amber-500/30 dark:text-amber-400 dark:border-amber-400/30",
         pending:
-          "bg-cyan-500/20 text-cyan-600 border-cyan-500/30 dark:text-cyan-400 dark:border-cyan-400/30",
+          "bg-slate-500/20 text-slate-600 border-slate-500/30 dark:text-slate-400 dark:border-slate-400/30",
+        inProgress:
+          "bg-blue-500/20 text-blue-600 border-blue-500/30 dark:text-blue-400 dark:border-blue-400/30",
         muted:
           "bg-muted text-muted-foreground border-border",
       },

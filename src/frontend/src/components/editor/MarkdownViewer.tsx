@@ -21,9 +21,11 @@ export function MarkdownViewer({ content, className = '' }: MarkdownViewerProps)
   }
 
   return (
-    <div
-      className={`prose prose-sm dark:prose-invert max-w-none ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="markdown-editor">
+      <div
+        className={`prose prose-sm dark:prose-invert max-w-none ${className}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
   )
 }

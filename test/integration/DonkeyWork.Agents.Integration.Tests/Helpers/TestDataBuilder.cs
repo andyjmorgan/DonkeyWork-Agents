@@ -29,14 +29,12 @@ public static class TestDataBuilder
     public static CreateProjectRequestV1 CreateProjectRequest(
         string? name = null,
         string? content = null,
-        string? successCriteria = null,
         ProjectStatus status = ProjectStatus.NotStarted)
     {
         return new CreateProjectRequestV1
         {
             Name = name ?? $"Test Project {Guid.NewGuid().ToString("N")[..8]}",
             Content = content ?? "Test project content",
-            SuccessCriteria = successCriteria,
             Status = status
         };
     }
@@ -44,14 +42,12 @@ public static class TestDataBuilder
     public static UpdateProjectRequestV1 UpdateProjectRequest(
         string? name = null,
         string? content = null,
-        string? successCriteria = null,
         ProjectStatus status = ProjectStatus.InProgress)
     {
         return new UpdateProjectRequestV1
         {
             Name = name ?? $"Updated Project {Guid.NewGuid().ToString("N")[..8]}",
             Content = content ?? "Updated project content",
-            SuccessCriteria = successCriteria,
             Status = status
         };
     }

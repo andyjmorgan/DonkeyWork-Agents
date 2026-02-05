@@ -40,8 +40,7 @@ public class ProjectServiceTests : IDisposable
         var request = new CreateProjectRequestV1
         {
             Name = "test-project",
-            Content = "Test content",
-            SuccessCriteria = "Must pass all tests"
+            Content = "Test content"
         };
 
         // Act
@@ -52,7 +51,6 @@ public class ProjectServiceTests : IDisposable
         Assert.NotEqual(Guid.Empty, result.Id);
         Assert.Equal(request.Name, result.Name);
         Assert.Equal(request.Content, result.Content);
-        Assert.Equal(request.SuccessCriteria, result.SuccessCriteria);
         Assert.Equal(ProjectStatus.NotStarted, result.Status);
         Assert.True(result.CreatedAt <= DateTimeOffset.UtcNow);
 
@@ -231,7 +229,6 @@ public class ProjectServiceTests : IDisposable
         {
             Name = "updated-name",
             Content = "Updated content",
-            SuccessCriteria = "New criteria",
             Status = ProjectStatus.InProgress
         };
 
@@ -243,7 +240,6 @@ public class ProjectServiceTests : IDisposable
         Assert.Equal(project.Id, result.Id);
         Assert.Equal(updateRequest.Name, result.Name);
         Assert.Equal(updateRequest.Content, result.Content);
-        Assert.Equal(updateRequest.SuccessCriteria, result.SuccessCriteria);
         Assert.Equal(updateRequest.Status, result.Status);
 
         // Verify in database

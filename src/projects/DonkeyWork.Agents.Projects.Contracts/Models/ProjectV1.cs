@@ -16,9 +16,6 @@ public sealed class CreateProjectRequestV1
     [JsonPropertyName("content")]
     public string? Content { get; init; }
 
-    [JsonPropertyName("successCriteria")]
-    public string? SuccessCriteria { get; init; }
-
     [JsonPropertyName("status")]
     public ProjectStatus Status { get; init; } = ProjectStatus.NotStarted;
 
@@ -41,9 +38,6 @@ public sealed class UpdateProjectRequestV1
 
     [JsonPropertyName("content")]
     public string? Content { get; init; }
-
-    [JsonPropertyName("successCriteria")]
-    public string? SuccessCriteria { get; init; }
 
     [JsonPropertyName("status")]
     public ProjectStatus Status { get; init; }
@@ -101,9 +95,6 @@ public sealed class ProjectDetailsV1
 
     [JsonPropertyName("content")]
     public string? Content { get; init; }
-
-    [JsonPropertyName("successCriteria")]
-    public string? SuccessCriteria { get; init; }
 
     [JsonPropertyName("status")]
     public ProjectStatus Status { get; init; }
