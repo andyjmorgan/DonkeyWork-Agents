@@ -76,11 +76,17 @@ export function ImageMessage({ fileId, alt = 'Message image', className }: Image
     )
   }
 
+  // Check if className contains size constraints (for thumbnail mode)
+  const hasSizeConstraint = className?.includes('max-w-') || className?.includes('max-h-')
+
   return (
     <>
-      <div className={cn("relative inline-block", className)}>
+      <div className={cn("relative inline-block overflow-hidden", className)}>
         {isLoading && (
-          <div className="flex items-center justify-center w-48 h-32 rounded-lg border border-border bg-muted animate-pulse">
+          <div className={cn(
+            "flex items-center justify-center rounded-lg border border-border bg-muted animate-pulse",
+            hasSizeConstraint ? "w-full h-full min-w-[60px] min-h-[60px]" : "w-48 h-32"
+          )}>
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
@@ -92,14 +98,13 @@ export function ImageMessage({ fileId, alt = 'Message image', className }: Image
             onError={handleError}
             onClick={openLightbox}
             className={cn(
-              "max-w-full max-h-[400px] rounded-lg object-contain cursor-zoom-in transition-opacity",
-              "w-auto",
+              "rounded-lg object-contain cursor-zoom-in transition-opacity",
+              hasSizeConstraint ? "w-full h-full" : "max-w-[300px] max-h-[400px]",
               isLoading ? "opacity-0 absolute" : "opacity-100"
             )}
-            style={{ maxWidth: 'min(300px, 100%)' }}
           />
         )}
-        {!isLoading && (
+        {!isLoading && !hasSizeConstraint && (
           <button
             onClick={openLightbox}
             className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 hover:opacity-100 transition-opacity"
