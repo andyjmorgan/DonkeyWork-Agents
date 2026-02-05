@@ -19,23 +19,27 @@ public interface ITodoService
 
     /// <summary>
     /// Lists all standalone todos for the current user (not associated with any project or milestone).
+    /// Returns summary models without description/completionNotes - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<TodoV1>> GetStandaloneAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TodoSummaryV1>> GetStandaloneAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all todos for the current user.
+    /// Returns summary models without description/completionNotes - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<TodoV1>> ListAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TodoSummaryV1>> ListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all todos for a project.
+    /// Returns summary models without description/completionNotes - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<TodoV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TodoSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all todos for a milestone.
+    /// Returns summary models without description/completionNotes - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<TodoV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TodoSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates a todo.

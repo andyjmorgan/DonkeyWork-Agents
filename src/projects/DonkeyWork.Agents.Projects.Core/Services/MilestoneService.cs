@@ -225,7 +225,6 @@ public class MilestoneService : IMilestoneService
             Id = milestone.Id,
             ProjectId = milestone.ProjectId,
             Name = milestone.Name,
-            Content = milestone.Content,
             Status = (Contracts.Models.MilestoneStatus)(int)milestone.Status,
             DueDate = milestone.DueDate,
             SortOrder = milestone.SortOrder,

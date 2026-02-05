@@ -85,7 +85,7 @@ public class TodoService : ITodoService
         return todo == null ? null : MapToDto(todo);
     }
 
-    public async Task<IReadOnlyList<TodoV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoSummaryV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -95,10 +95,10 @@ public class TodoService : ITodoService
             .ThenByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return todos.Select(MapToDto).ToList();
+        return todos.Select(MapToSummaryDto).ToList();
     }
 
-    public async Task<IReadOnlyList<TodoV1>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoSummaryV1>> ListAsync(CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -107,10 +107,10 @@ public class TodoService : ITodoService
             .ThenByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return todos.Select(MapToDto).ToList();
+        return todos.Select(MapToSummaryDto).ToList();
     }
 
-    public async Task<IReadOnlyList<TodoV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -120,10 +120,10 @@ public class TodoService : ITodoService
             .ThenByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return todos.Select(MapToDto).ToList();
+        return todos.Select(MapToSummaryDto).ToList();
     }
 
-    public async Task<IReadOnlyList<TodoV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TodoSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
         var todos = await _dbContext.Todos
             .AsNoTracking()
@@ -133,7 +133,7 @@ public class TodoService : ITodoService
             .ThenByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return todos.Select(MapToDto).ToList();
+        return todos.Select(MapToSummaryDto).ToList();
     }
 
     public async Task<TodoV1?> UpdateAsync(Guid todoId, UpdateTodoRequestV1 request, CancellationToken cancellationToken = default)
@@ -227,6 +227,25 @@ public class TodoService : ITodoService
             Status = (Contracts.Models.TodoStatus)(int)todo.Status,
             Priority = (Contracts.Models.TodoPriority)(int)todo.Priority,
             CompletionNotes = todo.CompletionNotes,
+            DueDate = todo.DueDate,
+            CompletedAt = todo.CompletedAt,
+            SortOrder = todo.SortOrder,
+            ProjectId = todo.ProjectId,
+            MilestoneId = todo.MilestoneId,
+            Tags = todo.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
+            CreatedAt = todo.CreatedAt,
+            UpdatedAt = todo.UpdatedAt
+        };
+    }
+
+    private static TodoSummaryV1 MapToSummaryDto(TodoEntity todo)
+    {
+        return new TodoSummaryV1
+        {
+            Id = todo.Id,
+            Title = todo.Title,
+            Status = (Contracts.Models.TodoStatus)(int)todo.Status,
+            Priority = (Contracts.Models.TodoPriority)(int)todo.Priority,
             DueDate = todo.DueDate,
             CompletedAt = todo.CompletedAt,
             SortOrder = todo.SortOrder,

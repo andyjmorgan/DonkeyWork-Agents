@@ -19,23 +19,27 @@ public interface INoteService
 
     /// <summary>
     /// Lists all standalone notes for the current user (not associated with any project or milestone).
+    /// Returns summary models without content - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<NoteV1>> GetStandaloneAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<NoteSummaryV1>> GetStandaloneAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all notes for the current user.
+    /// Returns summary models without content - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<NoteV1>> ListAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<NoteSummaryV1>> ListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all notes for a project.
+    /// Returns summary models without content - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<NoteV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<NoteSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all notes for a milestone.
+    /// Returns summary models without content - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<NoteV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<NoteSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates a note.

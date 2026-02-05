@@ -25,15 +25,16 @@ public class TasksTools
 
     /// <summary>
     /// Lists all tasks for the current user.
+    /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
     [McpServerTool(Name = "tasks_list")]
     [McpTool(
         Name = "tasks_list",
         Title = "List Tasks",
-        Description = "List all tasks (todos) for the current user. Tasks can be standalone, or optionally associated with a project or milestone. Returns all tasks regardless of their association.",
+        Description = "List all tasks (todos) for the current user. Tasks can be standalone, or optionally associated with a project or milestone. Returns summary models - use tasks_get for full task details including description.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TodoV1>> ListTasks(CancellationToken ct)
+    public async Task<IReadOnlyList<TodoSummaryV1>> ListTasks(CancellationToken ct)
     {
         return await _todoService.ListAsync(ct);
     }
@@ -151,15 +152,16 @@ public class TasksTools
 
     /// <summary>
     /// Lists all tasks for a specific project.
+    /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
     [McpServerTool(Name = "tasks_list_by_project")]
     [McpTool(
         Name = "tasks_list_by_project",
         Title = "List Tasks by Project",
-        Description = "List all tasks directly associated with a specific project (project-level tasks only). Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those.",
+        Description = "List all tasks directly associated with a specific project (project-level tasks only). Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those. Returns summary models - use tasks_get for full task details.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TodoV1>> ListTasksByProject(
+    public async Task<IReadOnlyList<TodoSummaryV1>> ListTasksByProject(
         [Description("The unique identifier of the project")] Guid projectId,
         CancellationToken ct)
     {
@@ -168,15 +170,16 @@ public class TasksTools
 
     /// <summary>
     /// Lists all tasks for a specific milestone.
+    /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
     [McpServerTool(Name = "tasks_list_by_milestone")]
     [McpTool(
         Name = "tasks_list_by_milestone",
         Title = "List Tasks by Milestone",
-        Description = "List all tasks associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases.",
+        Description = "List all tasks associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use tasks_get for full task details.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TodoV1>> ListTasksByMilestone(
+    public async Task<IReadOnlyList<TodoSummaryV1>> ListTasksByMilestone(
         [Description("The unique identifier of the milestone")] Guid milestoneId,
         CancellationToken ct)
     {

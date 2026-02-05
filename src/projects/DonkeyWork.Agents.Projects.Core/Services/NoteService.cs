@@ -82,7 +82,7 @@ public class NoteService : INoteService
         return note == null ? null : MapToDto(note);
     }
 
-    public async Task<IReadOnlyList<NoteV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteSummaryV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -92,10 +92,10 @@ public class NoteService : INoteService
             .ThenByDescending(n => n.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return notes.Select(MapToDto).ToList();
+        return notes.Select(MapToSummaryDto).ToList();
     }
 
-    public async Task<IReadOnlyList<NoteV1>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteSummaryV1>> ListAsync(CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -104,10 +104,10 @@ public class NoteService : INoteService
             .ThenByDescending(n => n.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return notes.Select(MapToDto).ToList();
+        return notes.Select(MapToSummaryDto).ToList();
     }
 
-    public async Task<IReadOnlyList<NoteV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -117,10 +117,10 @@ public class NoteService : INoteService
             .ThenByDescending(n => n.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return notes.Select(MapToDto).ToList();
+        return notes.Select(MapToSummaryDto).ToList();
     }
 
-    public async Task<IReadOnlyList<NoteV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<NoteSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
         var notes = await _dbContext.Notes
             .AsNoTracking()
@@ -130,7 +130,7 @@ public class NoteService : INoteService
             .ThenByDescending(n => n.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return notes.Select(MapToDto).ToList();
+        return notes.Select(MapToSummaryDto).ToList();
     }
 
     public async Task<NoteV1?> UpdateAsync(Guid noteId, UpdateNoteRequestV1 request, CancellationToken cancellationToken = default)
@@ -205,6 +205,21 @@ public class NoteService : INoteService
             Id = note.Id,
             Title = note.Title,
             Content = note.Content,
+            SortOrder = note.SortOrder,
+            ProjectId = note.ProjectId,
+            MilestoneId = note.MilestoneId,
+            Tags = note.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
+            CreatedAt = note.CreatedAt,
+            UpdatedAt = note.UpdatedAt
+        };
+    }
+
+    private static NoteSummaryV1 MapToSummaryDto(NoteEntity note)
+    {
+        return new NoteSummaryV1
+        {
+            Id = note.Id,
+            Title = note.Title,
             SortOrder = note.SortOrder,
             ProjectId = note.ProjectId,
             MilestoneId = note.MilestoneId,

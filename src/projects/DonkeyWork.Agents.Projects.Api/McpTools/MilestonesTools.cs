@@ -25,12 +25,13 @@ public class MilestonesTools
 
     /// <summary>
     /// Lists all milestones for a specific project.
+    /// Returns summary models without content/successCriteria - use milestones_get for full details.
     /// </summary>
     [McpServerTool(Name = "milestones_list")]
     [McpTool(
         Name = "milestones_list",
         Title = "List Milestones",
-        Description = "List all milestones for a specific project. Milestones are phases or deliverables within a project. Each milestone can have its own tasks and notes.",
+        Description = "List all milestones for a specific project. Milestones are phases or deliverables within a project. Each milestone can have its own tasks and notes. Returns summary models - use milestones_get for full milestone content.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<MilestoneSummaryV1>> ListMilestones(

@@ -25,15 +25,16 @@ public class NotesTools
 
     /// <summary>
     /// Lists all notes for the current user.
+    /// Returns summary models without content - use notes_get for full details.
     /// </summary>
     [McpServerTool(Name = "notes_list")]
     [McpTool(
         Name = "notes_list",
         Title = "List Notes",
-        Description = "List all notes for the current user. Notes can be standalone, or optionally associated with a project or milestone. Returns all notes regardless of their association.",
+        Description = "List all notes for the current user. Notes can be standalone, or optionally associated with a project or milestone. Returns summary models - use notes_get for full note content.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<NoteV1>> ListNotes(CancellationToken ct)
+    public async Task<IReadOnlyList<NoteSummaryV1>> ListNotes(CancellationToken ct)
     {
         return await _noteService.ListAsync(ct);
     }
@@ -141,15 +142,16 @@ public class NotesTools
 
     /// <summary>
     /// Lists all notes for a specific project.
+    /// Returns summary models without content - use notes_get for full details.
     /// </summary>
     [McpServerTool(Name = "notes_list_by_project")]
     [McpTool(
         Name = "notes_list_by_project",
         Title = "List Notes by Project",
-        Description = "List all notes directly associated with a specific project (project-level notes only). Does not include notes associated with milestones within the project - use notes_list_by_milestone for those.",
+        Description = "List all notes directly associated with a specific project (project-level notes only). Does not include notes associated with milestones within the project - use notes_list_by_milestone for those. Returns summary models - use notes_get for full content.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<NoteV1>> ListNotesByProject(
+    public async Task<IReadOnlyList<NoteSummaryV1>> ListNotesByProject(
         [Description("The unique identifier of the project")] Guid projectId,
         CancellationToken ct)
     {
@@ -158,15 +160,16 @@ public class NotesTools
 
     /// <summary>
     /// Lists all notes for a specific milestone.
+    /// Returns summary models without content - use notes_get for full details.
     /// </summary>
     [McpServerTool(Name = "notes_list_by_milestone")]
     [McpTool(
         Name = "notes_list_by_milestone",
         Title = "List Notes by Milestone",
-        Description = "List all notes associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases.",
+        Description = "List all notes associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use notes_get for full content.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<NoteV1>> ListNotesByMilestone(
+    public async Task<IReadOnlyList<NoteSummaryV1>> ListNotesByMilestone(
         [Description("The unique identifier of the milestone")] Guid milestoneId,
         CancellationToken ct)
     {

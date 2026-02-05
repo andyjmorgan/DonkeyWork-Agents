@@ -249,7 +249,6 @@ public class ProjectService : IProjectService
                 Id = m.Id,
                 ProjectId = m.ProjectId,
                 Name = m.Name,
-                Content = m.Content,
                 Status = (Contracts.Models.MilestoneStatus)(int)m.Status,
                 DueDate = m.DueDate,
                 SortOrder = m.SortOrder,

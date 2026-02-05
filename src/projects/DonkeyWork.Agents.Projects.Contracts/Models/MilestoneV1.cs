@@ -68,7 +68,8 @@ public sealed class UpdateMilestoneRequestV1
 }
 
 /// <summary>
-/// Milestone response model (summary).
+/// Milestone response model (summary for list views - excludes content and successCriteria to reduce payload size).
+/// Use milestones_get to retrieve full details.
 /// </summary>
 public sealed class MilestoneSummaryV1
 {
@@ -80,9 +81,6 @@ public sealed class MilestoneSummaryV1
 
     [JsonPropertyName("name")]
     public required string Name { get; init; }
-
-    [JsonPropertyName("content")]
-    public string? Content { get; init; }
 
     [JsonPropertyName("status")]
     public MilestoneStatus Status { get; init; }
