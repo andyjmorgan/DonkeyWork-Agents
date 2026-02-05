@@ -8,6 +8,7 @@ using DonkeyWork.Agents.Identity.Api.Options;
 using DonkeyWork.Agents.Identity.Contracts.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace DonkeyWork.Agents.Identity.Api.Controllers;
@@ -23,14 +24,17 @@ public class AuthController : ControllerBase
 {
     private readonly KeycloakOptions _keycloakOptions;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<AuthController> _logger;
     private const string CodeVerifierCookieName = "pkce_code_verifier";
 
     public AuthController(
         IOptions<KeycloakOptions> keycloakOptions,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ILogger<AuthController> logger)
     {
         _keycloakOptions = keycloakOptions.Value;
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -193,13 +197,23 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
     {
+        // Log truncated token for debugging (first 20 chars + length)
+        var tokenPreview = string.IsNullOrEmpty(request.RefreshToken)
+            ? "(empty)"
+            : $"{request.RefreshToken[..Math.Min(20, request.RefreshToken.Length)]}... (len={request.RefreshToken.Length})";
+        _logger.LogInformation("Token refresh requested. Token preview: {TokenPreview}", tokenPreview);
+
         if (string.IsNullOrEmpty(request.RefreshToken))
         {
+            _logger.LogWarning("Token refresh failed: refresh token is empty or null");
             return BadRequest(new { error = "refresh_token_required", error_description = "Refresh token is required." });
         }
 
         var backchannelAuthority = _keycloakOptions.InternalAuthority ?? _keycloakOptions.Authority;
         var tokenEndpoint = $"{backchannelAuthority}/protocol/openid-connect/token";
+
+        _logger.LogDebug("Calling Keycloak token endpoint: {TokenEndpoint}, ClientId: {ClientId}",
+            tokenEndpoint, EffectiveClientId);
 
         var tokenRequest = new Dictionary<string, string>
         {
@@ -212,6 +226,7 @@ public class AuthController : ControllerBase
         if (!string.IsNullOrEmpty(_keycloakOptions.ClientSecret))
         {
             tokenRequest["client_secret"] = _keycloakOptions.ClientSecret;
+            _logger.LogDebug("Client secret is configured and will be included in request");
         }
 
         var httpClient = _httpClientFactory.CreateClient();
@@ -220,6 +235,32 @@ public class AuthController : ControllerBase
         if (!tokenResponse.IsSuccessStatusCode)
         {
             var errorContent = await tokenResponse.Content.ReadAsStringAsync();
+
+            // Parse Keycloak error response for better logging
+            string? keycloakError = null;
+            string? keycloakErrorDescription = null;
+            try
+            {
+                var errorJson = JsonSerializer.Deserialize<JsonElement>(errorContent);
+                keycloakError = errorJson.TryGetProperty("error", out var e) ? e.GetString() : null;
+                keycloakErrorDescription = errorJson.TryGetProperty("error_description", out var ed) ? ed.GetString() : null;
+            }
+            catch
+            {
+                // Ignore JSON parse errors
+            }
+
+            _logger.LogWarning(
+                "Token refresh failed. Status: {StatusCode}, KeycloakError: {KeycloakError}, " +
+                "KeycloakErrorDescription: {KeycloakErrorDescription}, TokenEndpoint: {TokenEndpoint}, " +
+                "TokenPreview: {TokenPreview}, RawResponse: {RawResponse}",
+                (int)tokenResponse.StatusCode,
+                keycloakError ?? "(not parsed)",
+                keycloakErrorDescription ?? "(not parsed)",
+                tokenEndpoint,
+                tokenPreview,
+                errorContent);
+
             return BadRequest(new { error = "refresh_failed", error_description = errorContent });
         }
 
@@ -228,8 +269,11 @@ public class AuthController : ControllerBase
 
         if (tokens == null || string.IsNullOrEmpty(tokens.AccessToken))
         {
+            _logger.LogWarning("Token refresh failed: could not parse token response");
             return BadRequest(new { error = "invalid_response", error_description = "Failed to parse token response." });
         }
+
+        _logger.LogInformation("Token refresh successful. New token expires in {ExpiresIn} seconds", tokens.ExpiresIn);
 
         return Ok(new RefreshTokenResponse
         {

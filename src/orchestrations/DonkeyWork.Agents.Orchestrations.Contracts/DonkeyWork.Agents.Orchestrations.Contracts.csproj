@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj" />
+        <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader2, AlertCircle } from 'lucide-react'
+import { Send, Loader2, AlertCircle, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { parseMarkdown } from '@/lib/markdown'
 import { conversations, type ContentPart, type ConversationMessage } from '@/lib/api'
 import { useConversationStream } from '@/hooks/useConversationStream'
@@ -49,6 +54,7 @@ export function ChatInterface({
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId || null)
   const [error, setError] = useState<string | null>(null)
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -168,6 +174,16 @@ export function ChatInterface({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
+  const handleCopyMessage = useCallback(async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMessageId(messageId)
+      setTimeout(() => setCopiedMessageId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy message:', err)
+    }
+  }, [])
+
   // Get streaming content for display
   const streamingContent = streamingMessage?.content
     .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
@@ -211,16 +227,36 @@ export function ChatInterface({
                 </p>
               </div>
             ) : (
-              <div className="max-w-[90%]">
+              <div className="max-w-[90%] group">
                 <div
                   className="prose prose-sm dark:prose-invert max-w-none text-foreground/80"
                   dangerouslySetInnerHTML={{
                     __html: parseMarkdown(message.content),
                   }}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatTime(message.timestamp)}
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    {formatTime(message.timestamp)}
+                  </p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => handleCopyMessage(message.id, message.content)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+                        aria-label="Copy message"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="h-3.5 w-3.5 text-green-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{copiedMessageId === message.id ? 'Copied!' : 'Copy message'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
             )}
           </div>

@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj" />
+        <ProjectReference Include="..\..\conversations\DonkeyWork.Agents.Conversations.Contracts\DonkeyWork.Agents.Conversations.Contracts.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
         <ProjectReference Include="..\..\orchestrations\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />
     </ItemGroup>

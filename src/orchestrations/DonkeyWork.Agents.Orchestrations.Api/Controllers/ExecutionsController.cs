@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -516,9 +517,10 @@ public class ExecutionsController : ControllerBase
     {
         // Find the last user message as the current message
         var lastUserMessage = messages.LastOrDefault(m => m.Role.Equals("user", StringComparison.OrdinalIgnoreCase));
-        var currentMessage = lastUserMessage?.Content ?? string.Empty;
+        var currentMessageText = lastUserMessage?.Content ?? string.Empty;
 
         // Convert messages to conversation history (excluding the last user message which is "current")
+        // Wrap string content in TextChatContentPart (playground API uses simple strings)
         var historyMessages = messages
             .Take(messages.Count - 1) // Exclude last message (current user message)
             .Select(m => new ConversationMessage
@@ -526,7 +528,7 @@ public class ExecutionsController : ControllerBase
                 Role = m.Role.Equals("user", StringComparison.OrdinalIgnoreCase)
                     ? ConversationRole.User
                     : ConversationRole.Assistant,
-                Content = m.Content
+                Content = new List<ChatContentPart> { new TextChatContentPart { Text = m.Content } }
             })
             .ToList();
 
@@ -534,7 +536,7 @@ public class ExecutionsController : ControllerBase
         {
             Id = Guid.NewGuid(), // Ephemeral conversation ID for playground
             Messages = historyMessages,
-            CurrentMessage = currentMessage
+            CurrentMessage = new List<ChatContentPart> { new TextChatContentPart { Text = currentMessageText } }
         };
     }
 

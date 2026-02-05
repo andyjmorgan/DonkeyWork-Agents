@@ -1,10 +1,12 @@
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
 
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Models;
 
 /// <summary>
 /// Conversation context for Chat mode execution.
 /// Contains the conversation history and current user input.
+/// Content parts are hydrated (images converted to base64) before being stored here.
 /// </summary>
 public sealed class ConversationContext
 {
@@ -15,20 +17,21 @@ public sealed class ConversationContext
     public required Guid Id { get; init; }
 
     /// <summary>
-    /// The conversation message history.
+    /// The conversation message history with hydrated content.
     /// </summary>
     [JsonPropertyName("messages")]
     public required IReadOnlyList<ConversationMessage> Messages { get; init; }
 
     /// <summary>
-    /// The current user message being processed.
+    /// The current user message content parts being processed.
+    /// Images are already hydrated to base64.
     /// </summary>
     [JsonPropertyName("currentMessage")]
-    public required string CurrentMessage { get; init; }
+    public required IReadOnlyList<ChatContentPart> CurrentMessage { get; init; }
 }
 
 /// <summary>
-/// A message in the conversation history.
+/// A message in the conversation history with hydrated content.
 /// </summary>
 public sealed class ConversationMessage
 {
@@ -39,10 +42,10 @@ public sealed class ConversationMessage
     public required ConversationRole Role { get; init; }
 
     /// <summary>
-    /// The message content.
+    /// The message content parts. Images are already hydrated to base64.
     /// </summary>
     [JsonPropertyName("content")]
-    public required string Content { get; init; }
+    public required IReadOnlyList<ChatContentPart> Content { get; init; }
 }
 
 /// <summary>

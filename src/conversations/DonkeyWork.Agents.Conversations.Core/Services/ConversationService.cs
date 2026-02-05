@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.Json;
 using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Conversations.Contracts.Models;
 using DonkeyWork.Agents.Conversations.Contracts.Models.Events;
@@ -11,6 +10,8 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Conversations;
+using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
+using DonkeyWork.Agents.Storage.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -22,26 +23,22 @@ public class ConversationService : IConversationService
     private readonly IIdentityContext _identityContext;
     private readonly IOrchestrationExecutor _orchestrationExecutor;
     private readonly IExecutionStreamService _streamService;
+    private readonly IStorageService _storageService;
     private readonly ILogger<ConversationService> _logger;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-        AllowOutOfOrderMetadataProperties = true
-    };
 
     public ConversationService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
         IOrchestrationExecutor orchestrationExecutor,
         IExecutionStreamService streamService,
+        IStorageService storageService,
         ILogger<ConversationService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
         _orchestrationExecutor = orchestrationExecutor;
         _streamService = streamService;
+        _storageService = storageService;
         _logger = logger;
     }
 
@@ -202,16 +199,13 @@ public class ConversationService : IConversationService
         var now = DateTimeOffset.UtcNow;
         var messageId = Guid.NewGuid();
 
-        // Serialize content to JSON
-        var contentJson = JsonSerializer.Serialize(request.Content, JsonOptions);
-
         var message = new ConversationMessageEntity
         {
             Id = messageId,
             UserId = userId,
             ConversationId = conversationId,
             Role = Persistence.Entities.Conversations.MessageRole.User,
-            Content = contentJson,
+            Content = request.Content.ToList(),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -229,7 +223,7 @@ public class ConversationService : IConversationService
         {
             Id = messageId,
             Role = Contracts.Models.MessageRole.User,
-            Content = request.Content,
+            Content = request.Content.ToList(),
             CreatedAt = now
         };
     }
@@ -256,7 +250,6 @@ public class ConversationService : IConversationService
 
         // 1. Save user message
         var userMessageId = Guid.NewGuid();
-        var contentJson = JsonSerializer.Serialize(request.Content, JsonOptions);
 
         var userMessage = new ConversationMessageEntity
         {
@@ -264,7 +257,7 @@ public class ConversationService : IConversationService
             UserId = userId,
             ConversationId = conversationId,
             Role = Persistence.Entities.Conversations.MessageRole.User,
-            Content = contentJson,
+            Content = request.Content.ToList(),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -299,38 +292,31 @@ public class ConversationService : IConversationService
         // 5. Emit part_start for the text response
         yield return new PartStartEvent { PartType = "text", PartIndex = 0 };
 
-        // 6. Build conversation context from history + new user message
+        // 6. Build conversation context from history + new user message (with hydrated images)
         var historyMessages = new List<Orchestrations.Contracts.Models.ConversationMessage>();
 
         // Add existing conversation messages (excluding the one we just added)
         foreach (var msg in conversation.Messages.Where(m => m.Id != userMessageId))
         {
-            var content = DeserializeContent(msg.Content);
-            var textContent = string.Join("", content
-                .Where(p => p is TextContentPart)
-                .Cast<TextContentPart>()
-                .Select(p => p.Text));
+            var hydratedContent = await HydrateContentPartsAsync(msg.Content, cancellationToken);
 
             historyMessages.Add(new Orchestrations.Contracts.Models.ConversationMessage
             {
                 Role = msg.Role == Persistence.Entities.Conversations.MessageRole.User
                     ? Orchestrations.Contracts.Models.ConversationRole.User
                     : Orchestrations.Contracts.Models.ConversationRole.Assistant,
-                Content = textContent
+                Content = hydratedContent
             });
         }
 
-        // Current message text
-        var currentMessage = string.Join("", request.Content
-            .Where(p => p is TextContentPart)
-            .Cast<TextContentPart>()
-            .Select(p => p.Text));
+        // Hydrate current message content
+        var hydratedCurrentMessage = await HydrateContentPartsAsync(request.Content, cancellationToken);
 
         var conversationContext = new Orchestrations.Contracts.Models.ConversationContext
         {
             Id = conversationId,
             Messages = historyMessages,
-            CurrentMessage = currentMessage
+            CurrentMessage = hydratedCurrentMessage
         };
 
         // 7. Fire-and-forget orchestration execution
@@ -343,9 +329,6 @@ public class ConversationService : IConversationService
 
         // 8. Stream events from orchestration execution
         var responseBuilder = new StringBuilder();
-        int? inputTokens = null;
-        int? outputTokens = null;
-        int? totalTokens = null;
         string? errorMessage = null;
 
         await foreach (var evt in _streamService.ReadEventsAsync(executionId))
@@ -387,7 +370,6 @@ public class ConversationService : IConversationService
         // 11. Save assistant message to database
         var responseText = responseBuilder.ToString();
         var assistantContent = new List<ContentPart> { new TextContentPart { Text = responseText } };
-        var assistantContentJson = JsonSerializer.Serialize(assistantContent, JsonOptions);
 
         var assistantMessage = new ConversationMessageEntity
         {
@@ -395,10 +377,7 @@ public class ConversationService : IConversationService
             UserId = userId,
             ConversationId = conversationId,
             Role = Persistence.Entities.Conversations.MessageRole.Assistant,
-            Content = assistantContentJson,
-            InputTokens = inputTokens,
-            OutputTokens = outputTokens,
-            TotalTokens = totalTokens,
+            Content = assistantContent,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };
@@ -409,18 +388,7 @@ public class ConversationService : IConversationService
 
         _logger.LogInformation("Saved assistant message {MessageId} to conversation {ConversationId}", assistantMessageId, conversationId);
 
-        // 12. Emit token_usage if available
-        if (inputTokens.HasValue && outputTokens.HasValue && totalTokens.HasValue)
-        {
-            yield return new TokenUsageEvent
-            {
-                InputTokens = inputTokens.Value,
-                OutputTokens = outputTokens.Value,
-                TotalTokens = totalTokens.Value
-            };
-        }
-
-        // 13. Emit response_end with the final message
+        // 12. Emit response_end with the final message
         yield return new ResponseEndEvent
         {
             Message = new ConversationMessageV1
@@ -428,9 +396,6 @@ public class ConversationService : IConversationService
                 Id = assistantMessageId,
                 Role = Contracts.Models.MessageRole.Assistant,
                 Content = assistantContent,
-                InputTokens = inputTokens,
-                OutputTokens = outputTokens,
-                TotalTokens = totalTokens,
                 CreatedAt = assistantMessage.CreatedAt
             }
         };
@@ -484,31 +449,55 @@ public class ConversationService : IConversationService
 
     private static ConversationMessageV1 MapMessage(ConversationMessageEntity message)
     {
-        var content = DeserializeContent(message.Content);
-
         return new ConversationMessageV1
         {
             Id = message.Id,
             Role = (Contracts.Models.MessageRole)(int)message.Role,
-            Content = content,
-            InputTokens = message.InputTokens,
-            OutputTokens = message.OutputTokens,
-            TotalTokens = message.TotalTokens,
-            Provider = message.Provider,
-            Model = message.Model,
+            Content = message.Content,
             CreatedAt = message.CreatedAt
         };
     }
 
-    private static List<ContentPart> DeserializeContent(string json)
+    /// <summary>
+    /// Hydrates content parts by downloading images from storage and converting to base64.
+    /// </summary>
+    private async Task<IReadOnlyList<ChatContentPart>> HydrateContentPartsAsync(
+        IEnumerable<ContentPart> contentParts,
+        CancellationToken cancellationToken)
     {
-        try
+        var result = new List<ChatContentPart>();
+
+        foreach (var part in contentParts)
         {
-            return JsonSerializer.Deserialize<List<ContentPart>>(json, JsonOptions) ?? [];
+            switch (part)
+            {
+                case TextContentPart textPart:
+                    result.Add(new TextChatContentPart { Text = textPart.Text });
+                    break;
+
+                case ImageContentPart imagePart:
+                    var downloadResult = await _storageService.DownloadAsync(imagePart.FileId, cancellationToken);
+                    if (downloadResult != null)
+                    {
+                        using var memoryStream = new MemoryStream();
+                        await downloadResult.Content.CopyToAsync(memoryStream, cancellationToken);
+                        var base64Data = Convert.ToBase64String(memoryStream.ToArray());
+
+                        result.Add(new ImageChatContentPart
+                        {
+                            SourceType = "base64",
+                            MediaType = imagePart.MediaType,
+                            Data = base64Data
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to download image {FileId} for hydration", imagePart.FileId);
+                    }
+                    break;
+            }
         }
-        catch
-        {
-            return [];
-        }
+
+        return result;
     }
 }

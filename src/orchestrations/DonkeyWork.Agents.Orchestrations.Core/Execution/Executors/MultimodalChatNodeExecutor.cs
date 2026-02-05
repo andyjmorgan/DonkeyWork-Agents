@@ -61,7 +61,7 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
             }
         }
 
-        // In Chat mode, use conversation from context
+        // In Chat mode, use conversation from context (content is already hydrated)
         if (Context.Conversation != null)
         {
             // Add conversation history
@@ -70,11 +70,19 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
                 var role = msg.Role == Contracts.Models.ConversationRole.User
                     ? ChatMessageRole.User
                     : ChatMessageRole.Assistant;
-                messages.Add(ChatMessage.FromText(role, msg.Content));
+                messages.Add(new ChatMessage
+                {
+                    Role = role,
+                    Content = msg.Content
+                });
             }
 
-            // Add current message
-            messages.Add(ChatMessage.FromText(ChatMessageRole.User, Context.Conversation.CurrentMessage));
+            // Add current message (already hydrated with base64 images)
+            messages.Add(new ChatMessage
+            {
+                Role = ChatMessageRole.User,
+                Content = Context.Conversation.CurrentMessage
+            });
         }
         else
         {
@@ -212,4 +220,5 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
             _ => Orchestrations.Contracts.Models.Events.ContentPartType.Text
         };
     }
+
 }

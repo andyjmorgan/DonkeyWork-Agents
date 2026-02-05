@@ -4,6 +4,7 @@ using DonkeyWork.Agents.Identity.Api.Controllers;
 using DonkeyWork.Agents.Identity.Api.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
@@ -14,12 +15,14 @@ namespace DonkeyWork.Agents.Identity.Api.Tests;
 public class AuthControllerTests
 {
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
+    private readonly Mock<ILogger<AuthController>> _loggerMock;
     private readonly IOptions<KeycloakOptions> _keycloakOptions;
     private readonly KeycloakOptions _keycloakOptionsValue;
 
     public AuthControllerTests()
     {
         _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _loggerMock = new Mock<ILogger<AuthController>>();
         _keycloakOptionsValue = new KeycloakOptions
         {
             Authority = "https://auth.example.com/realms/test",
@@ -30,7 +33,7 @@ public class AuthControllerTests
 
     private AuthController CreateController(HttpContext? httpContext = null)
     {
-        var controller = new AuthController(_keycloakOptions, _httpClientFactoryMock.Object);
+        var controller = new AuthController(_keycloakOptions, _httpClientFactoryMock.Object, _loggerMock.Object);
 
         if (httpContext != null)
         {

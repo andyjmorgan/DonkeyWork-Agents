@@ -26,36 +26,6 @@ public sealed class ConversationMessageV1
     public List<ContentPart> Content { get; init; } = [];
 
     /// <summary>
-    /// Number of input tokens used (for assistant messages).
-    /// </summary>
-    [JsonPropertyName("inputTokens")]
-    public int? InputTokens { get; init; }
-
-    /// <summary>
-    /// Number of output tokens used (for assistant messages).
-    /// </summary>
-    [JsonPropertyName("outputTokens")]
-    public int? OutputTokens { get; init; }
-
-    /// <summary>
-    /// Total tokens used (for assistant messages).
-    /// </summary>
-    [JsonPropertyName("totalTokens")]
-    public int? TotalTokens { get; init; }
-
-    /// <summary>
-    /// LLM provider used (for assistant messages).
-    /// </summary>
-    [JsonPropertyName("provider")]
-    public string? Provider { get; init; }
-
-    /// <summary>
-    /// Model used (for assistant messages).
-    /// </summary>
-    [JsonPropertyName("model")]
-    public string? Model { get; init; }
-
-    /// <summary>
     /// When the message was created.
     /// </summary>
     [JsonPropertyName("createdAt")]

@@ -105,13 +105,18 @@ export const useAuthStore = create<AuthState>()(
 
         // If already refreshing, return the existing promise
         if (state.isRefreshing && state.refreshPromise) {
+          console.debug('[Auth] Token refresh already in progress, reusing existing promise')
           return state.refreshPromise
         }
 
-        const { refreshToken } = state
+        const { refreshToken, expiresAt } = state
         if (!refreshToken) {
+          console.warn('[Auth] Cannot refresh: no refresh token available')
           return false
         }
+
+        const timeRemaining = expiresAt ? Math.round((expiresAt - Date.now()) / 1000) : 'unknown'
+        console.debug(`[Auth] Starting token refresh. Token expires in ${timeRemaining}s. RefreshToken preview: ${refreshToken.substring(0, 20)}...`)
 
         // Create the refresh promise
         const refreshPromise = (async () => {
@@ -127,6 +132,21 @@ export const useAuthStore = create<AuthState>()(
             })
 
             if (!response.ok) {
+              // Refresh failed - try to get error details
+              try {
+                const errorBody = await response.json()
+                console.error('[Auth] Token refresh failed:', {
+                  status: response.status,
+                  error: errorBody.error,
+                  errorDescription: errorBody.error_description,
+                  refreshTokenPreview: refreshToken.substring(0, 20) + '...',
+                })
+              } catch {
+                console.error('[Auth] Token refresh failed:', {
+                  status: response.status,
+                  refreshTokenPreview: refreshToken.substring(0, 20) + '...',
+                })
+              }
               // Refresh failed - logout
               get().logout()
               return false
@@ -146,8 +166,10 @@ export const useAuthStore = create<AuthState>()(
               refreshPromise: null,
             })
 
+            console.debug(`[Auth] Token refresh successful. New token expires in ${data.expiresIn}s`)
             return true
-          } catch {
+          } catch (error) {
+            console.error('[Auth] Token refresh threw exception:', error)
             set({ isRefreshing: false, refreshPromise: null })
             return false
           }
