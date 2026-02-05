@@ -1,10 +1,8 @@
-import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, MessageSquare, PlusCircle, MessagesSquare, File, Bell, Server } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, MessageSquare, PlusCircle, MessagesSquare, File, Server } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/branding/Logo'
-import { test } from '@/lib/api'
 
 interface SidebarProps {
   open: boolean
@@ -65,19 +63,6 @@ const navigationGroups: NavGroup[] = [
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {
-  const [isSendingNotification, setIsSendingNotification] = useState(false)
-
-  const handleTestNotification = async () => {
-    setIsSendingNotification(true)
-    try {
-      await test.sendNotification()
-    } catch (err) {
-      console.error('Failed to send test notification:', err)
-    } finally {
-      setIsSendingNotification(false)
-    }
-  }
-
   return (
     <>
       {/* Mobile overlay */}
@@ -143,17 +128,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </nav>
 
           {/* Footer */}
-          <div className="border-t border-sidebar-border p-4 space-y-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start gap-2 text-xs"
-              onClick={handleTestNotification}
-              disabled={isSendingNotification}
-            >
-              <Bell className="h-3.5 w-3.5" />
-              {isSendingNotification ? 'Sending...' : 'Test Notification'}
-            </Button>
+          <div className="border-t border-sidebar-border p-4">
             <p className="text-xs text-sidebar-foreground/60">
               Build something rad
             </p>

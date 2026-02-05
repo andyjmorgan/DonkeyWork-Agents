@@ -165,6 +165,7 @@ public class TodoService : ITodoService
         }
 
         var now = DateTimeOffset.UtcNow;
+        var oldStatus = todo.Status;
         var wasCompleted = todo.Status == Persistence.Entities.Projects.TodoStatus.Completed;
         var isCompleted = request.Status == Contracts.Models.TodoStatus.Completed;
 
@@ -213,17 +214,32 @@ public class TodoService : ITodoService
         _logger.LogInformation("Updated todo {TodoId}", todoId);
 
         // Send notification (fire-and-forget)
+        var newStatus = (Persistence.Entities.Projects.TodoStatus)(int)request.Status;
+        var statusChanged = oldStatus != newStatus;
+        var notificationMessage = statusChanged
+            ? $"'{request.Title}' is now {FormatStatus(request.Status)}"
+            : $"'{request.Title}' has been updated";
+
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.TaskUpdated,
-            Title = "Task Updated",
-            Message = $"Task '{request.Title}' has been updated",
+            Title = statusChanged ? $"Task {FormatStatus(request.Status)}" : "Task Updated",
+            Message = notificationMessage,
             EntityId = todoId,
             ParentId = request.MilestoneId ?? request.ProjectId
         });
 
         return await GetByIdAsync(todoId, cancellationToken);
     }
+
+    private static string FormatStatus(Contracts.Models.TodoStatus status) => status switch
+    {
+        Contracts.Models.TodoStatus.Pending => "Pending",
+        Contracts.Models.TodoStatus.InProgress => "In Progress",
+        Contracts.Models.TodoStatus.Completed => "Completed",
+        Contracts.Models.TodoStatus.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
 
     public async Task<bool> DeleteAsync(Guid todoId, CancellationToken cancellationToken = default)
     {

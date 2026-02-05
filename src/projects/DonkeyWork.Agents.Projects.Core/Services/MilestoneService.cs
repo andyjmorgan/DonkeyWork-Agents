@@ -160,6 +160,7 @@ public class MilestoneService : IMilestoneService
         }
 
         var now = DateTimeOffset.UtcNow;
+        var oldStatus = milestone.Status;
 
         milestone.Name = request.Name;
         milestone.Content = request.Content;
@@ -214,17 +215,33 @@ public class MilestoneService : IMilestoneService
         _logger.LogInformation("Updated milestone {MilestoneId}", milestoneId);
 
         // Send notification (fire-and-forget)
+        var newStatus = (Persistence.Entities.Projects.MilestoneStatus)(int)request.Status;
+        var statusChanged = oldStatus != newStatus;
+        var notificationMessage = statusChanged
+            ? $"'{request.Name}' is now {FormatStatus(request.Status)}"
+            : $"'{request.Name}' has been updated";
+
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.MilestoneUpdated,
-            Title = "Milestone Updated",
-            Message = $"Milestone '{request.Name}' has been updated",
+            Title = statusChanged ? $"Milestone {FormatStatus(request.Status)}" : "Milestone Updated",
+            Message = notificationMessage,
             EntityId = milestoneId,
             ParentId = milestone.ProjectId
         });
 
         return await GetByIdAsync(milestoneId, cancellationToken);
     }
+
+    private static string FormatStatus(Contracts.Models.MilestoneStatus status) => status switch
+    {
+        Contracts.Models.MilestoneStatus.NotStarted => "Not Started",
+        Contracts.Models.MilestoneStatus.InProgress => "In Progress",
+        Contracts.Models.MilestoneStatus.OnHold => "On Hold",
+        Contracts.Models.MilestoneStatus.Completed => "Completed",
+        Contracts.Models.MilestoneStatus.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
 
     public async Task<bool> DeleteAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {

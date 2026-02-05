@@ -149,6 +149,7 @@ public class ProjectService : IProjectService
         }
 
         var now = DateTimeOffset.UtcNow;
+        var oldStatus = project.Status;
 
         project.Name = request.Name;
         project.Content = request.Content;
@@ -200,16 +201,32 @@ public class ProjectService : IProjectService
         _logger.LogInformation("Updated project {ProjectId}", projectId);
 
         // Send notification (fire-and-forget)
+        var newStatus = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status;
+        var statusChanged = oldStatus != newStatus;
+        var notificationMessage = statusChanged
+            ? $"'{request.Name}' is now {FormatStatus(request.Status)}"
+            : $"'{request.Name}' has been updated";
+
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.ProjectUpdated,
-            Title = "Project Updated",
-            Message = $"Project '{request.Name}' has been updated",
+            Title = statusChanged ? $"Project {FormatStatus(request.Status)}" : "Project Updated",
+            Message = notificationMessage,
             EntityId = projectId
         });
 
         return await GetByIdAsync(projectId, cancellationToken);
     }
+
+    private static string FormatStatus(Contracts.Models.ProjectStatus status) => status switch
+    {
+        Contracts.Models.ProjectStatus.NotStarted => "Not Started",
+        Contracts.Models.ProjectStatus.InProgress => "In Progress",
+        Contracts.Models.ProjectStatus.OnHold => "On Hold",
+        Contracts.Models.ProjectStatus.Completed => "Completed",
+        Contracts.Models.ProjectStatus.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
 
     public async Task<bool> DeleteAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
