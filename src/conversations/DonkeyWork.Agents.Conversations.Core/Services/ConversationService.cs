@@ -11,6 +11,7 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Conversations;
 using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
+using DonkeyWork.Agents.Storage.Contracts.Models;
 using DonkeyWork.Agents.Storage.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public class ConversationService : IConversationService
     private readonly IOrchestrationExecutor _orchestrationExecutor;
     private readonly IExecutionStreamService _streamService;
     private readonly IStorageService _storageService;
+    private readonly IImageValidationService _imageValidationService;
     private readonly ILogger<ConversationService> _logger;
 
     public ConversationService(
@@ -32,6 +34,7 @@ public class ConversationService : IConversationService
         IOrchestrationExecutor orchestrationExecutor,
         IExecutionStreamService streamService,
         IStorageService storageService,
+        IImageValidationService imageValidationService,
         ILogger<ConversationService> logger)
     {
         _dbContext = dbContext;
@@ -39,6 +42,7 @@ public class ConversationService : IConversationService
         _orchestrationExecutor = orchestrationExecutor;
         _streamService = streamService;
         _storageService = storageService;
+        _imageValidationService = imageValidationService;
         _logger = logger;
     }
 
@@ -176,6 +180,18 @@ public class ConversationService : IConversationService
             return false;
         }
 
+        // Mark associated images for deletion
+        var markedCount = await _storageService.MarkForDeletionByMetadataAsync(
+            "conversationId",
+            conversationId.ToString(),
+            cancellationToken);
+
+        if (markedCount > 0)
+        {
+            _logger.LogInformation("Marked {Count} images for deletion for conversation {ConversationId}",
+                markedCount, conversationId);
+        }
+
         _dbContext.Conversations.Remove(conversation);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -264,6 +280,19 @@ public class ConversationService : IConversationService
 
         _dbContext.ConversationMessages.Add(userMessage);
         conversation.UpdatedAt = now;
+
+        // Auto-generate title from first message if title is generic
+        if (conversation.Messages.Count == 0 && conversation.Title.StartsWith("Conversation_"))
+        {
+            var firstText = request.Content
+                .OfType<TextContentPart>()
+                .FirstOrDefault()?.Text ?? "New conversation";
+
+            conversation.Title = firstText.Length > 50
+                ? firstText[..50] + "..."
+                : firstText;
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Added user message {MessageId} to conversation {ConversationId}", userMessageId, conversationId);
@@ -417,6 +446,67 @@ public class ConversationService : IConversationService
         _logger.LogInformation("Deleted message {MessageId} from conversation {ConversationId}", messageId, conversationId);
 
         return true;
+    }
+
+    public async Task<UploadImageResponseV1?> UploadImageAsync(
+        Guid conversationId,
+        string fileName,
+        string contentType,
+        Stream fileStream,
+        CancellationToken cancellationToken = default)
+    {
+        // Verify conversation exists and belongs to user
+        var conversation = await _dbContext.Conversations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
+
+        if (conversation == null)
+        {
+            return null;
+        }
+
+        // Get file size
+        var fileSize = fileStream.Length;
+
+        // Validate image
+        var validationResult = await _imageValidationService.ValidateAsync(contentType, fileSize, fileStream);
+
+        if (!validationResult.IsValid)
+        {
+            throw new InvalidOperationException(validationResult.ErrorMessage);
+        }
+
+        // Reset stream position after validation
+        if (fileStream.CanSeek)
+        {
+            fileStream.Position = 0;
+        }
+
+        // Upload to storage with conversation metadata
+        var uploadRequest = new UploadFileRequest
+        {
+            FileName = fileName,
+            ContentType = validationResult.DetectedMimeType ?? contentType,
+            Content = fileStream,
+            Metadata = new Dictionary<string, string>
+            {
+                ["conversationId"] = conversationId.ToString()
+            }
+        };
+
+        var storedFile = await _storageService.UploadAsync(uploadRequest, cancellationToken);
+
+        _logger.LogInformation(
+            "Uploaded image {FileId} for conversation {ConversationId}. Size: {Size} bytes, Type: {ContentType}",
+            storedFile.Id, conversationId, storedFile.SizeBytes, storedFile.ContentType);
+
+        return new UploadImageResponseV1
+        {
+            FileId = storedFile.Id,
+            FileName = storedFile.FileName,
+            ContentType = storedFile.ContentType,
+            SizeBytes = storedFile.SizeBytes
+        };
     }
 
     private static ConversationSummaryV1 MapToSummary(ConversationEntity conversation)

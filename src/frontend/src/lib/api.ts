@@ -302,12 +302,22 @@ export interface CreateOrchestrationResponse {
   createdAt: string
 }
 
+// Chat-enabled orchestration type (for agent selector)
+export interface ChatEnabledOrchestration {
+  id: string
+  name: string
+  description?: string
+}
+
 export const orchestrations = {
   list: () => api.get<Orchestration[]>('/api/v1/orchestrations'),
   create: (data: CreateOrchestrationRequest) => api.post<CreateOrchestrationResponse>('/api/v1/orchestrations', data),
   get: (id: string) => api.get<Orchestration>(`/api/v1/orchestrations/${id}`),
   update: (id: string, data: CreateOrchestrationRequest) => fetchWithAuth(`/api/v1/orchestrations/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.json() as Promise<Orchestration>),
   delete: (id: string) => api.delete(`/api/v1/orchestrations/${id}`),
+
+  // Chat-enabled orchestrations (for agent selector)
+  listChatEnabled: () => api.get<ChatEnabledOrchestration[]>('/api/v1/orchestrations/chat-enabled'),
 
   // Versions
   listVersions: (orchestrationId: string) => api.get<OrchestrationVersion[]>(`/api/v1/orchestrations/${orchestrationId}/versions`),
@@ -844,8 +854,22 @@ export interface TextContentPart {
   text: string
 }
 
-// Union type for all content parts (extend as more types are added)
-export type ContentPart = TextContentPart
+export interface ImageContentPart {
+  type: 'image'
+  fileId: string
+  mediaType: string
+}
+
+// Union type for all content parts
+export type ContentPart = TextContentPart | ImageContentPart
+
+// Image upload response
+export interface UploadImageResponse {
+  fileId: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+}
 
 export interface ConversationMessage {
   id: string
@@ -978,6 +1002,33 @@ export const conversations = {
   // Delete message
   deleteMessage: (conversationId: string, messageId: string) =>
     api.delete(`/api/v1/conversations/${conversationId}/messages/${messageId}`),
+
+  // Upload image for conversation
+  uploadImage: async (conversationId: string, file: File): Promise<UploadImageResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // Use baseFetchWithAuth directly - don't set Content-Type, let FormData set its own boundary
+    const response = await baseFetchWithAuth(
+      `${BASE_URL}/api/v1/conversations/${conversationId}/upload`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }))
+      throw new Error(error.error || 'Upload failed')
+    }
+
+    return response.json()
+  },
+}
+
+// Helper to get image download URL
+export const getImageDownloadUrl = (fileId: string): string => {
+  return `${BASE_URL}/api/v1/files/${fileId}/download`
 }
 
 // Export fetchWithAuth for hooks that need raw fetch access (e.g., SSE streaming)

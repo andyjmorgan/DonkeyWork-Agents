@@ -142,6 +142,32 @@ public sealed class StorageService : IStorageService
         return true;
     }
 
+    public async Task<int> MarkForDeletionByMetadataAsync(string metadataKey, string metadataValue, CancellationToken cancellationToken = default)
+    {
+        var searchPattern = $"\"{metadataKey}\":\"{metadataValue}\"";
+        var now = DateTimeOffset.UtcNow;
+
+        // Find all active files where metadata contains the key-value pair
+        var entities = await _dbContext.StoredFiles
+            .Where(f => f.Status == FileStatus.Active &&
+                        f.Metadata != null &&
+                        f.Metadata.Contains(searchPattern))
+            .ToListAsync(cancellationToken);
+
+        if (entities.Count == 0)
+            return 0;
+
+        // Mark each file for deletion
+        foreach (var entity in entities)
+        {
+            entity.Status = FileStatus.MarkedForDeletion;
+            entity.MarkedForDeletionAt = now;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return entities.Count;
+    }
+
     private static StoredFile ToModel(StoredFileEntity entity)
     {
         return new StoredFile

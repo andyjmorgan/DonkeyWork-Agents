@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
@@ -201,6 +202,27 @@ public class OrchestrationService : IOrchestrationService
         _logger.LogInformation("Deleted agent {AgentId}", agentId);
 
         return true;
+    }
+
+    public async Task<IReadOnlyList<ChatEnabledOrchestrationV1>> ListChatEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        // Get all orchestrations with their current (published) version
+        var orchestrations = await _dbContext.Orchestrations
+            .AsNoTracking()
+            .Include(o => o.CurrentVersion)
+            .Where(o => o.CurrentVersionId != null)
+            .ToListAsync(cancellationToken);
+
+        // Filter to those with ChatInterfaceConfig and map to response
+        return orchestrations
+            .Where(o => o.CurrentVersion?.Interface is ChatInterfaceConfig)
+            .Select(o => new ChatEnabledOrchestrationV1
+            {
+                Id = o.Id,
+                Name = o.Name,
+                Description = o.CurrentVersion?.Interface?.Description
+            })
+            .ToList();
     }
 
     private static GetOrchestrationResponseV1 MapToResponse(OrchestrationEntity agent)

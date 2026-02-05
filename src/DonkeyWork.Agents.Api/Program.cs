@@ -74,7 +74,7 @@ builder.Services.AddIdentityApi(builder.Configuration);
 builder.Services.AddProjectsApi();
 
 // Add Conversations module
-builder.Services.AddConversationsApi();
+builder.Services.AddConversationsApi(builder.Configuration);
 
 builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly, typeof(IdentityTools).Assembly);
 

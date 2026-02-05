@@ -78,4 +78,15 @@ public interface IConversationService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if deleted, false if not found.</returns>
     Task<bool> DeleteMessageAsync(Guid conversationId, Guid messageId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Uploads an image for use in conversation messages.
+    /// </summary>
+    /// <param name="conversationId">The conversation ID.</param>
+    /// <param name="fileName">The original file name.</param>
+    /// <param name="contentType">The content type of the file.</param>
+    /// <param name="fileStream">The file content stream.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The upload result, or null if conversation not found.</returns>
+    Task<UploadImageResponseV1?> UploadImageAsync(Guid conversationId, string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken = default);
 }

@@ -31,4 +31,9 @@ public interface IOrchestrationService
     /// Deletes an orchestration and all its versions.
     /// </summary>
     Task<bool> DeleteAsync(Guid orchestrationId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all orchestrations with Chat interface enabled (has a published version with ChatInterfaceConfig).
+    /// </summary>
+    Task<IReadOnlyList<ChatEnabledOrchestrationV1>> ListChatEnabledAsync(CancellationToken cancellationToken = default);
 }

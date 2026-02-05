@@ -76,6 +76,18 @@ public class OrchestrationsController : ControllerBase
     }
 
     /// <summary>
+    /// List all agents with Chat interface enabled (for agent selector).
+    /// </summary>
+    /// <response code="200">Returns the list of chat-enabled agents.</response>
+    [HttpGet("chat-enabled")]
+    [ProducesResponseType<IReadOnlyList<ChatEnabledOrchestrationV1>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListChatEnabled()
+    {
+        var agents = await _agentService.ListChatEnabledAsync();
+        return Ok(agents);
+    }
+
+    /// <summary>
     /// Update agent metadata (name, description).
     /// </summary>
     /// <param name="id">The agent ID.</param>

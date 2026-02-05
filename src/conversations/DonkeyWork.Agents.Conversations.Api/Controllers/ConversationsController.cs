@@ -230,4 +230,48 @@ public class ConversationsController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Upload an image for use in conversation messages.
+    /// </summary>
+    /// <param name="id">The conversation ID.</param>
+    /// <param name="file">The image file to upload.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <response code="201">Returns the uploaded file details.</response>
+    /// <response code="400">Invalid file or validation failed.</response>
+    /// <response code="404">Conversation not found.</response>
+    [HttpPost("{id:guid}/upload")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10MB
+    [ProducesResponseType<UploadImageResponseV1>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadImage(Guid id, IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { error = "No file provided or file is empty." });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await _conversationService.UploadImageAsync(
+                id,
+                file.FileName,
+                file.ContentType,
+                stream,
+                cancellationToken);
+
+            if (result == null)
+                return NotFound();
+
+            return Created($"/api/v1/files/{result.FileId}", result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Image upload validation failed for conversation {ConversationId}", id);
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
