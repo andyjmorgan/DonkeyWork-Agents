@@ -111,6 +111,9 @@ app.UseForwardedHeaders(forwardedHeadersOptions);
 // Add Serilog request logging
 app.UseSerilogRequestLogging();
 
+// Enable developer exception page in all environments for debugging
+app.UseDeveloperExceptionPage();
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {

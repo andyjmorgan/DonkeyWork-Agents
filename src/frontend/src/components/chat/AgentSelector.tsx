@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Bot, ChevronDown, Plus, Loader2 } from 'lucide-react'
+import { Bot, ChevronDown, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { orchestrations, type ChatEnabledOrchestration } from '@/lib/api'
 
@@ -14,14 +13,12 @@ interface AgentSelectorProps {
   selectedAgentId?: string
   selectedAgentName?: string
   onAgentSelect: (agent: ChatEnabledOrchestration) => void
-  onNewChat: () => void
 }
 
 export function AgentSelector({
   selectedAgentId,
   selectedAgentName,
   onAgentSelect,
-  onNewChat,
 }: AgentSelectorProps) {
   const [agents, setAgents] = useState<ChatEnabledOrchestration[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -87,21 +84,8 @@ export function AgentSelector({
               ))}
             </>
           )}
-          {agents.length > 0 && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onNewChat}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Chat
-              </DropdownMenuItem>
-            </>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <Button variant="outline" size="icon" onClick={onNewChat} title="New Chat">
-        <Plus className="h-4 w-4" />
-      </Button>
     </div>
   )
 }

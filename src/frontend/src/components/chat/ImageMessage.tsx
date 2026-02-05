@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Loader2, ImageOff, ZoomIn, X } from 'lucide-react'
-import { getImageDownloadUrl } from '@/lib/api'
+import { fetchImageAsBlob } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 interface ImageMessageProps {
@@ -13,8 +13,36 @@ export function ImageMessage({ fileId, alt = 'Message image', className }: Image
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
 
-  const imageUrl = getImageDownloadUrl(fileId)
+  // Fetch image with auth header and convert to blob URL
+  useEffect(() => {
+    let isMounted = true
+    setIsLoading(true)
+    setHasError(false)
+
+    fetchImageAsBlob(fileId)
+      .then((url) => {
+        if (isMounted) {
+          setBlobUrl(url)
+          setIsLoading(false)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHasError(true)
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+      // Revoke blob URL on cleanup
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl)
+      }
+    }
+  }, [fileId])
 
   const handleLoad = useCallback(() => {
     setIsLoading(false)
@@ -56,17 +84,19 @@ export function ImageMessage({ fileId, alt = 'Message image', className }: Image
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
-        <img
-          src={imageUrl}
-          alt={alt}
-          onLoad={handleLoad}
-          onError={handleError}
-          onClick={openLightbox}
-          className={cn(
-            "max-w-[300px] max-h-[400px] rounded-lg object-contain cursor-zoom-in transition-opacity",
-            isLoading ? "opacity-0 absolute" : "opacity-100"
-          )}
-        />
+        {blobUrl && (
+          <img
+            src={blobUrl}
+            alt={alt}
+            onLoad={handleLoad}
+            onError={handleError}
+            onClick={openLightbox}
+            className={cn(
+              "max-w-[300px] max-h-[400px] rounded-lg object-contain cursor-zoom-in transition-opacity",
+              isLoading ? "opacity-0 absolute" : "opacity-100"
+            )}
+          />
+        )}
         {!isLoading && (
           <button
             onClick={openLightbox}
@@ -91,12 +121,14 @@ export function ImageMessage({ fileId, alt = 'Message image', className }: Image
           >
             <X className="h-6 w-6" />
           </button>
-          <img
-            src={imageUrl}
-            alt={alt}
-            className="max-w-[90vw] max-h-[90vh] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {blobUrl && (
+            <img
+              src={blobUrl}
+              alt={alt}
+              className="max-w-[90vw] max-h-[90vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
         </div>
       )}
     </>

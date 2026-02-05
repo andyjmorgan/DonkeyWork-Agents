@@ -1031,5 +1031,18 @@ export const getImageDownloadUrl = (fileId: string): string => {
   return `${BASE_URL}/api/v1/files/${fileId}/download`
 }
 
+/**
+ * Fetch an image with auth headers and return a blob URL.
+ * This is needed because img src doesn't include Authorization headers.
+ */
+export const fetchImageAsBlob = async (fileId: string): Promise<string> => {
+  const response = await baseFetchWithAuth(`${BASE_URL}/api/v1/files/${fileId}/download`)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status}`)
+  }
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
+}
+
 // Export fetchWithAuth for hooks that need raw fetch access (e.g., SSE streaming)
 export { fetchWithAuth }

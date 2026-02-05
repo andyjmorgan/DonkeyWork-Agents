@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, MessageSquare, PlusCircle, MessagesSquare } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/branding/Logo'
@@ -27,8 +27,7 @@ const navigationGroups: NavGroup[] = [
     name: 'Chat',
     icon: MessageSquare,
     items: [
-      { name: 'New Chat', href: '/chat', icon: PlusCircle, iconColor: 'text-emerald-500' },
-      { name: 'Conversations', href: '/conversations', icon: MessagesSquare, iconColor: 'text-blue-500' },
+      { name: 'Chat', href: '/chat', icon: MessageSquare, iconColor: 'text-emerald-500' },
     ],
   },
   {
