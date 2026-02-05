@@ -97,7 +97,7 @@ public class NotesTools
     public async Task<NoteV1?> UpdateNote(
         [Description("The unique identifier of the note to update")] Guid id,
         [Description("New title for the note (omit to keep current)")] string? title = null,
-        [Description("New content (supports markdown, omit to keep current)")] string? content = null,
+        [Description("New content (supports markdown, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
         [Description("New sort order for display (omit to keep current)")] int? sortOrder = null,
         [Description("Project ID to associate with (omit to keep current)")] Guid? projectId = null,
         [Description("Milestone ID to associate with (omit to keep current)")] Guid? milestoneId = null,
