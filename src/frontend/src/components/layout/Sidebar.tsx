@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/branding/Logo'
@@ -40,11 +40,16 @@ const navigationGroups: NavGroup[] = [
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
     ],
   },
-]
-
-const standaloneNavigation: NavItem[] = [
-  { name: 'API Keys', href: '/api-keys', icon: Key, iconColor: 'text-yellow-500' },
-  { name: 'Secrets', href: '/secrets', icon: Lock, iconColor: 'text-rose-500' },
+  {
+    name: 'Secrets',
+    icon: Lock,
+    items: [
+      { name: 'API Keys', href: '/api-keys', icon: Key, iconColor: 'text-yellow-500' },
+      { name: 'Credentials', href: '/credentials', icon: KeyRound, iconColor: 'text-rose-500' },
+      { name: 'OAuth Clients', href: '/oauth-clients', icon: Shield, iconColor: 'text-purple-500' },
+      { name: 'Connected Accounts', href: '/connected-accounts', icon: LinkIcon, iconColor: 'text-green-500' },
+    ],
+  },
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {
@@ -110,28 +115,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 </div>
               </div>
             ))}
-
-            {/* Standalone navigation */}
-            <div className="space-y-1">
-              {standaloneNavigation.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                    )
-                  }
-                >
-                  <item.icon className={cn('h-5 w-5', item.iconColor)} />
-                  {item.name}
-                </NavLink>
-              ))}
-            </div>
           </nav>
 
           {/* Footer */}
