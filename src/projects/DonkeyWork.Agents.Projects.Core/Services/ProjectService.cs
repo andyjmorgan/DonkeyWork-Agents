@@ -1,4 +1,7 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using DonkeyWork.Agents.Notifications.Contracts.Enums;
+using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
+using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -12,15 +15,18 @@ public class ProjectService : IProjectService
 {
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<ProjectService> _logger;
 
     public ProjectService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
+        INotificationService notificationService,
         ILogger<ProjectService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -86,6 +92,15 @@ public class ProjectService : IProjectService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created project {ProjectId}", projectId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.ProjectCreated,
+            Title = "Project Created",
+            Message = $"Project '{request.Name}' has been created",
+            EntityId = projectId
+        });
 
         return (await GetByIdAsync(projectId, cancellationToken))!;
     }
@@ -184,11 +199,21 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Updated project {ProjectId}", projectId);
 
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.ProjectUpdated,
+            Title = "Project Updated",
+            Message = $"Project '{request.Name}' has been updated",
+            EntityId = projectId
+        });
+
         return await GetByIdAsync(projectId, cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var project = await _dbContext.Projects
             .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
 
@@ -197,10 +222,20 @@ public class ProjectService : IProjectService
             return false;
         }
 
+        var projectName = project.Name;
         _dbContext.Projects.Remove(project);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted project {ProjectId}", projectId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.ProjectDeleted,
+            Title = "Project Deleted",
+            Message = $"Project '{projectName}' has been deleted",
+            EntityId = projectId
+        });
 
         return true;
     }

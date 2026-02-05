@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, ChatPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, ChatPage, ConversationsPage } from '@/pages'
 import { useAuthStore } from '@/store/auth'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { NotificationListener } from '@/components/providers/NotificationListener'
 
 function TokenRefreshManager({ children }: { children: React.ReactNode }) {
   useTokenRefresh()
@@ -15,9 +17,10 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <TokenRefreshManager>
-        <Toaster />
-        <Routes>
+      <TooltipProvider>
+        <TokenRefreshManager>
+          <Toaster />
+          <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/login/callback" element={<LoginCallbackPage />} />
@@ -26,6 +29,9 @@ export default function App() {
           {/* Protected routes */}
           {isAuthenticated ? (
             <>
+              {/* Real-time notifications */}
+              <NotificationListener />
+
               {/* Editor page - full screen, no layout wrapper */}
               <Route path="/orchestrations/:id/edit" element={<OrchestrationEditorPage />} />
 
@@ -34,6 +40,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/orchestrations" replace />} />
                 <Route path="/orchestrations" element={<OrchestrationsPage />} />
                 <Route path="/chat" element={<ChatPage />} />
+                <Route path="/conversations" element={<ConversationsPage />} />
                 <Route path="/executions" element={<ExecutionsPage />} />
                 <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
                 <Route path="/workspace" element={<ProjectsPage />} />
@@ -55,7 +62,8 @@ export default function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           )}
         </Routes>
-      </TokenRefreshManager>
+        </TokenRefreshManager>
+      </TooltipProvider>
     </BrowserRouter>
   )
 }

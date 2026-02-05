@@ -4,6 +4,8 @@ using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
 using DonkeyWork.Agents.Mcp.Core;
+using DonkeyWork.Agents.Notifications.Core;
+using DonkeyWork.Agents.Notifications.Core.Hubs;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Services;
 using DonkeyWork.Agents.Projects.Api;
@@ -84,6 +86,9 @@ builder.Services.AddProvidersApi();
 // Add Storage module
 builder.Services.AddStorageApi(builder.Configuration);
 
+// Add Notifications module (includes SignalR)
+builder.Services.AddNotificationsCore();
+
 // Configure Data Protection with PostgreSQL storage
 builder.Services.AddDataProtection()
     .SetApplicationName("DonkeyWork.Agents")
@@ -124,6 +129,9 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Map SignalR hub for real-time notifications
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.MapMcp().RequireAuthorization();
 

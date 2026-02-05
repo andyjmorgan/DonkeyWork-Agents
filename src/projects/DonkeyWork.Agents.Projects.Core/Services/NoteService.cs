@@ -1,4 +1,7 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using DonkeyWork.Agents.Notifications.Contracts.Enums;
+using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
+using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -12,15 +15,18 @@ public class NoteService : INoteService
 {
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<NoteService> _logger;
 
     public NoteService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
+        INotificationService notificationService,
         ILogger<NoteService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -68,6 +74,16 @@ public class NoteService : INoteService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created note {NoteId}", noteId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.NoteCreated,
+            Title = "Note Created",
+            Message = $"Note '{request.Title}' has been created",
+            EntityId = noteId,
+            ParentId = request.MilestoneId ?? request.ProjectId
+        });
 
         return (await GetByIdAsync(noteId, cancellationToken))!;
     }
@@ -177,11 +193,22 @@ public class NoteService : INoteService
 
         _logger.LogInformation("Updated note {NoteId}", noteId);
 
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.NoteUpdated,
+            Title = "Note Updated",
+            Message = $"Note '{request.Title}' has been updated",
+            EntityId = noteId,
+            ParentId = request.MilestoneId ?? request.ProjectId
+        });
+
         return await GetByIdAsync(noteId, cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid noteId, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var note = await _dbContext.Notes
             .FirstOrDefaultAsync(n => n.Id == noteId, cancellationToken);
 
@@ -190,10 +217,22 @@ public class NoteService : INoteService
             return false;
         }
 
+        var noteTitle = note.Title;
+        var parentId = note.MilestoneId ?? note.ProjectId;
         _dbContext.Notes.Remove(note);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted note {NoteId}", noteId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.NoteDeleted,
+            Title = "Note Deleted",
+            Message = $"Note '{noteTitle}' has been deleted",
+            EntityId = noteId,
+            ParentId = parentId
+        });
 
         return true;
     }

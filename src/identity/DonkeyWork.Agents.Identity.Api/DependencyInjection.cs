@@ -112,6 +112,21 @@ public static class DependencyInjection
 
                 options.Events = new JwtBearerEvents
                 {
+                    // Extract token from query string for SignalR WebSocket connections
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+
+                        // If token is in query string and path is a SignalR hub, use it
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = context =>
                     {
                         var logger = context.HttpContext.RequestServices

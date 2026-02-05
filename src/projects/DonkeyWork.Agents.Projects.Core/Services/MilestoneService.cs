@@ -1,4 +1,7 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using DonkeyWork.Agents.Notifications.Contracts.Enums;
+using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
+using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -12,15 +15,18 @@ public class MilestoneService : IMilestoneService
 {
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<MilestoneService> _logger;
 
     public MilestoneService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
+        INotificationService notificationService,
         ILogger<MilestoneService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -98,6 +104,16 @@ public class MilestoneService : IMilestoneService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created milestone {MilestoneId}", milestoneId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.MilestoneCreated,
+            Title = "Milestone Created",
+            Message = $"Milestone '{request.Name}' has been created",
+            EntityId = milestoneId,
+            ParentId = projectId
+        });
 
         return await GetByIdAsync(milestoneId, cancellationToken);
     }
@@ -197,11 +213,22 @@ public class MilestoneService : IMilestoneService
 
         _logger.LogInformation("Updated milestone {MilestoneId}", milestoneId);
 
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.MilestoneUpdated,
+            Title = "Milestone Updated",
+            Message = $"Milestone '{request.Name}' has been updated",
+            EntityId = milestoneId,
+            ParentId = milestone.ProjectId
+        });
+
         return await GetByIdAsync(milestoneId, cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var milestone = await _dbContext.Milestones
             .FirstOrDefaultAsync(m => m.Id == milestoneId, cancellationToken);
 
@@ -210,10 +237,22 @@ public class MilestoneService : IMilestoneService
             return false;
         }
 
+        var milestoneName = milestone.Name;
+        var projectId = milestone.ProjectId;
         _dbContext.Milestones.Remove(milestone);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted milestone {MilestoneId}", milestoneId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.MilestoneDeleted,
+            Title = "Milestone Deleted",
+            Message = $"Milestone '{milestoneName}' has been deleted",
+            EntityId = milestoneId,
+            ParentId = projectId
+        });
 
         return true;
     }

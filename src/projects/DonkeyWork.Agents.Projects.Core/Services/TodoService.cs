@@ -1,4 +1,7 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using DonkeyWork.Agents.Notifications.Contracts.Enums;
+using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
+using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Models;
@@ -12,15 +15,18 @@ public class TodoService : ITodoService
 {
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<TodoService> _logger;
 
     public TodoService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
+        INotificationService notificationService,
         ILogger<TodoService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
+        _notificationService = notificationService;
         _logger = logger;
     }
 
@@ -71,6 +77,16 @@ public class TodoService : ITodoService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created todo {TodoId}", todoId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.TaskCreated,
+            Title = "Task Created",
+            Message = $"Task '{request.Title}' has been created",
+            EntityId = todoId,
+            ParentId = request.MilestoneId ?? request.ProjectId
+        });
 
         return (await GetByIdAsync(todoId, cancellationToken))!;
     }
@@ -196,11 +212,22 @@ public class TodoService : ITodoService
 
         _logger.LogInformation("Updated todo {TodoId}", todoId);
 
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.TaskUpdated,
+            Title = "Task Updated",
+            Message = $"Task '{request.Title}' has been updated",
+            EntityId = todoId,
+            ParentId = request.MilestoneId ?? request.ProjectId
+        });
+
         return await GetByIdAsync(todoId, cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid todoId, CancellationToken cancellationToken = default)
     {
+        var userId = _identityContext.UserId;
         var todo = await _dbContext.Todos
             .FirstOrDefaultAsync(t => t.Id == todoId, cancellationToken);
 
@@ -209,10 +236,22 @@ public class TodoService : ITodoService
             return false;
         }
 
+        var todoTitle = todo.Title;
+        var parentId = todo.MilestoneId ?? todo.ProjectId;
         _dbContext.Todos.Remove(todo);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted todo {TodoId}", todoId);
+
+        // Send notification (fire-and-forget)
+        _ = _notificationService.SendAsync(new WorkspaceNotification
+        {
+            Type = NotificationType.TaskDeleted,
+            Title = "Task Deleted",
+            Message = $"Task '{todoTitle}' has been deleted",
+            EntityId = todoId,
+            ParentId = parentId
+        });
 
         return true;
     }
