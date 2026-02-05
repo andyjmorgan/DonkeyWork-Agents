@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -25,7 +26,9 @@ public class NotificationHub : Hub<INotificationClient>
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.User?.FindFirst("sub")?.Value;
+        // JWT claims are mapped by default: "sub" becomes ClaimTypes.NameIdentifier
+        var userId = Context.User?.FindFirst("sub")?.Value
+            ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var groupName = $"user-{userId}";
 
         _logger.LogInformation(
