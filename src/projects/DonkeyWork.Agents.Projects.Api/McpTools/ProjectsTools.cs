@@ -92,7 +92,7 @@ public class ProjectsTools
     public async Task<ProjectDetailsV1?> UpdateProject(
         [Description("The unique identifier of the project to update")] Guid id,
         [Description("New name for the project (omit to keep current)")] string? name = null,
-        [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current)")] string? content = null,
+        [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
         [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled (omit to keep current)")] ProjectStatus? status = null,
         CancellationToken ct = default)
     {

@@ -102,7 +102,7 @@ public class MilestonesTools
     public async Task<MilestoneDetailsV1?> UpdateMilestone(
         [Description("The unique identifier of the milestone to update")] Guid id,
         [Description("New name for the milestone (omit to keep current)")] string? name = null,
-        [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current)")] string? content = null,
+        [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
         [Description("New success criteria (omit to keep current)")] string? successCriteria = null,
         [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled (omit to keep current)")] MilestoneStatus? status = null,
         [Description("New due date (omit to keep current)")] DateTimeOffset? dueDate = null,
