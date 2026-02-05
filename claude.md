@@ -51,6 +51,7 @@ Before starting work, assess the full backlog:
 - **Reference the plan** - Always refer back to the plan note during implementation
 - **Document blockers** - If blocked, add notes explaining the issue and update status to `OnHold` if needed
 - **Complete the loop** - After finishing an item, return to "Determining What to Work On" to select the next item
+- **Save research to notes** - Any research performed (codebase exploration, technical decisions, API analysis, etc.) should be saved as notes attached to the relevant project/milestone using `mcp__donkeywork__notes_create`. This preserves knowledge across sessions and prevents re-doing the same research later.
 
 ### Parallel Execution with Agents
 

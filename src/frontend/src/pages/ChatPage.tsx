@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatInterface } from '@/components/execution/ChatInterface'
@@ -7,10 +8,31 @@ import { ConversationSidebar } from '@/components/chat/ConversationSidebar'
 import { conversations, type ChatEnabledOrchestration, type ConversationSummary } from '@/lib/api'
 
 export function ChatPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState<ChatEnabledOrchestration | null>(null)
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  // Load conversation from URL query parameter
+  useEffect(() => {
+    const conversationId = searchParams.get('conversation')
+    if (conversationId && conversationId !== activeConversationId) {
+      // Load the conversation to get orchestration info
+      conversations.get(conversationId).then((conversation) => {
+        setActiveConversationId(conversationId)
+        setSelectedAgent({
+          id: conversation.orchestrationId,
+          name: conversation.orchestrationName,
+        })
+        // Clear the query param after loading
+        setSearchParams({}, { replace: true })
+      }).catch((err) => {
+        console.error('Failed to load conversation from URL:', err)
+        setSearchParams({}, { replace: true })
+      })
+    }
+  }, [searchParams, activeConversationId, setSearchParams])
 
   const handleAgentSelect = useCallback(async (agent: ChatEnabledOrchestration) => {
     setSelectedAgent(agent)

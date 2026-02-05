@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Loader2, Edit, Trash2, FolderOpen, Target, CheckSquare } from 'lucide-react'
+import { Plus, Loader2, Edit, Trash2, FolderOpen, Target, CheckSquare, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -50,6 +50,7 @@ const statusLabels: Record<ProjectStatus, string> = {
 export function ProjectsPage() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [projectsList, setProjectsList] = useState<ProjectSummary[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -72,6 +73,18 @@ export function ProjectsPage() {
       console.error('Failed to load projects:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true)
+      const data = await projects.list()
+      setProjectsList(data)
+    } catch (error) {
+      console.error('Failed to refresh projects:', error)
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -129,10 +142,20 @@ export function ProjectsPage() {
             Manage your projects, milestones, and track progress
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">New Project</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">New Project</span>
+          </Button>
+        </div>
       </div>
 
       {projectsList.length === 0 ? (

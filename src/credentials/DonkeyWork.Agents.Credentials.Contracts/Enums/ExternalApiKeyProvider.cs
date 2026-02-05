@@ -9,14 +9,4 @@ public enum ExternalApiKeyProvider
     OpenAI,
     Anthropic,
     Google,
-
-    // Payment Providers
-    Stripe,
-
-    // Email/Communication Providers
-    SendGrid,
-    Twilio,
-
-    // Other
-    Custom
 }
