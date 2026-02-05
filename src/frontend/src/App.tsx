@@ -20,6 +20,8 @@ export default function App() {
       <TooltipProvider>
         <TokenRefreshManager>
           <Toaster />
+          {/* Real-time notifications - only when authenticated */}
+          {isAuthenticated && <NotificationListener />}
           <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -29,9 +31,6 @@ export default function App() {
           {/* Protected routes */}
           {isAuthenticated ? (
             <>
-              {/* Real-time notifications */}
-              <NotificationListener />
-
               {/* Editor page - full screen, no layout wrapper */}
               <Route path="/orchestrations/:id/edit" element={<OrchestrationEditorPage />} />
 
