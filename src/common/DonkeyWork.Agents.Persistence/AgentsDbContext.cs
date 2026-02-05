@@ -63,6 +63,13 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     // MCP module (system-level logging, no user scoping)
     public DbSet<McpToolInvocationLogEntity> McpToolInvocationLogs => Set<McpToolInvocationLogEntity>();
 
+    // MCP server configurations module
+    public DbSet<McpServerConfigurationEntity> McpServerConfigurations => Set<McpServerConfigurationEntity>();
+    public DbSet<McpStdioConfigurationEntity> McpStdioConfigurations => Set<McpStdioConfigurationEntity>();
+    public DbSet<McpHttpConfigurationEntity> McpHttpConfigurations => Set<McpHttpConfigurationEntity>();
+    public DbSet<McpHttpOAuthConfigurationEntity> McpHttpOAuthConfigurations => Set<McpHttpOAuthConfigurationEntity>();
+    public DbSet<McpHttpHeaderConfigurationEntity> McpHttpHeaderConfigurations => Set<McpHttpHeaderConfigurationEntity>();
+
     // Data Protection keys (system-level, no user scoping)
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

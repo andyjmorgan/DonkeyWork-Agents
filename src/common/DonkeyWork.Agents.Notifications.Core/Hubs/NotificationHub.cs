@@ -9,7 +9,7 @@ namespace DonkeyWork.Agents.Notifications.Core.Hubs;
 /// SignalR hub for real-time workspace notifications.
 /// Clients are automatically added to a user-specific group on connection.
 /// </summary>
-[Authorize]
+[Authorize(AuthenticationSchemes = "Bearer")]
 public class NotificationHub : Hub<INotificationClient>
 {
     private readonly ILogger<NotificationHub> _logger;

@@ -5,12 +5,11 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.7.0-preview.1" />
+        <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Mcp.Contracts\DonkeyWork.Agents.Mcp.Contracts.csproj" />
-        <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
-        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+        <ProjectReference Include="..\DonkeyWork.Agents.Mcp.Core\DonkeyWork.Agents.Mcp.Core.csproj" />
     </ItemGroup>
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />

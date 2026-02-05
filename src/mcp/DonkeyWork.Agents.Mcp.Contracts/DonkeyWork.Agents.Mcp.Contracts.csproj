@@ -7,4 +7,7 @@
     <ItemGroup>
         <PackageReference Include="ModelContextProtocol" Version="0.7.0-preview.1" />
     </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj" />
+    </ItemGroup>
 </Project>

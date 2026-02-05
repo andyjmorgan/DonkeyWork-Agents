@@ -3,6 +3,7 @@ using DonkeyWork.Agents.Conversations.Api;
 using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
+using DonkeyWork.Agents.Mcp.Api;
 using DonkeyWork.Agents.Mcp.Core;
 using DonkeyWork.Agents.Notifications.Core;
 using DonkeyWork.Agents.Notifications.Core.Hubs;
@@ -74,6 +75,9 @@ builder.Services.AddIdentityApi(builder.Configuration);
 
 // Add Projects module
 builder.Services.AddProjectsApi();
+
+// Add MCP module
+builder.Services.AddMcpApi();
 
 // Add Conversations module
 builder.Services.AddConversationsApi(builder.Configuration);
