@@ -88,6 +88,64 @@ public class FilesController : ControllerBase
     }
 
     /// <summary>
+    /// Get a presigned URL for direct file access.
+    /// </summary>
+    /// <param name="id">The file ID.</param>
+    /// <param name="expiryMinutes">Optional URL expiry in minutes (default: 60).</param>
+    /// <response code="200">Returns the presigned URL.</response>
+    /// <response code="404">File not found.</response>
+    [HttpGet("{id:guid}/url")]
+    [ProducesResponseType<GetPublicUrlResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPublicUrl(Guid id, [FromQuery] int? expiryMinutes = null)
+    {
+        var expiry = expiryMinutes.HasValue ? TimeSpan.FromMinutes(expiryMinutes.Value) : (TimeSpan?)null;
+        var result = await _storageService.GetPublicUrlAsync(id, expiry);
+
+        if (result == null)
+            return NotFound();
+
+        var response = new GetPublicUrlResponseV1
+        {
+            Url = result.Url,
+            ExpiresAt = result.ExpiresAt
+        };
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Get a presigned URL for an image preview with optional resizing.
+    /// </summary>
+    /// <param name="id">The file ID.</param>
+    /// <param name="width">Optional width for resizing.</param>
+    /// <param name="height">Optional height for resizing.</param>
+    /// <param name="expiryMinutes">Optional URL expiry in minutes (default: 60).</param>
+    /// <response code="200">Returns the preview URL.</response>
+    /// <response code="404">File not found.</response>
+    [HttpGet("{id:guid}/preview")]
+    [ProducesResponseType<GetPreviewUrlResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPreviewUrl(Guid id, [FromQuery] int? width = null, [FromQuery] int? height = null, [FromQuery] int? expiryMinutes = null)
+    {
+        var expiry = expiryMinutes.HasValue ? TimeSpan.FromMinutes(expiryMinutes.Value) : (TimeSpan?)null;
+        var result = await _storageService.GetPreviewUrlAsync(id, width, height, expiry);
+
+        if (result == null)
+            return NotFound();
+
+        var response = new GetPreviewUrlResponseV1
+        {
+            Url = result.Url,
+            ExpiresAt = result.ExpiresAt,
+            Width = width,
+            Height = height
+        };
+
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Download a file.
     /// </summary>
     /// <param name="id">The file ID.</param>

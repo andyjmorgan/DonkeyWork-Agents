@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, ChatPage, ConversationsPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, ChatPage, ConversationsPage, FilesPage } from '@/pages'
 import { useAuthStore } from '@/store/auth'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -48,6 +48,7 @@ export default function App() {
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/notes" element={<NotesPage />} />
                 <Route path="/notes/:noteId" element={<NoteEditorPage />} />
+                <Route path="/files" element={<FilesPage />} />
                 <Route path="/tasks/:taskId" element={<TaskEditorPage />} />
                 <Route path="/api-keys" element={<ApiKeysPage />} />
                 <Route path="/credentials" element={<CredentialsPage />} />

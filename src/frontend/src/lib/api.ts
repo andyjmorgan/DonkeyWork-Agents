@@ -1031,6 +1031,117 @@ export const getImageDownloadUrl = (fileId: string): string => {
   return `${BASE_URL}/api/v1/files/${fileId}/download`
 }
 
+// Storage File Types
+export type FileStatus = 'Active' | 'MarkedForDeletion' | 'Deleted'
+
+export interface StoredFileItem {
+  id: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  status: FileStatus
+  createdAt: string
+}
+
+export interface StoredFileDetails {
+  id: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+  checksumSha256?: string
+  status: FileStatus
+  createdAt: string
+  markedForDeletionAt?: string
+  metadata?: Record<string, string>
+}
+
+export interface GetPublicUrlResponse {
+  url: string
+  expiresAt: string
+}
+
+export interface GetPreviewUrlResponse {
+  url: string
+  expiresAt: string
+  width?: number
+  height?: number
+}
+
+// Files API
+export const files = {
+  // List files (paginated)
+  list: (offset = 0, limit = 20) =>
+    api.get<PaginatedResponse<StoredFileItem>>(`/api/v1/files?offset=${offset}&limit=${limit}`),
+
+  // Get file metadata
+  get: (id: string) =>
+    api.get<StoredFileDetails>(`/api/v1/files/${id}`),
+
+  // Upload file (multipart/form-data)
+  upload: async (file: File): Promise<StoredFileDetails> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await baseFetchWithAuth(
+      `${BASE_URL}/api/v1/files`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }))
+      throw new Error(error.error || 'Upload failed')
+    }
+
+    return response.json()
+  },
+
+  // Delete file (soft delete)
+  delete: (id: string) =>
+    api.delete(`/api/v1/files/${id}`),
+
+  // Get presigned public URL
+  getPublicUrl: (id: string, expiryMinutes?: number) => {
+    const params = expiryMinutes ? `?expiryMinutes=${expiryMinutes}` : ''
+    return api.get<GetPublicUrlResponse>(`/api/v1/files/${id}/url${params}`)
+  },
+
+  // Get preview URL (with optional resizing)
+  getPreviewUrl: (id: string, options?: { width?: number; height?: number; expiryMinutes?: number }) => {
+    const params = new URLSearchParams()
+    if (options?.width) params.append('width', options.width.toString())
+    if (options?.height) params.append('height', options.height.toString())
+    if (options?.expiryMinutes) params.append('expiryMinutes', options.expiryMinutes.toString())
+    const query = params.toString()
+    return api.get<GetPreviewUrlResponse>(`/api/v1/files/${id}/preview${query ? `?${query}` : ''}`)
+  },
+
+  // Download file (returns raw response for streaming)
+  download: async (id: string): Promise<{ blob: Blob; fileName: string; contentType: string }> => {
+    const response = await baseFetchWithAuth(`${BASE_URL}/api/v1/files/${id}/download`)
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+
+    const contentDisposition = response.headers.get('content-disposition')
+    const contentType = response.headers.get('content-type') || 'application/octet-stream'
+
+    // Extract filename from content-disposition header
+    let fileName = 'download'
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (match) {
+        fileName = match[1].replace(/['"]/g, '')
+      }
+    }
+
+    const blob = await response.blob()
+    return { blob, fileName, contentType }
+  },
+}
+
 /**
  * Fetch an image with auth headers and return a blob URL.
  * This is needed because img src doesn't include Authorization headers.

@@ -31,6 +31,58 @@ public sealed class StorageService : IStorageService
         _options = options.Value;
     }
 
+    public async Task<PresignedUrlResult?> GetPublicUrlAsync(Guid id, TimeSpan? expiry = null, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.StoredFiles
+            .FirstOrDefaultAsync(f => f.Id == id && f.Status == FileStatus.Active, cancellationToken);
+
+        if (entity == null)
+            return null;
+
+        var urlExpiry = expiry ?? _options.DefaultPresignedUrlExpiry;
+        var presignedUrl = _s3Client.GetPreSignedUrl(entity.BucketName, entity.ObjectKey, urlExpiry);
+
+        // If a public service URL is configured, replace the internal URL
+        if (!string.IsNullOrEmpty(_options.PublicServiceUrl))
+        {
+            var internalUri = new Uri(_options.ServiceUrl);
+            var publicUri = new Uri(_options.PublicServiceUrl);
+            presignedUrl = presignedUrl.Replace(
+                $"{internalUri.Scheme}://{internalUri.Authority}",
+                $"{publicUri.Scheme}://{publicUri.Authority}");
+        }
+
+        return new PresignedUrlResult
+        {
+            Url = presignedUrl,
+            ExpiresAt = DateTimeOffset.UtcNow.Add(urlExpiry)
+        };
+    }
+
+    public async Task<PresignedUrlResult?> GetPreviewUrlAsync(Guid id, int? width = null, int? height = null, TimeSpan? expiry = null, CancellationToken cancellationToken = default)
+    {
+        var result = await GetPublicUrlAsync(id, expiry, cancellationToken);
+        if (result == null)
+            return null;
+
+        // SeaweedFS supports image resizing via query parameters
+        if (width.HasValue || height.HasValue)
+        {
+            var separator = result.Url.Contains('?') ? "&" : "?";
+            var resizeParams = new List<string>();
+
+            if (width.HasValue)
+                resizeParams.Add($"width={width.Value}");
+            if (height.HasValue)
+                resizeParams.Add($"height={height.Value}");
+
+            resizeParams.Add("mode=fit");
+            result.Url = $"{result.Url}{separator}{string.Join("&", resizeParams)}";
+        }
+
+        return result;
+    }
+
     public async Task<StoredFile> UploadAsync(UploadFileRequest request, CancellationToken cancellationToken = default)
     {
         // Ensure bucket exists

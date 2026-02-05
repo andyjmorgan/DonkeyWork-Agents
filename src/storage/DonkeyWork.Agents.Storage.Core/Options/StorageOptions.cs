@@ -23,4 +23,15 @@ public class StorageOptions
     public TimeSpan FileDeletionGracePeriod { get; set; } = TimeSpan.FromDays(30);
 
     public bool UsePathStyleAddressing { get; set; } = true;
+
+    /// <summary>
+    /// Public-facing URL for generating presigned URLs.
+    /// If not set, ServiceUrl will be used.
+    /// </summary>
+    public string? PublicServiceUrl { get; set; }
+
+    /// <summary>
+    /// Default expiry for presigned URLs.
+    /// </summary>
+    public TimeSpan DefaultPresignedUrlExpiry { get; set; } = TimeSpan.FromHours(1);
 }

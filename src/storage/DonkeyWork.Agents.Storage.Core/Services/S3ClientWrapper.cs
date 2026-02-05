@@ -85,6 +85,19 @@ public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
         await _s3Client.DeleteObjectAsync(request, cancellationToken);
     }
 
+    public string GetPreSignedUrl(string bucketName, string objectKey, TimeSpan expiry)
+    {
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = bucketName,
+            Key = objectKey,
+            Expires = DateTime.UtcNow.Add(expiry),
+            Verb = HttpVerb.GET
+        };
+
+        return _s3Client.GetPreSignedURL(request);
+    }
+
     public void Dispose()
     {
         _s3Client.Dispose();

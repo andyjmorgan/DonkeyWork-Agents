@@ -268,4 +268,278 @@ public class StorageServiceTests
         Assert.Equal("test.txt", result.FileName);
         Assert.Equal("text/plain", result.ContentType);
     }
+
+    #region GetPublicUrlAsync Tests
+
+    [Fact]
+    public async Task GetPublicUrlAsync_ExistingActiveFile_ReturnsPresignedUrl()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var entity = new StoredFileEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            FileName = "test.txt",
+            ContentType = "text/plain",
+            SizeBytes = 100,
+            BucketName = "test-bucket",
+            ObjectKey = "test-key",
+            Status = FileStatus.Active
+        };
+        dbContext.StoredFiles.Add(entity);
+        await dbContext.SaveChangesAsync();
+
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "test-key", It.IsAny<TimeSpan>()))
+            .Returns("http://localhost:8333/test-bucket/test-key?signature=abc");
+
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPublicUrlAsync(entity.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("test-bucket", result.Url);
+        Assert.True(result.ExpiresAt > DateTimeOffset.UtcNow);
+    }
+
+    [Fact]
+    public async Task GetPublicUrlAsync_NonExistingFile_ReturnsNull()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPublicUrlAsync(Guid.NewGuid());
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetPublicUrlAsync_DeletedFile_ReturnsNull()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var entity = new StoredFileEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            FileName = "test.txt",
+            ContentType = "text/plain",
+            SizeBytes = 100,
+            BucketName = "test-bucket",
+            ObjectKey = "test-key",
+            Status = FileStatus.MarkedForDeletion
+        };
+        dbContext.StoredFiles.Add(entity);
+        await dbContext.SaveChangesAsync();
+
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPublicUrlAsync(entity.Id);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetPublicUrlAsync_WithPublicServiceUrl_ReplacesInternalUrl()
+    {
+        // Arrange
+        var optionsWithPublicUrl = Options.Create(new StorageOptions
+        {
+            ServiceUrl = "http://localhost:8333",
+            PublicServiceUrl = "https://files.example.com",
+            AccessKey = "admin",
+            SecretKey = "admin",
+            DefaultBucket = "test-bucket"
+        });
+
+        var dbContext = CreateDbContext();
+        var entity = new StoredFileEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            FileName = "test.txt",
+            ContentType = "text/plain",
+            SizeBytes = 100,
+            BucketName = "test-bucket",
+            ObjectKey = "test-key",
+            Status = FileStatus.Active
+        };
+        dbContext.StoredFiles.Add(entity);
+        await dbContext.SaveChangesAsync();
+
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "test-key", It.IsAny<TimeSpan>()))
+            .Returns("http://localhost:8333/test-bucket/test-key?signature=abc");
+
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, optionsWithPublicUrl);
+
+        // Act
+        var result = await service.GetPublicUrlAsync(entity.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.StartsWith("https://files.example.com", result.Url);
+        Assert.DoesNotContain("localhost:8333", result.Url);
+    }
+
+    [Fact]
+    public async Task GetPublicUrlAsync_WithCustomExpiry_UsesProvidedExpiry()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var entity = new StoredFileEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            FileName = "test.txt",
+            ContentType = "text/plain",
+            SizeBytes = 100,
+            BucketName = "test-bucket",
+            ObjectKey = "test-key",
+            Status = FileStatus.Active
+        };
+        dbContext.StoredFiles.Add(entity);
+        await dbContext.SaveChangesAsync();
+
+        var customExpiry = TimeSpan.FromMinutes(30);
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "test-key", customExpiry))
+            .Returns("http://localhost:8333/test-bucket/test-key?signature=abc");
+
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPublicUrlAsync(entity.Id, customExpiry);
+
+        // Assert
+        Assert.NotNull(result);
+        _s3ClientMock.Verify(x => x.GetPreSignedUrl("test-bucket", "test-key", customExpiry), Times.Once);
+    }
+
+    #endregion
+
+    #region GetPreviewUrlAsync Tests
+
+    [Fact]
+    public async Task GetPreviewUrlAsync_ExistingFile_ReturnsUrlWithResizeParams()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var entity = new StoredFileEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            FileName = "image.png",
+            ContentType = "image/png",
+            SizeBytes = 1000,
+            BucketName = "test-bucket",
+            ObjectKey = "image-key",
+            Status = FileStatus.Active
+        };
+        dbContext.StoredFiles.Add(entity);
+        await dbContext.SaveChangesAsync();
+
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "image-key", It.IsAny<TimeSpan>()))
+            .Returns("http://localhost:8333/test-bucket/image-key?signature=abc");
+
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPreviewUrlAsync(entity.Id, width: 200, height: 150);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("width=200", result.Url);
+        Assert.Contains("height=150", result.Url);
+        Assert.Contains("mode=fit", result.Url);
+    }
+
+    [Fact]
+    public async Task GetPreviewUrlAsync_WithOnlyWidth_ReturnsUrlWithWidthParam()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var entity = new StoredFileEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            FileName = "image.png",
+            ContentType = "image/png",
+            SizeBytes = 1000,
+            BucketName = "test-bucket",
+            ObjectKey = "image-key",
+            Status = FileStatus.Active
+        };
+        dbContext.StoredFiles.Add(entity);
+        await dbContext.SaveChangesAsync();
+
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "image-key", It.IsAny<TimeSpan>()))
+            .Returns("http://localhost:8333/test-bucket/image-key?signature=abc");
+
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPreviewUrlAsync(entity.Id, width: 300);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("width=300", result.Url);
+        Assert.DoesNotContain("height=", result.Url);
+        Assert.Contains("mode=fit", result.Url);
+    }
+
+    [Fact]
+    public async Task GetPreviewUrlAsync_WithNoResizeParams_ReturnsBaseUrl()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var entity = new StoredFileEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            FileName = "image.png",
+            ContentType = "image/png",
+            SizeBytes = 1000,
+            BucketName = "test-bucket",
+            ObjectKey = "image-key",
+            Status = FileStatus.Active
+        };
+        dbContext.StoredFiles.Add(entity);
+        await dbContext.SaveChangesAsync();
+
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "image-key", It.IsAny<TimeSpan>()))
+            .Returns("http://localhost:8333/test-bucket/image-key?signature=abc");
+
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPreviewUrlAsync(entity.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.DoesNotContain("width=", result.Url);
+        Assert.DoesNotContain("height=", result.Url);
+        Assert.DoesNotContain("mode=fit", result.Url);
+    }
+
+    [Fact]
+    public async Task GetPreviewUrlAsync_NonExistingFile_ReturnsNull()
+    {
+        // Arrange
+        var dbContext = CreateDbContext();
+        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+
+        // Act
+        var result = await service.GetPreviewUrlAsync(Guid.NewGuid(), width: 200);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
 }
