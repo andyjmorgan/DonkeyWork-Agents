@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Trash2, Loader2, Calendar, CheckSquare, Circle, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Trash2, Loader2, Calendar, CheckSquare, Circle, Clock, CheckCircle2, AlertCircle, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
@@ -43,6 +43,10 @@ interface ContentCardProps {
   priority?: TodoPriority
   /** Task due date */
   dueDate?: string
+  /** Associated milestone info */
+  milestone?: { id: string; name: string }
+  /** Handler for milestone click */
+  onMilestoneClick?: (milestoneId: string) => void
   /** Handler for toggling task completion */
   onToggleComplete?: () => void
   /** Whether the card content should be strikethrough (completed state) */
@@ -65,6 +69,8 @@ export function ContentCard({
   status,
   priority,
   dueDate,
+  milestone,
+  onMilestoneClick,
   onToggleComplete,
   isCompleted,
 }: ContentCardProps) {
@@ -142,7 +148,7 @@ export function ContentCard({
 
       {/* Footer */}
       <div className="mt-auto pt-3 flex items-center gap-2 flex-wrap border-t border-border/50 -mx-4 px-4 -mb-4 pb-3 bg-muted/30 rounded-b-lg">
-        {/* Task metadata (priority, status, due date) */}
+        {/* Task metadata (priority, status, due date, milestone) */}
         {isTask && (
           <div className="flex items-center gap-2 flex-wrap">
             {priority && (
@@ -161,6 +167,19 @@ export function ContentCard({
               >
                 {status}
               </Badge>
+            )}
+            {milestone && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onMilestoneClick?.(milestone.id)
+                }}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                title={`Milestone: ${milestone.name}`}
+              >
+                <Target className="h-3 w-3" />
+                <span className="truncate max-w-[100px]">{milestone.name}</span>
+              </button>
             )}
             {dueDate && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">

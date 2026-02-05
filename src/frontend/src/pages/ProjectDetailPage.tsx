@@ -726,21 +726,28 @@ export function ProjectDetailPage() {
                     </span>
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {project.todos.filter(t => t.status !== 'Completed').map((todo) => (
-                      <ContentCard
-                        key={todo.id}
-                        title={todo.title}
-                        content={todo.description}
-                        onClick={() => navigate(`/tasks/${todo.id}`)}
-                        onDelete={() => handleDeleteTodo(todo.id)}
-                        date={todo.updatedAt || todo.createdAt}
-                        status={todo.status}
-                        priority={todo.priority}
-                        dueDate={todo.dueDate}
-                        onToggleComplete={() => handleToggleTodoStatus(todo)}
-                        isCompleted={false}
-                      />
-                    ))}
+                    {project.todos.filter(t => t.status !== 'Completed').map((todo) => {
+                      const milestone = todo.milestoneId
+                        ? projectMilestones.find(m => m.id === todo.milestoneId)
+                        : undefined
+                      return (
+                        <ContentCard
+                          key={todo.id}
+                          title={todo.title}
+                          content={todo.description}
+                          onClick={() => navigate(`/tasks/${todo.id}`)}
+                          onDelete={() => handleDeleteTodo(todo.id)}
+                          date={todo.updatedAt || todo.createdAt}
+                          status={todo.status}
+                          priority={todo.priority}
+                          dueDate={todo.dueDate}
+                          milestone={milestone ? { id: milestone.id, name: milestone.name } : undefined}
+                          onMilestoneClick={(milestoneId) => navigate(`/workspace/${id}/milestones/${milestoneId}`)}
+                          onToggleComplete={() => handleToggleTodoStatus(todo)}
+                          isCompleted={false}
+                        />
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -755,21 +762,28 @@ export function ProjectDetailPage() {
                     </span>
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {project.todos.filter(t => t.status === 'Completed').map((todo) => (
-                      <ContentCard
-                        key={todo.id}
-                        title={todo.title}
-                        content={todo.description}
-                        onClick={() => navigate(`/tasks/${todo.id}`)}
-                        onDelete={() => handleDeleteTodo(todo.id)}
-                        date={todo.updatedAt || todo.createdAt}
-                        status={todo.status}
-                        priority={todo.priority}
-                        dueDate={todo.dueDate}
-                        onToggleComplete={() => handleToggleTodoStatus(todo)}
-                        isCompleted={true}
-                      />
-                    ))}
+                    {project.todos.filter(t => t.status === 'Completed').map((todo) => {
+                      const milestone = todo.milestoneId
+                        ? projectMilestones.find(m => m.id === todo.milestoneId)
+                        : undefined
+                      return (
+                        <ContentCard
+                          key={todo.id}
+                          title={todo.title}
+                          content={todo.description}
+                          onClick={() => navigate(`/tasks/${todo.id}`)}
+                          onDelete={() => handleDeleteTodo(todo.id)}
+                          date={todo.updatedAt || todo.createdAt}
+                          status={todo.status}
+                          priority={todo.priority}
+                          dueDate={todo.dueDate}
+                          milestone={milestone ? { id: milestone.id, name: milestone.name } : undefined}
+                          onMilestoneClick={(milestoneId) => navigate(`/workspace/${id}/milestones/${milestoneId}`)}
+                          onToggleComplete={() => handleToggleTodoStatus(todo)}
+                          isCompleted={true}
+                        />
+                      )
+                    })}
                   </div>
                 </div>
               )}

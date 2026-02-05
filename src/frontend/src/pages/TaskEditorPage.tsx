@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, CheckSquare, Calendar } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, CheckSquare, Calendar, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { todos, projects, type Todo, type ProjectDetails, type TodoPriority, type TodoStatus } from '@/lib/api'
+import { todos, projects, milestones, type Todo, type ProjectDetails, type MilestoneDetails, type TodoPriority, type TodoStatus } from '@/lib/api'
 
 export function TaskEditorPage() {
   const { taskId } = useParams<{ taskId: string }>()
@@ -23,6 +23,7 @@ export function TaskEditorPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [task, setTask] = useState<Todo | null>(null)
   const [project, setProject] = useState<ProjectDetails | null>(null)
+  const [milestone, setMilestone] = useState<MilestoneDetails | null>(null)
 
   // Form fields
   const [title, setTitle] = useState('')
@@ -54,6 +55,12 @@ export function TaskEditorPage() {
       if (taskData.projectId) {
         const projectData = await projects.get(taskData.projectId)
         setProject(projectData)
+
+        // Load milestone if task belongs to one
+        if (taskData.milestoneId) {
+          const milestoneData = await milestones.get(taskData.projectId, taskData.milestoneId)
+          setMilestone(milestoneData)
+        }
       }
     } catch (error) {
       console.error('Failed to load task:', error)
@@ -158,12 +165,24 @@ export function TaskEditorPage() {
                   className="flex items-center gap-1.5 hover:text-foreground transition-colors min-w-0"
                 >
                   <FolderKanban className="h-4 w-4 shrink-0" />
-                  <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{project.name}</span>
+                  <span className="truncate max-w-[60px] sm:max-w-[100px] md:max-w-[150px]">{project.name}</span>
                 </button>
                 <ChevronRight className="h-4 w-4 shrink-0" />
+                {milestone && (
+                  <>
+                    <button
+                      onClick={() => navigate(`/workspace/${project.id}/milestones/${milestone.id}`)}
+                      className="flex items-center gap-1.5 hover:text-foreground transition-colors min-w-0"
+                    >
+                      <Target className="h-4 w-4 shrink-0 text-purple-500" />
+                      <span className="truncate max-w-[60px] sm:max-w-[100px] md:max-w-[150px]">{milestone.name}</span>
+                    </button>
+                    <ChevronRight className="h-4 w-4 shrink-0" />
+                  </>
+                )}
                 <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
                   <CheckSquare className="h-4 w-4 shrink-0 text-emerald-500" />
-                  <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">{isNewTask ? 'New Task' : task?.title}</span>
+                  <span className="truncate max-w-[60px] sm:max-w-[100px] md:max-w-[150px]">{isNewTask ? 'New Task' : task?.title}</span>
                 </span>
               </>
             ) : (
