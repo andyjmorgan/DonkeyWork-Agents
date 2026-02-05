@@ -41,10 +41,10 @@ public class NotificationService : INotificationService
     {
         var groupName = $"user-{userId}";
 
-        _logger.LogDebug(
-            "Sending {NotificationType} notification to user {UserId} for entity {EntityId}",
+        _logger.LogInformation(
+            "Sending {NotificationType} notification to group {GroupName} for entity {EntityId}",
             notification.Type,
-            userId,
+            groupName,
             notification.EntityId);
 
         try

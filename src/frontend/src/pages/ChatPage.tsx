@@ -47,7 +47,7 @@ export function ChatPage() {
   }, [])
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden -m-4 md:-m-6">
       {/* Chat header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <AgentSelector

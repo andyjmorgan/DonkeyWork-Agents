@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Notifications.Contracts.Enums;
 using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Notifications.Contracts.Models;
@@ -18,10 +19,17 @@ namespace DonkeyWork.Agents.Api.Controllers;
 public class TestController : ControllerBase
 {
     private readonly INotificationService _notificationService;
+    private readonly IIdentityContext _identityContext;
+    private readonly ILogger<TestController> _logger;
 
-    public TestController(INotificationService notificationService)
+    public TestController(
+        INotificationService notificationService,
+        IIdentityContext identityContext,
+        ILogger<TestController> logger)
     {
         _notificationService = notificationService;
+        _identityContext = identityContext;
+        _logger = logger;
     }
 
     /// <summary>
@@ -32,6 +40,9 @@ public class TestController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> SendTestNotification(CancellationToken cancellationToken)
     {
+        var userId = _identityContext.UserId;
+        _logger.LogInformation("Sending test notification to user {UserId}", userId);
+
         var notification = new WorkspaceNotification
         {
             Type = NotificationType.ProjectCreated,
@@ -43,6 +54,6 @@ public class TestController : ControllerBase
 
         await _notificationService.SendAsync(notification, cancellationToken);
 
-        return Ok(new { message = "Test notification sent" });
+        return Ok(new { message = "Test notification sent", userId = userId.ToString() });
     }
 }

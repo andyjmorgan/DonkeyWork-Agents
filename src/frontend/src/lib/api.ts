@@ -220,7 +220,8 @@ export interface Orchestration {
 }
 
 // Interface configuration types (polymorphic, 1:1 - each orchestration has exactly one interface)
-export type InterfaceType = 'DirectInterfaceConfig' | 'ChatInterfaceConfig' | 'McpInterfaceConfig' | 'A2aInterfaceConfig' | 'WebhookInterfaceConfig'
+// Note: Only Direct and Chat interfaces are currently supported in the playground
+export type InterfaceType = 'DirectInterfaceConfig' | 'ChatInterfaceConfig'
 
 export interface InterfaceConfigBase {
   type: InterfaceType
@@ -236,24 +237,7 @@ export interface ChatInterfaceConfig extends InterfaceConfigBase {
   type: 'ChatInterfaceConfig'
 }
 
-export interface McpInterfaceConfig extends InterfaceConfigBase {
-  type: 'McpInterfaceConfig'
-  toolName?: string
-}
-
-export interface A2aInterfaceConfig extends InterfaceConfigBase {
-  type: 'A2aInterfaceConfig'
-  agentId?: string
-  capabilities?: string[]
-}
-
-export interface WebhookInterfaceConfig extends InterfaceConfigBase {
-  type: 'WebhookInterfaceConfig'
-  allowedMethods?: string[]
-  requireSignature?: boolean
-}
-
-export type InterfaceConfig = DirectInterfaceConfig | ChatInterfaceConfig | McpInterfaceConfig | A2aInterfaceConfig | WebhookInterfaceConfig
+export type InterfaceConfig = DirectInterfaceConfig | ChatInterfaceConfig
 
 // ReactFlow types - using 'any' to maintain compatibility with ReactFlow library types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

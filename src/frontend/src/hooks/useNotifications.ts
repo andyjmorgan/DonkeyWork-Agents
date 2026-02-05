@@ -82,7 +82,7 @@ export function useNotifications(
 
     // Don't connect without auth
     if (!isAuthenticated || !accessToken) {
-      console.debug('[Notifications] Skipping connection - not authenticated')
+      console.log('[Notifications] Skipping connection - not authenticated')
       return
     }
 
@@ -95,7 +95,7 @@ export function useNotifications(
       }
     }
 
-    console.debug('[Notifications] Building connection to', HUB_URL)
+    console.log('[Notifications] Building connection to', HUB_URL)
 
     const connection = new HubConnectionBuilder()
       .withUrl(HUB_URL, {
@@ -110,7 +110,7 @@ export function useNotifications(
           // Exponential backoff: 0s, 2s, 4s, 8s, 16s, then cap at 30s
           if (retryContext.previousRetryCount === 0) return 0
           const delay = Math.min(30000, Math.pow(2, retryContext.previousRetryCount) * 1000)
-          console.debug(`[Notifications] Reconnecting in ${delay}ms (attempt ${retryContext.previousRetryCount + 1})`)
+          console.log(`[Notifications] Reconnecting in ${delay}ms (attempt ${retryContext.previousRetryCount + 1})`)
           return delay
         },
       })
@@ -119,22 +119,22 @@ export function useNotifications(
 
     // Set up event handlers
     connection.on('ReceiveNotification', (notification: WorkspaceNotification) => {
-      console.debug('[Notifications] Received:', notification.type, notification.entityId)
+      console.log('[Notifications] Received:', notification.type, notification.entityId)
       onNotificationRef.current?.(notification)
     })
 
     connection.onclose((error) => {
-      console.debug('[Notifications] Connection closed', error?.message)
+      console.log('[Notifications] Connection closed', error?.message)
       setConnectionState('disconnected')
     })
 
     connection.onreconnecting((error) => {
-      console.debug('[Notifications] Reconnecting...', error?.message)
+      console.log('[Notifications] Reconnecting...', error?.message)
       setConnectionState('reconnecting')
     })
 
     connection.onreconnected((connectionId) => {
-      console.debug('[Notifications] Reconnected with ID:', connectionId)
+      console.log('[Notifications] Reconnected with ID:', connectionId)
       setConnectionState('connected')
     })
 
@@ -143,7 +143,7 @@ export function useNotifications(
 
     try {
       await connection.start()
-      console.debug('[Notifications] Connected successfully')
+      console.log('[Notifications] Connected successfully')
       updateConnectionState(connection)
     } catch (error) {
       console.error('[Notifications] Failed to connect:', error)
@@ -155,7 +155,7 @@ export function useNotifications(
     if (connectionRef.current) {
       try {
         await connectionRef.current.stop()
-        console.debug('[Notifications] Disconnected')
+        console.log('[Notifications] Disconnected')
       } catch (error) {
         console.error('[Notifications] Error disconnecting:', error)
       }

@@ -1,12 +1,11 @@
 import { useState, useRef, useCallback, useMemo, useLayoutEffect, useEffect } from 'react'
-import { Play, Loader2, RefreshCw, Send, Trash2 } from 'lucide-react'
+import { Play, Loader2, RefreshCw, Send, Trash2, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useExecutionStream } from '@/hooks/useExecutionStream'
-import { StreamingOutput } from './StreamingOutput'
 import { parseMarkdown } from '@/lib/markdown'
-import type { JSONSchema, InterfaceConfig } from '@/lib/api'
+import { executions, type JSONSchema, type InterfaceConfig } from '@/lib/api'
 
 interface TestPanelProps {
   orchestrationId: string
@@ -260,7 +259,7 @@ function ChatTestPanel({ orchestrationId }: { orchestrationId: string }) {
   )
 }
 
-// Direct JSON test interface
+// Direct JSON test interface (non-streaming)
 function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: string; inputSchema?: JSONSchema }) {
   // Initialize input from schema if available
   const initialInput = useMemo(() => {
@@ -271,12 +270,10 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
   }, [inputSchema])
 
   const [input, setInput] = useState(initialInput)
-  const [output, setOutput] = useState<unknown>(null)
-
-  const { events, isStreaming, error, startStream } = useExecutionStream({
-    onComplete: (result) => setOutput(result),
-    onError: (err) => console.error('Execution error:', err)
-  })
+  const [output, setOutput] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isExecuting, setIsExecuting] = useState(false)
+  const [executionStatus, setExecutionStatus] = useState<'Completed' | 'Failed' | null>(null)
 
   // Update input when schema changes (for subsequent schema loads)
   const prevInputSchemaRef = useRef(inputSchema)
@@ -295,13 +292,48 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
     }
   }
 
-  const handleTest = () => {
+  const handleTest = async () => {
+    let parsedInput: unknown
     try {
-      const parsedInput = JSON.parse(input)
-      setOutput(null)
-      startStream(orchestrationId, parsedInput, true)
+      parsedInput = JSON.parse(input)
     } catch {
-      alert('Invalid JSON input')
+      setError('Invalid JSON input')
+      return
+    }
+
+    setIsExecuting(true)
+    setOutput(null)
+    setError(null)
+    setExecutionStatus(null)
+
+    try {
+      const result = await executions.test(orchestrationId, parsedInput)
+
+      if (result.status === 'Completed') {
+        setExecutionStatus('Completed')
+        // Output is a JSON string from backend, format it nicely
+        if (result.output) {
+          try {
+            const parsed = typeof result.output === 'string' ? JSON.parse(result.output) : result.output
+            setOutput(JSON.stringify(parsed, null, 2))
+          } catch {
+            setOutput(String(result.output))
+          }
+        } else {
+          setOutput('(no output)')
+        }
+      } else if (result.status === 'Failed') {
+        setExecutionStatus('Failed')
+        setError(result.error || 'Execution failed')
+      } else {
+        setExecutionStatus('Failed')
+        setError(`Unexpected status: ${result.status}`)
+      }
+    } catch (err) {
+      setExecutionStatus('Failed')
+      setError(err instanceof Error ? err.message : 'Execution failed')
+    } finally {
+      setIsExecuting(false)
     }
   }
 
@@ -315,7 +347,7 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
               variant="ghost"
               size="sm"
               onClick={handleResetTemplate}
-              disabled={isStreaming}
+              disabled={isExecuting}
               className="h-7 text-xs"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
@@ -332,10 +364,10 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
         />
         <Button
           onClick={handleTest}
-          disabled={isStreaming}
+          disabled={isExecuting}
           className="w-full"
         >
-          {isStreaming ? (
+          {isExecuting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Running...
@@ -351,12 +383,50 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
 
       <div className="flex-1 overflow-hidden">
         <Label className="mb-2 block">Output</Label>
-        <StreamingOutput
-          events={events}
-          output={output}
-          error={error}
-          isStreaming={isStreaming}
-        />
+        <div className="h-full rounded-lg border border-border bg-muted/30 overflow-auto">
+          {/* Loading state */}
+          {isExecuting && (
+            <div className="flex items-center justify-center h-full p-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Executing orchestration...</span>
+              </div>
+            </div>
+          )}
+
+          {/* Success output */}
+          {!isExecuting && executionStatus === 'Completed' && output && (
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3 text-sm text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Execution completed</span>
+              </div>
+              <pre className="text-sm font-mono whitespace-pre-wrap break-all">{output}</pre>
+            </div>
+          )}
+
+          {/* Error output */}
+          {!isExecuting && error && (
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3 text-sm text-destructive">
+                <XCircle className="h-4 w-4" />
+                <span>Execution failed</span>
+              </div>
+              <div className="p-3 rounded-md bg-destructive/10 text-sm text-destructive">
+                {error}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!isExecuting && !output && !error && (
+            <div className="flex items-center justify-center h-full p-4">
+              <p className="text-sm text-muted-foreground">
+                Click "Test Orchestration" to see results
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

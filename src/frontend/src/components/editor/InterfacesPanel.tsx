@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { MessageSquare, Zap, Network, Globe, Webhook } from 'lucide-react'
+import { MessageSquare, Zap } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -26,34 +26,16 @@ const interfaceOptions: Array<{
   icon: React.ReactNode
 }> = [
   {
-    type: 'ChatInterfaceConfig',
-    label: 'Chat',
-    description: 'Conversational chat interface with message history',
-    icon: <MessageSquare className="h-4 w-4" />,
-  },
-  {
     type: 'DirectInterfaceConfig',
     label: 'Direct',
-    description: 'Single request/response execution via API',
+    description: 'Simple JSON input/output API calls',
     icon: <Zap className="h-4 w-4" />,
   },
   {
-    type: 'McpInterfaceConfig',
-    label: 'MCP',
-    description: 'Model Context Protocol server interface',
-    icon: <Network className="h-4 w-4" />,
-  },
-  {
-    type: 'A2aInterfaceConfig',
-    label: 'Agent-to-Agent',
-    description: 'Communication with other AI agents',
-    icon: <Globe className="h-4 w-4" />,
-  },
-  {
-    type: 'WebhookInterfaceConfig',
-    label: 'Webhook',
-    description: 'Receive HTTP webhook requests',
-    icon: <Webhook className="h-4 w-4" />,
+    type: 'ChatInterfaceConfig',
+    label: 'Chat',
+    description: 'Conversational interface with message history',
+    icon: <MessageSquare className="h-4 w-4" />,
   },
 ]
 
