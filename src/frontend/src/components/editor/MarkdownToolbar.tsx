@@ -45,6 +45,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useCallback, useState } from 'react'
 import type { ViewMode } from './MarkdownEditor'
 import { TableDialog } from './TableDialog'
+import { MermaidDiagram } from './MermaidDiagram'
 
 interface MarkdownToolbarProps {
   editor: Editor
@@ -404,14 +405,15 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange, onInsertMa
         </DialogContent>
       </Dialog>
 
-      {/* Mermaid Dialog */}
+      {/* Mermaid Dialog with side-by-side editor and preview */}
       <Dialog open={showMermaidDialog} onOpenChange={setShowMermaidDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Insert Mermaid Diagram</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 min-h-[400px]">
+            {/* Left panel - Code editor */}
+            <div className="flex flex-col space-y-2">
               <Label htmlFor="mermaidCode">Mermaid Code</Label>
               <Textarea
                 id="mermaidCode"
@@ -421,15 +423,22 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange, onInsertMa
     A[Start] --> B{Decision}
     B -->|Yes| C[Action 1]
     B -->|No| D[Action 2]`}
-                className="min-h-[200px] font-mono text-sm"
+                className="flex-1 min-h-[300px] font-mono text-sm resize-none"
               />
+              <p className="text-xs text-muted-foreground">
+                Learn more at{' '}
+                <a href="https://mermaid.js.org/syntax/flowchart.html" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                  mermaid.js.org
+                </a>
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Learn more about Mermaid syntax at{' '}
-              <a href="https://mermaid.js.org/syntax/flowchart.html" target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                mermaid.js.org
-              </a>
-            </p>
+            {/* Right panel - Live preview */}
+            <div className="flex flex-col space-y-2">
+              <Label>Preview</Label>
+              <div className="flex-1 border border-border rounded-md overflow-auto bg-muted/30 min-h-[300px]">
+                <MermaidDiagram code={mermaidCode} className="h-full" />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMermaidDialog(false)}>
