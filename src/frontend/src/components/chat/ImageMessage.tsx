@@ -92,9 +92,11 @@ export function ImageMessage({ fileId, alt = 'Message image', className }: Image
             onError={handleError}
             onClick={openLightbox}
             className={cn(
-              "max-w-[300px] max-h-[400px] rounded-lg object-contain cursor-zoom-in transition-opacity",
+              "max-w-full max-h-[400px] rounded-lg object-contain cursor-zoom-in transition-opacity",
+              "w-auto",
               isLoading ? "opacity-0 absolute" : "opacity-100"
             )}
+            style={{ maxWidth: 'min(300px, 100%)' }}
           />
         )}
         {!isLoading && (

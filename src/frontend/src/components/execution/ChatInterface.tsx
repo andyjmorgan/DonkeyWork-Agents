@@ -251,7 +251,7 @@ export function ChatInterface({
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {message.role === 'user' ? (
-              <div className="max-w-[80%] rounded-2xl px-4 py-2 bg-user-chat text-user-chat-foreground">
+              <div className="max-w-[80%] rounded-2xl px-4 py-2 bg-user-chat text-user-chat-foreground overflow-hidden">
                 {/* Render images first */}
                 {message.contentParts.filter(p => p.type === 'image').map((part, idx) => (
                   part.type === 'image' && (
@@ -269,7 +269,7 @@ export function ChatInterface({
                 </p>
               </div>
             ) : (
-              <div className="max-w-[90%] group">
+              <div className="max-w-[90%] group overflow-hidden">
                 {/* Render images if any */}
                 {message.contentParts.filter(p => p.type === 'image').map((part, idx) => (
                   part.type === 'image' && (
