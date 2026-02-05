@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader2, AlertCircle, Copy, Check } from 'lucide-react'
+import { Send, Loader2, AlertCircle, Copy, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -245,40 +245,47 @@ export function ChatInterface({
           </div>
         )}
 
-        {messages.map((message) => (
+        {messages.map((message) => {
+          const imagesParts = message.contentParts.filter(p => p.type === 'image')
+          const hasImages = imagesParts.length > 0
+
+          return (
           <div
             key={message.id}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {message.role === 'user' ? (
-              <div className="max-w-[80%] rounded-2xl px-4 py-2 bg-user-chat text-user-chat-foreground overflow-hidden">
-                {/* Render images first */}
-                {message.contentParts.filter(p => p.type === 'image').map((part, idx) => (
-                  part.type === 'image' && (
-                    <div key={`img-${idx}`} className="mb-2">
-                      <ImageMessage fileId={part.fileId} alt="User image" />
-                    </div>
-                  )
-                ))}
-                {/* Then text content */}
+              <div className={`max-w-[80%] flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'} gap-1`}>
+                {/* Text bubble (only if there's text) */}
                 {message.content && (
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div className="rounded-2xl px-4 py-2 bg-user-chat text-user-chat-foreground">
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  </div>
                 )}
-                <p className="mt-1 text-xs text-user-chat-foreground/70">
+                {/* Image trail BELOW the bubble */}
+                {hasImages && (
+                  <div className={`flex gap-1 ${imagesParts.length === 1 ? '' : 'flex-wrap'}`}>
+                    {imagesParts.map((part, idx) => (
+                      part.type === 'image' && (
+                        <ImageMessage
+                          key={`img-${idx}`}
+                          fileId={part.fileId}
+                          alt="User image"
+                          thumbnail
+                          size={imagesParts.length === 1 ? 'single' : 'multi'}
+                        />
+                      )
+                    ))}
+                  </div>
+                )}
+                {/* Timestamp */}
+                <p className="text-xs text-user-chat-foreground/50">
                   {formatTime(message.timestamp)}
                 </p>
               </div>
             ) : (
-              <div className="max-w-[90%] group overflow-hidden">
-                {/* Render images if any */}
-                {message.contentParts.filter(p => p.type === 'image').map((part, idx) => (
-                  part.type === 'image' && (
-                    <div key={`img-${idx}`} className="mb-2">
-                      <ImageMessage fileId={part.fileId} alt="Assistant image" />
-                    </div>
-                  )
-                ))}
-                {/* Render text content */}
+              <div className="max-w-[90%] flex flex-col items-start gap-1 group">
+                {/* Text content */}
                 {message.content && (
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none text-foreground/80"
@@ -287,8 +294,25 @@ export function ChatInterface({
                     }}
                   />
                 )}
-                <div className="mt-1 flex items-center gap-2">
-                  <p className="text-xs text-muted-foreground">
+                {/* Image trail BELOW the text */}
+                {hasImages && (
+                  <div className={`flex gap-1 ${imagesParts.length === 1 ? '' : 'flex-wrap'}`}>
+                    {imagesParts.map((part, idx) => (
+                      part.type === 'image' && (
+                        <ImageMessage
+                          key={`img-${idx}`}
+                          fileId={part.fileId}
+                          alt="Assistant image"
+                          thumbnail
+                          size={imagesParts.length === 1 ? 'single' : 'multi'}
+                        />
+                      )
+                    ))}
+                  </div>
+                )}
+                {/* Timestamp and copy button */}
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground/50">
                     {formatTime(message.timestamp)}
                   </p>
                   <Tooltip>
@@ -313,7 +337,7 @@ export function ChatInterface({
               </div>
             )}
           </div>
-        ))}
+        )})}
 
         {/* Streaming message */}
         {isStreaming && streamingMessage && (
@@ -351,24 +375,27 @@ export function ChatInterface({
 
       {/* Input area */}
       <div className="border-t border-border bg-background p-4">
-        {/* Pending images preview */}
+        {/* Pending images preview - centered, growing horizontally */}
         {pendingImages.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {pendingImages.map((img) => (
-              <div key={img.fileId} className="relative">
-                <ImageMessage fileId={img.fileId} className="max-w-[80px] max-h-[80px]" />
-                <button
-                  onClick={() => removePendingImage(img.fileId)}
-                  className="absolute -top-2 -right-2 p-1 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  aria-label="Remove image"
-                >
-                  <span className="sr-only">Remove</span>
-                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ))}
+          <div className="mb-3 flex justify-center">
+            <div className="flex gap-1.5">
+              {pendingImages.map((img) => (
+                <div key={img.fileId} className="relative group">
+                  <ImageMessage
+                    fileId={img.fileId}
+                    thumbnail
+                    size={pendingImages.length === 1 ? 'single' : 'multi'}
+                  />
+                  <button
+                    onClick={() => removePendingImage(img.fileId)}
+                    className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                    aria-label="Remove image"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

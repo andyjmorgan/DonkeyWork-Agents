@@ -7,9 +7,13 @@ interface ImageMessageProps {
   fileId: string
   alt?: string
   className?: string
+  /** Render as small thumbnail that expands on click */
+  thumbnail?: boolean
+  /** Size variant for thumbnails: 'single' (80x60) or 'multi' (64x52) */
+  size?: 'single' | 'multi'
 }
 
-export function ImageMessage({ fileId, alt = 'Message image', className }: ImageMessageProps) {
+export function ImageMessage({ fileId, alt = 'Message image', className, thumbnail = false, size = 'single' }: ImageMessageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
@@ -76,9 +80,75 @@ export function ImageMessage({ fileId, alt = 'Message image', className }: Image
     )
   }
 
-  // Check if className contains size constraints (for thumbnail mode)
+  // Thumbnail dimensions based on size prop
+  const thumbnailDimensions = size === 'single'
+    ? { width: 80, height: 60 }
+    : { width: 64, height: 52 }
+
+  // Check if className contains size constraints (for legacy usage)
   const hasSizeConstraint = className?.includes('max-w-') || className?.includes('max-h-')
 
+  // Thumbnail mode: tiny images that blow up on click
+  if (thumbnail) {
+    return (
+      <>
+        <div
+          onClick={openLightbox}
+          className={cn(
+            "rounded-[10px] overflow-hidden cursor-zoom-in transition-all duration-150",
+            "shadow-[0_1px_6px_rgba(0,0,0,0.22)] hover:shadow-[0_3px_14px_rgba(0,0,0,0.35)]",
+            "hover:scale-[1.08]",
+            className
+          )}
+          style={{ width: thumbnailDimensions.width, height: thumbnailDimensions.height }}
+        >
+          {isLoading && (
+            <div className="w-full h-full flex items-center justify-center bg-muted animate-pulse">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {blobUrl && (
+            <img
+              src={blobUrl}
+              alt={alt}
+              onLoad={handleLoad}
+              onError={handleError}
+              className={cn(
+                "w-full h-full object-cover",
+                isLoading ? "opacity-0" : "opacity-100"
+              )}
+            />
+          )}
+        </div>
+
+        {/* Lightbox with blow-up animation */}
+        {isLightboxOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm cursor-zoom-out animate-in fade-in duration-150"
+            onClick={closeLightbox}
+          >
+            <button
+              onClick={closeLightbox}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            {blobUrl && (
+              <img
+                src={blobUrl}
+                alt={alt}
+                className="max-w-[88vw] max-h-[88vh] object-contain rounded-[14px] shadow-[0_30px_100px_rgba(0,0,0,0.6)] animate-in zoom-in-75 duration-300"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+          </div>
+        )}
+      </>
+    )
+  }
+
+  // Default mode: larger images in message view
   return (
     <>
       <div className={cn("relative inline-block overflow-hidden", className)}>
