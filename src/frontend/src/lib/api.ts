@@ -1146,3 +1146,117 @@ export { fetchWithAuth }
 export const test = {
   sendNotification: () => api.post<{ message: string }>('/api/v1/test/notification', {}),
 }
+
+// MCP Server Configuration Types
+export type McpTransportType = 'Stdio' | 'Http'
+export type McpHttpTransportMode = 'AutoDetect' | 'Sse' | 'StreamableHttp'
+export type McpHttpAuthType = 'None' | 'OAuth' | 'Header'
+
+export interface McpStdioConfigurationV1 {
+  command: string
+  arguments?: string[]
+  environmentVariables?: Record<string, string>
+  preExecScripts?: string[]
+  workingDirectory?: string
+}
+
+export interface McpHttpHeaderConfigurationV1 {
+  headerName: string
+  headerValue: string
+}
+
+export interface McpHttpOAuthConfigurationV1 {
+  clientId: string
+  clientSecret?: string
+  redirectUri: string
+  scopes?: string[]
+  authorizationEndpoint: string
+  tokenEndpoint: string
+}
+
+export interface McpHttpConfigurationV1 {
+  endpoint: string
+  transportMode: McpHttpTransportMode
+  authType: McpHttpAuthType
+  oauthConfiguration?: McpHttpOAuthConfigurationV1
+  headerConfigurations?: McpHttpHeaderConfigurationV1[]
+}
+
+export interface McpServerSummary {
+  id: string
+  name: string
+  description?: string
+  transportType: McpTransportType
+  isEnabled: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface McpServerDetails {
+  id: string
+  name: string
+  description?: string
+  transportType: McpTransportType
+  isEnabled: boolean
+  stdioConfiguration?: McpStdioConfigurationV1
+  httpConfiguration?: McpHttpConfigurationV1
+  createdAt: string
+  updatedAt?: string
+}
+
+// Create request types
+export interface CreateMcpStdioConfigurationRequest {
+  command: string
+  arguments?: string[]
+  environmentVariables?: Record<string, string>
+  preExecScripts?: string[]
+  workingDirectory?: string
+}
+
+export interface CreateMcpHttpHeaderConfigurationRequest {
+  headerName: string
+  headerValue: string
+}
+
+export interface CreateMcpHttpOAuthConfigurationRequest {
+  clientId: string
+  clientSecret?: string
+  redirectUri: string
+  scopes?: string[]
+  authorizationEndpoint: string
+  tokenEndpoint: string
+}
+
+export interface CreateMcpHttpConfigurationRequest {
+  endpoint: string
+  transportMode: McpHttpTransportMode
+  authType: McpHttpAuthType
+  oauthConfiguration?: CreateMcpHttpOAuthConfigurationRequest
+  headerConfigurations?: CreateMcpHttpHeaderConfigurationRequest[]
+}
+
+export interface CreateMcpServerRequest {
+  name: string
+  description?: string
+  transportType: McpTransportType
+  isEnabled?: boolean
+  stdioConfiguration?: CreateMcpStdioConfigurationRequest
+  httpConfiguration?: CreateMcpHttpConfigurationRequest
+}
+
+export interface UpdateMcpServerRequest {
+  name: string
+  description?: string
+  isEnabled?: boolean
+  stdioConfiguration?: CreateMcpStdioConfigurationRequest
+  httpConfiguration?: CreateMcpHttpConfigurationRequest
+}
+
+// MCP Servers API
+export const mcpServers = {
+  list: () => api.get<McpServerSummary[]>('/api/v1/mcp-servers'),
+  get: (id: string) => api.get<McpServerDetails>(`/api/v1/mcp-servers/${id}`),
+  create: (data: CreateMcpServerRequest) => api.post<McpServerDetails>('/api/v1/mcp-servers', data),
+  update: (id: string, data: UpdateMcpServerRequest) => api.put<McpServerDetails>(`/api/v1/mcp-servers/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/mcp-servers/${id}`),
+}
