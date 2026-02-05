@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Core.Services;
@@ -22,8 +23,9 @@ public class ProjectServiceTests : IDisposable
     public ProjectServiceTests()
     {
         (_dbContext, _identityContext) = MockDbContext.CreateWithIdentityContext();
+        var notificationService = new Mock<INotificationService>();
         var logger = new Mock<ILogger<ProjectService>>();
-        _service = new ProjectService(_dbContext, _identityContext, logger.Object);
+        _service = new ProjectService(_dbContext, _identityContext, notificationService.Object, logger.Object);
     }
 
     public void Dispose()

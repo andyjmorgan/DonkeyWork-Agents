@@ -14,6 +14,7 @@ import {
   Pencil,
   LayoutDashboard,
   StickyNote,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,6 +70,9 @@ export function MilestoneDetailPage() {
   const [statusValue, setStatusValue] = useState<MilestoneStatus>('NotStarted')
   const [dueDateValue, setDueDateValue] = useState('')
 
+  // Refresh states
+  const [isRefreshingNotes, setIsRefreshingNotes] = useState(false)
+  const [isRefreshingTasks, setIsRefreshingTasks] = useState(false)
 
   useEffect(() => {
     if (projectId && milestoneId) {
@@ -95,6 +99,32 @@ export function MilestoneDetailPage() {
       console.error('Failed to load data:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleRefreshNotes = async () => {
+    if (!projectId || !milestoneId) return
+    try {
+      setIsRefreshingNotes(true)
+      const milestoneData = await milestones.get(projectId, milestoneId)
+      setMilestone(milestoneData)
+    } catch (error) {
+      console.error('Failed to refresh notes:', error)
+    } finally {
+      setIsRefreshingNotes(false)
+    }
+  }
+
+  const handleRefreshTasks = async () => {
+    if (!projectId || !milestoneId) return
+    try {
+      setIsRefreshingTasks(true)
+      const milestoneData = await milestones.get(projectId, milestoneId)
+      setMilestone(milestoneData)
+    } catch (error) {
+      console.error('Failed to refresh tasks:', error)
+    } finally {
+      setIsRefreshingTasks(false)
     }
   }
 
@@ -537,7 +567,15 @@ export function MilestoneDetailPage() {
             </div>
           ) : (
             <>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefreshNotes}
+                  disabled={isRefreshingNotes}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshingNotes ? 'animate-spin' : ''}`} />
+                </Button>
                 <Button variant="outline" size="sm" onClick={createAndEditNote}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Note
@@ -574,7 +612,15 @@ export function MilestoneDetailPage() {
             </div>
           ) : (
             <>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefreshTasks}
+                  disabled={isRefreshingTasks}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshingTasks ? 'animate-spin' : ''}`} />
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => createAndEditTask()}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Task

@@ -14,6 +14,7 @@ import {
   Save,
   LayoutDashboard,
   StickyNote,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -78,6 +79,11 @@ export function ProjectDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingMilestone, setEditingMilestone] = useState<MilestoneSummary | null>(null)
 
+  // Refresh states
+  const [isRefreshingMilestones, setIsRefreshingMilestones] = useState(false)
+  const [isRefreshingNotes, setIsRefreshingNotes] = useState(false)
+  const [isRefreshingTasks, setIsRefreshingTasks] = useState(false)
+
   // Form states
   const [milestoneForm, setMilestoneForm] = useState<CreateMilestoneRequest>({
     name: '',
@@ -106,6 +112,45 @@ export function ProjectDetailPage() {
       console.error('Failed to load project:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleRefreshMilestones = async () => {
+    if (!id) return
+    try {
+      setIsRefreshingMilestones(true)
+      const milestonesData = await milestones.list(id)
+      setProjectMilestones(milestonesData)
+    } catch (error) {
+      console.error('Failed to refresh milestones:', error)
+    } finally {
+      setIsRefreshingMilestones(false)
+    }
+  }
+
+  const handleRefreshNotes = async () => {
+    if (!id) return
+    try {
+      setIsRefreshingNotes(true)
+      const projectData = await projects.get(id)
+      setProject(projectData)
+    } catch (error) {
+      console.error('Failed to refresh notes:', error)
+    } finally {
+      setIsRefreshingNotes(false)
+    }
+  }
+
+  const handleRefreshTasks = async () => {
+    if (!id) return
+    try {
+      setIsRefreshingTasks(true)
+      const projectData = await projects.get(id)
+      setProject(projectData)
+    } catch (error) {
+      console.error('Failed to refresh tasks:', error)
+    } finally {
+      setIsRefreshingTasks(false)
     }
   }
 
@@ -588,7 +633,15 @@ export function ProjectDetailPage() {
             </div>
           ) : (
             <>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefreshMilestones}
+                  disabled={isRefreshingMilestones}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshingMilestones ? 'animate-spin' : ''}`} />
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => openDialog('milestone')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Milestone
@@ -672,7 +725,15 @@ export function ProjectDetailPage() {
             </div>
           ) : (
             <>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefreshNotes}
+                  disabled={isRefreshingNotes}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshingNotes ? 'animate-spin' : ''}`} />
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => createAndEditNote(null)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Note
@@ -709,7 +770,15 @@ export function ProjectDetailPage() {
             </div>
           ) : (
             <>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefreshTasks}
+                  disabled={isRefreshingTasks}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshingTasks ? 'animate-spin' : ''}`} />
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => createAndEditTask(null)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Task
