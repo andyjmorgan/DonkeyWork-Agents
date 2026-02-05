@@ -1157,3 +1157,8 @@ export const fetchImageAsBlob = async (fileId: string): Promise<string> => {
 
 // Export fetchWithAuth for hooks that need raw fetch access (e.g., SSE streaming)
 export { fetchWithAuth }
+
+// Test utilities
+export const test = {
+  sendNotification: () => api.post<{ message: string }>('/api/v1/test/notification', {}),
+}
