@@ -30,7 +30,7 @@ internal sealed class AnthropicAiClient : IAiClient
         IReadOnlyDictionary<string, object>? providerParameters,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var (systemPrompt, messageParams) = MapMessages(messages);
+        var (systemBlocks, messageParams) = MapMessages(messages);
 
         var maxTokens = 4096L;
         if (providerParameters?.TryGetValue("max_tokens", out var mt) == true)
@@ -53,7 +53,7 @@ internal sealed class AnthropicAiClient : IAiClient
             Model = _modelId,
             MaxTokens = maxTokens,
             Messages = messageParams,
-            System = !string.IsNullOrEmpty(systemPrompt) ? systemPrompt : null,
+            System = systemBlocks != null ? (MessageCreateParamsSystem)systemBlocks : null,
             Temperature = temperature,
             TopP = topP
         };
@@ -138,7 +138,7 @@ internal sealed class AnthropicAiClient : IAiClient
         IReadOnlyDictionary<string, object>? providerParameters,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var (systemPrompt, messageParams) = MapMessages(messages);
+        var (systemBlocks, messageParams) = MapMessages(messages);
 
         var maxTokens = 4096L;
         if (providerParameters?.TryGetValue("max_tokens", out var mt) == true)
@@ -161,7 +161,7 @@ internal sealed class AnthropicAiClient : IAiClient
             Model = _modelId,
             MaxTokens = maxTokens,
             Messages = messageParams,
-            System = !string.IsNullOrEmpty(systemPrompt) ? systemPrompt : null,
+            System = systemBlocks != null ? (MessageCreateParamsSystem)systemBlocks : null,
             Temperature = temperature,
             TopP = topP
         };
@@ -231,10 +231,10 @@ internal sealed class AnthropicAiClient : IAiClient
         };
     }
 
-    private static (string? systemPrompt, MessageParam[] messages) MapMessages(
+    private static (IReadOnlyList<TextBlockParam>? systemBlocks, MessageParam[] messages) MapMessages(
         IReadOnlyList<InternalMessage> messages)
     {
-        string? systemPrompt = null;
+        List<TextBlockParam>? systemBlocks = null;
         var result = new List<MessageParam>();
 
         foreach (var msg in messages)
@@ -244,7 +244,12 @@ internal sealed class AnthropicAiClient : IAiClient
             switch (msg.Role)
             {
                 case InternalMessageRole.System:
-                    systemPrompt = contentMsg.GetTextContent();
+                    var systemText = contentMsg.GetTextContent();
+                    if (!string.IsNullOrEmpty(systemText))
+                    {
+                        systemBlocks ??= [];
+                        systemBlocks.Add(new TextBlockParam { Text = systemText });
+                    }
                     break;
                 case InternalMessageRole.User:
                     // TODO: Add multimodal support with ContentBlock array
@@ -256,6 +261,6 @@ internal sealed class AnthropicAiClient : IAiClient
             }
         }
 
-        return (systemPrompt, result.ToArray());
+        return (systemBlocks, result.ToArray());
     }
 }
