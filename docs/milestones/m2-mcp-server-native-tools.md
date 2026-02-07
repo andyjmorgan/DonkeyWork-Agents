@@ -2,12 +2,12 @@
 
 ## Overview
 
-Implement the MCP server infrastructure and expose platform-provided native tools (todos, milestones, notes).
+Implement the MCP server infrastructure and expose platform-provided native tools (tasks, milestones, notes).
 
 ## Goals
 
 1. Implement MCP server using Microsoft MCP SDK
-2. Expose native tools for todos, milestones, notes
+2. Expose native tools for tasks, milestones, notes
 3. Implement API key and JWT authentication
 4. Host at `mcp.agents.donkeywork.dev` (separate subdomain due to k3s routing: `/` → frontend, `/api` → backend)
 
@@ -23,11 +23,10 @@ Implement the MCP server infrastructure and expose platform-provided native tool
 
 ### Native Tools
 
-> **Note:** Todos, Milestones, and Notes already exist in the Projects module.
+> **Note:** Tasks, Milestones, and Notes already exist in the Projects module.
 > Tool classes will live in `DonkeyWork.Agents.Projects.Api` and wrap existing services.
-> Todos are exposed as "tasks" in MCP tools.
 
-- [ ] Tasks tools (wraps `ITodoService`, exposed as "tasks")
+- [ ] Tasks tools (wraps `ITaskItemService`, exposed as "tasks")
   - [ ] `tasks_list` — List user's tasks
   - [ ] `tasks_get` — Get task by ID
   - [ ] `tasks_create` — Create new task
@@ -84,7 +83,7 @@ Implement the MCP server infrastructure and expose platform-provided native tool
 │  └── Schema Generation                              │
 ├─────────────────────────────────────────────────────┤
 │  Native Tools (from Projects module)                │
-│  ├── tasks_*      (wraps TodoService)               │
+│  ├── tasks_*      (wraps TaskItemService)            │
 │  ├── milestones_*                                   │
 │  └── notes_*                                        │
 └─────────────────────────────────────────────────────┘
@@ -111,7 +110,7 @@ Two separate projects:
 ```
 src/projects/DonkeyWork.Agents.Projects.Api/
 └── McpTools/
-    ├── TasksTools.cs        # wraps ITodoService, exposes as tasks_*
+    ├── TasksTools.cs        # wraps ITaskItemService, exposes as tasks_*
     ├── MilestonesTools.cs
     └── NotesTools.cs
 ```
@@ -230,9 +229,9 @@ public class McpToolAttribute : Attribute
 [McpToolProvider(Provider = McpToolProvider.DonkeyWork)]
 public class TasksTools
 {
-    private readonly ITodoService _todoService;
+    private readonly ITaskItemService _taskItemService;
 
-    public TasksTools(ITodoService todoService) => _todoService = todoService;
+    public TasksTools(ITaskItemService taskItemService) => _taskItemService = taskItemService;
 
     [McpTool(
         Name = "tasks_list",
@@ -241,9 +240,9 @@ public class TasksTools
         Icon = "list",
         ReadOnlyHint = true,
         OpenWorldHint = false)]
-    public async Task<IEnumerable<TodoV1>> ListTasks(CancellationToken ct)
+    public async Task<IEnumerable<TaskItemV1>> ListTasks(CancellationToken ct)
     {
-        return await _todoService.ListAsync(ct);
+        return await _taskItemService.ListAsync(ct);
     }
 
     [McpTool(
@@ -254,13 +253,13 @@ public class TasksTools
         ReadOnlyHint = false,
         DestructiveHint = false,
         IdempotentHint = false)]
-    public async Task<TodoV1> CreateTask(
+    public async Task<TaskItemV1> CreateTask(
         [Description("Task title")] string title,
         [Description("Task description")] string? description,
         CancellationToken ct)
     {
-        var request = new CreateTodoRequestV1 { Title = title, Description = description };
-        return await _todoService.CreateAsync(request, ct);
+        var request = new CreateTaskItemRequestV1 { Title = title, Description = description };
+        return await _taskItemService.CreateAsync(request, ct);
     }
 
     [McpTool(
@@ -275,7 +274,7 @@ public class TasksTools
         [Description("Task ID")] Guid id,
         CancellationToken ct)
     {
-        await _todoService.DeleteAsync(id, ct);
+        await _taskItemService.DeleteAsync(id, ct);
     }
 }
 

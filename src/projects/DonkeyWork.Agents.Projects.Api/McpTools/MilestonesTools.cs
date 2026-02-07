@@ -136,7 +136,7 @@ public class MilestonesTools
     [McpTool(
         Name = "milestones_delete",
         Title = "Delete Milestone",
-        Description = "Permanently delete a milestone and all its related data (todos, notes)",
+        Description = "Permanently delete a milestone and all its related data (tasks, notes)",
         Icon = "trash",
         DestructiveHint = true,
         IdempotentHint = true)]

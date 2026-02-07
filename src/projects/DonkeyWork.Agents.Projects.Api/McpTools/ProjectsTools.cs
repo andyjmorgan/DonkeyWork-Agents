@@ -120,7 +120,7 @@ public class ProjectsTools
     [McpTool(
         Name = "projects_delete",
         Title = "Delete Project",
-        Description = "Permanently delete a project and all its related data (milestones, todos, notes)",
+        Description = "Permanently delete a project and all its related data (milestones, tasks, notes)",
         Icon = "trash",
         DestructiveHint = true,
         IdempotentHint = true)]

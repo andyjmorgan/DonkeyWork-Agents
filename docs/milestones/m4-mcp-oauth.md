@@ -78,8 +78,6 @@ orchestrations:read     - List and view orchestrations
 orchestrations:execute  - Execute orchestrations
 tasks:read              - List and view tasks
 tasks:write             - Create, update, delete tasks
-todos:read              - List and view todos
-todos:write             - Create, update, delete todos
 milestones:read         - List and view milestones
 milestones:write        - Create, update, delete milestones
 ```
