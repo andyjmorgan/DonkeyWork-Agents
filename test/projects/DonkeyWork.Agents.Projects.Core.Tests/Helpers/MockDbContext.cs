@@ -63,11 +63,11 @@ public static class MockDbContext
     }
 
     /// <summary>
-    /// Seeds the database with a todo.
+    /// Seeds the database with a task item.
     /// </summary>
-    public static void SeedTodo(AgentsDbContext context, TodoEntity todo)
+    public static void SeedTaskItem(AgentsDbContext context, TaskItemEntity taskItem)
     {
-        context.Todos.Add(todo);
+        context.TaskItems.Add(taskItem);
         context.SaveChanges();
     }
 

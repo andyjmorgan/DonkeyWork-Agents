@@ -113,7 +113,7 @@ public class ProjectService : IProjectService
             .Include(p => p.FileReferences)
             .Include(p => p.Milestones)
                 .ThenInclude(m => m.Tags)
-            .Include(p => p.Todos)
+            .Include(p => p.TaskItems)
                 .ThenInclude(t => t.Tags)
             .Include(p => p.Notes)
                 .ThenInclude(n => n.Tags)
@@ -128,7 +128,7 @@ public class ProjectService : IProjectService
             .AsNoTracking()
             .Include(p => p.Tags)
             .Include(p => p.Milestones)
-            .Include(p => p.Todos)
+            .Include(p => p.TaskItems)
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync(cancellationToken);
 
@@ -259,10 +259,10 @@ public class ProjectService : IProjectService
 
     private static ProjectSummaryV1 MapToSummary(ProjectEntity project)
     {
-        var allTodos = project.Todos.ToList();
+        var allTaskItems = project.TaskItems.ToList();
         foreach (var milestone in project.Milestones)
         {
-            allTodos.AddRange(milestone.Todos);
+            allTaskItems.AddRange(milestone.TaskItems);
         }
 
         return new ProjectSummaryV1
@@ -272,8 +272,8 @@ public class ProjectService : IProjectService
             Status = (Contracts.Models.ProjectStatus)(int)project.Status,
             Tags = project.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             MilestoneCount = project.Milestones.Count,
-            TodoCount = allTodos.Count,
-            CompletedTodoCount = allTodos.Count(t => t.Status == Persistence.Entities.Projects.TodoStatus.Completed),
+            TaskItemCount = allTaskItems.Count,
+            CompletedTaskItemCount = allTaskItems.Count(t => t.Status == Persistence.Entities.Projects.TaskItemStatus.Completed),
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt
         };
@@ -305,36 +305,36 @@ public class ProjectService : IProjectService
                 DueDate = m.DueDate,
                 SortOrder = m.SortOrder,
                 Tags = m.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
-                TodoCount = m.Todos.Count,
-                CompletedTodoCount = m.Todos.Count(t => t.Status == Persistence.Entities.Projects.TodoStatus.Completed),
+                TaskItemCount = m.TaskItems.Count,
+                CompletedTaskItemCount = m.TaskItems.Count(t => t.Status == Persistence.Entities.Projects.TaskItemStatus.Completed),
                 CreatedAt = m.CreatedAt,
                 UpdatedAt = m.UpdatedAt
             }).ToList(),
-            Todos = project.Todos.OrderBy(t => t.SortOrder).Select(MapTodo).ToList(),
+            Tasks = project.TaskItems.OrderBy(t => t.SortOrder).Select(MapTaskItem).ToList(),
             Notes = project.Notes.OrderBy(n => n.SortOrder).Select(MapNote).ToList(),
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt
         };
     }
 
-    private static TodoV1 MapTodo(TodoEntity todo)
+    private static TaskItemV1 MapTaskItem(TaskItemEntity taskItem)
     {
-        return new TodoV1
+        return new TaskItemV1
         {
-            Id = todo.Id,
-            Title = todo.Title,
-            Description = todo.Description,
-            Status = (Contracts.Models.TodoStatus)(int)todo.Status,
-            Priority = (Contracts.Models.TodoPriority)(int)todo.Priority,
-            CompletionNotes = todo.CompletionNotes,
-            DueDate = todo.DueDate,
-            CompletedAt = todo.CompletedAt,
-            SortOrder = todo.SortOrder,
-            ProjectId = todo.ProjectId,
-            MilestoneId = todo.MilestoneId,
-            Tags = todo.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
-            CreatedAt = todo.CreatedAt,
-            UpdatedAt = todo.UpdatedAt
+            Id = taskItem.Id,
+            Title = taskItem.Title,
+            Description = taskItem.Description,
+            Status = (Contracts.Models.TaskItemStatus)(int)taskItem.Status,
+            Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
+            CompletionNotes = taskItem.CompletionNotes,
+            DueDate = taskItem.DueDate,
+            CompletedAt = taskItem.CompletedAt,
+            SortOrder = taskItem.SortOrder,
+            ProjectId = taskItem.ProjectId,
+            MilestoneId = taskItem.MilestoneId,
+            Tags = taskItem.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
+            CreatedAt = taskItem.CreatedAt,
+            UpdatedAt = taskItem.UpdatedAt
         };
     }
 

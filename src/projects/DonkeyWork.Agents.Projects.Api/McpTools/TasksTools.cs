@@ -7,20 +7,20 @@ using ModelContextProtocol.Server;
 namespace DonkeyWork.Agents.Projects.Api.McpTools;
 
 /// <summary>
-/// MCP tools for managing tasks (todos).
+/// MCP tools for managing tasks.
 /// </summary>
 [McpServerToolType]
 [McpToolProvider(Provider = McpToolProvider.DonkeyWork)]
 public class TasksTools
 {
-    private readonly ITodoService _todoService;
+    private readonly ITaskItemService _taskItemService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TasksTools"/> class.
     /// </summary>
-    public TasksTools(ITodoService todoService)
+    public TasksTools(ITaskItemService taskItemService)
     {
-        _todoService = todoService;
+        _taskItemService = taskItemService;
     }
 
     /// <summary>
@@ -31,12 +31,12 @@ public class TasksTools
     [McpTool(
         Name = "tasks_list",
         Title = "List Tasks",
-        Description = "List all tasks (todos) for the current user. Tasks can be standalone, or optionally associated with a project or milestone. Returns summary models - use tasks_get for full task details including description.",
+        Description = "List all tasks for the current user. Tasks can be standalone, or optionally associated with a project or milestone. Returns summary models - use tasks_get for full task details including description.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TodoSummaryV1>> ListTasks(CancellationToken ct)
+    public async Task<IReadOnlyList<TaskItemSummaryV1>> ListTasks(CancellationToken ct)
     {
-        return await _todoService.ListAsync(ct);
+        return await _taskItemService.ListAsync(ct);
     }
 
     /// <summary>
@@ -49,11 +49,11 @@ public class TasksTools
         Description = "Get a task by ID",
         Icon = "file",
         ReadOnlyHint = true)]
-    public async Task<TodoV1?> GetTask(
+    public async Task<TaskItemV1?> GetTask(
         [Description("The unique identifier of the task")] Guid id,
         CancellationToken ct)
     {
-        return await _todoService.GetByIdAsync(id, ct);
+        return await _taskItemService.GetByIdAsync(id, ct);
     }
 
     /// <summary>
@@ -63,30 +63,30 @@ public class TasksTools
     [McpTool(
         Name = "tasks_create",
         Title = "Create Task",
-        Description = "Create a new task (todo). Tasks can be standalone (no project or milestone), associated with a project only, or associated with a specific milestone within a project. Provide projectId for project-level tasks, or milestoneId for milestone-level tasks.",
+        Description = "Create a new task. Tasks can be standalone (no project or milestone), associated with a project only, or associated with a specific milestone within a project. Provide projectId for project-level tasks, or milestoneId for milestone-level tasks.",
         Icon = "plus")]
-    public async Task<TodoV1> CreateTask(
+    public async Task<TaskItemV1> CreateTask(
         [Description("The title of the task")] string title,
         [Description("Optional description of the task (supports markdown and mermaid diagrams)")] string? description,
-        [Description("Status: Pending (default), InProgress, Completed, or Cancelled")] TodoStatus? status,
-        [Description("Priority: Low, Medium (default), High, or Critical")] TodoPriority? priority,
+        [Description("Status: Pending (default), InProgress, Completed, or Cancelled")] TaskItemStatus? status,
+        [Description("Priority: Low, Medium (default), High, or Critical")] TaskItemPriority? priority,
         [Description("Optional due date for the task")] DateTimeOffset? dueDate,
         [Description("Optional project ID - set to associate this task with a project (task becomes project-level)")] Guid? projectId,
         [Description("Optional milestone ID - set to associate this task with a milestone (task becomes milestone-level)")] Guid? milestoneId,
         CancellationToken ct)
     {
-        var request = new CreateTodoRequestV1
+        var request = new CreateTaskItemRequestV1
         {
             Title = title,
             Description = description,
-            Status = status ?? TodoStatus.Pending,
-            Priority = priority ?? TodoPriority.Medium,
+            Status = status ?? TaskItemStatus.Pending,
+            Priority = priority ?? TaskItemPriority.Medium,
             DueDate = dueDate,
             ProjectId = projectId,
             MilestoneId = milestoneId
         };
 
-        return await _todoService.CreateAsync(request, ct);
+        return await _taskItemService.CreateAsync(request, ct);
     }
 
     /// <summary>
@@ -98,12 +98,12 @@ public class TasksTools
         Title = "Update Task",
         Description = "Update an existing task. Only provided fields are updated - omit fields to keep their current values. You can move tasks between standalone/project/milestone associations by setting projectId and milestoneId.",
         Icon = "edit")]
-    public async Task<TodoV1?> UpdateTask(
+    public async Task<TaskItemV1?> UpdateTask(
         [Description("The unique identifier of the task to update")] Guid id,
         [Description("New title for the task (omit to keep current)")] string? title = null,
         [Description("New description (supports markdown, omit to keep current)")] string? description = null,
-        [Description("Status: Pending, InProgress, Completed, or Cancelled (omit to keep current)")] TodoStatus? status = null,
-        [Description("Priority: Low, Medium, High, or Critical (omit to keep current)")] TodoPriority? priority = null,
+        [Description("Status: Pending, InProgress, Completed, or Cancelled (omit to keep current)")] TaskItemStatus? status = null,
+        [Description("Priority: Low, Medium, High, or Critical (omit to keep current)")] TaskItemPriority? priority = null,
         [Description("Completion notes (set when marking as Completed, omit to keep current)")] string? completionNotes = null,
         [Description("New due date (omit to keep current)")] DateTimeOffset? dueDate = null,
         [Description("Project ID to associate with (omit to keep current)")] Guid? projectId = null,
@@ -111,13 +111,13 @@ public class TasksTools
         CancellationToken ct = default)
     {
         // Fetch current task to merge with provided values
-        var current = await _todoService.GetByIdAsync(id, ct);
+        var current = await _taskItemService.GetByIdAsync(id, ct);
         if (current == null)
         {
             return null;
         }
 
-        var request = new UpdateTodoRequestV1
+        var request = new UpdateTaskItemRequestV1
         {
             Title = title ?? current.Title,
             Description = description ?? current.Description,
@@ -129,7 +129,7 @@ public class TasksTools
             MilestoneId = milestoneId ?? current.MilestoneId
         };
 
-        return await _todoService.UpdateAsync(id, request, ct);
+        return await _taskItemService.UpdateAsync(id, request, ct);
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public class TasksTools
         [Description("The unique identifier of the task to delete")] Guid id,
         CancellationToken ct)
     {
-        return await _todoService.DeleteAsync(id, ct);
+        return await _taskItemService.DeleteAsync(id, ct);
     }
 
     /// <summary>
@@ -161,11 +161,11 @@ public class TasksTools
         Description = "List all tasks directly associated with a specific project (project-level tasks only). Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those. Returns summary models - use tasks_get for full task details.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TodoSummaryV1>> ListTasksByProject(
+    public async Task<IReadOnlyList<TaskItemSummaryV1>> ListTasksByProject(
         [Description("The unique identifier of the project")] Guid projectId,
         CancellationToken ct)
     {
-        return await _todoService.GetByProjectIdAsync(projectId, ct);
+        return await _taskItemService.GetByProjectIdAsync(projectId, ct);
     }
 
     /// <summary>
@@ -179,10 +179,10 @@ public class TasksTools
         Description = "List all tasks associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use tasks_get for full task details.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TodoSummaryV1>> ListTasksByMilestone(
+    public async Task<IReadOnlyList<TaskItemSummaryV1>> ListTasksByMilestone(
         [Description("The unique identifier of the milestone")] Guid milestoneId,
         CancellationToken ct)
     {
-        return await _todoService.GetByMilestoneIdAsync(milestoneId, ct);
+        return await _taskItemService.GetByMilestoneIdAsync(milestoneId, ct);
     }
 }

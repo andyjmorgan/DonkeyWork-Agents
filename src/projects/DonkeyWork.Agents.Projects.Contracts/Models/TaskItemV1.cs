@@ -4,9 +4,9 @@ using System.Text.Json.Serialization;
 namespace DonkeyWork.Agents.Projects.Contracts.Models;
 
 /// <summary>
-/// Request to create a todo.
+/// Request to create a task item.
 /// </summary>
-public sealed class CreateTodoRequestV1
+public sealed class CreateTaskItemRequestV1
 {
     [JsonPropertyName("title")]
     [Required]
@@ -17,10 +17,10 @@ public sealed class CreateTodoRequestV1
     public string? Description { get; init; }
 
     [JsonPropertyName("status")]
-    public TodoStatus Status { get; init; } = TodoStatus.Pending;
+    public TaskItemStatus Status { get; init; } = TaskItemStatus.Pending;
 
     [JsonPropertyName("priority")]
-    public TodoPriority Priority { get; init; } = TodoPriority.Medium;
+    public TaskItemPriority Priority { get; init; } = TaskItemPriority.Medium;
 
     [JsonPropertyName("dueDate")]
     public DateTimeOffset? DueDate { get; init; }
@@ -39,9 +39,9 @@ public sealed class CreateTodoRequestV1
 }
 
 /// <summary>
-/// Request to update a todo.
+/// Request to update a task item.
 /// </summary>
-public sealed class UpdateTodoRequestV1
+public sealed class UpdateTaskItemRequestV1
 {
     [JsonPropertyName("title")]
     [Required]
@@ -52,10 +52,10 @@ public sealed class UpdateTodoRequestV1
     public string? Description { get; init; }
 
     [JsonPropertyName("status")]
-    public TodoStatus Status { get; init; }
+    public TaskItemStatus Status { get; init; }
 
     [JsonPropertyName("priority")]
-    public TodoPriority Priority { get; init; }
+    public TaskItemPriority Priority { get; init; }
 
     [JsonPropertyName("completionNotes")]
     public string? CompletionNotes { get; init; }
@@ -77,9 +77,9 @@ public sealed class UpdateTodoRequestV1
 }
 
 /// <summary>
-/// Todo response model.
+/// Task item response model.
 /// </summary>
-public sealed class TodoV1
+public sealed class TaskItemV1
 {
     [JsonPropertyName("id")]
     public Guid Id { get; init; }
@@ -91,10 +91,10 @@ public sealed class TodoV1
     public string? Description { get; init; }
 
     [JsonPropertyName("status")]
-    public TodoStatus Status { get; init; }
+    public TaskItemStatus Status { get; init; }
 
     [JsonPropertyName("priority")]
-    public TodoPriority Priority { get; init; }
+    public TaskItemPriority Priority { get; init; }
 
     [JsonPropertyName("completionNotes")]
     public string? CompletionNotes { get; init; }

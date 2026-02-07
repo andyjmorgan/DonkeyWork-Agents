@@ -3,16 +3,16 @@ import { Trash2, Loader2, Calendar, CheckSquare, Circle, Clock, CheckCircle2, Al
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
-import type { TodoStatus, TodoPriority } from '@/lib/api'
+import type { TaskStatus, TaskPriority } from '@/lib/api'
 
-const statusIcons: Record<TodoStatus, ReactNode> = {
+const statusIcons: Record<TaskStatus, ReactNode> = {
   Pending: <Circle className="h-4 w-4 text-gray-400" />,
   InProgress: <Clock className="h-4 w-4 text-blue-500" />,
   Completed: <CheckCircle2 className="h-4 w-4 text-green-500" />,
   Cancelled: <AlertCircle className="h-4 w-4 text-red-500" />,
 }
 
-const priorityColors: Record<TodoPriority, string> = {
+const priorityColors: Record<TaskPriority, string> = {
   Low: 'bg-gray-500',
   Medium: 'bg-blue-500',
   High: 'bg-orange-500',
@@ -38,9 +38,9 @@ interface ContentCardProps {
   tags?: Array<{ id: string; name: string }>
   // Task-specific props
   /** Task status - enables task mode when provided */
-  status?: TodoStatus
+  status?: TaskStatus
   /** Task priority */
-  priority?: TodoPriority
+  priority?: TaskPriority
   /** Task due date */
   dueDate?: string
   /** Associated milestone info */

@@ -1,7 +1,7 @@
 namespace DonkeyWork.Agents.Persistence.Entities.Projects;
 
 /// <summary>
-/// Represents a project with description, success criteria, milestones, todos, notes, tags and file references.
+/// Represents a project with description, success criteria, milestones, task items, notes, tags and file references.
 /// </summary>
 public class ProjectEntity : BaseEntity
 {
@@ -26,9 +26,9 @@ public class ProjectEntity : BaseEntity
     public ICollection<MilestoneEntity> Milestones { get; set; } = new List<MilestoneEntity>();
 
     /// <summary>
-    /// Navigation property to todos directly under this project.
+    /// Navigation property to task items directly under this project.
     /// </summary>
-    public ICollection<TodoEntity> Todos { get; set; } = new List<TodoEntity>();
+    public ICollection<TaskItemEntity> TaskItems { get; set; } = new List<TaskItemEntity>();
 
     /// <summary>
     /// Navigation property to notes directly under this project.

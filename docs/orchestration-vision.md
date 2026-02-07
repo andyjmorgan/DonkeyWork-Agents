@@ -100,8 +100,8 @@ Users can build bespoke orchestration workflows and expose them as MCP tools to 
 ├─────────────────────────────────────────────────────┤
 │  Native Tools            │  User Orchestrations     │
 │  ├── tasks/*             │  ├── {orch-a}            │
-│  ├── todos/*             │  ├── {orch-b}            │
-│  └── milestones/*        │  └── ...                 │
+│  ├── milestones/*        │  ├── {orch-b}            │
+│  └── notes/*             │  └── ...                 │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -392,8 +392,8 @@ public class ToolResultContentPart : ContentPart
 
 Chat can use **platform-provided tools only**:
 - Tasks
-- Todos
 - Milestones
+- Notes
 
 User orchestrations as chat tools are **post-MVP** but the polymorphic message format keeps this door open.
 

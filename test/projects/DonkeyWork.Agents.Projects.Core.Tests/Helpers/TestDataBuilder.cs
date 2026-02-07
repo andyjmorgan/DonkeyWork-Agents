@@ -4,12 +4,12 @@ using DonkeyWork.Agents.Projects.Contracts.Models;
 // Aliases to resolve ambiguous references between Contracts.Models and Persistence.Entities
 using ContractProjectStatus = DonkeyWork.Agents.Projects.Contracts.Models.ProjectStatus;
 using ContractMilestoneStatus = DonkeyWork.Agents.Projects.Contracts.Models.MilestoneStatus;
-using ContractTodoStatus = DonkeyWork.Agents.Projects.Contracts.Models.TodoStatus;
-using ContractTodoPriority = DonkeyWork.Agents.Projects.Contracts.Models.TodoPriority;
+using ContractTaskItemStatus = DonkeyWork.Agents.Projects.Contracts.Models.TaskItemStatus;
+using ContractTaskItemPriority = DonkeyWork.Agents.Projects.Contracts.Models.TaskItemPriority;
 using EntityProjectStatus = DonkeyWork.Agents.Persistence.Entities.Projects.ProjectStatus;
 using EntityMilestoneStatus = DonkeyWork.Agents.Persistence.Entities.Projects.MilestoneStatus;
-using EntityTodoStatus = DonkeyWork.Agents.Persistence.Entities.Projects.TodoStatus;
-using EntityTodoPriority = DonkeyWork.Agents.Persistence.Entities.Projects.TodoPriority;
+using EntityTaskItemStatus = DonkeyWork.Agents.Persistence.Entities.Projects.TaskItemStatus;
+using EntityTaskItemPriority = DonkeyWork.Agents.Persistence.Entities.Projects.TaskItemPriority;
 
 namespace DonkeyWork.Agents.Projects.Core.Tests.Helpers;
 
@@ -104,19 +104,19 @@ public class TestDataBuilder
 
     #endregion
 
-    #region Todo Builders
+    #region TaskItem Builders
 
     /// <summary>
-    /// Creates a basic CreateTodoRequestV1 with default values.
+    /// Creates a basic CreateTaskItemRequestV1 with default values.
     /// </summary>
-    public static CreateTodoRequestV1 CreateTodoRequest(
-        string title = "test-todo",
-        string? description = "Test todo description",
-        ContractTodoPriority priority = ContractTodoPriority.Medium,
+    public static CreateTaskItemRequestV1 CreateTaskItemRequest(
+        string title = "test-task-item",
+        string? description = "Test task item description",
+        ContractTaskItemPriority priority = ContractTaskItemPriority.Medium,
         Guid? projectId = null,
         Guid? milestoneId = null)
     {
-        return new CreateTodoRequestV1
+        return new CreateTaskItemRequestV1
         {
             Title = title,
             Description = description,
@@ -127,26 +127,26 @@ public class TestDataBuilder
     }
 
     /// <summary>
-    /// Creates a TodoEntity with default test values.
+    /// Creates a TaskItemEntity with default test values.
     /// </summary>
-    public TodoEntity CreateTodoEntity(
+    public TaskItemEntity CreateTaskItemEntity(
         Guid? id = null,
         Guid? userId = null,
         Guid? projectId = null,
         Guid? milestoneId = null,
-        string title = "test-todo",
-        EntityTodoStatus status = EntityTodoStatus.Pending,
-        EntityTodoPriority priority = EntityTodoPriority.Medium,
+        string title = "test-task-item",
+        EntityTaskItemStatus status = EntityTaskItemStatus.Pending,
+        EntityTaskItemPriority priority = EntityTaskItemPriority.Medium,
         int sortOrder = 0)
     {
-        return new TodoEntity
+        return new TaskItemEntity
         {
             Id = id ?? Guid.NewGuid(),
             UserId = userId ?? _defaultUserId,
             ProjectId = projectId,
             MilestoneId = milestoneId,
             Title = title,
-            Description = "Test todo description",
+            Description = "Test task item description",
             Status = status,
             Priority = priority,
             SortOrder = sortOrder,

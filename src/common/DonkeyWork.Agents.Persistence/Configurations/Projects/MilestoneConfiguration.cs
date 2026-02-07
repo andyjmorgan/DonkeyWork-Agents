@@ -67,7 +67,7 @@ public class MilestoneConfiguration : IEntityTypeConfiguration<MilestoneEntity>
             .HasDatabaseName("ix_milestones_due_date");
 
         // Relationships
-        builder.HasMany(e => e.Todos)
+        builder.HasMany(e => e.TaskItems)
             .WithOne(t => t.Milestone)
             .HasForeignKey(t => t.MilestoneId)
             .OnDelete(DeleteBehavior.Cascade);

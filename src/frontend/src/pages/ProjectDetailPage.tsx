@@ -48,11 +48,11 @@ import {
 import {
   projects,
   milestones,
-  todos,
+  tasks,
   notes,
   type ProjectDetails,
   type MilestoneSummary,
-  type Todo,
+  type Task,
   type CreateMilestoneRequest,
   type ProjectStatus,
   type MilestoneStatus,
@@ -247,7 +247,7 @@ export function ProjectDetailPage() {
 
     try {
       setIsSubmitting(true)
-      const newTask = await todos.create({
+      const newTask = await tasks.create({
         title: `Untitled Task - ${timestamp}`,
         description: '',
         priority: 'Medium',
@@ -309,14 +309,14 @@ export function ProjectDetailPage() {
     }
   }
 
-  const handleDeleteTodo = async (todoId: string) => {
-    if (!window.confirm('Are you sure you want to delete this todo?')) return
+  const handleDeleteTask = async (taskId: string) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) return
 
     try {
-      await todos.delete(todoId)
+      await tasks.delete(taskId)
       await loadProject()
     } catch (error) {
-      console.error('Failed to delete todo:', error)
+      console.error('Failed to delete task:', error)
     }
   }
 
@@ -331,24 +331,24 @@ export function ProjectDetailPage() {
     }
   }
 
-  const handleToggleTodoStatus = async (todo: Todo) => {
+  const handleToggleTaskStatus = async (task: Task) => {
     try {
-      if (todo.status === 'Completed') {
+      if (task.status === 'Completed') {
         // Toggle back to Pending
-        await todos.update(todo.id, {
-          title: todo.title,
-          description: todo.description,
-          priority: todo.priority,
+        await tasks.update(task.id, {
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
           status: 'Pending',
-          sortOrder: todo.sortOrder,
+          sortOrder: task.sortOrder,
         })
       } else {
-        // Delete the todo when completing
-        await todos.delete(todo.id)
+        // Delete the task when completing
+        await tasks.delete(task.id)
       }
       await loadProject()
     } catch (error) {
-      console.error('Failed to update todo:', error)
+      console.error('Failed to update task:', error)
     }
   }
 
@@ -364,8 +364,8 @@ export function ProjectDetailPage() {
   }
 
   // Task counts
-  const openTodos = project?.todos.filter(t => t.status === 'Pending' || t.status === 'InProgress').length || 0
-  const completedTodos = project?.todos.filter(t => t.status === 'Completed' || t.status === 'Cancelled').length || 0
+  const openTasks = project?.tasks.filter(t => t.status === 'Pending' || t.status === 'InProgress').length || 0
+  const completedTasks = project?.tasks.filter(t => t.status === 'Completed' || t.status === 'Cancelled').length || 0
 
   // Milestone counts
   const openMilestones = projectMilestones.filter(m => m.status === 'InProgress' || m.status === 'OnHold').length
@@ -469,7 +469,7 @@ export function ProjectDetailPage() {
         <TabButton tab="overview" icon={LayoutDashboard} iconColor="text-slate-500" label="Overview" />
         <TabButton tab="milestones" icon={Target} iconColor="text-purple-500" label="Milestones" count={projectMilestones.length} />
         <TabButton tab="notes" icon={StickyNote} iconColor="text-blue-500" label="Notes" count={project.notes.length} />
-        <TabButton tab="tasks" icon={CheckSquare} iconColor="text-emerald-500" label="Tasks" count={project.todos.length} />
+        <TabButton tab="tasks" icon={CheckSquare} iconColor="text-emerald-500" label="Tasks" count={project.tasks.length} />
       </div>
 
       {/* Tab Content */}
@@ -507,11 +507,11 @@ export function ProjectDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-amber-500">{openTodos}</div>
+                  <div className="text-2xl font-bold text-amber-500">{openTasks}</div>
                   <div className="text-xs text-muted-foreground">Open</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-emerald-500">{completedTodos}</div>
+                  <div className="text-2xl font-bold text-emerald-500">{completedTasks}</div>
                   <div className="text-xs text-muted-foreground">Completed</div>
                 </div>
               </div>
@@ -590,29 +590,29 @@ export function ProjectDetailPage() {
           </div>
 
           {/* Recent Tasks Preview */}
-          {project.todos.length > 0 && (
+          {project.tasks.length > 0 && (
             <div className="rounded-lg border border-border bg-card p-4">
               <h4 className="text-sm font-medium text-muted-foreground mb-3">Recent Tasks</h4>
               <div className="space-y-2">
-                {project.todos.slice(0, 5).map((todo) => (
-                  <div key={todo.id} className="flex items-center gap-2 text-sm">
-                    {todo.status === 'Completed' ? (
+                {project.tasks.slice(0, 5).map((task) => (
+                  <div key={task.id} className="flex items-center gap-2 text-sm">
+                    {task.status === 'Completed' ? (
                       <CheckSquare className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                     ) : (
                       <div className="h-3.5 w-3.5 rounded border border-muted-foreground flex-shrink-0" />
                     )}
-                    <span className={`truncate ${todo.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
-                      {todo.title}
+                    <span className={`truncate ${task.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
+                      {task.title}
                     </span>
                   </div>
                 ))}
               </div>
-              {project.todos.length > 5 && (
+              {project.tasks.length > 5 && (
                 <button
                   onClick={() => setActiveTab('tasks')}
                   className="text-xs text-primary hover:underline mt-2"
                 >
-                  View all {project.todos.length} tasks
+                  View all {project.tasks.length} tasks
                 </button>
               )}
             </div>
@@ -672,7 +672,7 @@ export function ProjectDetailPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
-                          {milestone.completedTodoCount}/{milestone.todoCount} tasks
+                          {milestone.completedTaskCount}/{milestone.taskCount} tasks
                         </span>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -759,7 +759,7 @@ export function ProjectDetailPage() {
 
       {activeTab === 'tasks' && (
         <div className="space-y-6">
-          {project.todos.length === 0 ? (
+          {project.tasks.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center">
               <CheckSquare className="h-8 w-8 mx-auto text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">No tasks yet</p>
@@ -786,33 +786,33 @@ export function ProjectDetailPage() {
               </div>
 
               {/* Pending Tasks */}
-              {openTodos > 0 && (
+              {openTasks > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                     Pending
                     <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500">
-                      {openTodos}
+                      {openTasks}
                     </span>
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {project.todos.filter(t => t.status !== 'Completed').map((todo) => {
-                      const milestone = todo.milestoneId
-                        ? projectMilestones.find(m => m.id === todo.milestoneId)
+                    {project.tasks.filter(t => t.status !== 'Completed').map((task) => {
+                      const milestone = task.milestoneId
+                        ? projectMilestones.find(m => m.id === task.milestoneId)
                         : undefined
                       return (
                         <ContentCard
-                          key={todo.id}
-                          title={todo.title}
-                          content={todo.description}
-                          onClick={() => navigate(`/tasks/${todo.id}`)}
-                          onDelete={() => handleDeleteTodo(todo.id)}
-                          date={todo.updatedAt || todo.createdAt}
-                          status={todo.status}
-                          priority={todo.priority}
-                          dueDate={todo.dueDate}
+                          key={task.id}
+                          title={task.title}
+                          content={task.description}
+                          onClick={() => navigate(`/tasks/${task.id}`)}
+                          onDelete={() => handleDeleteTask(task.id)}
+                          date={task.updatedAt || task.createdAt}
+                          status={task.status}
+                          priority={task.priority}
+                          dueDate={task.dueDate}
                           milestone={milestone ? { id: milestone.id, name: milestone.name } : undefined}
                           onMilestoneClick={(milestoneId) => navigate(`/workspace/${id}/milestones/${milestoneId}`)}
-                          onToggleComplete={() => handleToggleTodoStatus(todo)}
+                          onToggleComplete={() => handleToggleTaskStatus(task)}
                           isCompleted={false}
                         />
                       )
@@ -822,33 +822,33 @@ export function ProjectDetailPage() {
               )}
 
               {/* Completed Tasks */}
-              {completedTodos > 0 && (
+              {completedTasks > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                     Completed
                     <span className="text-xs px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500">
-                      {completedTodos}
+                      {completedTasks}
                     </span>
                   </h3>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {project.todos.filter(t => t.status === 'Completed').map((todo) => {
-                      const milestone = todo.milestoneId
-                        ? projectMilestones.find(m => m.id === todo.milestoneId)
+                    {project.tasks.filter(t => t.status === 'Completed').map((task) => {
+                      const milestone = task.milestoneId
+                        ? projectMilestones.find(m => m.id === task.milestoneId)
                         : undefined
                       return (
                         <ContentCard
-                          key={todo.id}
-                          title={todo.title}
-                          content={todo.description}
-                          onClick={() => navigate(`/tasks/${todo.id}`)}
-                          onDelete={() => handleDeleteTodo(todo.id)}
-                          date={todo.updatedAt || todo.createdAt}
-                          status={todo.status}
-                          priority={todo.priority}
-                          dueDate={todo.dueDate}
+                          key={task.id}
+                          title={task.title}
+                          content={task.description}
+                          onClick={() => navigate(`/tasks/${task.id}`)}
+                          onDelete={() => handleDeleteTask(task.id)}
+                          date={task.updatedAt || task.createdAt}
+                          status={task.status}
+                          priority={task.priority}
+                          dueDate={task.dueDate}
                           milestone={milestone ? { id: milestone.id, name: milestone.name } : undefined}
                           onMilestoneClick={(milestoneId) => navigate(`/workspace/${id}/milestones/${milestoneId}`)}
-                          onToggleComplete={() => handleToggleTodoStatus(todo)}
+                          onToggleComplete={() => handleToggleTaskStatus(task)}
                           isCompleted={true}
                         />
                       )

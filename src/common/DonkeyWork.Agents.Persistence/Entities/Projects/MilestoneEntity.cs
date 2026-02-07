@@ -46,9 +46,9 @@ public class MilestoneEntity : BaseEntity
     public ProjectEntity Project { get; set; } = null!;
 
     /// <summary>
-    /// Navigation property to todos under this milestone.
+    /// Navigation property to task items under this milestone.
     /// </summary>
-    public ICollection<TodoEntity> Todos { get; set; } = new List<TodoEntity>();
+    public ICollection<TaskItemEntity> TaskItems { get; set; } = new List<TaskItemEntity>();
 
     /// <summary>
     /// Navigation property to notes under this milestone.

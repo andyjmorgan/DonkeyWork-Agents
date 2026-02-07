@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DonkeyWork.Agents.Persistence.Configurations.Projects;
 
-public class TodoTagConfiguration : IEntityTypeConfiguration<TodoTagEntity>
+public class TaskItemTagConfiguration : IEntityTypeConfiguration<TaskItemTagEntity>
 {
-    public void Configure(EntityTypeBuilder<TodoTagEntity> builder)
+    public void Configure(EntityTypeBuilder<TaskItemTagEntity> builder)
     {
-        builder.ToTable("todo_tags", "projects");
+        builder.ToTable("task_tags", "projects");
 
         builder.HasKey(e => e.Id);
 
@@ -29,8 +29,8 @@ public class TodoTagConfiguration : IEntityTypeConfiguration<TodoTagEntity>
             .HasColumnName("color")
             .HasMaxLength(7);
 
-        builder.Property(e => e.TodoId)
-            .HasColumnName("todo_id")
+        builder.Property(e => e.TaskItemId)
+            .HasColumnName("task_item_id")
             .IsRequired();
 
         builder.Property(e => e.CreatedAt)
@@ -42,12 +42,12 @@ public class TodoTagConfiguration : IEntityTypeConfiguration<TodoTagEntity>
 
         // Indexes
         builder.HasIndex(e => e.UserId)
-            .HasDatabaseName("ix_todo_tags_user_id");
+            .HasDatabaseName("ix_task_tags_user_id");
 
-        builder.HasIndex(e => e.TodoId)
-            .HasDatabaseName("ix_todo_tags_todo_id");
+        builder.HasIndex(e => e.TaskItemId)
+            .HasDatabaseName("ix_task_tags_task_item_id");
 
         builder.HasIndex(e => e.Name)
-            .HasDatabaseName("ix_todo_tags_name");
+            .HasDatabaseName("ix_task_tags_name");
     }
 }

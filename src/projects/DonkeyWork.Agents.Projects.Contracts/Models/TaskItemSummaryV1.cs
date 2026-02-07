@@ -3,10 +3,10 @@ using System.Text.Json.Serialization;
 namespace DonkeyWork.Agents.Projects.Contracts.Models;
 
 /// <summary>
-/// Todo response model (summary for list views - excludes description and completionNotes to reduce payload size).
+/// Task item response model (summary for list views - excludes description and completionNotes to reduce payload size).
 /// Use tasks_get to retrieve full details.
 /// </summary>
-public sealed class TodoSummaryV1
+public sealed class TaskItemSummaryV1
 {
     [JsonPropertyName("id")]
     public Guid Id { get; init; }
@@ -15,10 +15,10 @@ public sealed class TodoSummaryV1
     public required string Title { get; init; }
 
     [JsonPropertyName("status")]
-    public TodoStatus Status { get; init; }
+    public TaskItemStatus Status { get; init; }
 
     [JsonPropertyName("priority")]
-    public TodoPriority Priority { get; init; }
+    public TaskItemPriority Priority { get; init; }
 
     [JsonPropertyName("dueDate")]
     public DateTimeOffset? DueDate { get; init; }

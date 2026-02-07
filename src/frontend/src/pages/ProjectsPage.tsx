@@ -105,7 +105,7 @@ export function ProjectsPage() {
   }
 
   const handleDelete = async (projectId: string, projectName: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${projectName}"? This will also delete all milestones, todos, and notes associated with this project.`)) {
+    if (!window.confirm(`Are you sure you want to delete "${projectName}"? This will also delete all milestones, tasks, and notes associated with this project.`)) {
       return
     }
 
@@ -121,8 +121,8 @@ export function ProjectsPage() {
   }
 
   const getProgress = (project: ProjectSummary) => {
-    if (project.todoCount === 0) return 0
-    return Math.round((project.completedTodoCount / project.todoCount) * 100)
+    if (project.taskCount === 0) return 0
+    return Math.round((project.completedTaskCount / project.taskCount) * 100)
   }
 
   if (isLoading) {
@@ -193,7 +193,7 @@ export function ProjectsPage() {
                   </span>
                   <span className="flex items-center gap-1">
                     <CheckSquare className="h-4 w-4" />
-                    {project.completedTodoCount}/{project.todoCount} todos
+                    {project.completedTaskCount}/{project.taskCount} tasks
                   </span>
                 </div>
                 <Progress value={getProgress(project)} className="h-2" />
@@ -257,7 +257,7 @@ export function ProjectsPage() {
                       <div className="flex items-center gap-2">
                         <Progress value={getProgress(project)} className="h-2 w-20" />
                         <span className="text-sm text-muted-foreground">
-                          {project.completedTodoCount}/{project.todoCount}
+                          {project.completedTaskCount}/{project.taskCount}
                         </span>
                       </div>
                     </TableCell>

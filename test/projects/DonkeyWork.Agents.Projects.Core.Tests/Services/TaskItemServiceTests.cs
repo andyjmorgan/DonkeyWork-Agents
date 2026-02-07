@@ -9,23 +9,23 @@ using Microsoft.Extensions.Logging;
 namespace DonkeyWork.Agents.Projects.Core.Tests.Services;
 
 /// <summary>
-/// Unit tests for TodoService.
+/// Unit tests for TaskItemService.
 /// Tests CRUD operations and business logic without external dependencies.
 /// </summary>
-public class TodoServiceTests : IDisposable
+public class TaskItemServiceTests : IDisposable
 {
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
-    private readonly TodoService _service;
+    private readonly TaskItemService _service;
     private readonly Guid _testUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private readonly TestDataBuilder _builder = new();
 
-    public TodoServiceTests()
+    public TaskItemServiceTests()
     {
         (_dbContext, _identityContext) = MockDbContext.CreateWithIdentityContext();
         var notificationService = new Mock<INotificationService>();
-        var logger = new Mock<ILogger<TodoService>>();
-        _service = new TodoService(_dbContext, _identityContext, notificationService.Object, logger.Object);
+        var logger = new Mock<ILogger<TaskItemService>>();
+        _service = new TaskItemService(_dbContext, _identityContext, notificationService.Object, logger.Object);
     }
 
     public void Dispose()
@@ -36,14 +36,14 @@ public class TodoServiceTests : IDisposable
     #region CreateAsync Tests
 
     [Fact]
-    public async Task CreateAsync_WithValidRequest_CreatesTodo()
+    public async Task CreateAsync_WithValidRequest_CreatesTaskItem()
     {
         // Arrange
-        var request = new CreateTodoRequestV1
+        var request = new CreateTaskItemRequestV1
         {
-            Title = "test-todo",
+            Title = "test-task-item",
             Description = "Test description",
-            Priority = TodoPriority.High
+            Priority = TaskItemPriority.High
         };
 
         // Act
@@ -55,19 +55,19 @@ public class TodoServiceTests : IDisposable
         Assert.Equal(request.Title, result.Title);
         Assert.Equal(request.Description, result.Description);
         Assert.Equal(request.Priority, result.Priority);
-        Assert.Equal(TodoStatus.Pending, result.Status);
+        Assert.Equal(TaskItemStatus.Pending, result.Status);
 
-        // Verify todo was created in database
-        var todoInDb = await _dbContext.Todos.FindAsync(result.Id);
-        Assert.NotNull(todoInDb);
-        Assert.Equal(_testUserId, todoInDb.UserId);
+        // Verify task item was created in database
+        var taskItemInDb = await _dbContext.TaskItems.FindAsync(result.Id);
+        Assert.NotNull(taskItemInDb);
+        Assert.Equal(_testUserId, taskItemInDb.UserId);
     }
 
     [Fact]
-    public async Task CreateAsync_StandaloneTodo_HasNullProjectAndMilestone()
+    public async Task CreateAsync_StandaloneTaskItem_HasNullProjectAndMilestone()
     {
         // Arrange
-        var request = TestDataBuilder.CreateTodoRequest();
+        var request = TestDataBuilder.CreateTaskItemRequest();
 
         // Act
         var result = await _service.CreateAsync(request);
@@ -85,9 +85,9 @@ public class TodoServiceTests : IDisposable
         var project = _builder.CreateProjectEntity();
         MockDbContext.SeedProject(_dbContext, project);
 
-        var request = new CreateTodoRequestV1
+        var request = new CreateTaskItemRequestV1
         {
-            Title = "test-todo",
+            Title = "test-task-item",
             ProjectId = project.Id
         };
 
@@ -109,9 +109,9 @@ public class TodoServiceTests : IDisposable
         _dbContext.Projects.Add(project);
         MockDbContext.SeedMilestone(_dbContext, milestone);
 
-        var request = new CreateTodoRequestV1
+        var request = new CreateTaskItemRequestV1
         {
-            Title = "test-todo",
+            Title = "test-task-item",
             MilestoneId = milestone.Id
         };
 
@@ -124,12 +124,12 @@ public class TodoServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_WithTags_CreatesTodoWithTags()
+    public async Task CreateAsync_WithTags_CreatesTaskItemWithTags()
     {
         // Arrange
-        var request = new CreateTodoRequestV1
+        var request = new CreateTaskItemRequestV1
         {
-            Title = "test-todo",
+            Title = "test-task-item",
             Tags = new List<TagRequestV1>
             {
                 new() { Name = "urgent", Color = "#ff0000" },
@@ -151,11 +151,11 @@ public class TodoServiceTests : IDisposable
     public async Task CreateAsync_WithDifferentPriorities_SetsCorrectPriority()
     {
         // Arrange & Act & Assert
-        foreach (var priority in Enum.GetValues<TodoPriority>())
+        foreach (var priority in Enum.GetValues<TaskItemPriority>())
         {
-            var request = new CreateTodoRequestV1
+            var request = new CreateTaskItemRequestV1
             {
-                Title = $"todo-{priority}",
+                Title = $"task-item-{priority}",
                 Priority = priority
             };
 
@@ -171,23 +171,23 @@ public class TodoServiceTests : IDisposable
     #region GetByIdAsync Tests
 
     [Fact]
-    public async Task GetByIdAsync_WithExistingTodo_ReturnsTodo()
+    public async Task GetByIdAsync_WithExistingTaskItem_ReturnsTaskItem()
     {
         // Arrange
-        var todo = _builder.CreateTodoEntity();
-        MockDbContext.SeedTodo(_dbContext, todo);
+        var taskItem = _builder.CreateTaskItemEntity();
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
 
         // Act
-        var result = await _service.GetByIdAsync(todo.Id);
+        var result = await _service.GetByIdAsync(taskItem.Id);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(todo.Id, result.Id);
-        Assert.Equal(todo.Title, result.Title);
+        Assert.Equal(taskItem.Id, result.Id);
+        Assert.Equal(taskItem.Title, result.Title);
     }
 
     [Fact]
-    public async Task GetByIdAsync_WithNonExistentTodo_ReturnsNull()
+    public async Task GetByIdAsync_WithNonExistentTaskItem_ReturnsNull()
     {
         // Arrange
         var nonExistentId = Guid.NewGuid();
@@ -204,13 +204,13 @@ public class TodoServiceTests : IDisposable
     #region ListAsync Tests
 
     [Fact]
-    public async Task ListAsync_WithMultipleTodos_ReturnsAllUserTodos()
+    public async Task ListAsync_WithMultipleTaskItems_ReturnsAllUserTaskItems()
     {
         // Arrange
-        var todo1 = _builder.CreateTodoEntity(title: "todo-1");
-        var todo2 = _builder.CreateTodoEntity(title: "todo-2");
-        var todo3 = _builder.CreateTodoEntity(title: "todo-3");
-        _dbContext.Todos.AddRange(todo1, todo2, todo3);
+        var taskItem1 = _builder.CreateTaskItemEntity(title: "task-item-1");
+        var taskItem2 = _builder.CreateTaskItemEntity(title: "task-item-2");
+        var taskItem3 = _builder.CreateTaskItemEntity(title: "task-item-3");
+        _dbContext.TaskItems.AddRange(taskItem1, taskItem2, taskItem3);
         await _dbContext.SaveChangesAsync();
 
         // Act
@@ -222,7 +222,7 @@ public class TodoServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ListAsync_WithNoTodos_ReturnsEmptyList()
+    public async Task ListAsync_WithNoTaskItems_ReturnsEmptyList()
     {
         // Act
         var results = await _service.ListAsync();
@@ -237,16 +237,16 @@ public class TodoServiceTests : IDisposable
     #region GetStandaloneAsync Tests
 
     [Fact]
-    public async Task GetStandaloneAsync_ReturnsOnlyStandaloneTodos()
+    public async Task GetStandaloneAsync_ReturnsOnlyStandaloneTaskItems()
     {
         // Arrange
         var project = _builder.CreateProjectEntity();
         MockDbContext.SeedProject(_dbContext, project);
 
-        var standaloneTodo = _builder.CreateTodoEntity(title: "standalone");
-        var projectTodo = _builder.CreateTodoEntity(title: "project-todo", projectId: project.Id);
+        var standaloneTaskItem = _builder.CreateTaskItemEntity(title: "standalone");
+        var projectTaskItem = _builder.CreateTaskItemEntity(title: "project-task-item", projectId: project.Id);
 
-        _dbContext.Todos.AddRange(standaloneTodo, projectTodo);
+        _dbContext.TaskItems.AddRange(standaloneTaskItem, projectTaskItem);
         await _dbContext.SaveChangesAsync();
 
         // Act
@@ -263,27 +263,27 @@ public class TodoServiceTests : IDisposable
     #region UpdateAsync Tests
 
     [Fact]
-    public async Task UpdateAsync_WithValidRequest_UpdatesTodo()
+    public async Task UpdateAsync_WithValidRequest_UpdatesTaskItem()
     {
         // Arrange
-        var todo = _builder.CreateTodoEntity();
-        MockDbContext.SeedTodo(_dbContext, todo);
+        var taskItem = _builder.CreateTaskItemEntity();
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
 
-        var updateRequest = new UpdateTodoRequestV1
+        var updateRequest = new UpdateTaskItemRequestV1
         {
-            Title = "updated-todo",
+            Title = "updated-task-item",
             Description = "Updated description",
-            Status = TodoStatus.InProgress,
-            Priority = TodoPriority.Critical,
+            Status = TaskItemStatus.InProgress,
+            Priority = TaskItemPriority.Critical,
             SortOrder = 10
         };
 
         // Act
-        var result = await _service.UpdateAsync(todo.Id, updateRequest);
+        var result = await _service.UpdateAsync(taskItem.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(todo.Id, result.Id);
+        Assert.Equal(taskItem.Id, result.Id);
         Assert.Equal(updateRequest.Title, result.Title);
         Assert.Equal(updateRequest.Description, result.Description);
         Assert.Equal(updateRequest.Status, result.Status);
@@ -294,38 +294,38 @@ public class TodoServiceTests : IDisposable
     public async Task UpdateAsync_ToCompleted_SetsCompletedAt()
     {
         // Arrange
-        var todo = _builder.CreateTodoEntity();
-        MockDbContext.SeedTodo(_dbContext, todo);
+        var taskItem = _builder.CreateTaskItemEntity();
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
 
-        var updateRequest = new UpdateTodoRequestV1
+        var updateRequest = new UpdateTaskItemRequestV1
         {
-            Title = todo.Title,
-            Status = TodoStatus.Completed,
-            Priority = (TodoPriority)todo.Priority,
+            Title = taskItem.Title,
+            Status = TaskItemStatus.Completed,
+            Priority = (TaskItemPriority)taskItem.Priority,
             CompletionNotes = "Done!",
-            SortOrder = todo.SortOrder
+            SortOrder = taskItem.SortOrder
         };
 
         // Act
-        var result = await _service.UpdateAsync(todo.Id, updateRequest);
+        var result = await _service.UpdateAsync(taskItem.Id, updateRequest);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(TodoStatus.Completed, result.Status);
+        Assert.Equal(TaskItemStatus.Completed, result.Status);
         Assert.NotNull(result.CompletedAt);
         Assert.Equal("Done!", result.CompletionNotes);
     }
 
     [Fact]
-    public async Task UpdateAsync_WithNonExistentTodo_ReturnsNull()
+    public async Task UpdateAsync_WithNonExistentTaskItem_ReturnsNull()
     {
         // Arrange
         var nonExistentId = Guid.NewGuid();
-        var updateRequest = new UpdateTodoRequestV1
+        var updateRequest = new UpdateTaskItemRequestV1
         {
             Title = "test",
-            Status = TodoStatus.InProgress,
-            Priority = TodoPriority.Medium,
+            Status = TaskItemStatus.InProgress,
+            Priority = TaskItemPriority.Medium,
             SortOrder = 0
         };
 
@@ -341,25 +341,25 @@ public class TodoServiceTests : IDisposable
     #region DeleteAsync Tests
 
     [Fact]
-    public async Task DeleteAsync_WithExistingTodo_DeletesTodo()
+    public async Task DeleteAsync_WithExistingTaskItem_DeletesTaskItem()
     {
         // Arrange
-        var todo = _builder.CreateTodoEntity();
-        MockDbContext.SeedTodo(_dbContext, todo);
+        var taskItem = _builder.CreateTaskItemEntity();
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
 
         // Act
-        var result = await _service.DeleteAsync(todo.Id);
+        var result = await _service.DeleteAsync(taskItem.Id);
 
         // Assert
         Assert.True(result);
 
         // Verify deleted from database
-        var deletedTodo = await _dbContext.Todos.FindAsync(todo.Id);
-        Assert.Null(deletedTodo);
+        var deletedTaskItem = await _dbContext.TaskItems.FindAsync(taskItem.Id);
+        Assert.Null(deletedTaskItem);
     }
 
     [Fact]
-    public async Task DeleteAsync_WithNonExistentTodo_ReturnsFalse()
+    public async Task DeleteAsync_WithNonExistentTaskItem_ReturnsFalse()
     {
         // Arrange
         var nonExistentId = Guid.NewGuid();
@@ -379,9 +379,9 @@ public class TodoServiceTests : IDisposable
     public async Task CreateAsync_DefaultPriorityIsMedium()
     {
         // Arrange
-        var request = new CreateTodoRequestV1
+        var request = new CreateTaskItemRequestV1
         {
-            Title = "test-todo"
+            Title = "test-task-item"
         };
 
         // Act
@@ -389,21 +389,21 @@ public class TodoServiceTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(TodoPriority.Medium, result.Priority);
+        Assert.Equal(TaskItemPriority.Medium, result.Priority);
     }
 
     [Fact]
     public async Task CreateAsync_DefaultStatusIsPending()
     {
         // Arrange
-        var request = TestDataBuilder.CreateTodoRequest();
+        var request = TestDataBuilder.CreateTaskItemRequest();
 
         // Act
         var result = await _service.CreateAsync(request);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(TodoStatus.Pending, result.Status);
+        Assert.Equal(TaskItemStatus.Pending, result.Status);
     }
 
     #endregion

@@ -1,9 +1,9 @@
 namespace DonkeyWork.Agents.Persistence.Entities.Projects;
 
 /// <summary>
-/// Represents a tag associated with a todo.
+/// Represents a tag associated with a task item.
 /// </summary>
-public class TodoTagEntity : BaseEntity
+public class TaskItemTagEntity : BaseEntity
 {
     /// <summary>
     /// Tag name.
@@ -16,12 +16,12 @@ public class TodoTagEntity : BaseEntity
     public string? Color { get; set; }
 
     /// <summary>
-    /// Foreign key to the parent todo.
+    /// Foreign key to the parent task item.
     /// </summary>
-    public Guid TodoId { get; set; }
+    public Guid TaskItemId { get; set; }
 
     /// <summary>
-    /// Navigation property to the parent todo.
+    /// Navigation property to the parent task item.
     /// </summary>
-    public TodoEntity Todo { get; set; } = null!;
+    public TaskItemEntity TaskItem { get; set; } = null!;
 }

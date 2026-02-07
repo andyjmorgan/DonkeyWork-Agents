@@ -11,7 +11,7 @@ public static class DependencyInjection
         // Register services
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IMilestoneService, MilestoneService>();
-        services.AddScoped<ITodoService, TodoService>();
+        services.AddScoped<ITaskItemService, TaskItemService>();
         services.AddScoped<INoteService, NoteService>();
 
         return services;

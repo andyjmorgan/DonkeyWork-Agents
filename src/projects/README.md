@@ -1,6 +1,6 @@
 # Projects Module
 
-A comprehensive project management feature for organizing work with milestones, todos, and notes.
+A comprehensive project management feature for organizing work with milestones, tasks, and notes.
 
 ## Prerequisites
 
@@ -15,16 +15,16 @@ A comprehensive project management feature for organizing work with milestones, 
 - Status tracking: NotStarted, InProgress, Completed, OnHold
 - Tags for categorization
 - File references for linking related documents
-- Contains milestones, todos, and notes
+- Contains milestones, tasks, and notes
 
 ### Milestones
 - Nested within projects
 - Name, description, status, and due date
 - Ordered via sortOrder for custom sequencing
 - Status tracking: NotStarted, InProgress, Completed
-- Contains todos and notes
+- Contains tasks and notes
 
-### Todos
+### Tasks
 - Can exist **standalone** or within a project/milestone
 - Title and description (markdown supported)
 - Priority levels: Low, Medium, High, Critical
@@ -46,28 +46,28 @@ src/projects/
 │   ├── Controllers/
 │   │   ├── ProjectsController.cs      # /api/v1/projects
 │   │   ├── MilestonesController.cs    # /api/v1/projects/{projectId}/milestones
-│   │   ├── TodosController.cs         # /api/v1/todos (with /standalone endpoint)
+│   │   ├── TasksController.cs         # /api/v1/tasks (with /standalone endpoint)
 │   │   └── NotesController.cs         # /api/v1/notes (with /standalone endpoint)
 │   └── DependencyInjection.cs
 ├── DonkeyWork.Agents.Projects.Contracts/
 │   ├── Models/
-│   │   ├── Enums.cs                   # ProjectStatus, MilestoneStatus, TodoStatus, TodoPriority
+│   │   ├── Enums.cs                   # ProjectStatus, MilestoneStatus, TaskItemStatus, TaskItemPriority
 │   │   ├── ProjectV1.cs               # Project DTOs
 │   │   ├── MilestoneV1.cs             # Milestone DTOs
-│   │   ├── TodoV1.cs                  # Todo DTOs
+│   │   ├── TaskItemV1.cs              # Task DTOs
 │   │   ├── NoteV1.cs                  # Note DTOs
 │   │   ├── TagV1.cs                   # Tag DTOs
 │   │   └── FileReferenceV1.cs         # File reference DTOs
 │   └── Services/
 │       ├── IProjectService.cs
 │       ├── IMilestoneService.cs
-│       ├── ITodoService.cs
+│       ├── ITaskItemService.cs
 │       └── INoteService.cs
 └── DonkeyWork.Agents.Projects.Core/
     └── Services/
         ├── ProjectService.cs
         ├── MilestoneService.cs
-        ├── TodoService.cs
+        ├── TaskItemService.cs
         └── NoteService.cs
 ```
 
@@ -78,9 +78,9 @@ Located in `src/common/DonkeyWork.Agents.Persistence/`:
 ### Entities (`Entities/Projects/`)
 - `ProjectEntity` - Main project entity
 - `MilestoneEntity` - Project milestones
-- `TodoEntity` - Todos (standalone or linked)
+- `TaskItemEntity` - Tasks (standalone or linked)
 - `NoteEntity` - Notes (standalone or linked)
-- `ProjectTagEntity`, `MilestoneTagEntity`, `TodoTagEntity`, `NoteTagEntity` - Tags
+- `ProjectTagEntity`, `MilestoneTagEntity`, `TaskItemTagEntity`, `NoteTagEntity` - Tags
 - `ProjectFileReferenceEntity`, `MilestoneFileReferenceEntity` - File references
 
 ### EF Configurations (`Configurations/Projects/`)
@@ -109,15 +109,15 @@ All entities use Fluent API configuration with:
 | PUT | `/api/v1/projects/{projectId}/milestones/{id}` | Update milestone |
 | DELETE | `/api/v1/projects/{projectId}/milestones/{id}` | Delete milestone |
 
-### Todos
+### Tasks
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/todos` | List all todos |
-| GET | `/api/v1/todos/standalone` | List standalone todos only |
-| GET | `/api/v1/todos/{id}` | Get todo details |
-| POST | `/api/v1/todos` | Create todo |
-| PUT | `/api/v1/todos/{id}` | Update todo |
-| DELETE | `/api/v1/todos/{id}` | Delete todo |
+| GET | `/api/v1/tasks` | List all tasks |
+| GET | `/api/v1/tasks/standalone` | List standalone tasks only |
+| GET | `/api/v1/tasks/{id}` | Get task details |
+| POST | `/api/v1/tasks` | Create task |
+| PUT | `/api/v1/tasks/{id}` | Update task |
+| DELETE | `/api/v1/tasks/{id}` | Delete task |
 
 ### Notes
 | Method | Endpoint | Description |
@@ -135,20 +135,20 @@ Located in `src/frontend/src/`:
 
 ### Pages
 - `ProjectsPage.tsx` - List and manage projects
-- `ProjectDetailPage.tsx` - View project with milestones, todos, notes
-- `TodosPage.tsx` - Manage standalone todos
+- `ProjectDetailPage.tsx` - View project with milestones, tasks, notes
+- `TasksPage.tsx` - Manage standalone tasks
 - `NotesPage.tsx` - Manage standalone notes
 
 ### Navigation
 Projects are accessible via the sidebar under the "Projects" group with links to:
 - All Projects
-- Todos (standalone)
+- Tasks (standalone)
 - Notes (standalone)
 
 ### API Client
 Extended in `lib/api.ts` with:
 - Type definitions for all models
-- CRUD functions for projects, milestones, todos, notes
+- CRUD functions for projects, milestones, tasks, notes
 
 ## Testing
 
@@ -157,7 +157,7 @@ Test project: `test/projects/DonkeyWork.Agents.Projects.Core.Tests/`
 ### Test Coverage
 - `ProjectServiceTests` - 18 tests
 - `MilestoneServiceTests` - 13 tests
-- `TodoServiceTests` - 16 tests
+- `TaskItemServiceTests` - 16 tests
 - `NoteServiceTests` - 16 tests
 
 ### Running Tests
@@ -175,4 +175,4 @@ builder.Services.AddProjectsApi();
 ```
 
 ### Run Database Migration
-The migration `20260131100000_AddProjectsModule` creates the `projects` schema with all required tables.
+The migration `20260207100000_RenameTodosToTasks` renames the `projects.todos` and `projects.todo_tags` tables to `projects.tasks` and `projects.task_tags`.

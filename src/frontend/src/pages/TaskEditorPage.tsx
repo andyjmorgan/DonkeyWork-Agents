@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { todos, projects, milestones, type Todo, type ProjectDetails, type MilestoneDetails, type TodoPriority, type TodoStatus } from '@/lib/api'
+import { tasks, projects, milestones, type Task, type ProjectDetails, type MilestoneDetails, type TaskPriority, type TaskStatus } from '@/lib/api'
 
 export function TaskEditorPage() {
   const { taskId } = useParams<{ taskId: string }>()
@@ -21,15 +21,15 @@ export function TaskEditorPage() {
 
   const [isLoading, setIsLoading] = useState(!isNewTask)
   const [isSaving, setIsSaving] = useState(false)
-  const [task, setTask] = useState<Todo | null>(null)
+  const [task, setTask] = useState<Task | null>(null)
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [milestone, setMilestone] = useState<MilestoneDetails | null>(null)
 
   // Form fields
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<TodoPriority>('Medium')
-  const [status, setStatus] = useState<TodoStatus>('Pending')
+  const [priority, setPriority] = useState<TaskPriority>('Medium')
+  const [status, setStatus] = useState<TaskStatus>('Pending')
   const [dueDate, setDueDate] = useState('')
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function TaskEditorPage() {
 
     try {
       setIsLoading(true)
-      const taskData = await todos.get(taskId)
+      const taskData = await tasks.get(taskId)
       setTask(taskData)
       setTitle(taskData.title)
       setDescription(taskData.description || '')
@@ -77,7 +77,7 @@ export function TaskEditorPage() {
 
       if (isNewTask) {
         // Create new task
-        const newTask = await todos.create({
+        const newTask = await tasks.create({
           title,
           description,
           priority,
@@ -88,7 +88,7 @@ export function TaskEditorPage() {
         navigate(`/tasks/${newTask.id}`, { replace: true })
       } else if (task) {
         // Update existing task
-        await todos.update(task.id, {
+        await tasks.update(task.id, {
           title,
           description,
           priority,
@@ -112,7 +112,7 @@ export function TaskEditorPage() {
     if (!task || !window.confirm('Are you sure you want to delete this task?')) return
 
     try {
-      await todos.delete(task.id)
+      await tasks.delete(task.id)
       handleBack()
     } catch (error) {
       console.error('Failed to delete task:', error)
@@ -228,7 +228,7 @@ export function TaskEditorPage() {
           {/* Priority */}
           <div className="flex items-center gap-2">
             <Label className="text-sm text-muted-foreground">Priority:</Label>
-            <Select value={priority} onValueChange={(v) => setPriority(v as TodoPriority)}>
+            <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
               <SelectTrigger className="w-[120px] h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -244,7 +244,7 @@ export function TaskEditorPage() {
           {/* Status */}
           <div className="flex items-center gap-2">
             <Label className="text-sm text-muted-foreground">Status:</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as TodoStatus)}>
+            <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
               <SelectTrigger className="w-[130px] h-8">
                 <SelectValue />
               </SelectTrigger>
