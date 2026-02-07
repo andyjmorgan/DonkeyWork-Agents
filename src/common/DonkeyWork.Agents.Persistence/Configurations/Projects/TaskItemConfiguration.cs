@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DonkeyWork.Agents.Persistence.Configurations.Projects;
 
-public class TodoConfiguration : IEntityTypeConfiguration<TodoEntity>
+public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItemEntity>
 {
-    public void Configure(EntityTypeBuilder<TodoEntity> builder)
+    public void Configure(EntityTypeBuilder<TaskItemEntity> builder)
     {
-        builder.ToTable("todos", "projects");
+        builder.ToTable("tasks", "projects");
 
         builder.HasKey(e => e.Id);
 
@@ -64,27 +64,27 @@ public class TodoConfiguration : IEntityTypeConfiguration<TodoEntity>
 
         // Indexes
         builder.HasIndex(e => e.UserId)
-            .HasDatabaseName("ix_todos_user_id");
+            .HasDatabaseName("ix_tasks_user_id");
 
         builder.HasIndex(e => e.ProjectId)
-            .HasDatabaseName("ix_todos_project_id");
+            .HasDatabaseName("ix_tasks_project_id");
 
         builder.HasIndex(e => e.MilestoneId)
-            .HasDatabaseName("ix_todos_milestone_id");
+            .HasDatabaseName("ix_tasks_milestone_id");
 
         builder.HasIndex(e => e.Status)
-            .HasDatabaseName("ix_todos_status");
+            .HasDatabaseName("ix_tasks_status");
 
         builder.HasIndex(e => e.Priority)
-            .HasDatabaseName("ix_todos_priority");
+            .HasDatabaseName("ix_tasks_priority");
 
         builder.HasIndex(e => e.DueDate)
-            .HasDatabaseName("ix_todos_due_date");
+            .HasDatabaseName("ix_tasks_due_date");
 
         // Relationships
         builder.HasMany(e => e.Tags)
-            .WithOne(t => t.Todo)
-            .HasForeignKey(t => t.TodoId)
+            .WithOne(t => t.TaskItem)
+            .HasForeignKey(t => t.TaskItemId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

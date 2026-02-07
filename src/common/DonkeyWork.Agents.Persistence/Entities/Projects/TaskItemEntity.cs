@@ -1,29 +1,29 @@
 namespace DonkeyWork.Agents.Persistence.Entities.Projects;
 
 /// <summary>
-/// Represents a todo item that can exist standalone or within a project/milestone.
+/// Represents a task item that can exist standalone or within a project/milestone.
 /// </summary>
-public class TodoEntity : BaseEntity
+public class TaskItemEntity : BaseEntity
 {
     /// <summary>
-    /// Todo title.
+    /// Task item title.
     /// </summary>
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Todo description (markdown supported).
+    /// Task item description (markdown supported).
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
-    /// Todo status.
+    /// Task item status.
     /// </summary>
-    public TodoStatus Status { get; set; } = TodoStatus.Pending;
+    public TaskItemStatus Status { get; set; } = TaskItemStatus.Pending;
 
     /// <summary>
-    /// Todo priority.
+    /// Task item priority.
     /// </summary>
-    public TodoPriority Priority { get; set; } = TodoPriority.Medium;
+    public TaskItemPriority Priority { get; set; } = TaskItemPriority.Medium;
 
     /// <summary>
     /// Notes on completion (markdown supported).
@@ -31,12 +31,12 @@ public class TodoEntity : BaseEntity
     public string? CompletionNotes { get; set; }
 
     /// <summary>
-    /// Due date for the todo.
+    /// Due date for the task item.
     /// </summary>
     public DateTimeOffset? DueDate { get; set; }
 
     /// <summary>
-    /// Date when the todo was completed.
+    /// Date when the task item was completed.
     /// </summary>
     public DateTimeOffset? CompletedAt { get; set; }
 
@@ -66,15 +66,15 @@ public class TodoEntity : BaseEntity
     public MilestoneEntity? Milestone { get; set; }
 
     /// <summary>
-    /// Navigation property to todo tags.
+    /// Navigation property to task item tags.
     /// </summary>
-    public ICollection<TodoTagEntity> Tags { get; set; } = new List<TodoTagEntity>();
+    public ICollection<TaskItemTagEntity> Tags { get; set; } = new List<TaskItemTagEntity>();
 }
 
 /// <summary>
-/// Todo status enumeration.
+/// Task item status enumeration.
 /// </summary>
-public enum TodoStatus
+public enum TaskItemStatus
 {
     Pending = 0,
     InProgress = 1,
@@ -83,9 +83,9 @@ public enum TodoStatus
 }
 
 /// <summary>
-/// Todo priority enumeration.
+/// Task item priority enumeration.
 /// </summary>
-public enum TodoPriority
+public enum TaskItemPriority
 {
     Low = 0,
     Medium = 1,

@@ -190,20 +190,20 @@ public static class TestDataBuilder
 
     #endregion
 
-    #region Todo Builders
+    #region TaskItem Builders
 
-    public static CreateTodoRequestV1 CreateTodoRequest(
+    public static CreateTaskItemRequestV1 CreateTaskItemRequest(
         string? title = null,
         string? description = null,
-        TodoStatus status = TodoStatus.Pending,
-        TodoPriority priority = TodoPriority.Medium,
+        TaskItemStatus status = TaskItemStatus.Pending,
+        TaskItemPriority priority = TaskItemPriority.Medium,
         Guid? projectId = null,
         Guid? milestoneId = null)
     {
-        return new CreateTodoRequestV1
+        return new CreateTaskItemRequestV1
         {
-            Title = title ?? $"Test Todo {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Test todo description",
+            Title = title ?? $"Test Task {Guid.NewGuid().ToString("N")[..8]}",
+            Description = description ?? "Test task description",
             Status = status,
             Priority = priority,
             ProjectId = projectId,
@@ -211,16 +211,16 @@ public static class TestDataBuilder
         };
     }
 
-    public static UpdateTodoRequestV1 UpdateTodoRequest(
+    public static UpdateTaskItemRequestV1 UpdateTaskItemRequest(
         string? title = null,
         string? description = null,
-        TodoStatus status = TodoStatus.InProgress,
-        TodoPriority priority = TodoPriority.High)
+        TaskItemStatus status = TaskItemStatus.InProgress,
+        TaskItemPriority priority = TaskItemPriority.High)
     {
-        return new UpdateTodoRequestV1
+        return new UpdateTaskItemRequestV1
         {
-            Title = title ?? $"Updated Todo {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Updated todo description",
+            Title = title ?? $"Updated Task {Guid.NewGuid().ToString("N")[..8]}",
+            Description = description ?? "Updated task description",
             Status = status,
             Priority = priority
         };

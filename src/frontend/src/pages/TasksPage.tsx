@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Loader2, CheckSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ContentCard } from '@/components/workspace/ContentCard'
-import { todos, type Todo, type TodoStatus } from '@/lib/api'
+import { tasks, type Task, type TaskStatus } from '@/lib/api'
 
 export function TasksPage() {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
-  const [tasksList, setTasksList] = useState<Todo[]>([])
+  const [tasksList, setTasksList] = useState<Task[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export function TasksPage() {
   const loadTasks = async () => {
     try {
       setIsLoading(true)
-      const data = await todos.listStandalone()
+      const data = await tasks.listStandalone()
       setTasksList(data)
     } catch (error) {
       console.error('Failed to load tasks:', error)
@@ -27,10 +27,10 @@ export function TasksPage() {
     }
   }
 
-  const handleToggleComplete = async (task: Todo) => {
-    const newStatus: TodoStatus = task.status === 'Completed' ? 'Pending' : 'Completed'
+  const handleToggleComplete = async (task: Task) => {
+    const newStatus: TaskStatus = task.status === 'Completed' ? 'Pending' : 'Completed'
     try {
-      await todos.update(task.id, {
+      await tasks.update(task.id, {
         ...task,
         status: newStatus,
       })
@@ -47,7 +47,7 @@ export function TasksPage() {
 
     try {
       setDeletingId(taskId)
-      await todos.delete(taskId)
+      await tasks.delete(taskId)
       await loadTasks()
     } catch (error) {
       console.error('Failed to delete task:', error)

@@ -501,8 +501,8 @@ export const oauth = {
 // Project Management Types
 export type ProjectStatus = 'NotStarted' | 'InProgress' | 'OnHold' | 'Completed' | 'Cancelled'
 export type MilestoneStatus = 'NotStarted' | 'InProgress' | 'OnHold' | 'Completed' | 'Cancelled'
-export type TodoStatus = 'Pending' | 'InProgress' | 'Completed' | 'Cancelled'
-export type TodoPriority = 'Low' | 'Medium' | 'High' | 'Critical'
+export type TaskStatus = 'Pending' | 'InProgress' | 'Completed' | 'Cancelled'
+export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Critical'
 
 export interface Tag {
   id: string
@@ -536,8 +536,8 @@ export interface ProjectSummary {
   status: ProjectStatus
   tags: Tag[]
   milestoneCount: number
-  todoCount: number
-  completedTodoCount: number
+  taskCount: number
+  completedTaskCount: number
   createdAt: string
   updatedAt?: string
 }
@@ -551,7 +551,7 @@ export interface ProjectDetails {
   tags: Tag[]
   fileReferences: FileReference[]
   milestones: MilestoneSummary[]
-  todos: Todo[]
+  tasks: Task[]
   notes: Note[]
   createdAt: string
   updatedAt?: string
@@ -584,8 +584,8 @@ export interface MilestoneSummary {
   dueDate?: string
   sortOrder: number
   tags: Tag[]
-  todoCount: number
-  completedTodoCount: number
+  taskCount: number
+  completedTaskCount: number
   createdAt: string
   updatedAt?: string
 }
@@ -601,7 +601,7 @@ export interface MilestoneDetails {
   sortOrder: number
   tags: Tag[]
   fileReferences: FileReference[]
-  todos: Todo[]
+  tasks: Task[]
   notes: Note[]
   createdAt: string
   updatedAt?: string
@@ -629,12 +629,12 @@ export interface UpdateMilestoneRequest {
   fileReferences?: FileReferenceRequest[]
 }
 
-export interface Todo {
+export interface Task {
   id: string
   title: string
   description?: string
-  status: TodoStatus
-  priority: TodoPriority
+  status: TaskStatus
+  priority: TaskPriority
   completionNotes?: string
   dueDate?: string
   completedAt?: string
@@ -646,11 +646,11 @@ export interface Todo {
   updatedAt?: string
 }
 
-export interface CreateTodoRequest {
+export interface CreateTaskRequest {
   title: string
   description?: string
-  status?: TodoStatus
-  priority?: TodoPriority
+  status?: TaskStatus
+  priority?: TaskPriority
   dueDate?: string
   sortOrder?: number
   projectId?: string
@@ -658,11 +658,11 @@ export interface CreateTodoRequest {
   tags?: TagRequest[]
 }
 
-export interface UpdateTodoRequest {
+export interface UpdateTaskRequest {
   title: string
   description?: string
-  status: TodoStatus
-  priority: TodoPriority
+  status: TaskStatus
+  priority: TaskPriority
   completionNotes?: string
   dueDate?: string
   sortOrder: number
@@ -719,14 +719,14 @@ export const milestones = {
   delete: (projectId: string, id: string) => api.delete(`/api/v1/projects/${projectId}/milestones/${id}`),
 }
 
-// Todos API
-export const todos = {
-  list: () => api.get<Todo[]>('/api/v1/todos'),
-  listStandalone: () => api.get<Todo[]>('/api/v1/todos/standalone'),
-  get: (id: string) => api.get<Todo>(`/api/v1/todos/${id}`),
-  create: (data: CreateTodoRequest) => api.post<Todo>('/api/v1/todos', data),
-  update: (id: string, data: UpdateTodoRequest) => api.put<Todo>(`/api/v1/todos/${id}`, data),
-  delete: (id: string) => api.delete(`/api/v1/todos/${id}`),
+// Tasks API
+export const tasks = {
+  list: () => api.get<Task[]>('/api/v1/tasks'),
+  listStandalone: () => api.get<Task[]>('/api/v1/tasks/standalone'),
+  get: (id: string) => api.get<Task>(`/api/v1/tasks/${id}`),
+  create: (data: CreateTaskRequest) => api.post<Task>('/api/v1/tasks', data),
+  update: (id: string, data: UpdateTaskRequest) => api.put<Task>(`/api/v1/tasks/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/tasks/${id}`),
 }
 
 // Notes API

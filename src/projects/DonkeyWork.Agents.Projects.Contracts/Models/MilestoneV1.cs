@@ -94,11 +94,11 @@ public sealed class MilestoneSummaryV1
     [JsonPropertyName("tags")]
     public List<TagV1> Tags { get; init; } = [];
 
-    [JsonPropertyName("todoCount")]
-    public int TodoCount { get; init; }
+    [JsonPropertyName("taskCount")]
+    public int TaskItemCount { get; init; }
 
-    [JsonPropertyName("completedTodoCount")]
-    public int CompletedTodoCount { get; init; }
+    [JsonPropertyName("completedTaskCount")]
+    public int CompletedTaskItemCount { get; init; }
 
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }
@@ -142,8 +142,8 @@ public sealed class MilestoneDetailsV1
     [JsonPropertyName("fileReferences")]
     public List<FileReferenceV1> FileReferences { get; init; } = [];
 
-    [JsonPropertyName("todos")]
-    public List<TodoV1> Todos { get; init; } = [];
+    [JsonPropertyName("tasks")]
+    public List<TaskItemV1> Tasks { get; init; } = [];
 
     [JsonPropertyName("notes")]
     public List<NoteV1> Notes { get; init; } = [];

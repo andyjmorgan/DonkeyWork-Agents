@@ -25,9 +25,9 @@ public enum MilestoneStatus
 }
 
 /// <summary>
-/// Todo status enumeration.
+/// Task item status enumeration.
 /// </summary>
-public enum TodoStatus
+public enum TaskItemStatus
 {
     Pending = 0,
     InProgress = 1,
@@ -36,9 +36,9 @@ public enum TodoStatus
 }
 
 /// <summary>
-/// Todo priority enumeration.
+/// Task item priority enumeration.
 /// </summary>
-public enum TodoPriority
+public enum TaskItemPriority
 {
     Low = 0,
     Medium = 1,

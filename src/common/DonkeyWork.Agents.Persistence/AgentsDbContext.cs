@@ -47,11 +47,11 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     // Projects module
     public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
     public DbSet<MilestoneEntity> Milestones => Set<MilestoneEntity>();
-    public DbSet<TodoEntity> Todos => Set<TodoEntity>();
+    public DbSet<TaskItemEntity> TaskItems => Set<TaskItemEntity>();
     public DbSet<NoteEntity> Notes => Set<NoteEntity>();
     public DbSet<ProjectTagEntity> ProjectTags => Set<ProjectTagEntity>();
     public DbSet<MilestoneTagEntity> MilestoneTags => Set<MilestoneTagEntity>();
-    public DbSet<TodoTagEntity> TodoTags => Set<TodoTagEntity>();
+    public DbSet<TaskItemTagEntity> TaskItemTags => Set<TaskItemTagEntity>();
     public DbSet<NoteTagEntity> NoteTags => Set<NoteTagEntity>();
     public DbSet<ProjectFileReferenceEntity> ProjectFileReferences => Set<ProjectFileReferenceEntity>();
     public DbSet<MilestoneFileReferenceEntity> MilestoneFileReferences => Set<MilestoneFileReferenceEntity>();

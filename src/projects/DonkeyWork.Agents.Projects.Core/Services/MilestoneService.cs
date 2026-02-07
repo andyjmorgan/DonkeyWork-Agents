@@ -124,7 +124,7 @@ public class MilestoneService : IMilestoneService
             .AsNoTracking()
             .Include(m => m.Tags)
             .Include(m => m.FileReferences)
-            .Include(m => m.Todos)
+            .Include(m => m.TaskItems)
                 .ThenInclude(t => t.Tags)
             .Include(m => m.Notes)
                 .ThenInclude(n => n.Tags)
@@ -138,7 +138,7 @@ public class MilestoneService : IMilestoneService
         var milestones = await _dbContext.Milestones
             .AsNoTracking()
             .Include(m => m.Tags)
-            .Include(m => m.Todos)
+            .Include(m => m.TaskItems)
             .Where(m => m.ProjectId == projectId)
             .OrderBy(m => m.SortOrder)
             .ToListAsync(cancellationToken);
@@ -285,8 +285,8 @@ public class MilestoneService : IMilestoneService
             DueDate = milestone.DueDate,
             SortOrder = milestone.SortOrder,
             Tags = milestone.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
-            TodoCount = milestone.Todos.Count,
-            CompletedTodoCount = milestone.Todos.Count(t => t.Status == Persistence.Entities.Projects.TodoStatus.Completed),
+            TaskItemCount = milestone.TaskItems.Count,
+            CompletedTaskItemCount = milestone.TaskItems.Count(t => t.Status == Persistence.Entities.Projects.TaskItemStatus.Completed),
             CreatedAt = milestone.CreatedAt,
             UpdatedAt = milestone.UpdatedAt
         };
@@ -313,13 +313,13 @@ public class MilestoneService : IMilestoneService
                 Description = f.Description,
                 SortOrder = f.SortOrder
             }).ToList(),
-            Todos = milestone.Todos.OrderBy(t => t.SortOrder).Select(t => new TodoV1
+            Tasks = milestone.TaskItems.OrderBy(t => t.SortOrder).Select(t => new TaskItemV1
             {
                 Id = t.Id,
                 Title = t.Title,
                 Description = t.Description,
-                Status = (Contracts.Models.TodoStatus)(int)t.Status,
-                Priority = (Contracts.Models.TodoPriority)(int)t.Priority,
+                Status = (Contracts.Models.TaskItemStatus)(int)t.Status,
+                Priority = (Contracts.Models.TaskItemPriority)(int)t.Priority,
                 CompletionNotes = t.CompletionNotes,
                 DueDate = t.DueDate,
                 CompletedAt = t.CompletedAt,

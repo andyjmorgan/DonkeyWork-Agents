@@ -37,11 +37,11 @@ import {
 import {
   projects,
   milestones,
-  todos,
+  tasks,
   notes,
   type ProjectDetails,
   type MilestoneDetails,
-  type Todo,
+  type Task,
   type MilestoneStatus,
 } from '@/lib/api'
 
@@ -242,7 +242,7 @@ export function MilestoneDetailPage() {
     })
 
     try {
-      const newTask = await todos.create({
+      const newTask = await tasks.create({
         title: `Untitled Task - ${timestamp}`,
         description: '',
         priority: 'Medium',
@@ -254,35 +254,35 @@ export function MilestoneDetailPage() {
     }
   }
 
-  const handleToggleTodoStatus = async (todo: Todo) => {
+  const handleToggleTaskStatus = async (task: Task) => {
     try {
-      if (todo.status === 'Completed') {
+      if (task.status === 'Completed') {
         // Toggle back to Pending
-        await todos.update(todo.id, {
-          title: todo.title,
-          description: todo.description,
-          priority: todo.priority,
+        await tasks.update(task.id, {
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
           status: 'Pending',
-          sortOrder: todo.sortOrder,
+          sortOrder: task.sortOrder,
         })
       } else {
-        // Delete the todo when completing
-        await todos.delete(todo.id)
+        // Delete the task when completing
+        await tasks.delete(task.id)
       }
       await loadData()
     } catch (error) {
-      console.error('Failed to update todo:', error)
+      console.error('Failed to update task:', error)
     }
   }
 
-  const handleDeleteTodo = async (todoId: string) => {
-    if (!window.confirm('Are you sure you want to delete this todo?')) return
+  const handleDeleteTask = async (taskId: string) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) return
 
     try {
-      await todos.delete(todoId)
+      await tasks.delete(taskId)
       await loadData()
     } catch (error) {
-      console.error('Failed to delete todo:', error)
+      console.error('Failed to delete task:', error)
     }
   }
 
@@ -297,8 +297,8 @@ export function MilestoneDetailPage() {
     }
   }
 
-  const pendingTodos = milestone?.todos.filter(t => t.status !== 'Completed').length || 0
-  const completedTodos = milestone?.todos.filter(t => t.status === 'Completed').length || 0
+  const pendingTasks = milestone?.tasks.filter(t => t.status !== 'Completed').length || 0
+  const completedTasks = milestone?.tasks.filter(t => t.status === 'Completed').length || 0
 
   if (isLoading) {
     return (
@@ -462,7 +462,7 @@ export function MilestoneDetailPage() {
       <div className="flex gap-2 overflow-x-auto pb-1">
         <TabButton tab="overview" icon={LayoutDashboard} iconColor="text-slate-500" label="Overview" />
         <TabButton tab="notes" icon={StickyNote} iconColor="text-blue-500" label="Notes" count={milestone.notes.length} />
-        <TabButton tab="tasks" icon={CheckSquare} iconColor="text-emerald-500" label="Tasks" count={milestone.todos.length} />
+        <TabButton tab="tasks" icon={CheckSquare} iconColor="text-emerald-500" label="Tasks" count={milestone.tasks.length} />
       </div>
 
       {/* Tab Content */}
@@ -471,11 +471,11 @@ export function MilestoneDetailPage() {
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-3xl font-bold text-amber-500">{pendingTodos}</div>
+              <div className="text-3xl font-bold text-amber-500">{pendingTasks}</div>
               <div className="text-sm text-muted-foreground">Pending</div>
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-3xl font-bold text-emerald-500">{completedTodos}</div>
+              <div className="text-3xl font-bold text-emerald-500">{completedTasks}</div>
               <div className="text-sm text-muted-foreground">Completed</div>
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
@@ -484,8 +484,8 @@ export function MilestoneDetailPage() {
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
               <div className="text-3xl font-bold text-primary">
-                {milestone.todos.length > 0
-                  ? Math.round((completedTodos / milestone.todos.length) * 100)
+                {milestone.tasks.length > 0
+                  ? Math.round((completedTasks / milestone.tasks.length) * 100)
                   : 0}%
               </div>
               <div className="text-sm text-muted-foreground">Progress</div>
@@ -601,7 +601,7 @@ export function MilestoneDetailPage() {
 
       {activeTab === 'tasks' && (
         <div className="space-y-4">
-          {milestone.todos.length === 0 ? (
+          {milestone.tasks.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center">
               <CheckSquare className="h-8 w-8 mx-auto text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">No tasks yet</p>
@@ -627,19 +627,19 @@ export function MilestoneDetailPage() {
                 </Button>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {milestone.todos.map((todo) => (
+                {milestone.tasks.map((task) => (
                   <ContentCard
-                    key={todo.id}
-                    title={todo.title}
-                    content={todo.description}
-                    onClick={() => navigate(`/tasks/${todo.id}`)}
-                    onDelete={() => handleDeleteTodo(todo.id)}
-                    date={todo.updatedAt || todo.createdAt}
-                    status={todo.status}
-                    priority={todo.priority}
-                    dueDate={todo.dueDate}
-                    onToggleComplete={() => handleToggleTodoStatus(todo)}
-                    isCompleted={todo.status === 'Completed'}
+                    key={task.id}
+                    title={task.title}
+                    content={task.description}
+                    onClick={() => navigate(`/tasks/${task.id}`)}
+                    onDelete={() => handleDeleteTask(task.id)}
+                    date={task.updatedAt || task.createdAt}
+                    status={task.status}
+                    priority={task.priority}
+                    dueDate={task.dueDate}
+                    onToggleComplete={() => handleToggleTaskStatus(task)}
+                    isCompleted={task.status === 'Completed'}
                   />
                 ))}
               </div>
