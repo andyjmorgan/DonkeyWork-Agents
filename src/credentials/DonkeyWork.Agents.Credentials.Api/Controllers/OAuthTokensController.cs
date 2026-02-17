@@ -155,8 +155,10 @@ public class OAuthTokensController : ControllerBase
                 config.ClientSecret,
                 cancellationToken);
 
-            // Calculate new expiration
-            var newExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+            // Calculate new expiration (null means the token does not expire)
+            DateTimeOffset? newExpiresAt = tokenResponse.ExpiresIn.HasValue
+                ? DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn.Value)
+                : null;
 
             // Update stored token
             await _tokenService.RefreshTokenAsync(
@@ -209,10 +211,15 @@ public class OAuthTokensController : ControllerBase
         }
     }
 
-    private static OAuthTokenStatus GetTokenStatus(DateTimeOffset expiresAt)
+    private static OAuthTokenStatus GetTokenStatus(DateTimeOffset? expiresAt)
     {
+        if (!expiresAt.HasValue)
+        {
+            return OAuthTokenStatus.Active;
+        }
+
         var now = DateTimeOffset.UtcNow;
-        var timeUntilExpiry = expiresAt - now;
+        var timeUntilExpiry = expiresAt.Value - now;
 
         if (timeUntilExpiry <= TimeSpan.Zero)
         {

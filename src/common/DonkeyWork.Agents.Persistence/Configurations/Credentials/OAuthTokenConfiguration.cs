@@ -45,7 +45,7 @@ public class OAuthTokenConfiguration : IEntityTypeConfiguration<OAuthTokenEntity
             .HasColumnType("jsonb");
 
         builder.Property(e => e.ExpiresAt)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(e => e.CreatedAt)
             .IsRequired();

@@ -184,9 +184,9 @@ public abstract class OAuthProviderBase : IOAuthProvider
             ? rtProp.GetString()
             : null;
 
-        var expiresIn = root.TryGetProperty("expires_in", out var exProp)
+        int? expiresIn = root.TryGetProperty("expires_in", out var exProp)
             ? exProp.GetInt32()
-            : 3600;
+            : null;
 
         var tokenType = root.TryGetProperty("token_type", out var ttProp)
             ? ttProp.GetString()

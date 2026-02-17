@@ -242,7 +242,7 @@ public class OAuthTokensControllerTests
                 tokenId,
                 "new_access_token",
                 "new_refresh_token",
-                It.IsAny<DateTimeOffset>(),
+                It.IsAny<DateTimeOffset?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(token);
 

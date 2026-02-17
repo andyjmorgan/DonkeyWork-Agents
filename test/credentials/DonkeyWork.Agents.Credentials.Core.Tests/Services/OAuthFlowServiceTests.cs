@@ -351,7 +351,7 @@ public class OAuthFlowServiceTests : IDisposable
             AccessToken = tokenResponse.AccessToken,
             RefreshToken = tokenResponse.RefreshToken!,
             Scopes = tokenResponse.Scopes!.ToList(),
-            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
+            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn!.Value),
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -377,7 +377,7 @@ public class OAuthFlowServiceTests : IDisposable
             .Setup(s => s.StoreTokenAsync(
                 _userId, provider, userInfo.ExternalUserId, userInfo.Email,
                 tokenResponse.AccessToken, tokenResponse.RefreshToken!,
-                tokenResponse.Scopes, It.IsAny<DateTimeOffset>(),
+                tokenResponse.Scopes, It.IsAny<DateTimeOffset?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
 
@@ -448,7 +448,7 @@ public class OAuthFlowServiceTests : IDisposable
             AccessToken = tokenResponse.AccessToken,
             RefreshToken = string.Empty,
             Scopes = tokenResponse.Scopes!.ToList(),
-            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
+            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn!.Value),
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -475,7 +475,7 @@ public class OAuthFlowServiceTests : IDisposable
                 _userId, provider, userInfo.ExternalUserId, userInfo.Email,
                 tokenResponse.AccessToken, string.Empty,
                 tokenResponse.Scopes ?? Array.Empty<string>(),
-                It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+                It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
 
         // Act
@@ -488,7 +488,7 @@ public class OAuthFlowServiceTests : IDisposable
                 _userId, provider, userInfo.ExternalUserId, userInfo.Email,
                 tokenResponse.AccessToken, string.Empty,
                 It.IsAny<IEnumerable<string>>(),
-                It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()),
+                It.IsAny<DateTimeOffset?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -535,7 +535,7 @@ public class OAuthFlowServiceTests : IDisposable
             AccessToken = tokenResponse.AccessToken,
             RefreshToken = tokenResponse.RefreshToken!,
             Scopes = defaultScopes.ToList(),
-            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
+            ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn!.Value),
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -564,7 +564,7 @@ public class OAuthFlowServiceTests : IDisposable
             .Setup(s => s.StoreTokenAsync(
                 _userId, provider, userInfo.ExternalUserId, userInfo.Email,
                 tokenResponse.AccessToken, tokenResponse.RefreshToken!,
-                defaultScopes, It.IsAny<DateTimeOffset>(),
+                defaultScopes, It.IsAny<DateTimeOffset?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
 

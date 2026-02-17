@@ -25,7 +25,7 @@ public class OAuthTokenEntity : BaseEntity
     /// </summary>
     public string ScopesJson { get; set; } = "[]";
 
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
 
     public DateTimeOffset? LastRefreshedAt { get; set; }
 }

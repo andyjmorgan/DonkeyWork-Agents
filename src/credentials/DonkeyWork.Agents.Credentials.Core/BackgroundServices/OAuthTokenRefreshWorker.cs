@@ -113,6 +113,13 @@ public sealed class OAuthTokenRefreshWorker : BackgroundService
                 return;
             }
 
+            // Skip tokens without a refresh token (provider doesn't support refresh)
+            if (string.IsNullOrEmpty(token.RefreshToken))
+            {
+                _logger.LogDebug("Skipping token {TokenId} - no refresh token available", tokenId);
+                return;
+            }
+
             // Get provider configuration
             var config = await configService.GetByProviderAsync(userId, provider, cancellationToken);
             if (config == null)
@@ -131,8 +138,10 @@ public sealed class OAuthTokenRefreshWorker : BackgroundService
                 config.ClientSecret,
                 cancellationToken);
 
-            // Calculate new expiration
-            var newExpiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+            // Calculate new expiration (null means the token does not expire)
+            DateTimeOffset? newExpiresAt = tokenResponse.ExpiresIn.HasValue
+                ? DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn.Value)
+                : null;
 
             // Update stored token
             await tokenService.RefreshTokenAsync(

@@ -478,7 +478,7 @@ export interface OAuthToken {
   email: string
   externalUserId: string
   status: OAuthTokenStatus
-  expiresAt: string
+  expiresAt?: string | null
   lastRefreshedAt?: string
   createdAt: string
 }
@@ -491,7 +491,7 @@ export interface OAuthTokenDetail {
   accessToken: string
   scopes: string[]
   status: OAuthTokenStatus
-  expiresAt: string
+  expiresAt?: string | null
   lastRefreshedAt?: string
   createdAt: string
 }

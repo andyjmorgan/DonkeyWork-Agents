@@ -69,7 +69,7 @@ public sealed class OAuthTokenService : IOAuthTokenService
         string accessToken,
         string refreshToken,
         IEnumerable<string> scopes,
-        DateTimeOffset expiresAt,
+        DateTimeOffset? expiresAt,
         CancellationToken cancellationToken = default)
     {
         var scopesList = scopes.ToList();
@@ -118,7 +118,7 @@ public sealed class OAuthTokenService : IOAuthTokenService
         Guid id,
         string newAccessToken,
         string newRefreshToken,
-        DateTimeOffset newExpiresAt,
+        DateTimeOffset? newExpiresAt,
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.OAuthTokens
@@ -163,7 +163,7 @@ public sealed class OAuthTokenService : IOAuthTokenService
 
         var entities = await _dbContext.OAuthTokens
             .IgnoreQueryFilters() // Get tokens for all users
-            .Where(e => e.ExpiresAt <= expirationThreshold)
+            .Where(e => e.ExpiresAt.HasValue && e.ExpiresAt.Value <= expirationThreshold)
             .ToListAsync(cancellationToken);
 
         return entities.Select(ToModel).ToList();

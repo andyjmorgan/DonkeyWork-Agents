@@ -35,7 +35,7 @@ public sealed class OAuthToken
     /// </summary>
     public required IReadOnlyList<string> Scopes { get; init; }
 
-    public required DateTimeOffset ExpiresAt { get; init; }
+    public DateTimeOffset? ExpiresAt { get; init; }
 
     public required DateTimeOffset CreatedAt { get; init; }
 

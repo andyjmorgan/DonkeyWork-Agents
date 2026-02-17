@@ -149,8 +149,10 @@ public sealed class OAuthFlowService : IOAuthFlowService
             tokenResponse.AccessToken,
             cancellationToken);
 
-        // Calculate expiration time
-        var expiresAt = DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn);
+        // Calculate expiration time (null means the token does not expire)
+        DateTimeOffset? expiresAt = tokenResponse.ExpiresIn.HasValue
+            ? DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn.Value)
+            : null;
 
         // Store or update token
         var token = await _tokenService.StoreTokenAsync(

@@ -33,9 +33,9 @@ public sealed class OAuthTokenItemV1
     public required OAuthTokenStatus Status { get; init; }
 
     /// <summary>
-    /// When the token expires.
+    /// When the token expires. Null if the token does not expire.
     /// </summary>
-    public required DateTimeOffset ExpiresAt { get; init; }
+    public DateTimeOffset? ExpiresAt { get; init; }
 
     /// <summary>
     /// When the token was last refreshed.

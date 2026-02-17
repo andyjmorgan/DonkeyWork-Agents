@@ -82,13 +82,13 @@ public interface IOAuthProvider
 /// </summary>
 /// <param name="AccessToken">Access token.</param>
 /// <param name="RefreshToken">Refresh token (may be null).</param>
-/// <param name="ExpiresIn">Token expiration in seconds.</param>
+/// <param name="ExpiresIn">Token expiration in seconds. Null if the token does not expire.</param>
 /// <param name="TokenType">Token type (usually "Bearer").</param>
 /// <param name="Scopes">Granted scopes.</param>
 public record OAuthTokenResponse(
     string AccessToken,
     string? RefreshToken,
-    int ExpiresIn,
+    int? ExpiresIn,
     string? TokenType,
     IEnumerable<string>? Scopes);
 
