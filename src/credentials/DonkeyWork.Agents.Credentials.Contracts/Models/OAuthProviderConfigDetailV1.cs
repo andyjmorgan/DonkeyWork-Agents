@@ -36,4 +36,29 @@ public sealed class OAuthProviderConfigDetailV1
     /// When the configuration was created.
     /// </summary>
     public required DateTimeOffset CreatedAt { get; init; }
+
+    /// <summary>
+    /// Authorization endpoint URL (for Custom providers).
+    /// </summary>
+    public string? AuthorizationUrl { get; init; }
+
+    /// <summary>
+    /// Token endpoint URL (for Custom providers).
+    /// </summary>
+    public string? TokenUrl { get; init; }
+
+    /// <summary>
+    /// User info endpoint URL (for Custom providers).
+    /// </summary>
+    public string? UserInfoUrl { get; init; }
+
+    /// <summary>
+    /// Scopes (for Custom providers).
+    /// </summary>
+    public IReadOnlyList<string>? Scopes { get; init; }
+
+    /// <summary>
+    /// Display name for custom providers.
+    /// </summary>
+    public string? CustomProviderName { get; init; }
 }

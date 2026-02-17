@@ -135,8 +135,8 @@ public class OAuthTokensController : ControllerBase
                 });
             }
 
-            // Get provider instance
-            var provider = _providerFactory.GetProvider(token.Provider);
+            // Get provider instance (pass config for custom providers)
+            var provider = _providerFactory.GetProvider(token.Provider, config);
 
             // Refresh token
             var tokenResponse = await provider.RefreshTokenAsync(

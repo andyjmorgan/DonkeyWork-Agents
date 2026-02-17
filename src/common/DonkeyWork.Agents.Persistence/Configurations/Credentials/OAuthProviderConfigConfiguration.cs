@@ -39,7 +39,24 @@ public class OAuthProviderConfigConfiguration : IEntityTypeConfiguration<OAuthPr
         builder.Property(e => e.CreatedAt)
             .IsRequired();
 
+        // Custom provider fields (nullable)
+        builder.Property(e => e.AuthorizationUrl)
+            .HasMaxLength(2048);
+
+        builder.Property(e => e.TokenUrl)
+            .HasMaxLength(2048);
+
+        builder.Property(e => e.UserInfoUrl)
+            .HasMaxLength(2048);
+
+        builder.Property(e => e.ScopesJson)
+            .HasMaxLength(4096);
+
+        builder.Property(e => e.CustomProviderName)
+            .HasMaxLength(200);
+
         builder.HasIndex(e => e.UserId);
-        builder.HasIndex(e => new { e.UserId, e.Provider }).IsUnique();
+        builder.HasIndex(e => new { e.UserId, e.Provider }).IsUnique()
+            .HasFilter("\"Provider\" != 'Custom'");
     }
 }

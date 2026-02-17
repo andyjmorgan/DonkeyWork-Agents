@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
@@ -66,16 +67,34 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
         string clientId,
         string clientSecret,
         string redirectUri,
+        string? authorizationUrl = null,
+        string? tokenUrl = null,
+        string? userInfoUrl = null,
+        List<string>? scopes = null,
+        string? customProviderName = null,
         CancellationToken cancellationToken = default)
     {
-        // Check for existing config for this provider
-        var existing = await _dbContext.OAuthProviderConfigs
-            .FirstOrDefaultAsync(e => e.UserId == userId && e.Provider == provider, cancellationToken);
-
-        if (existing != null)
+        // Check for existing config for non-custom providers (custom allows multiple)
+        if (provider != OAuthProvider.Custom)
         {
-            throw new InvalidOperationException(
-                $"OAuth provider config already exists for {provider}. Use Update instead.");
+            var existing = await _dbContext.OAuthProviderConfigs
+                .FirstOrDefaultAsync(e => e.UserId == userId && e.Provider == provider, cancellationToken);
+
+            if (existing != null)
+            {
+                throw new InvalidOperationException(
+                    $"OAuth provider config already exists for {provider}. Use Update instead.");
+            }
+        }
+
+        // Validate custom provider has required URLs
+        if (provider == OAuthProvider.Custom)
+        {
+            if (string.IsNullOrEmpty(authorizationUrl) || string.IsNullOrEmpty(tokenUrl))
+            {
+                throw new InvalidOperationException(
+                    "Custom OAuth providers require AuthorizationUrl and TokenUrl.");
+            }
         }
 
         var entity = new OAuthProviderConfigEntity
@@ -84,7 +103,12 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
             Provider = provider,
             ClientIdEncrypted = Encrypt(clientId),
             ClientSecretEncrypted = Encrypt(clientSecret),
-            RedirectUri = redirectUri
+            RedirectUri = redirectUri,
+            AuthorizationUrl = authorizationUrl,
+            TokenUrl = tokenUrl,
+            UserInfoUrl = userInfoUrl,
+            ScopesJson = scopes != null ? JsonSerializer.Serialize(scopes) : null,
+            CustomProviderName = customProviderName
         };
 
         _dbContext.OAuthProviderConfigs.Add(entity);
@@ -99,6 +123,11 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
         string? clientId,
         string? clientSecret,
         string? redirectUri,
+        string? authorizationUrl = null,
+        string? tokenUrl = null,
+        string? userInfoUrl = null,
+        List<string>? scopes = null,
+        string? customProviderName = null,
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.OAuthProviderConfigs
@@ -124,6 +153,31 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
             entity.RedirectUri = redirectUri;
         }
 
+        if (authorizationUrl != null)
+        {
+            entity.AuthorizationUrl = authorizationUrl;
+        }
+
+        if (tokenUrl != null)
+        {
+            entity.TokenUrl = tokenUrl;
+        }
+
+        if (userInfoUrl != null)
+        {
+            entity.UserInfoUrl = userInfoUrl;
+        }
+
+        if (scopes != null)
+        {
+            entity.ScopesJson = JsonSerializer.Serialize(scopes);
+        }
+
+        if (customProviderName != null)
+        {
+            entity.CustomProviderName = customProviderName;
+        }
+
         entity.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -146,6 +200,12 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
 
     private OAuthProviderConfig ToModel(OAuthProviderConfigEntity entity)
     {
+        List<string>? scopes = null;
+        if (!string.IsNullOrEmpty(entity.ScopesJson))
+        {
+            scopes = JsonSerializer.Deserialize<List<string>>(entity.ScopesJson);
+        }
+
         return new OAuthProviderConfig
         {
             Id = entity.Id,
@@ -154,7 +214,12 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
             ClientId = Decrypt(entity.ClientIdEncrypted),
             ClientSecret = Decrypt(entity.ClientSecretEncrypted),
             RedirectUri = entity.RedirectUri,
-            CreatedAt = entity.CreatedAt
+            CreatedAt = entity.CreatedAt,
+            AuthorizationUrl = entity.AuthorizationUrl,
+            TokenUrl = entity.TokenUrl,
+            UserInfoUrl = entity.UserInfoUrl,
+            Scopes = scopes,
+            CustomProviderName = entity.CustomProviderName
         };
     }
 

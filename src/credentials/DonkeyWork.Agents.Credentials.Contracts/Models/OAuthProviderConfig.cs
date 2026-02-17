@@ -27,4 +27,29 @@ public sealed class OAuthProviderConfig
     public required string RedirectUri { get; init; }
 
     public required DateTimeOffset CreatedAt { get; init; }
+
+    /// <summary>
+    /// Custom authorization endpoint URL. Only set for Custom providers.
+    /// </summary>
+    public string? AuthorizationUrl { get; init; }
+
+    /// <summary>
+    /// Custom token endpoint URL. Only set for Custom providers.
+    /// </summary>
+    public string? TokenUrl { get; init; }
+
+    /// <summary>
+    /// Custom user info endpoint URL. Only set for Custom providers.
+    /// </summary>
+    public string? UserInfoUrl { get; init; }
+
+    /// <summary>
+    /// Custom scopes. Only set for Custom providers.
+    /// </summary>
+    public IReadOnlyList<string>? Scopes { get; init; }
+
+    /// <summary>
+    /// Display name for the custom provider.
+    /// </summary>
+    public string? CustomProviderName { get; init; }
 }

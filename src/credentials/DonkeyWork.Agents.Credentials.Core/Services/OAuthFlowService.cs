@@ -45,8 +45,8 @@ public sealed class OAuthFlowService : IOAuthFlowService
         // Generate state for CSRF protection
         var state = GenerateState();
 
-        // Get provider instance
-        var oauthProvider = _providerFactory.GetProvider(provider);
+        // Get provider instance (pass config for custom providers)
+        var oauthProvider = _providerFactory.GetProvider(provider, config);
 
         // Build authorization URL
         var authorizationUrl = oauthProvider.BuildAuthorizationUrl(
@@ -74,8 +74,8 @@ public sealed class OAuthFlowService : IOAuthFlowService
                 $"OAuth provider configuration not found for {provider}.");
         }
 
-        // Get provider instance
-        var oauthProvider = _providerFactory.GetProvider(provider);
+        // Get provider instance (pass config for custom providers)
+        var oauthProvider = _providerFactory.GetProvider(provider, config);
 
         // Exchange code for tokens
         var tokenResponse = await oauthProvider.ExchangeCodeForTokensAsync(

@@ -17,6 +17,11 @@ public interface IOAuthProviderConfigService
         string clientId,
         string clientSecret,
         string redirectUri,
+        string? authorizationUrl = null,
+        string? tokenUrl = null,
+        string? userInfoUrl = null,
+        List<string>? scopes = null,
+        string? customProviderName = null,
         CancellationToken cancellationToken = default);
 
     Task<OAuthProviderConfig> UpdateAsync(
@@ -25,6 +30,11 @@ public interface IOAuthProviderConfigService
         string? clientId,
         string? clientSecret,
         string? redirectUri,
+        string? authorizationUrl = null,
+        string? tokenUrl = null,
+        string? userInfoUrl = null,
+        List<string>? scopes = null,
+        string? customProviderName = null,
         CancellationToken cancellationToken = default);
 
     Task DeleteAsync(Guid userId, Guid id, CancellationToken cancellationToken = default);

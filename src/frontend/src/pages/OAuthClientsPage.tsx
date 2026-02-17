@@ -96,7 +96,11 @@ export function OAuthClientsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ProviderIcon provider={config.provider} />
-                    <CardTitle className="text-base">{config.provider}</CardTitle>
+                    <CardTitle className="text-base">
+                      {config.provider === 'Custom'
+                        ? (config.customProviderName || 'Custom')
+                        : config.provider}
+                    </CardTitle>
                   </div>
                   <Button
                     variant="ghost"

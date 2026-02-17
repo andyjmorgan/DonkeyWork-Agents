@@ -1,6 +1,6 @@
 import { type OAuthProvider } from '@/lib/api'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
-import { Github } from 'lucide-react'
+import { Github, Globe } from 'lucide-react'
 
 interface ProviderIconProps {
   provider: OAuthProvider
@@ -22,6 +22,8 @@ export function ProviderIcon({ provider, className = 'h-5 w-5' }: ProviderIconPr
       )
     case 'GitHub':
       return <Github className={className} />
+    case 'Custom':
+      return <Globe className={className} />
     default:
       return null
   }

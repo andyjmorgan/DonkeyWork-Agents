@@ -411,8 +411,20 @@ export const executions = {
 }
 
 // OAuth types
-export type OAuthProvider = 'Google' | 'Microsoft' | 'GitHub'
+export type OAuthProvider = 'Google' | 'Microsoft' | 'GitHub' | 'Custom'
 export type OAuthTokenStatus = 'Active' | 'ExpiringSoon' | 'Expired'
+
+export interface OAuthProviderMetadata {
+  provider: OAuthProvider
+  displayName: string
+  authorizationUrl: string
+  tokenUrl: string
+  userInfoUrl: string
+  defaultScopes: string[]
+  setupUrl: string
+  setupInstructions: string
+  isBuiltIn: boolean
+}
 
 export interface OAuthProviderConfig {
   id: string
@@ -420,6 +432,7 @@ export interface OAuthProviderConfig {
   redirectUri: string
   createdAt: string
   hasToken: boolean
+  customProviderName?: string
 }
 
 export interface OAuthProviderConfigDetail {
@@ -429,6 +442,11 @@ export interface OAuthProviderConfigDetail {
   clientSecret: string
   redirectUri: string
   createdAt: string
+  authorizationUrl?: string
+  tokenUrl?: string
+  userInfoUrl?: string
+  scopes?: string[]
+  customProviderName?: string
 }
 
 export interface CreateOAuthProviderConfigRequest {
@@ -436,12 +454,22 @@ export interface CreateOAuthProviderConfigRequest {
   clientId: string
   clientSecret: string
   redirectUri: string
+  authorizationUrl?: string
+  tokenUrl?: string
+  userInfoUrl?: string
+  scopes?: string[]
+  customProviderName?: string
 }
 
 export interface UpdateOAuthProviderConfigRequest {
   clientId?: string
   clientSecret?: string
   redirectUri?: string
+  authorizationUrl?: string
+  tokenUrl?: string
+  userInfoUrl?: string
+  scopes?: string[]
+  customProviderName?: string
 }
 
 export interface OAuthToken {
@@ -481,6 +509,9 @@ export interface RefreshTokenResponse {
 
 // OAuth API functions
 export const oauth = {
+  // Provider metadata
+  getProviderMetadata: () => api.get<OAuthProviderMetadata[]>('/api/v1/oauth/configs/providers'),
+
   // Provider configs
   listConfigs: () => api.get<OAuthProviderConfig[]>('/api/v1/oauth/configs'),
   getConfig: (id: string) => api.get<OAuthProviderConfigDetail>(`/api/v1/oauth/configs/${id}`),
