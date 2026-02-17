@@ -3,6 +3,9 @@ using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Core.Utilities;
+using DonkeyWork.Agents.Persistence;
+using DonkeyWork.Agents.Persistence.Entities.Credentials;
+using Microsoft.EntityFrameworkCore;
 
 namespace DonkeyWork.Agents.Credentials.Core.Services;
 
@@ -14,18 +17,26 @@ public sealed class OAuthFlowService : IOAuthFlowService
     private readonly IOAuthProviderConfigService _providerConfigService;
     private readonly IOAuthTokenService _tokenService;
     private readonly IOAuthProviderFactory _providerFactory;
+    private readonly AgentsDbContext _dbContext;
+
+    /// <summary>
+    /// How long a state parameter is valid for.
+    /// </summary>
+    private static readonly TimeSpan StateExpiration = TimeSpan.FromMinutes(10);
 
     public OAuthFlowService(
         IOAuthProviderConfigService providerConfigService,
         IOAuthTokenService tokenService,
-        IOAuthProviderFactory providerFactory)
+        IOAuthProviderFactory providerFactory,
+        AgentsDbContext dbContext)
     {
         _providerConfigService = providerConfigService;
         _tokenService = tokenService;
         _providerFactory = providerFactory;
+        _dbContext = dbContext;
     }
 
-    public async Task<(string AuthorizationUrl, string State, string CodeVerifier)> GenerateAuthorizationUrlAsync(
+    public async Task<(string AuthorizationUrl, string State)> GenerateAuthorizationUrlAsync(
         Guid userId,
         OAuthProvider provider,
         CancellationToken cancellationToken = default)
@@ -45,6 +56,19 @@ public sealed class OAuthFlowService : IOAuthFlowService
         // Generate state for CSRF protection
         var state = GenerateState();
 
+        // Store state in database
+        var stateEntity = new OAuthStateEntity
+        {
+            UserId = userId,
+            State = state,
+            Provider = provider,
+            CodeVerifier = codeVerifier,
+            ExpiresAt = DateTimeOffset.UtcNow.Add(StateExpiration)
+        };
+
+        _dbContext.OAuthStates.Add(stateEntity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
         // Get provider instance (pass config for custom providers)
         var oauthProvider = _providerFactory.GetProvider(provider, config);
 
@@ -55,14 +79,48 @@ public sealed class OAuthFlowService : IOAuthFlowService
             codeChallenge,
             state);
 
-        return (authorizationUrl, state, codeVerifier);
+        return (authorizationUrl, state);
+    }
+
+    public async Task<OAuthCallbackState?> ValidateAndConsumeStateAsync(
+        string state,
+        CancellationToken cancellationToken = default)
+    {
+        // Look up state - must bypass query filter since callback is anonymous
+        var entity = await _dbContext.OAuthStates
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.State == state, cancellationToken);
+
+        if (entity == null)
+        {
+            return null;
+        }
+
+        // Check expiration
+        if (entity.ExpiresAt < DateTimeOffset.UtcNow)
+        {
+            // Expired - clean it up and return null
+            _dbContext.OAuthStates.Remove(entity);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return null;
+        }
+
+        // Consume the state (one-time use)
+        _dbContext.OAuthStates.Remove(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new OAuthCallbackState
+        {
+            UserId = entity.UserId,
+            Provider = entity.Provider,
+            CodeVerifier = entity.CodeVerifier
+        };
     }
 
     public async Task<OAuthToken> HandleCallbackAsync(
         Guid userId,
         OAuthProvider provider,
         string code,
-        string state,
         string codeVerifier,
         CancellationToken cancellationToken = default)
     {

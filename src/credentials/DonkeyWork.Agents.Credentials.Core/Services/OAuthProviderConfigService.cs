@@ -78,6 +78,7 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
         if (provider != OAuthProvider.Custom)
         {
             var existing = await _dbContext.OAuthProviderConfigs
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(e => e.UserId == userId && e.Provider == provider, cancellationToken);
 
             if (existing != null)

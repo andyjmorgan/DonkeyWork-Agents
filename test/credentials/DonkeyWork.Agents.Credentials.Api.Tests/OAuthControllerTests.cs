@@ -33,12 +33,14 @@ public class OAuthControllerTests
             _identityContextMock.Object,
             _loggerMock.Object);
 
-        // Setup HttpContext for cookies
+        // Setup HttpContext
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
         };
     }
+
+    #region GetAuthorizationUrl Tests
 
     [Fact]
     public async Task GetAuthorizationUrl_WithValidProvider_ReturnsOkWithUrl()
@@ -47,11 +49,10 @@ public class OAuthControllerTests
         var provider = OAuthProvider.Google;
         var authUrl = "https://accounts.google.com/o/oauth2/v2/auth?...";
         var state = "random_state_123";
-        var codeVerifier = "random_verifier_456";
 
         _oauthFlowServiceMock
             .Setup(s => s.GenerateAuthorizationUrlAsync(_userId, provider, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((authUrl, state, codeVerifier));
+            .ReturnsAsync((authUrl, state));
 
         // Act
         var result = await _controller.GetAuthorizationUrl(provider, CancellationToken.None);
@@ -61,8 +62,6 @@ public class OAuthControllerTests
         var response = Assert.IsType<GetAuthorizationUrlResponseV1>(okResult.Value);
         Assert.Equal(authUrl, response.AuthorizationUrl);
         Assert.Equal(state, response.State);
-
-        // Verify cookies were set (no assertion needed, just checking service was called)
     }
 
     [Fact]
@@ -83,30 +82,9 @@ public class OAuthControllerTests
         Assert.NotNull(badRequestResult.Value);
     }
 
-    [Fact]
-    public async Task GetAuthorizationUrl_SetsCookiesWithCorrectOptions()
-    {
-        // Arrange
-        var provider = OAuthProvider.GitHub;
-        var authUrl = "https://github.com/login/oauth/authorize?...";
-        var state = "state_123";
-        var codeVerifier = "verifier_456";
+    #endregion
 
-        _oauthFlowServiceMock
-            .Setup(s => s.GenerateAuthorizationUrlAsync(_userId, provider, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((authUrl, state, codeVerifier));
-
-        // Act
-        await _controller.GetAuthorizationUrl(provider, CancellationToken.None);
-
-        // Assert
-        var cookies = _controller.Response.Cookies;
-        Assert.NotNull(cookies);
-
-        _oauthFlowServiceMock.Verify(
-            s => s.GenerateAuthorizationUrlAsync(_userId, provider, It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
+    #region Callback Tests
 
     [Fact]
     public async Task Callback_WithSuccessfulFlow_RedirectsToFrontendWithSuccess()
@@ -119,13 +97,17 @@ public class OAuthControllerTests
 
         _controller.ControllerContext.HttpContext.Request.Scheme = "https";
         _controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost:5050");
-        _controller.ControllerContext.HttpContext.Request.Cookies = new MockRequestCookieCollection(
-            new Dictionary<string, string>
-            {
-                [$"oauth_state_{provider}"] = state,
-                [$"oauth_verifier_{provider}"] = codeVerifier,
-                [$"oauth_userid_{provider}"] = _userId.ToString()
-            });
+
+        var callbackState = new OAuthCallbackState
+        {
+            UserId = _userId,
+            Provider = provider,
+            CodeVerifier = codeVerifier
+        };
+
+        _oauthFlowServiceMock
+            .Setup(s => s.ValidateAndConsumeStateAsync(state, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callbackState);
 
         var token = new OAuthToken
         {
@@ -143,11 +125,7 @@ public class OAuthControllerTests
 
         _oauthFlowServiceMock
             .Setup(s => s.HandleCallbackAsync(
-                _userId,
-                provider,
-                code,
-                state,
-                codeVerifier,
+                _userId, provider, code, codeVerifier,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(token);
 
@@ -158,6 +136,47 @@ public class OAuthControllerTests
         var redirectResult = Assert.IsType<RedirectResult>(result);
         Assert.Contains("success=true", redirectResult.Url);
         Assert.Contains($"provider={provider}", redirectResult.Url);
+    }
+
+    [Fact]
+    public async Task Callback_SetsIdentityContextFromState()
+    {
+        // Arrange
+        var provider = OAuthProvider.Google;
+        var code = "auth_code_123";
+        var state = "state_123";
+
+        _controller.ControllerContext.HttpContext.Request.Scheme = "https";
+        _controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost:5050");
+
+        var callbackState = new OAuthCallbackState
+        {
+            UserId = _userId,
+            Provider = provider,
+            CodeVerifier = "verifier_456"
+        };
+
+        _oauthFlowServiceMock
+            .Setup(s => s.ValidateAndConsumeStateAsync(state, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callbackState);
+
+        _oauthFlowServiceMock
+            .Setup(s => s.HandleCallbackAsync(
+                It.IsAny<Guid>(), It.IsAny<OAuthProvider>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OAuthToken
+            {
+                Id = Guid.NewGuid(), UserId = _userId, Provider = provider,
+                ExternalUserId = "ext", Email = "a@b.com", AccessToken = "t",
+                RefreshToken = "r", Scopes = Array.Empty<string>(),
+                ExpiresAt = DateTimeOffset.UtcNow.AddHours(1), CreatedAt = DateTimeOffset.UtcNow
+            });
+
+        // Act
+        await _controller.Callback(provider, code, state, null, null, CancellationToken.None);
+
+        // Assert
+        _identityContextMock.Verify(x => x.SetIdentity(_userId, null, null, null), Times.Once);
     }
 
     [Fact]
@@ -198,32 +217,30 @@ public class OAuthControllerTests
     }
 
     [Fact]
-    public async Task Callback_WithStateMismatch_RedirectsWithError()
+    public async Task Callback_WithInvalidState_RedirectsWithError()
     {
         // Arrange
         var provider = OAuthProvider.GitHub;
         var code = "auth_code_123";
-        var state = "state_123";
-        var wrongState = "wrong_state";
+        var state = "invalid_state";
 
         _controller.ControllerContext.HttpContext.Request.Scheme = "https";
         _controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost:5050");
-        _controller.ControllerContext.HttpContext.Request.Cookies = new MockRequestCookieCollection(
-            new Dictionary<string, string>
-            {
-                [$"oauth_state_{provider}"] = wrongState
-            });
+
+        _oauthFlowServiceMock
+            .Setup(s => s.ValidateAndConsumeStateAsync(state, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OAuthCallbackState?)null);
 
         // Act
         var result = await _controller.Callback(provider, code, state, null, null, CancellationToken.None);
 
         // Assert
         var redirectResult = Assert.IsType<RedirectResult>(result);
-        Assert.Contains("error=state_mismatch", redirectResult.Url);
+        Assert.Contains("error=invalid_state", redirectResult.Url);
     }
 
     [Fact]
-    public async Task Callback_WithMissingCodeVerifier_RedirectsWithError()
+    public async Task Callback_WithProviderMismatch_RedirectsWithError()
     {
         // Arrange
         var provider = OAuthProvider.Google;
@@ -232,46 +249,25 @@ public class OAuthControllerTests
 
         _controller.ControllerContext.HttpContext.Request.Scheme = "https";
         _controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost:5050");
-        _controller.ControllerContext.HttpContext.Request.Cookies = new MockRequestCookieCollection(
-            new Dictionary<string, string>
-            {
-                [$"oauth_state_{provider}"] = state
-                // Missing verifier
-            });
+
+        // State says GitHub but URL says Google
+        var callbackState = new OAuthCallbackState
+        {
+            UserId = _userId,
+            Provider = OAuthProvider.GitHub,
+            CodeVerifier = "verifier_456"
+        };
+
+        _oauthFlowServiceMock
+            .Setup(s => s.ValidateAndConsumeStateAsync(state, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callbackState);
 
         // Act
         var result = await _controller.Callback(provider, code, state, null, null, CancellationToken.None);
 
         // Assert
         var redirectResult = Assert.IsType<RedirectResult>(result);
-        Assert.Contains("error=missing_verifier", redirectResult.Url);
-    }
-
-    [Fact]
-    public async Task Callback_WithMissingUserId_RedirectsWithError()
-    {
-        // Arrange
-        var provider = OAuthProvider.Microsoft;
-        var code = "auth_code_123";
-        var state = "state_123";
-        var codeVerifier = "verifier_456";
-
-        _controller.ControllerContext.HttpContext.Request.Scheme = "https";
-        _controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost:5050");
-        _controller.ControllerContext.HttpContext.Request.Cookies = new MockRequestCookieCollection(
-            new Dictionary<string, string>
-            {
-                [$"oauth_state_{provider}"] = state,
-                [$"oauth_verifier_{provider}"] = codeVerifier
-                // Missing userid
-            });
-
-        // Act
-        var result = await _controller.Callback(provider, code, state, null, null, CancellationToken.None);
-
-        // Assert
-        var redirectResult = Assert.IsType<RedirectResult>(result);
-        Assert.Contains("error=missing_userid", redirectResult.Url);
+        Assert.Contains("error=provider_mismatch", redirectResult.Url);
     }
 
     [Fact]
@@ -285,21 +281,21 @@ public class OAuthControllerTests
 
         _controller.ControllerContext.HttpContext.Request.Scheme = "https";
         _controller.ControllerContext.HttpContext.Request.Host = new HostString("localhost:5050");
-        _controller.ControllerContext.HttpContext.Request.Cookies = new MockRequestCookieCollection(
-            new Dictionary<string, string>
-            {
-                [$"oauth_state_{provider}"] = state,
-                [$"oauth_verifier_{provider}"] = codeVerifier,
-                [$"oauth_userid_{provider}"] = _userId.ToString()
-            });
+
+        var callbackState = new OAuthCallbackState
+        {
+            UserId = _userId,
+            Provider = provider,
+            CodeVerifier = codeVerifier
+        };
+
+        _oauthFlowServiceMock
+            .Setup(s => s.ValidateAndConsumeStateAsync(state, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(callbackState);
 
         _oauthFlowServiceMock
             .Setup(s => s.HandleCallbackAsync(
-                _userId,
-                provider,
-                code,
-                state,
-                codeVerifier,
+                _userId, provider, code, codeVerifier,
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Token exchange failed"));
 
@@ -311,31 +307,5 @@ public class OAuthControllerTests
         Assert.Contains("error=callback_failed", redirectResult.Url);
     }
 
-    // Helper class for mocking request cookies
-    private class MockRequestCookieCollection : IRequestCookieCollection
-    {
-        private readonly Dictionary<string, string> _cookies;
-
-        public MockRequestCookieCollection(Dictionary<string, string> cookies)
-        {
-            _cookies = cookies;
-        }
-
-        public string? this[string key] => _cookies.TryGetValue(key, out var value) ? value : null;
-        public int Count => _cookies.Count;
-        public ICollection<string> Keys => _cookies.Keys;
-        public bool ContainsKey(string key) => _cookies.ContainsKey(key);
-        public bool TryGetValue(string key, out string? value)
-        {
-            if (_cookies.TryGetValue(key, out var val))
-            {
-                value = val;
-                return true;
-            }
-            value = null;
-            return false;
-        }
-        public IEnumerator<KeyValuePair<string, string>> GetEnumerator() => _cookies.GetEnumerator();
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _cookies.GetEnumerator();
-    }
+    #endregion
 }

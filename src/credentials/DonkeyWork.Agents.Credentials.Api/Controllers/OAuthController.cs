@@ -35,7 +35,7 @@ public class OAuthController : ControllerBase
 
     /// <summary>
     /// Generates an OAuth authorization URL for the specified provider.
-    /// Stores state and code verifier in secure cookies for callback validation.
+    /// Stores flow state server-side for secure callback validation.
     /// </summary>
     /// <param name="provider">OAuth provider (Google, Microsoft, GitHub).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -51,23 +51,10 @@ public class OAuthController : ControllerBase
     {
         try
         {
-            var (authorizationUrl, state, codeVerifier) = await _oauthFlowService.GenerateAuthorizationUrlAsync(
+            var (authorizationUrl, state) = await _oauthFlowService.GenerateAuthorizationUrlAsync(
                 _identityContext.UserId,
                 provider,
                 cancellationToken);
-
-            // Store state and code verifier in secure cookies
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Lax,
-                MaxAge = TimeSpan.FromMinutes(10)
-            };
-
-            Response.Cookies.Append($"oauth_state_{provider}", state, cookieOptions);
-            Response.Cookies.Append($"oauth_verifier_{provider}", codeVerifier, cookieOptions);
-            Response.Cookies.Append($"oauth_userid_{provider}", _identityContext.UserId.ToString(), cookieOptions);
 
             return Ok(new GetAuthorizationUrlResponseV1
             {
@@ -84,7 +71,7 @@ public class OAuthController : ControllerBase
 
     /// <summary>
     /// Handles the OAuth callback from the provider.
-    /// Validates state, exchanges code for tokens, and stores them.
+    /// Validates state against server-side store, exchanges code for tokens, and stores them.
     /// Redirects to frontend with success or error.
     /// </summary>
     /// <param name="provider">OAuth provider.</param>
@@ -112,71 +99,51 @@ public class OAuthController : ControllerBase
         if (!string.IsNullOrEmpty(error))
         {
             _logger.LogWarning("OAuth callback error from {Provider}: {Error}", provider, error);
-            CleanupCookies(provider);
             return Redirect($"{callbackUrl}?error={Uri.EscapeDataString(error)}&provider={provider}");
         }
 
         if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
         {
             _logger.LogWarning("OAuth callback missing code or state for {Provider}", provider);
-            CleanupCookies(provider);
             return Redirect($"{callbackUrl}?error=missing_parameters&provider={provider}");
         }
 
-        // Validate state
-        if (!Request.Cookies.TryGetValue($"oauth_state_{provider}", out var expectedState) ||
-            state != expectedState)
+        // Validate state against server-side store and get flow context
+        var callbackState = await _oauthFlowService.ValidateAndConsumeStateAsync(state, cancellationToken);
+        if (callbackState == null)
         {
-            _logger.LogWarning("OAuth state mismatch for {Provider}", provider);
-            CleanupCookies(provider);
-            return Redirect($"{callbackUrl}?error=state_mismatch&provider={provider}");
+            _logger.LogWarning("OAuth state invalid or expired for {Provider}", provider);
+            return Redirect($"{callbackUrl}?error=invalid_state&provider={provider}");
         }
 
-        // Get code verifier
-        if (!Request.Cookies.TryGetValue($"oauth_verifier_{provider}", out var codeVerifier) ||
-            string.IsNullOrEmpty(codeVerifier))
+        // Verify the provider in the URL matches the state
+        if (callbackState.Provider != provider)
         {
-            _logger.LogWarning("OAuth code verifier not found for {Provider}", provider);
-            CleanupCookies(provider);
-            return Redirect($"{callbackUrl}?error=missing_verifier&provider={provider}");
+            _logger.LogWarning(
+                "OAuth provider mismatch: URL has {UrlProvider} but state has {StateProvider}",
+                provider, callbackState.Provider);
+            return Redirect($"{callbackUrl}?error=provider_mismatch&provider={provider}");
         }
 
-        // Get user ID
-        if (!Request.Cookies.TryGetValue($"oauth_userid_{provider}", out var userIdStr) ||
-            !Guid.TryParse(userIdStr, out var userId))
-        {
-            _logger.LogWarning("OAuth user ID not found for {Provider}", provider);
-            CleanupCookies(provider);
-            return Redirect($"{callbackUrl}?error=missing_userid&provider={provider}");
-        }
+        // Populate identity context from the stored state so downstream services work
+        _identityContext.SetIdentity(callbackState.UserId);
 
         try
         {
-            // Handle callback and store tokens
             await _oauthFlowService.HandleCallbackAsync(
-                userId,
-                provider,
+                callbackState.UserId,
+                callbackState.Provider,
                 code,
-                state,
-                codeVerifier,
+                callbackState.CodeVerifier,
                 cancellationToken);
 
-            CleanupCookies(provider);
             _logger.LogInformation("OAuth flow completed successfully for {Provider}", provider);
             return Redirect($"{callbackUrl}?success=true&provider={provider}");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "OAuth callback handling failed for {Provider}", provider);
-            CleanupCookies(provider);
             return Redirect($"{callbackUrl}?error=callback_failed&provider={provider}");
         }
-    }
-
-    private void CleanupCookies(OAuthProvider provider)
-    {
-        Response.Cookies.Delete($"oauth_state_{provider}");
-        Response.Cookies.Delete($"oauth_verifier_{provider}");
-        Response.Cookies.Delete($"oauth_userid_{provider}");
     }
 }
