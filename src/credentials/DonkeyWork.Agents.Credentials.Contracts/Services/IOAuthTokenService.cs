@@ -19,10 +19,10 @@ public interface IOAuthTokenService
         string accessToken,
         string refreshToken,
         IEnumerable<string> scopes,
-        DateTimeOffset expiresAt,
+        DateTimeOffset? expiresAt,
         CancellationToken cancellationToken = default);
 
-    Task<OAuthToken> RefreshTokenAsync(Guid id, string newAccessToken, string newRefreshToken, DateTimeOffset newExpiresAt, CancellationToken cancellationToken = default);
+    Task<OAuthToken> RefreshTokenAsync(Guid id, string newAccessToken, string newRefreshToken, DateTimeOffset? newExpiresAt, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(Guid userId, Guid id, CancellationToken cancellationToken = default);
 

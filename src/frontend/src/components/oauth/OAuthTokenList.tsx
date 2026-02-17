@@ -79,7 +79,9 @@ export function OAuthTokenList({ tokens, onRefresh, onDisconnect }: OAuthTokenLi
             <div>
               <span>Expires:</span>{' '}
               <span className="font-medium">
-                {formatDistanceToNow(new Date(token.expiresAt), { addSuffix: true })}
+                {token.expiresAt
+                  ? formatDistanceToNow(new Date(token.expiresAt), { addSuffix: true })
+                  : 'Does not expire'}
               </span>
             </div>
             {token.lastRefreshedAt && (
