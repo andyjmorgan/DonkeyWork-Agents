@@ -124,6 +124,16 @@ public class OAuthTokensController : ControllerBase
 
         try
         {
+            // Check if the token has a refresh token
+            if (string.IsNullOrEmpty(token.RefreshToken))
+            {
+                return BadRequest(new RefreshTokenResponseV1
+                {
+                    Success = false,
+                    Error = "This provider does not support token refresh. Please reconnect the account."
+                });
+            }
+
             // Get provider config
             var config = await _configService.GetByProviderAsync(_identityContext.UserId, token.Provider, cancellationToken);
             if (config == null)
