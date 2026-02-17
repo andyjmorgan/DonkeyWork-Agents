@@ -30,4 +30,10 @@ public interface IIdentityContext
     /// Whether the current request is authenticated.
     /// </summary>
     bool IsAuthenticated { get; }
+
+    /// <summary>
+    /// Sets the identity context for the current request scope.
+    /// Used by authentication middleware and OAuth callbacks.
+    /// </summary>
+    void SetIdentity(Guid userId, string? email = null, string? name = null, string? username = null);
 }

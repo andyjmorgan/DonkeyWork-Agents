@@ -10,14 +10,26 @@ public interface IOAuthFlowService
 {
     /// <summary>
     /// Generates an authorization URL for the OAuth flow with PKCE.
+    /// Stores the state, code verifier, and user context in the database.
     /// </summary>
     /// <param name="userId">User ID.</param>
     /// <param name="provider">OAuth provider.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Authorization URL, state parameter, and code verifier.</returns>
-    Task<(string AuthorizationUrl, string State, string CodeVerifier)> GenerateAuthorizationUrlAsync(
+    /// <returns>Authorization URL and state parameter.</returns>
+    Task<(string AuthorizationUrl, string State)> GenerateAuthorizationUrlAsync(
         Guid userId,
         OAuthProvider provider,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates the OAuth state parameter and returns the stored callback context.
+    /// Consumes (deletes) the state so it cannot be reused.
+    /// </summary>
+    /// <param name="state">The state parameter from the OAuth callback.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The callback context if valid, null if state is invalid or expired.</returns>
+    Task<OAuthCallbackState?> ValidateAndConsumeStateAsync(
+        string state,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -26,7 +38,6 @@ public interface IOAuthFlowService
     /// <param name="userId">User ID.</param>
     /// <param name="provider">OAuth provider.</param>
     /// <param name="code">Authorization code from callback.</param>
-    /// <param name="state">State parameter for CSRF validation.</param>
     /// <param name="codeVerifier">PKCE code verifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The stored OAuth token.</returns>
@@ -34,7 +45,6 @@ public interface IOAuthFlowService
         Guid userId,
         OAuthProvider provider,
         string code,
-        string state,
         string codeVerifier,
         CancellationToken cancellationToken = default);
 }

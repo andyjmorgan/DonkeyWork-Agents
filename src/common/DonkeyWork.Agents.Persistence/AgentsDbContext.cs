@@ -31,6 +31,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<OAuthTokenEntity> OAuthTokens => Set<OAuthTokenEntity>();
     public DbSet<UserApiKeyEntity> UserApiKeys => Set<UserApiKeyEntity>();
     public DbSet<OAuthProviderConfigEntity> OAuthProviderConfigs => Set<OAuthProviderConfigEntity>();
+    public DbSet<OAuthStateEntity> OAuthStates => Set<OAuthStateEntity>();
 
     // Storage module
     public DbSet<StoredFileEntity> StoredFiles => Set<StoredFileEntity>();
