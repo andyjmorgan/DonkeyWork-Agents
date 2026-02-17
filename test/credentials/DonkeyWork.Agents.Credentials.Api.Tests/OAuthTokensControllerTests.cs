@@ -226,7 +226,7 @@ public class OAuthTokensControllerTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(OAuthProvider.Microsoft))
+            .Setup(f => f.GetProvider(OAuthProvider.Microsoft, config))
             .Returns(providerMock.Object);
 
         providerMock

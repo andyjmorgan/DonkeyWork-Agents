@@ -197,6 +197,11 @@ public class OAuthProviderConfigsControllerTests
                 request.ClientId,
                 request.ClientSecret,
                 request.RedirectUri,
+                request.AuthorizationUrl,
+                request.TokenUrl,
+                request.UserInfoUrl,
+                request.Scopes,
+                request.CustomProviderName,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdConfig);
 
@@ -230,6 +235,11 @@ public class OAuthProviderConfigsControllerTests
                 request.ClientId,
                 request.ClientSecret,
                 request.RedirectUri,
+                request.AuthorizationUrl,
+                request.TokenUrl,
+                request.UserInfoUrl,
+                request.Scopes,
+                request.CustomProviderName,
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("OAuth provider config already exists"));
 
@@ -271,6 +281,11 @@ public class OAuthProviderConfigsControllerTests
                 request.ClientId,
                 request.ClientSecret,
                 request.RedirectUri,
+                request.AuthorizationUrl,
+                request.TokenUrl,
+                request.UserInfoUrl,
+                request.Scopes,
+                request.CustomProviderName,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedConfig);
 
@@ -301,6 +316,11 @@ public class OAuthProviderConfigsControllerTests
                 request.ClientId,
                 request.ClientSecret,
                 request.RedirectUri,
+                request.AuthorizationUrl,
+                request.TokenUrl,
+                request.UserInfoUrl,
+                request.Scopes,
+                request.CustomProviderName,
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Config not found"));
 
