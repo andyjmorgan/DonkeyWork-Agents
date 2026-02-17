@@ -200,6 +200,7 @@ public abstract class OAuthProviderBase : IOAuthProvider
         var httpClient = HttpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("DonkeyWork-Agents", "1.0"));
 
         var response = await httpClient.SendAsync(request, cancellationToken);
 
