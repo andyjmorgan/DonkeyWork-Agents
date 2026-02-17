@@ -161,8 +161,24 @@ public abstract class OAuthProviderBase : IOAuthProvider
         var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        var accessToken = root.GetProperty("access_token").GetString()
-            ?? throw new InvalidOperationException("access_token is required");
+        // Some providers (e.g. GitHub) return errors with HTTP 200
+        if (root.TryGetProperty("error", out var errorProp))
+        {
+            var error = errorProp.GetString();
+            var description = root.TryGetProperty("error_description", out var descProp)
+                ? descProp.GetString()
+                : null;
+            throw new HttpRequestException(
+                $"Token endpoint returned error: {error}" +
+                (description != null ? $" - {description}" : string.Empty));
+        }
+
+        if (!root.TryGetProperty("access_token", out var atProp) || string.IsNullOrEmpty(atProp.GetString()))
+        {
+            throw new InvalidOperationException("Token response does not contain access_token");
+        }
+
+        var accessToken = atProp.GetString()!;
 
         var refreshToken = root.TryGetProperty("refresh_token", out var rtProp)
             ? rtProp.GetString()
