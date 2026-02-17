@@ -17,8 +17,8 @@ export default function OAuthCallbackPage() {
       console.error(`Failed to connect account: ${error}`)
     }
 
-    // Redirect to secrets page after 2 seconds
-    const timer = setTimeout(() => navigate('/secrets'), 2000)
+    // Redirect to connected accounts page after 2 seconds
+    const timer = setTimeout(() => navigate('/connected-accounts'), 2000)
     return () => clearTimeout(timer)
   }, [searchParams, navigate])
 
