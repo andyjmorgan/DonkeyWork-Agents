@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
@@ -33,6 +34,70 @@ public class OAuthProviderConfigsController : ControllerBase
     }
 
     /// <summary>
+    /// Returns metadata for all supported OAuth providers including endpoint URLs,
+    /// default scopes, and setup instructions.
+    /// </summary>
+    /// <response code="200">Returns provider metadata.</response>
+    [HttpGet("providers")]
+    [ProducesResponseType<IReadOnlyList<OAuthProviderMetadataV1>>(StatusCodes.Status200OK)]
+    public IActionResult GetProviderMetadata()
+    {
+        var metadata = new List<OAuthProviderMetadataV1>
+        {
+            new()
+            {
+                Provider = OAuthProvider.Google,
+                DisplayName = "Google",
+                AuthorizationUrl = "https://accounts.google.com/o/oauth2/v2/auth",
+                TokenUrl = "https://oauth2.googleapis.com/token",
+                UserInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo",
+                DefaultScopes = ["openid", "profile", "email", "https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/drive.file"],
+                SetupUrl = "https://console.cloud.google.com/apis/credentials",
+                SetupInstructions = "Create a project in Google Cloud Console, enable the Gmail and Drive APIs, then create OAuth 2.0 credentials under APIs & Services > Credentials. Set the authorized redirect URI to the callback URL shown below.",
+                IsBuiltIn = true
+            },
+            new()
+            {
+                Provider = OAuthProvider.Microsoft,
+                DisplayName = "Microsoft",
+                AuthorizationUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+                TokenUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+                UserInfoUrl = "https://graph.microsoft.com/v1.0/me",
+                DefaultScopes = ["openid", "profile", "email", "User.Read", "Mail.Read", "Files.ReadWrite.All"],
+                SetupUrl = "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
+                SetupInstructions = "Register an application in Azure Portal under App registrations. Add a Web platform with the redirect URI shown below. Create a client secret under Certificates & secrets. Grant the required Microsoft Graph API permissions.",
+                IsBuiltIn = true
+            },
+            new()
+            {
+                Provider = OAuthProvider.GitHub,
+                DisplayName = "GitHub",
+                AuthorizationUrl = "https://github.com/login/oauth/authorize",
+                TokenUrl = "https://github.com/login/oauth/access_token",
+                UserInfoUrl = "https://api.github.com/user",
+                DefaultScopes = ["user:email", "repo"],
+                SetupUrl = "https://github.com/settings/developers",
+                SetupInstructions = "Go to GitHub Settings > Developer settings > OAuth Apps and create a new OAuth App. Set the Authorization callback URL to the redirect URI shown below.",
+                IsBuiltIn = true
+            },
+            new()
+            {
+                Provider = OAuthProvider.Custom,
+                DisplayName = "Custom",
+                AuthorizationUrl = "",
+                TokenUrl = "",
+                UserInfoUrl = "",
+                DefaultScopes = [],
+                SetupUrl = "",
+                SetupInstructions = "Enter the OAuth 2.0 authorization and token endpoint URLs from your provider. The user info endpoint is optional but recommended for identifying connected accounts.",
+                IsBuiltIn = false
+            }
+        };
+
+        return Ok(metadata);
+    }
+
+    /// <summary>
     /// Lists all OAuth provider configurations for the current user.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -50,7 +115,8 @@ public class OAuthProviderConfigsController : ControllerBase
             Provider = c.Provider,
             RedirectUri = c.RedirectUri,
             CreatedAt = c.CreatedAt,
-            HasToken = tokens.Any(t => t.Provider == c.Provider)
+            HasToken = tokens.Any(t => t.Provider == c.Provider),
+            CustomProviderName = c.CustomProviderName
         }).ToList();
 
         return Ok(items);
@@ -82,7 +148,12 @@ public class OAuthProviderConfigsController : ControllerBase
             ClientId = MaskSecret(config.ClientId),
             ClientSecret = MaskSecret(config.ClientSecret),
             RedirectUri = config.RedirectUri,
-            CreatedAt = config.CreatedAt
+            CreatedAt = config.CreatedAt,
+            AuthorizationUrl = config.AuthorizationUrl,
+            TokenUrl = config.TokenUrl,
+            UserInfoUrl = config.UserInfoUrl,
+            Scopes = config.Scopes,
+            CustomProviderName = config.CustomProviderName
         };
 
         return Ok(detail);
@@ -110,6 +181,11 @@ public class OAuthProviderConfigsController : ControllerBase
                 request.ClientId,
                 request.ClientSecret,
                 request.RedirectUri,
+                request.AuthorizationUrl,
+                request.TokenUrl,
+                request.UserInfoUrl,
+                request.Scopes,
+                request.CustomProviderName,
                 cancellationToken);
 
             var item = new OAuthProviderConfigItemV1
@@ -118,7 +194,8 @@ public class OAuthProviderConfigsController : ControllerBase
                 Provider = config.Provider,
                 RedirectUri = config.RedirectUri,
                 CreatedAt = config.CreatedAt,
-                HasToken = false
+                HasToken = false,
+                CustomProviderName = config.CustomProviderName
             };
 
             return CreatedAtAction(nameof(Get), new { id = config.Id }, item);
@@ -153,6 +230,11 @@ public class OAuthProviderConfigsController : ControllerBase
                 request.ClientId,
                 request.ClientSecret,
                 request.RedirectUri,
+                request.AuthorizationUrl,
+                request.TokenUrl,
+                request.UserInfoUrl,
+                request.Scopes,
+                request.CustomProviderName,
                 cancellationToken);
 
             var detail = new OAuthProviderConfigDetailV1
@@ -162,7 +244,12 @@ public class OAuthProviderConfigsController : ControllerBase
                 ClientId = MaskSecret(config.ClientId),
                 ClientSecret = MaskSecret(config.ClientSecret),
                 RedirectUri = config.RedirectUri,
-                CreatedAt = config.CreatedAt
+                CreatedAt = config.CreatedAt,
+                AuthorizationUrl = config.AuthorizationUrl,
+                TokenUrl = config.TokenUrl,
+                UserInfoUrl = config.UserInfoUrl,
+                Scopes = config.Scopes,
+                CustomProviderName = config.CustomProviderName
             };
 
             return Ok(detail);

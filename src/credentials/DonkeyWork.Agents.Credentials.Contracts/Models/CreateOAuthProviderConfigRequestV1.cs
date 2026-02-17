@@ -31,4 +31,29 @@ public sealed class CreateOAuthProviderConfigRequestV1
     /// </summary>
     [Required]
     public required string RedirectUri { get; init; }
+
+    /// <summary>
+    /// Authorization endpoint URL. Required for Custom providers.
+    /// </summary>
+    public string? AuthorizationUrl { get; init; }
+
+    /// <summary>
+    /// Token endpoint URL. Required for Custom providers.
+    /// </summary>
+    public string? TokenUrl { get; init; }
+
+    /// <summary>
+    /// User info endpoint URL. Optional for Custom providers.
+    /// </summary>
+    public string? UserInfoUrl { get; init; }
+
+    /// <summary>
+    /// Scopes to request. Optional for Custom providers.
+    /// </summary>
+    public List<string>? Scopes { get; init; }
+
+    /// <summary>
+    /// Display name for the custom provider.
+    /// </summary>
+    public string? CustomProviderName { get; init; }
 }

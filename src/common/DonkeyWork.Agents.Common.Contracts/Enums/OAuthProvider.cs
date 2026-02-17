@@ -7,5 +7,6 @@ public enum OAuthProvider
 {
     Google,
     Microsoft,
-    GitHub
+    GitHub,
+    Custom
 }

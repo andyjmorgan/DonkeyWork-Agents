@@ -31,4 +31,9 @@ public sealed class OAuthProviderConfigItemV1
     /// Whether a token exists for this provider.
     /// </summary>
     public required bool HasToken { get; init; }
+
+    /// <summary>
+    /// Display name for custom providers.
+    /// </summary>
+    public string? CustomProviderName { get; init; }
 }

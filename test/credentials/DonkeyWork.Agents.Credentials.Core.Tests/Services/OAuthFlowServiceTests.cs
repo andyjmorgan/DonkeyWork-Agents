@@ -57,7 +57,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         // Act
@@ -131,7 +131,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         // Act - Generate twice
@@ -209,7 +209,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         _tokenServiceMock
@@ -352,7 +352,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         _tokenServiceMock
@@ -460,7 +460,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         _tokenServiceMock
@@ -535,7 +535,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         // Act & Assert
@@ -592,7 +592,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         // Act & Assert
@@ -670,7 +670,7 @@ public class OAuthFlowServiceTests
             .ReturnsAsync(config);
 
         _providerFactoryMock
-            .Setup(f => f.GetProvider(provider))
+            .Setup(f => f.GetProvider(provider, config))
             .Returns(providerMock.Object);
 
         DateTimeOffset? capturedExpiresAt = null;

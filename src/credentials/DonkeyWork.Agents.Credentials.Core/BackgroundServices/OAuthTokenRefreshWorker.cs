@@ -121,8 +121,8 @@ public sealed class OAuthTokenRefreshWorker : BackgroundService
                 return;
             }
 
-            // Get provider instance
-            var oauthProvider = providerFactory.GetProvider(provider);
+            // Get provider instance (pass config for custom providers)
+            var oauthProvider = providerFactory.GetProvider(provider, config);
 
             // Refresh the token
             var tokenResponse = await oauthProvider.RefreshTokenAsync(
