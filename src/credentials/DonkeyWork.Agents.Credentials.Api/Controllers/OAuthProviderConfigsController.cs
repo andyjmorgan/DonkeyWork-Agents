@@ -63,7 +63,7 @@ public class OAuthProviderConfigsController : ControllerBase
                 AuthorizationUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
                 TokenUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/token",
                 UserInfoUrl = "https://graph.microsoft.com/v1.0/me",
-                DefaultScopes = ["openid", "profile", "email", "User.Read", "Mail.Read", "Files.ReadWrite.All"],
+                DefaultScopes = ["openid", "offline_access", "profile", "email", "User.Read", "Mail.Read", "Files.ReadWrite.All"],
                 SetupUrl = "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
                 SetupInstructions = "Register an application in Azure Portal under App registrations. Add a Web platform with the redirect URI shown below. Create a client secret under Certificates & secrets. Grant the required Microsoft Graph API permissions.",
                 IsBuiltIn = true
