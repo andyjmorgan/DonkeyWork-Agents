@@ -120,6 +120,16 @@ export function ConnectedAccountsPage() {
                   </Button>
                 </div>
               </div>
+              {token.scopes.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {token.scopes.map((scope) => (
+                    <Badge key={scope} variant="outline" className="text-xs font-normal">
+                      {scope}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <div>
                   <span>Expires:</span>{' '}

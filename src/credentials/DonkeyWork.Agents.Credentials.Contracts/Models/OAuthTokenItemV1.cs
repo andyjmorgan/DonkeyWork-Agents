@@ -46,4 +46,9 @@ public sealed class OAuthTokenItemV1
     /// When the token was created.
     /// </summary>
     public required DateTimeOffset CreatedAt { get; init; }
+
+    /// <summary>
+    /// Scopes granted by the provider.
+    /// </summary>
+    public required IReadOnlyList<string> Scopes { get; init; }
 }

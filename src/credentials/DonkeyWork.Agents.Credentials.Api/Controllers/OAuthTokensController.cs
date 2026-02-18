@@ -59,7 +59,8 @@ public class OAuthTokensController : ControllerBase
             Status = GetTokenStatus(t.ExpiresAt),
             ExpiresAt = t.ExpiresAt,
             LastRefreshedAt = t.LastRefreshedAt,
-            CreatedAt = t.CreatedAt
+            CreatedAt = t.CreatedAt,
+            Scopes = t.Scopes
         }).ToList();
 
         return Ok(items);

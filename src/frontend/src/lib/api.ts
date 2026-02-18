@@ -481,6 +481,7 @@ export interface OAuthToken {
   expiresAt?: string | null
   lastRefreshedAt?: string
   createdAt: string
+  scopes: string[]
 }
 
 export interface OAuthTokenDetail {
