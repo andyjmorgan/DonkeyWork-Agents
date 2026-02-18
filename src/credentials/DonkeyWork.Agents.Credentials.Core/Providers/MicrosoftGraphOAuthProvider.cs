@@ -25,6 +25,7 @@ public sealed class MicrosoftGraphOAuthProvider : OAuthProviderBase
         return new[]
         {
             "openid",
+            "offline_access",
             "profile",
             "email",
             "User.Read",
