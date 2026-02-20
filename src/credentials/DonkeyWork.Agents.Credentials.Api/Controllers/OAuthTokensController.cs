@@ -60,7 +60,8 @@ public class OAuthTokensController : ControllerBase
             ExpiresAt = t.ExpiresAt,
             LastRefreshedAt = t.LastRefreshedAt,
             CreatedAt = t.CreatedAt,
-            Scopes = t.Scopes
+            Scopes = t.Scopes,
+            CanRefresh = !string.IsNullOrEmpty(t.RefreshToken)
         }).ToList();
 
         return Ok(items);

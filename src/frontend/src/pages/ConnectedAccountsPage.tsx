@@ -116,7 +116,7 @@ export function ConnectedAccountsPage() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  {token.provider !== 'GitHub' && (
+                  {token.canRefresh && (
                     <Button
                       size="sm"
                       variant="ghost"

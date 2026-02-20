@@ -51,4 +51,9 @@ public sealed class OAuthTokenItemV1
     /// Scopes granted by the provider.
     /// </summary>
     public required IReadOnlyList<string> Scopes { get; init; }
+
+    /// <summary>
+    /// Whether this token supports refresh. False when the provider does not issue refresh tokens.
+    /// </summary>
+    public required bool CanRefresh { get; init; }
 }

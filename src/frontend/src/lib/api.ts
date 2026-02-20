@@ -482,6 +482,7 @@ export interface OAuthToken {
   lastRefreshedAt?: string
   createdAt: string
   scopes: string[]
+  canRefresh: boolean
 }
 
 export interface OAuthTokenDetail {

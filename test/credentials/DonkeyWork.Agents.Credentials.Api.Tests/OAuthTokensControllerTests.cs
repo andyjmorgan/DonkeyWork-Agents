@@ -456,6 +456,54 @@ public class OAuthTokensControllerTests
         Assert.Empty(items);
     }
 
+    [Fact]
+    public async Task List_SetsCanRefreshBasedOnRefreshToken()
+    {
+        // Arrange
+        var tokens = new List<OAuthToken>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = _userId,
+                Provider = OAuthProvider.Google,
+                Email = "user@google.com",
+                ExternalUserId = "ext_1",
+                AccessToken = "access_token",
+                RefreshToken = "has_refresh_token",
+                Scopes = new[] { "email" },
+                ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = _userId,
+                Provider = OAuthProvider.GitHub,
+                Email = "user@github.com",
+                ExternalUserId = "ext_2",
+                AccessToken = "access_token",
+                RefreshToken = "",
+                Scopes = Array.Empty<string>(),
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+
+        _tokenServiceMock
+            .Setup(s => s.GetByUserIdAsync(_userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tokens);
+
+        // Act
+        var result = await _controller.List(CancellationToken.None);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var items = Assert.IsAssignableFrom<IReadOnlyList<OAuthTokenItemV1>>(okResult.Value);
+        Assert.Equal(2, items.Count);
+        Assert.True(items[0].CanRefresh);   // Has refresh token
+        Assert.False(items[1].CanRefresh);  // Empty refresh token
+    }
+
     #region GetAccessToken Tests
 
     [Fact]
