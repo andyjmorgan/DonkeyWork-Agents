@@ -103,6 +103,38 @@ public class OAuthTokensController : ControllerBase
     }
 
     /// <summary>
+    /// Gets the unmasked access token for a specific OAuth token.
+    /// </summary>
+    /// <param name="id">Token ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <response code="200">Returns the unmasked access token.</response>
+    /// <response code="404">Token not found.</response>
+    [HttpGet("{id}/access-token")]
+    [ProducesResponseType<GetOAuthAccessTokenResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAccessToken([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var token = await _tokenService.GetByIdAsync(_identityContext.UserId, id, cancellationToken);
+
+        if (token == null)
+        {
+            return NotFound();
+        }
+
+        var response = new GetOAuthAccessTokenResponseV1
+        {
+            Id = token.Id,
+            Provider = token.Provider,
+            Email = token.Email,
+            AccessToken = token.AccessToken,
+            Status = GetTokenStatus(token.ExpiresAt),
+            ExpiresAt = token.ExpiresAt
+        };
+
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Manually refreshes an OAuth token.
     /// </summary>
     /// <param name="id">Token ID.</param>

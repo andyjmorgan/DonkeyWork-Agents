@@ -497,6 +497,21 @@ export interface OAuthTokenDetail {
   createdAt: string
 }
 
+export interface GetOAuthAccessTokenResponse {
+  id: string
+  provider: OAuthProvider
+  email: string
+  accessToken: string
+  status: OAuthTokenStatus
+  expiresAt?: string | null
+}
+
+export interface AvailableCredential {
+  credentialType: 'OAuth' | 'ApiKey'
+  provider: string
+  isConfigured: boolean
+}
+
 export interface GetAuthorizationUrlResponse {
   authorizationUrl: string
   state: string
@@ -526,8 +541,14 @@ export const oauth = {
   // Tokens
   listTokens: () => api.get<OAuthToken[]>('/api/v1/oauth/tokens'),
   getToken: (id: string) => api.get<OAuthTokenDetail>(`/api/v1/oauth/tokens/${id}`),
+  getAccessToken: (id: string) => api.get<GetOAuthAccessTokenResponse>(`/api/v1/oauth/tokens/${id}/access-token`),
   refreshToken: (id: string) => api.post<RefreshTokenResponse>(`/api/v1/oauth/tokens/${id}/refresh`, {}),
   disconnectToken: (id: string) => api.delete(`/api/v1/oauth/tokens/${id}`),
+}
+
+// Available Credentials API
+export const availableCredentials = {
+  list: () => api.get<AvailableCredential[]>('/api/v1/credentials/available'),
 }
 
 // Project Management Types

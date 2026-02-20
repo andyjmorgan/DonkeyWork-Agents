@@ -455,4 +455,95 @@ public class OAuthTokensControllerTests
         var items = Assert.IsAssignableFrom<IReadOnlyList<OAuthTokenItemV1>>(okResult.Value);
         Assert.Empty(items);
     }
+
+    #region GetAccessToken Tests
+
+    [Fact]
+    public async Task GetAccessToken_WithExistingToken_ReturnsOkWithUnmaskedToken()
+    {
+        // Arrange
+        var tokenId = Guid.NewGuid();
+        var token = new OAuthToken
+        {
+            Id = tokenId,
+            UserId = _userId,
+            Provider = OAuthProvider.Google,
+            Email = "user@example.com",
+            ExternalUserId = "ext_123",
+            AccessToken = "ya29.full_unmasked_access_token_value",
+            RefreshToken = "refresh_token",
+            Scopes = new[] { "email", "profile" },
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _tokenServiceMock
+            .Setup(s => s.GetByIdAsync(_userId, tokenId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(token);
+
+        // Act
+        var result = await _controller.GetAccessToken(tokenId, CancellationToken.None);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<GetOAuthAccessTokenResponseV1>(okResult.Value);
+        Assert.Equal(tokenId, response.Id);
+        Assert.Equal("user@example.com", response.Email);
+        Assert.Equal("ya29.full_unmasked_access_token_value", response.AccessToken);
+        Assert.Equal(OAuthTokenStatus.Active, response.Status);
+    }
+
+    [Fact]
+    public async Task GetAccessToken_WithNonExistingToken_ReturnsNotFound()
+    {
+        // Arrange
+        var tokenId = Guid.NewGuid();
+
+        _tokenServiceMock
+            .Setup(s => s.GetByIdAsync(_userId, tokenId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OAuthToken?)null);
+
+        // Act
+        var result = await _controller.GetAccessToken(tokenId, CancellationToken.None);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetAccessToken_DoesNotIncludeRefreshToken()
+    {
+        // Arrange
+        var tokenId = Guid.NewGuid();
+        var token = new OAuthToken
+        {
+            Id = tokenId,
+            UserId = _userId,
+            Provider = OAuthProvider.Microsoft,
+            Email = "user@example.com",
+            ExternalUserId = "ext_123",
+            AccessToken = "access_token_value",
+            RefreshToken = "secret_refresh_token",
+            Scopes = new[] { "User.Read" },
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        _tokenServiceMock
+            .Setup(s => s.GetByIdAsync(_userId, tokenId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(token);
+
+        // Act
+        var result = await _controller.GetAccessToken(tokenId, CancellationToken.None);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<GetOAuthAccessTokenResponseV1>(okResult.Value);
+
+        // Verify the response type does not have a RefreshToken property
+        var properties = typeof(GetOAuthAccessTokenResponseV1).GetProperties();
+        Assert.DoesNotContain(properties, p => p.Name == "RefreshToken");
+    }
+
+    #endregion
 }

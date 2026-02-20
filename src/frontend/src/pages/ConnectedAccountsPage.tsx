@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, Unplug } from 'lucide-react'
+import { Eye, RefreshCw, Unplug } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ProviderIcon } from '@/components/oauth/ProviderIcon'
+import { ViewOAuthTokenDialog } from '@/components/oauth/ViewOAuthTokenDialog'
 import { oauth, type OAuthToken } from '@/lib/api'
 import { useOAuthFlow } from '@/hooks/useOAuthFlow'
 import { formatDistanceToNow } from 'date-fns'
@@ -10,6 +11,8 @@ import { formatDistanceToNow } from 'date-fns'
 export function ConnectedAccountsPage() {
   const [tokens, setTokens] = useState<OAuthToken[]>([])
   const [loading, setLoading] = useState(true)
+  const [viewTokenId, setViewTokenId] = useState<string | null>(null)
+  const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const { disconnect, refresh } = useOAuthFlow()
 
   const loadTokens = async () => {
@@ -105,6 +108,17 @@ export function ConnectedAccountsPage() {
                   <Button
                     size="sm"
                     variant="ghost"
+                    onClick={() => {
+                      setViewTokenId(token.id)
+                      setViewDialogOpen(true)
+                    }}
+                    title="View access token"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     onClick={() => handleRefresh(token.id)}
                     title="Refresh token"
                   >
@@ -152,6 +166,12 @@ export function ConnectedAccountsPage() {
           ))}
         </div>
       )}
+
+      <ViewOAuthTokenDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        tokenId={viewTokenId}
+      />
     </div>
   )
 }
