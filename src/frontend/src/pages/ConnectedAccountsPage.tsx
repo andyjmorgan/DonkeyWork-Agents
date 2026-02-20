@@ -116,14 +116,16 @@ export function ConnectedAccountsPage() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleRefresh(token.id)}
-                    title="Refresh token"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
+                  {token.provider !== 'GitHub' && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRefresh(token.id)}
+                      title="Refresh token"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
