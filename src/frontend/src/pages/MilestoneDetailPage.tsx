@@ -542,26 +542,6 @@ export function MilestoneDetailPage() {
             </div>
           </div>
 
-          {/* Completion Notes */}
-          {(milestone.status === 'Completed' || milestone.status === 'Cancelled') && milestone.completionNotes && (
-            <div className={`rounded-lg border p-4 ${milestone.status === 'Completed' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
-              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                {milestone.status === 'Completed' ? (
-                  <CheckSquare className="h-4 w-4 text-emerald-500" />
-                ) : (
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                )}
-                {milestone.status === 'Completed' ? 'Completion Notes' : 'Cancellation Notes'}
-              </h3>
-              <MarkdownViewer content={milestone.completionNotes} />
-              {milestone.completedAt && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {milestone.status === 'Completed' ? 'Completed' : 'Cancelled'} on {new Date(milestone.completedAt).toLocaleDateString()}
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Milestone Content */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -621,6 +601,26 @@ export function MilestoneDetailPage() {
               </div>
             )}
           </div>
+
+          {/* Completion Notes */}
+          {(milestone.status === 'Completed' || milestone.status === 'Cancelled') && milestone.completionNotes && (
+            <div className={`rounded-lg border p-4 ${milestone.status === 'Completed' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                {milestone.status === 'Completed' ? (
+                  <CheckSquare className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                )}
+                {milestone.status === 'Completed' ? 'Completion Notes' : 'Cancellation Notes'}
+              </h3>
+              <MarkdownViewer content={milestone.completionNotes} />
+              {milestone.completedAt && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {milestone.status === 'Completed' ? 'Completed' : 'Cancelled'} on {new Date(milestone.completedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
