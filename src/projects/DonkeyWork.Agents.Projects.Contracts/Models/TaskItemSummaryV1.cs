@@ -23,6 +23,12 @@ public sealed class TaskItemSummaryV1
     [JsonPropertyName("dueDate")]
     public DateTimeOffset? DueDate { get; init; }
 
+    [JsonPropertyName("descriptionPreview")]
+    public string? DescriptionPreview { get; init; }
+
+    [JsonPropertyName("descriptionLength")]
+    public int DescriptionLength { get; init; }
+
     [JsonPropertyName("completedAt")]
     public DateTimeOffset? CompletedAt { get; init; }
 

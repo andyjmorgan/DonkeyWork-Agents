@@ -50,9 +50,11 @@ public class ProjectsTools
         ReadOnlyHint = true)]
     public async Task<ProjectDetailsV1?> GetProject(
         [Description("The unique identifier of the project")] Guid id,
-        CancellationToken ct)
+        [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
+        [Description("Optional number of characters to read from the offset (for chunked reading of large content fields)")] int? contentLength = null,
+        CancellationToken ct = default)
     {
-        return await _projectService.GetByIdAsync(id, ct);
+        return await _projectService.GetByIdAsync(id, contentOffset, contentLength, ct);
     }
 
     /// <summary>
@@ -94,10 +96,11 @@ public class ProjectsTools
         [Description("New name for the project (omit to keep current)")] string? name = null,
         [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
         [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled (omit to keep current)")] ProjectStatus? status = null,
+        [Description("Completion notes (set when marking as Completed or Cancelled, omit to keep current)")] string? completionNotes = null,
         CancellationToken ct = default)
     {
         // Fetch current project to merge with provided values
-        var current = await _projectService.GetByIdAsync(id, ct);
+        var current = await _projectService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {
             return null;
@@ -107,7 +110,8 @@ public class ProjectsTools
         {
             Name = name ?? current.Name,
             Content = content ?? current.Content,
-            Status = status ?? current.Status
+            Status = status ?? current.Status,
+            CompletionNotes = completionNotes ?? current.CompletionNotes
         };
 
         return await _projectService.UpdateAsync(id, request, ct);

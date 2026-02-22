@@ -41,6 +41,16 @@ public class NoteEntity : BaseEntity
     public MilestoneEntity? Milestone { get; set; }
 
     /// <summary>
+    /// Foreign key to the parent research (optional).
+    /// </summary>
+    public Guid? ResearchId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the parent research.
+    /// </summary>
+    public DonkeyWork.Agents.Persistence.Entities.Research.ResearchEntity? Research { get; set; }
+
+    /// <summary>
     /// Navigation property to note tags.
     /// </summary>
     public ICollection<NoteTagEntity> Tags { get; set; } = new List<NoteTagEntity>();

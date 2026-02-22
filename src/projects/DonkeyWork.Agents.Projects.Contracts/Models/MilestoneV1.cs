@@ -54,6 +54,9 @@ public sealed class UpdateMilestoneRequestV1
     [JsonPropertyName("status")]
     public MilestoneStatus Status { get; init; }
 
+    [JsonPropertyName("completionNotes")]
+    public string? CompletionNotes { get; init; }
+
     [JsonPropertyName("dueDate")]
     public DateTimeOffset? DueDate { get; init; }
 
@@ -100,6 +103,15 @@ public sealed class MilestoneSummaryV1
     [JsonPropertyName("completedTaskCount")]
     public int CompletedTaskItemCount { get; init; }
 
+    [JsonPropertyName("contentPreview")]
+    public string? ContentPreview { get; init; }
+
+    [JsonPropertyName("contentLength")]
+    public int ContentLength { get; init; }
+
+    [JsonPropertyName("completedAt")]
+    public DateTimeOffset? CompletedAt { get; init; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }
 
@@ -124,6 +136,9 @@ public sealed class MilestoneDetailsV1
     [JsonPropertyName("content")]
     public string? Content { get; init; }
 
+    [JsonPropertyName("contentLength")]
+    public int ContentLength { get; init; }
+
     [JsonPropertyName("successCriteria")]
     public string? SuccessCriteria { get; init; }
 
@@ -147,6 +162,12 @@ public sealed class MilestoneDetailsV1
 
     [JsonPropertyName("notes")]
     public List<NoteV1> Notes { get; init; } = [];
+
+    [JsonPropertyName("completionNotes")]
+    public string? CompletionNotes { get; init; }
+
+    [JsonPropertyName("completedAt")]
+    public DateTimeOffset? CompletedAt { get; init; }
 
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }

@@ -417,4 +417,123 @@ public class NoteServiceTests : IDisposable
     // User isolation should be tested at the DbContext/integration test level.
 
     #endregion
+
+    #region Content Truncation and Chunking Tests
+
+    [Fact]
+    public async Task ListAsync_WithLongContent_IncludesTruncatedPreview()
+    {
+        // Arrange
+        var longContent = new string('a', 1000);
+        var note = _builder.CreateNoteEntity();
+        note.Content = longContent;
+        _dbContext.Notes.Add(note);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.NotNull(summary.ContentPreview);
+        Assert.Equal(503, summary.ContentPreview.Length); // 500 + "..."
+        Assert.EndsWith("...", summary.ContentPreview);
+        Assert.Equal(1000, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithShortContent_PreviewEqualsContent()
+    {
+        // Arrange
+        var shortContent = "Short content";
+        var note = _builder.CreateNoteEntity();
+        note.Content = shortContent;
+        _dbContext.Notes.Add(note);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Equal(shortContent, summary.ContentPreview);
+        Assert.Equal(shortContent.Length, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithNullContent_PreviewIsNull()
+    {
+        // Arrange
+        var note = _builder.CreateNoteEntity();
+        note.Content = null;
+        _dbContext.Notes.Add(note);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Null(summary.ContentPreview);
+        Assert.Equal(0, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithoutChunking_ReturnsFullContent()
+    {
+        // Arrange
+        var longContent = new string('x', 2000);
+        var note = _builder.CreateNoteEntity();
+        note.Content = longContent;
+        MockDbContext.SeedNote(_dbContext, note);
+
+        // Act
+        var result = await _service.GetByIdAsync(note.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(longContent, result.Content);
+        Assert.Equal(2000, result.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithChunking_ReturnsChunkedContent()
+    {
+        // Arrange
+        var content = "Hello World! This is test content.";
+        var note = _builder.CreateNoteEntity();
+        note.Content = content;
+        MockDbContext.SeedNote(_dbContext, note);
+
+        // Act
+        var result = await _service.GetByIdAsync(note.Id, contentOffset: 6, contentLength: 5);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World", result.Content);
+        Assert.Equal(content.Length, result.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithOffsetOnly_ReturnsFromOffset()
+    {
+        // Arrange
+        var content = "Hello World!";
+        var note = _builder.CreateNoteEntity();
+        note.Content = content;
+        MockDbContext.SeedNote(_dbContext, note);
+
+        // Act
+        var result = await _service.GetByIdAsync(note.Id, contentOffset: 6);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World!", result.Content);
+        Assert.Equal(12, result.ContentLength);
+    }
+
+    #endregion
 }

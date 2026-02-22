@@ -42,6 +42,9 @@ public sealed class UpdateProjectRequestV1
     [JsonPropertyName("status")]
     public ProjectStatus Status { get; init; }
 
+    [JsonPropertyName("completionNotes")]
+    public string? CompletionNotes { get; init; }
+
     [JsonPropertyName("tags")]
     public List<TagRequestV1>? Tags { get; init; }
 
@@ -75,6 +78,15 @@ public sealed class ProjectSummaryV1
     [JsonPropertyName("completedTaskCount")]
     public int CompletedTaskItemCount { get; init; }
 
+    [JsonPropertyName("contentPreview")]
+    public string? ContentPreview { get; init; }
+
+    [JsonPropertyName("contentLength")]
+    public int ContentLength { get; init; }
+
+    [JsonPropertyName("completedAt")]
+    public DateTimeOffset? CompletedAt { get; init; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }
 
@@ -96,6 +108,9 @@ public sealed class ProjectDetailsV1
     [JsonPropertyName("content")]
     public string? Content { get; init; }
 
+    [JsonPropertyName("contentLength")]
+    public int ContentLength { get; init; }
+
     [JsonPropertyName("status")]
     public ProjectStatus Status { get; init; }
 
@@ -113,6 +128,12 @@ public sealed class ProjectDetailsV1
 
     [JsonPropertyName("notes")]
     public List<NoteV1> Notes { get; init; } = [];
+
+    [JsonPropertyName("completionNotes")]
+    public string? CompletionNotes { get; init; }
+
+    [JsonPropertyName("completedAt")]
+    public DateTimeOffset? CompletedAt { get; init; }
 
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }

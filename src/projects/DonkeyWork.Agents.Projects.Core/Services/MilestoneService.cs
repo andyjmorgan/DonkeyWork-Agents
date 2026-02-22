@@ -4,6 +4,7 @@ using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
@@ -115,10 +116,10 @@ public class MilestoneService : IMilestoneService
             ParentId = projectId
         });
 
-        return await GetByIdAsync(milestoneId, cancellationToken);
+        return await GetByIdAsync(milestoneId, cancellationToken: cancellationToken);
     }
 
-    public async Task<MilestoneDetailsV1?> GetByIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
+    public async Task<MilestoneDetailsV1?> GetByIdAsync(Guid milestoneId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default)
     {
         var milestone = await _dbContext.Milestones
             .AsNoTracking()
@@ -130,7 +131,7 @@ public class MilestoneService : IMilestoneService
                 .ThenInclude(n => n.Tags)
             .FirstOrDefaultAsync(m => m.Id == milestoneId, cancellationToken);
 
-        return milestone == null ? null : MapToDetails(milestone);
+        return milestone == null ? null : MapToDetails(milestone, contentOffset, contentLength);
     }
 
     public async Task<IReadOnlyList<MilestoneSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
@@ -159,16 +160,37 @@ public class MilestoneService : IMilestoneService
             return null;
         }
 
+        // Validate completion notes are provided when moving to a terminal status
+        var isTerminalStatus = request.Status is Contracts.Models.MilestoneStatus.Completed or Contracts.Models.MilestoneStatus.Cancelled;
+        if (isTerminalStatus && string.IsNullOrWhiteSpace(request.CompletionNotes))
+        {
+            throw new InvalidOperationException("Completion notes are required when marking a milestone as completed or cancelled.");
+        }
+
         var now = DateTimeOffset.UtcNow;
         var oldStatus = milestone.Status;
+        var newStatus = (Persistence.Entities.Projects.MilestoneStatus)(int)request.Status;
+        var wasTerminal = oldStatus is Persistence.Entities.Projects.MilestoneStatus.Completed or Persistence.Entities.Projects.MilestoneStatus.Cancelled;
+        var isNowTerminal = newStatus is Persistence.Entities.Projects.MilestoneStatus.Completed or Persistence.Entities.Projects.MilestoneStatus.Cancelled;
 
         milestone.Name = request.Name;
         milestone.Content = request.Content;
         milestone.SuccessCriteria = request.SuccessCriteria;
-        milestone.Status = (Persistence.Entities.Projects.MilestoneStatus)(int)request.Status;
+        milestone.Status = newStatus;
+        milestone.CompletionNotes = request.CompletionNotes;
         milestone.DueDate = request.DueDate;
         milestone.SortOrder = request.SortOrder;
         milestone.UpdatedAt = now;
+
+        // Set completed timestamp when moving to terminal status
+        if (!wasTerminal && isNowTerminal)
+        {
+            milestone.CompletedAt = now;
+        }
+        else if (wasTerminal && !isNowTerminal)
+        {
+            milestone.CompletedAt = null;
+        }
 
         // Update tags - remove existing and add new
         _dbContext.MilestoneTags.RemoveRange(milestone.Tags);
@@ -215,7 +237,6 @@ public class MilestoneService : IMilestoneService
         _logger.LogInformation("Updated milestone {MilestoneId}", milestoneId);
 
         // Send notification (fire-and-forget)
-        var newStatus = (Persistence.Entities.Projects.MilestoneStatus)(int)request.Status;
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
             ? $"'{request.Name}' is now {FormatStatus(request.Status)}"
@@ -230,7 +251,7 @@ public class MilestoneService : IMilestoneService
             ParentId = milestone.ProjectId
         });
 
-        return await GetByIdAsync(milestoneId, cancellationToken);
+        return await GetByIdAsync(milestoneId, cancellationToken: cancellationToken);
     }
 
     private static string FormatStatus(Contracts.Models.MilestoneStatus status) => status switch
@@ -287,21 +308,27 @@ public class MilestoneService : IMilestoneService
             Tags = milestone.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             TaskItemCount = milestone.TaskItems.Count,
             CompletedTaskItemCount = milestone.TaskItems.Count(t => t.Status == Persistence.Entities.Projects.TaskItemStatus.Completed),
+            ContentPreview = ContentTruncationHelper.TruncateContent(milestone.Content),
+            ContentLength = ContentTruncationHelper.GetContentLength(milestone.Content),
+            CompletedAt = milestone.CompletedAt,
             CreatedAt = milestone.CreatedAt,
             UpdatedAt = milestone.UpdatedAt
         };
     }
 
-    private static MilestoneDetailsV1 MapToDetails(MilestoneEntity milestone)
+    private static MilestoneDetailsV1 MapToDetails(MilestoneEntity milestone, int? contentOffset = null, int? contentLength = null)
     {
         return new MilestoneDetailsV1
         {
             Id = milestone.Id,
             ProjectId = milestone.ProjectId,
             Name = milestone.Name,
-            Content = milestone.Content,
-            SuccessCriteria = milestone.SuccessCriteria,
+            Content = ContentTruncationHelper.ApplyChunking(milestone.Content, contentOffset, contentLength),
+            ContentLength = ContentTruncationHelper.GetContentLength(milestone.Content),
+            SuccessCriteria = ContentTruncationHelper.ApplyChunking(milestone.SuccessCriteria, contentOffset, contentLength),
             Status = (Contracts.Models.MilestoneStatus)(int)milestone.Status,
+            CompletionNotes = milestone.CompletionNotes,
+            CompletedAt = milestone.CompletedAt,
             DueDate = milestone.DueDate,
             SortOrder = milestone.SortOrder,
             Tags = milestone.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
@@ -318,6 +345,7 @@ public class MilestoneService : IMilestoneService
                 Id = t.Id,
                 Title = t.Title,
                 Description = t.Description,
+                DescriptionLength = ContentTruncationHelper.GetContentLength(t.Description),
                 Status = (Contracts.Models.TaskItemStatus)(int)t.Status,
                 Priority = (Contracts.Models.TaskItemPriority)(int)t.Priority,
                 CompletionNotes = t.CompletionNotes,
@@ -335,6 +363,7 @@ public class MilestoneService : IMilestoneService
                 Id = n.Id,
                 Title = n.Title,
                 Content = n.Content,
+                ContentLength = ContentTruncationHelper.GetContentLength(n.Content),
                 SortOrder = n.SortOrder,
                 ProjectId = n.ProjectId,
                 MilestoneId = n.MilestoneId,

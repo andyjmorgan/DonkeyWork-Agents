@@ -14,8 +14,9 @@ public interface IMilestoneService
 
     /// <summary>
     /// Gets a milestone by ID with full details.
+    /// Supports optional content chunking via offset/length parameters.
     /// </summary>
-    Task<MilestoneDetailsV1?> GetByIdAsync(Guid milestoneId, CancellationToken cancellationToken = default);
+    Task<MilestoneDetailsV1?> GetByIdAsync(Guid milestoneId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all milestones for a project.

@@ -3,6 +3,7 @@ using System;
 using DonkeyWork.Agents.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DonkeyWork.Agents.Persistence.Migrations
 {
     [DbContext(typeof(AgentsDbContext))]
-    partial class AgentsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260222144132_AddCompletionNotesToProjectsAndMilestones")]
+    partial class AddCompletionNotesToProjectsAndMilestones
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1344,10 +1347,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("project_id");
 
-                    b.Property<Guid?>("ResearchId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("research_id");
-
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer")
                         .HasColumnName("sort_order");
@@ -1376,9 +1375,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
 
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("ix_notes_project_id");
-
-                    b.HasIndex("ResearchId")
-                        .HasDatabaseName("ix_notes_research_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_notes_user_id");
@@ -1731,115 +1727,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.ToTable("task_tags", "projects");
                 });
 
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Research.ResearchEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
-
-                    b.Property<string>("CompletionNotes")
-                        .HasColumnType("text")
-                        .HasColumnName("completion_notes");
-
-                    b.Property<string>("Content")
-                        .HasColumnType("text")
-                        .HasColumnName("content");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("subject");
-
-                    b.Property<string>("Summary")
-                        .HasColumnType("text")
-                        .HasColumnName("summary");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_research_created_at");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_research_status");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_research_user_id");
-
-                    b.ToTable("research", "research");
-                });
-
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Research.ResearchTagEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<string>("Color")
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)")
-                        .HasColumnName("color");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("name");
-
-                    b.Property<Guid>("ResearchId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("research_id");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .HasDatabaseName("ix_research_tags_name");
-
-                    b.HasIndex("ResearchId")
-                        .HasDatabaseName("ix_research_tags_research_id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_research_tags_user_id");
-
-                    b.ToTable("research_tags", "research");
-                });
-
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Storage.FileShareEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2169,16 +2056,9 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Research.ResearchEntity", "Research")
-                        .WithMany("Notes")
-                        .HasForeignKey("ResearchId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.Navigation("Milestone");
 
                     b.Navigation("Project");
-
-                    b.Navigation("Research");
                 });
 
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Projects.NoteTagEntity", b =>
@@ -2240,17 +2120,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("TaskItem");
-                });
-
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Research.ResearchTagEntity", b =>
-                {
-                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Research.ResearchEntity", "Research")
-                        .WithMany("Tags")
-                        .HasForeignKey("ResearchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Research");
                 });
 
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Storage.FileShareEntity", b =>
@@ -2331,13 +2200,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
 
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Projects.TaskItemEntity", b =>
                 {
-                    b.Navigation("Tags");
-                });
-
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Research.ResearchEntity", b =>
-                {
-                    b.Navigation("Notes");
-
                     b.Navigation("Tags");
                 });
 

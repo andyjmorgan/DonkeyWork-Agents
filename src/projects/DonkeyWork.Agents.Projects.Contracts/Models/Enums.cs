@@ -45,3 +45,14 @@ public enum TaskItemPriority
     High = 2,
     Critical = 3
 }
+
+/// <summary>
+/// Research status enumeration.
+/// </summary>
+public enum ResearchStatus
+{
+    NotStarted = 0,
+    InProgress = 1,
+    Completed = 2,
+    Cancelled = 3
+}

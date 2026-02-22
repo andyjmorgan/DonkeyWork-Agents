@@ -25,6 +25,9 @@ public sealed class CreateNoteRequestV1
     [JsonPropertyName("milestoneId")]
     public Guid? MilestoneId { get; init; }
 
+    [JsonPropertyName("researchId")]
+    public Guid? ResearchId { get; init; }
+
     [JsonPropertyName("tags")]
     public List<TagRequestV1>? Tags { get; init; }
 }
@@ -51,6 +54,9 @@ public sealed class UpdateNoteRequestV1
     [JsonPropertyName("milestoneId")]
     public Guid? MilestoneId { get; init; }
 
+    [JsonPropertyName("researchId")]
+    public Guid? ResearchId { get; init; }
+
     [JsonPropertyName("tags")]
     public List<TagRequestV1>? Tags { get; init; }
 }
@@ -69,6 +75,9 @@ public sealed class NoteV1
     [JsonPropertyName("content")]
     public string? Content { get; init; }
 
+    [JsonPropertyName("contentLength")]
+    public int ContentLength { get; init; }
+
     [JsonPropertyName("sortOrder")]
     public int SortOrder { get; init; }
 
@@ -77,6 +86,9 @@ public sealed class NoteV1
 
     [JsonPropertyName("milestoneId")]
     public Guid? MilestoneId { get; init; }
+
+    [JsonPropertyName("researchId")]
+    public Guid? ResearchId { get; init; }
 
     [JsonPropertyName("tags")]
     public List<TagV1> Tags { get; init; } = [];

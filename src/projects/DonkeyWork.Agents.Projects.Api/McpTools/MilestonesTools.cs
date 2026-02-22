@@ -53,9 +53,11 @@ public class MilestonesTools
         ReadOnlyHint = true)]
     public async Task<MilestoneDetailsV1?> GetMilestone(
         [Description("The unique identifier of the milestone")] Guid id,
-        CancellationToken ct)
+        [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
+        [Description("Optional number of characters to read from the offset (for chunked reading of large content fields)")] int? contentLength = null,
+        CancellationToken ct = default)
     {
-        return await _milestoneService.GetByIdAsync(id, ct);
+        return await _milestoneService.GetByIdAsync(id, contentOffset, contentLength, ct);
     }
 
     /// <summary>
@@ -105,12 +107,13 @@ public class MilestonesTools
         [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
         [Description("New success criteria (omit to keep current)")] string? successCriteria = null,
         [Description("Status: NotStarted, InProgress, OnHold, Completed, or Cancelled (omit to keep current)")] MilestoneStatus? status = null,
+        [Description("Completion notes (set when marking as Completed or Cancelled, omit to keep current)")] string? completionNotes = null,
         [Description("New due date (omit to keep current)")] DateTimeOffset? dueDate = null,
         [Description("New sort order for display (omit to keep current)")] int? sortOrder = null,
         CancellationToken ct = default)
     {
         // Fetch current milestone to merge with provided values
-        var current = await _milestoneService.GetByIdAsync(id, ct);
+        var current = await _milestoneService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {
             return null;
@@ -122,6 +125,7 @@ public class MilestonesTools
             Content = content ?? current.Content,
             SuccessCriteria = successCriteria ?? current.SuccessCriteria,
             Status = status ?? current.Status,
+            CompletionNotes = completionNotes ?? current.CompletionNotes,
             DueDate = dueDate ?? current.DueDate,
             SortOrder = sortOrder ?? current.SortOrder
         };

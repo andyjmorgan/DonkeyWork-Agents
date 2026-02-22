@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Mcp;
 using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Persistence.Entities.Research;
 using DonkeyWork.Agents.Persistence.Entities.Storage;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,10 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<NoteTagEntity> NoteTags => Set<NoteTagEntity>();
     public DbSet<ProjectFileReferenceEntity> ProjectFileReferences => Set<ProjectFileReferenceEntity>();
     public DbSet<MilestoneFileReferenceEntity> MilestoneFileReferences => Set<MilestoneFileReferenceEntity>();
+
+    // Research module
+    public DbSet<ResearchEntity> Research => Set<ResearchEntity>();
+    public DbSet<ResearchTagEntity> ResearchTags => Set<ResearchTagEntity>();
 
     // Conversations module
     public DbSet<ConversationEntity> Conversations => Set<ConversationEntity>();

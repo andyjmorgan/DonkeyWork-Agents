@@ -4,6 +4,7 @@ using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
@@ -88,17 +89,17 @@ public class TaskItemService : ITaskItemService
             ParentId = request.MilestoneId ?? request.ProjectId
         });
 
-        return (await GetByIdAsync(taskItemId, cancellationToken))!;
+        return (await GetByIdAsync(taskItemId, cancellationToken: cancellationToken))!;
     }
 
-    public async Task<TaskItemV1?> GetByIdAsync(Guid taskItemId, CancellationToken cancellationToken = default)
+    public async Task<TaskItemV1?> GetByIdAsync(Guid taskItemId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default)
     {
         var taskItem = await _dbContext.TaskItems
             .AsNoTracking()
             .Include(t => t.Tags)
             .FirstOrDefaultAsync(t => t.Id == taskItemId, cancellationToken);
 
-        return taskItem == null ? null : MapToDto(taskItem);
+        return taskItem == null ? null : MapToDto(taskItem, contentOffset, contentLength);
     }
 
     public async Task<IReadOnlyList<TaskItemSummaryV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
@@ -164,14 +165,22 @@ public class TaskItemService : ITaskItemService
             return null;
         }
 
+        // Validate completion notes are provided when moving to a terminal status
+        var isTerminalStatus = request.Status is Contracts.Models.TaskItemStatus.Completed or Contracts.Models.TaskItemStatus.Cancelled;
+        if (isTerminalStatus && string.IsNullOrWhiteSpace(request.CompletionNotes))
+        {
+            throw new InvalidOperationException("Completion notes are required when marking a task as completed or cancelled.");
+        }
+
         var now = DateTimeOffset.UtcNow;
         var oldStatus = taskItem.Status;
-        var wasCompleted = taskItem.Status == Persistence.Entities.Projects.TaskItemStatus.Completed;
-        var isCompleted = request.Status == Contracts.Models.TaskItemStatus.Completed;
+        var newStatus = (Persistence.Entities.Projects.TaskItemStatus)(int)request.Status;
+        var wasTerminal = oldStatus is Persistence.Entities.Projects.TaskItemStatus.Completed or Persistence.Entities.Projects.TaskItemStatus.Cancelled;
+        var isNowTerminal = newStatus is Persistence.Entities.Projects.TaskItemStatus.Completed or Persistence.Entities.Projects.TaskItemStatus.Cancelled;
 
         taskItem.Title = request.Title;
         taskItem.Description = request.Description;
-        taskItem.Status = (Persistence.Entities.Projects.TaskItemStatus)(int)request.Status;
+        taskItem.Status = newStatus;
         taskItem.Priority = (Persistence.Entities.Projects.TaskItemPriority)(int)request.Priority;
         taskItem.CompletionNotes = request.CompletionNotes;
         taskItem.DueDate = request.DueDate;
@@ -180,12 +189,12 @@ public class TaskItemService : ITaskItemService
         taskItem.MilestoneId = request.MilestoneId;
         taskItem.UpdatedAt = now;
 
-        // Set completed timestamp if status changed to completed
-        if (!wasCompleted && isCompleted)
+        // Set completed timestamp when moving to terminal status
+        if (!wasTerminal && isNowTerminal)
         {
             taskItem.CompletedAt = now;
         }
-        else if (wasCompleted && !isCompleted)
+        else if (wasTerminal && !isNowTerminal)
         {
             taskItem.CompletedAt = null;
         }
@@ -214,7 +223,6 @@ public class TaskItemService : ITaskItemService
         _logger.LogInformation("Updated task item {TaskItemId}", taskItemId);
 
         // Send notification (fire-and-forget)
-        var newStatus = (Persistence.Entities.Projects.TaskItemStatus)(int)request.Status;
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
             ? $"'{request.Title}' is now {FormatStatus(request.Status)}"
@@ -229,7 +237,7 @@ public class TaskItemService : ITaskItemService
             ParentId = request.MilestoneId ?? request.ProjectId
         });
 
-        return await GetByIdAsync(taskItemId, cancellationToken);
+        return await GetByIdAsync(taskItemId, cancellationToken: cancellationToken);
     }
 
     private static string FormatStatus(Contracts.Models.TaskItemStatus status) => status switch
@@ -272,13 +280,14 @@ public class TaskItemService : ITaskItemService
         return true;
     }
 
-    private static TaskItemV1 MapToDto(TaskItemEntity taskItem)
+    private static TaskItemV1 MapToDto(TaskItemEntity taskItem, int? contentOffset = null, int? contentLength = null)
     {
         return new TaskItemV1
         {
             Id = taskItem.Id,
             Title = taskItem.Title,
-            Description = taskItem.Description,
+            Description = ContentTruncationHelper.ApplyChunking(taskItem.Description, contentOffset, contentLength),
+            DescriptionLength = ContentTruncationHelper.GetContentLength(taskItem.Description),
             Status = (Contracts.Models.TaskItemStatus)(int)taskItem.Status,
             Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
             CompletionNotes = taskItem.CompletionNotes,
@@ -301,6 +310,8 @@ public class TaskItemService : ITaskItemService
             Title = taskItem.Title,
             Status = (Contracts.Models.TaskItemStatus)(int)taskItem.Status,
             Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
+            DescriptionPreview = ContentTruncationHelper.TruncateContent(taskItem.Description),
+            DescriptionLength = ContentTruncationHelper.GetContentLength(taskItem.Description),
             DueDate = taskItem.DueDate,
             CompletedAt = taskItem.CompletedAt,
             SortOrder = taskItem.SortOrder,

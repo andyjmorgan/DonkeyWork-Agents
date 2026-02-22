@@ -90,6 +90,9 @@ public sealed class TaskItemV1
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
+    [JsonPropertyName("descriptionLength")]
+    public int DescriptionLength { get; init; }
+
     [JsonPropertyName("status")]
     public TaskItemStatus Status { get; init; }
 

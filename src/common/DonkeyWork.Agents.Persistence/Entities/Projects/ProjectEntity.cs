@@ -21,6 +21,16 @@ public class ProjectEntity : BaseEntity
     public ProjectStatus Status { get; set; } = ProjectStatus.NotStarted;
 
     /// <summary>
+    /// Notes on completion (markdown supported).
+    /// </summary>
+    public string? CompletionNotes { get; set; }
+
+    /// <summary>
+    /// Date when the project was completed.
+    /// </summary>
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>
     /// Navigation property to milestones.
     /// </summary>
     public ICollection<MilestoneEntity> Milestones { get; set; } = new List<MilestoneEntity>();

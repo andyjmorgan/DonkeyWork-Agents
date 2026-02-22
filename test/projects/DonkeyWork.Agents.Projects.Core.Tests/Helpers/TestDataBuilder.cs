@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Persistence.Entities.Research;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 
 // Aliases to resolve ambiguous references between Contracts.Models and Persistence.Entities
@@ -10,6 +11,7 @@ using EntityProjectStatus = DonkeyWork.Agents.Persistence.Entities.Projects.Proj
 using EntityMilestoneStatus = DonkeyWork.Agents.Persistence.Entities.Projects.MilestoneStatus;
 using EntityTaskItemStatus = DonkeyWork.Agents.Persistence.Entities.Projects.TaskItemStatus;
 using EntityTaskItemPriority = DonkeyWork.Agents.Persistence.Entities.Projects.TaskItemPriority;
+using EntityResearchStatus = DonkeyWork.Agents.Persistence.Entities.Research.ResearchStatus;
 
 namespace DonkeyWork.Agents.Projects.Core.Tests.Helpers;
 
@@ -197,6 +199,45 @@ public class TestDataBuilder
             Title = title,
             Content = "Test note content",
             SortOrder = sortOrder,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    #endregion
+
+    #region Research Builders
+
+    /// <summary>
+    /// Creates a basic CreateResearchRequestV1 with default values.
+    /// </summary>
+    public static CreateResearchRequestV1 CreateResearchRequest(
+        string subject = "test-research",
+        string? content = "Test research content")
+    {
+        return new CreateResearchRequestV1
+        {
+            Subject = subject,
+            Content = content
+        };
+    }
+
+    /// <summary>
+    /// Creates a ResearchEntity with default test values.
+    /// </summary>
+    public ResearchEntity CreateResearchEntity(
+        Guid? id = null,
+        Guid? userId = null,
+        string subject = "test-research",
+        EntityResearchStatus status = EntityResearchStatus.NotStarted)
+    {
+        return new ResearchEntity
+        {
+            Id = id ?? Guid.NewGuid(),
+            UserId = userId ?? _defaultUserId,
+            Subject = subject,
+            Content = "Test research content",
+            Status = status,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };

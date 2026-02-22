@@ -1,6 +1,7 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Persistence.Entities.Research;
 using Microsoft.EntityFrameworkCore;
 
 namespace DonkeyWork.Agents.Projects.Core.Tests.Helpers;
@@ -77,6 +78,15 @@ public static class MockDbContext
     public static void SeedNote(AgentsDbContext context, NoteEntity note)
     {
         context.Notes.Add(note);
+        context.SaveChanges();
+    }
+
+    /// <summary>
+    /// Seeds the database with a research item.
+    /// </summary>
+    public static void SeedResearch(AgentsDbContext context, ResearchEntity research)
+    {
+        context.Research.Add(research);
         context.SaveChanges();
     }
 }

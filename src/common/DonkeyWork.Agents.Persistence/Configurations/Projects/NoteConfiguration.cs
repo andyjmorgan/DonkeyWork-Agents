@@ -38,6 +38,9 @@ public class NoteConfiguration : IEntityTypeConfiguration<NoteEntity>
         builder.Property(e => e.MilestoneId)
             .HasColumnName("milestone_id");
 
+        builder.Property(e => e.ResearchId)
+            .HasColumnName("research_id");
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();
@@ -54,6 +57,9 @@ public class NoteConfiguration : IEntityTypeConfiguration<NoteEntity>
 
         builder.HasIndex(e => e.MilestoneId)
             .HasDatabaseName("ix_notes_milestone_id");
+
+        builder.HasIndex(e => e.ResearchId)
+            .HasDatabaseName("ix_notes_research_id");
 
         builder.HasIndex(e => e.CreatedAt)
             .HasDatabaseName("ix_notes_created_at");

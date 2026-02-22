@@ -4,6 +4,7 @@ using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
@@ -102,10 +103,10 @@ public class ProjectService : IProjectService
             EntityId = projectId
         });
 
-        return (await GetByIdAsync(projectId, cancellationToken))!;
+        return (await GetByIdAsync(projectId, cancellationToken: cancellationToken))!;
     }
 
-    public async Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, CancellationToken cancellationToken = default)
+    public async Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default)
     {
         var project = await _dbContext.Projects
             .AsNoTracking()
@@ -119,7 +120,7 @@ public class ProjectService : IProjectService
                 .ThenInclude(n => n.Tags)
             .FirstOrDefaultAsync(p => p.Id == projectId, cancellationToken);
 
-        return project == null ? null : MapToDetails(project);
+        return project == null ? null : MapToDetails(project, contentOffset, contentLength);
     }
 
     public async Task<IReadOnlyList<ProjectSummaryV1>> ListAsync(CancellationToken cancellationToken = default)
@@ -148,13 +149,34 @@ public class ProjectService : IProjectService
             return null;
         }
 
+        // Validate completion notes are provided when moving to a terminal status
+        var isTerminalStatus = request.Status is Contracts.Models.ProjectStatus.Completed or Contracts.Models.ProjectStatus.Cancelled;
+        if (isTerminalStatus && string.IsNullOrWhiteSpace(request.CompletionNotes))
+        {
+            throw new InvalidOperationException("Completion notes are required when marking a project as completed or cancelled.");
+        }
+
         var now = DateTimeOffset.UtcNow;
         var oldStatus = project.Status;
+        var newStatus = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status;
+        var wasTerminal = oldStatus is Persistence.Entities.Projects.ProjectStatus.Completed or Persistence.Entities.Projects.ProjectStatus.Cancelled;
+        var isNowTerminal = newStatus is Persistence.Entities.Projects.ProjectStatus.Completed or Persistence.Entities.Projects.ProjectStatus.Cancelled;
 
         project.Name = request.Name;
         project.Content = request.Content;
-        project.Status = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status;
+        project.Status = newStatus;
+        project.CompletionNotes = request.CompletionNotes;
         project.UpdatedAt = now;
+
+        // Set completed timestamp when moving to terminal status
+        if (!wasTerminal && isNowTerminal)
+        {
+            project.CompletedAt = now;
+        }
+        else if (wasTerminal && !isNowTerminal)
+        {
+            project.CompletedAt = null;
+        }
 
         // Update tags - remove existing and add new
         _dbContext.ProjectTags.RemoveRange(project.Tags);
@@ -201,7 +223,6 @@ public class ProjectService : IProjectService
         _logger.LogInformation("Updated project {ProjectId}", projectId);
 
         // Send notification (fire-and-forget)
-        var newStatus = (Persistence.Entities.Projects.ProjectStatus)(int)request.Status;
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
             ? $"'{request.Name}' is now {FormatStatus(request.Status)}"
@@ -215,7 +236,7 @@ public class ProjectService : IProjectService
             EntityId = projectId
         });
 
-        return await GetByIdAsync(projectId, cancellationToken);
+        return await GetByIdAsync(projectId, cancellationToken: cancellationToken);
     }
 
     private static string FormatStatus(Contracts.Models.ProjectStatus status) => status switch
@@ -274,18 +295,22 @@ public class ProjectService : IProjectService
             MilestoneCount = project.Milestones.Count,
             TaskItemCount = allTaskItems.Count,
             CompletedTaskItemCount = allTaskItems.Count(t => t.Status == Persistence.Entities.Projects.TaskItemStatus.Completed),
+            ContentPreview = ContentTruncationHelper.TruncateContent(project.Content),
+            ContentLength = ContentTruncationHelper.GetContentLength(project.Content),
+            CompletedAt = project.CompletedAt,
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt
         };
     }
 
-    private static ProjectDetailsV1 MapToDetails(ProjectEntity project)
+    private static ProjectDetailsV1 MapToDetails(ProjectEntity project, int? contentOffset = null, int? contentLength = null)
     {
         return new ProjectDetailsV1
         {
             Id = project.Id,
             Name = project.Name,
-            Content = project.Content,
+            Content = ContentTruncationHelper.ApplyChunking(project.Content, contentOffset, contentLength),
+            ContentLength = ContentTruncationHelper.GetContentLength(project.Content),
             Status = (Contracts.Models.ProjectStatus)(int)project.Status,
             Tags = project.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             FileReferences = project.FileReferences.OrderBy(f => f.SortOrder).Select(f => new FileReferenceV1
@@ -307,11 +332,16 @@ public class ProjectService : IProjectService
                 Tags = m.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
                 TaskItemCount = m.TaskItems.Count,
                 CompletedTaskItemCount = m.TaskItems.Count(t => t.Status == Persistence.Entities.Projects.TaskItemStatus.Completed),
+                ContentPreview = ContentTruncationHelper.TruncateContent(m.Content),
+                ContentLength = ContentTruncationHelper.GetContentLength(m.Content),
+                CompletedAt = m.CompletedAt,
                 CreatedAt = m.CreatedAt,
                 UpdatedAt = m.UpdatedAt
             }).ToList(),
             Tasks = project.TaskItems.OrderBy(t => t.SortOrder).Select(MapTaskItem).ToList(),
             Notes = project.Notes.OrderBy(n => n.SortOrder).Select(MapNote).ToList(),
+            CompletionNotes = project.CompletionNotes,
+            CompletedAt = project.CompletedAt,
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt
         };
@@ -324,6 +354,7 @@ public class ProjectService : IProjectService
             Id = taskItem.Id,
             Title = taskItem.Title,
             Description = taskItem.Description,
+            DescriptionLength = ContentTruncationHelper.GetContentLength(taskItem.Description),
             Status = (Contracts.Models.TaskItemStatus)(int)taskItem.Status,
             Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
             CompletionNotes = taskItem.CompletionNotes,
@@ -345,9 +376,11 @@ public class ProjectService : IProjectService
             Id = note.Id,
             Title = note.Title,
             Content = note.Content,
+            ContentLength = ContentTruncationHelper.GetContentLength(note.Content),
             SortOrder = note.SortOrder,
             ProjectId = note.ProjectId,
             MilestoneId = note.MilestoneId,
+            ResearchId = note.ResearchId,
             Tags = note.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             CreatedAt = note.CreatedAt,
             UpdatedAt = note.UpdatedAt

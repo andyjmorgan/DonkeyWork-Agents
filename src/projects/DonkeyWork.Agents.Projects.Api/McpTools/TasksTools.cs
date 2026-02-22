@@ -51,9 +51,11 @@ public class TasksTools
         ReadOnlyHint = true)]
     public async Task<TaskItemV1?> GetTask(
         [Description("The unique identifier of the task")] Guid id,
-        CancellationToken ct)
+        [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
+        [Description("Optional number of characters to read from the offset (for chunked reading of large content fields)")] int? contentLength = null,
+        CancellationToken ct = default)
     {
-        return await _taskItemService.GetByIdAsync(id, ct);
+        return await _taskItemService.GetByIdAsync(id, contentOffset, contentLength, ct);
     }
 
     /// <summary>
@@ -111,7 +113,7 @@ public class TasksTools
         CancellationToken ct = default)
     {
         // Fetch current task to merge with provided values
-        var current = await _taskItemService.GetByIdAsync(id, ct);
+        var current = await _taskItemService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {
             return null;

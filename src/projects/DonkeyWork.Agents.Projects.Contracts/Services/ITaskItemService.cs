@@ -14,8 +14,9 @@ public interface ITaskItemService
 
     /// <summary>
     /// Gets a task item by ID.
+    /// Supports optional content chunking via offset/length parameters.
     /// </summary>
-    Task<TaskItemV1?> GetByIdAsync(Guid taskItemId, CancellationToken cancellationToken = default);
+    Task<TaskItemV1?> GetByIdAsync(Guid taskItemId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all standalone task items for the current user (not associated with any project or milestone).

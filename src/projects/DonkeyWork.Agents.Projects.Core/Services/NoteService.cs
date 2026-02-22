@@ -4,6 +4,7 @@ using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ public class NoteService : INoteService
             SortOrder = request.SortOrder,
             ProjectId = request.ProjectId,
             MilestoneId = request.MilestoneId,
+            ResearchId = request.ResearchId,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -85,17 +87,17 @@ public class NoteService : INoteService
             ParentId = request.MilestoneId ?? request.ProjectId
         });
 
-        return (await GetByIdAsync(noteId, cancellationToken))!;
+        return (await GetByIdAsync(noteId, cancellationToken: cancellationToken))!;
     }
 
-    public async Task<NoteV1?> GetByIdAsync(Guid noteId, CancellationToken cancellationToken = default)
+    public async Task<NoteV1?> GetByIdAsync(Guid noteId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default)
     {
         var note = await _dbContext.Notes
             .AsNoTracking()
             .Include(n => n.Tags)
             .FirstOrDefaultAsync(n => n.Id == noteId, cancellationToken);
 
-        return note == null ? null : MapToDto(note);
+        return note == null ? null : MapToDto(note, contentOffset, contentLength);
     }
 
     public async Task<IReadOnlyList<NoteSummaryV1>> GetStandaloneAsync(CancellationToken cancellationToken = default)
@@ -103,7 +105,7 @@ public class NoteService : INoteService
         var notes = await _dbContext.Notes
             .AsNoTracking()
             .Include(n => n.Tags)
-            .Where(n => n.ProjectId == null && n.MilestoneId == null)
+            .Where(n => n.ProjectId == null && n.MilestoneId == null && n.ResearchId == null)
             .OrderBy(n => n.SortOrder)
             .ThenByDescending(n => n.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -149,6 +151,19 @@ public class NoteService : INoteService
         return notes.Select(MapToSummaryDto).ToList();
     }
 
+    public async Task<IReadOnlyList<NoteSummaryV1>> GetByResearchIdAsync(Guid researchId, CancellationToken cancellationToken = default)
+    {
+        var notes = await _dbContext.Notes
+            .AsNoTracking()
+            .Include(n => n.Tags)
+            .Where(n => n.ResearchId == researchId)
+            .OrderBy(n => n.SortOrder)
+            .ThenByDescending(n => n.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return notes.Select(MapToSummaryDto).ToList();
+    }
+
     public async Task<NoteV1?> UpdateAsync(Guid noteId, UpdateNoteRequestV1 request, CancellationToken cancellationToken = default)
     {
         var userId = _identityContext.UserId;
@@ -168,6 +183,7 @@ public class NoteService : INoteService
         note.SortOrder = request.SortOrder;
         note.ProjectId = request.ProjectId;
         note.MilestoneId = request.MilestoneId;
+        note.ResearchId = request.ResearchId;
         note.UpdatedAt = now;
 
         // Update tags - remove existing and add new
@@ -203,7 +219,7 @@ public class NoteService : INoteService
             ParentId = request.MilestoneId ?? request.ProjectId
         });
 
-        return await GetByIdAsync(noteId, cancellationToken);
+        return await GetByIdAsync(noteId, cancellationToken: cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(Guid noteId, CancellationToken cancellationToken = default)
@@ -237,16 +253,18 @@ public class NoteService : INoteService
         return true;
     }
 
-    private static NoteV1 MapToDto(NoteEntity note)
+    private static NoteV1 MapToDto(NoteEntity note, int? contentOffset = null, int? contentLength = null)
     {
         return new NoteV1
         {
             Id = note.Id,
             Title = note.Title,
-            Content = note.Content,
+            Content = ContentTruncationHelper.ApplyChunking(note.Content, contentOffset, contentLength),
+            ContentLength = ContentTruncationHelper.GetContentLength(note.Content),
             SortOrder = note.SortOrder,
             ProjectId = note.ProjectId,
             MilestoneId = note.MilestoneId,
+            ResearchId = note.ResearchId,
             Tags = note.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             CreatedAt = note.CreatedAt,
             UpdatedAt = note.UpdatedAt
@@ -259,9 +277,12 @@ public class NoteService : INoteService
         {
             Id = note.Id,
             Title = note.Title,
+            ContentPreview = ContentTruncationHelper.TruncateContent(note.Content),
+            ContentLength = ContentTruncationHelper.GetContentLength(note.Content),
             SortOrder = note.SortOrder,
             ProjectId = note.ProjectId,
             MilestoneId = note.MilestoneId,
+            ResearchId = note.ResearchId,
             Tags = note.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             CreatedAt = note.CreatedAt,
             UpdatedAt = note.UpdatedAt

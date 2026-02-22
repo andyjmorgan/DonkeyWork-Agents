@@ -14,8 +14,9 @@ public interface IProjectService
 
     /// <summary>
     /// Gets a project by ID with full details.
+    /// Supports optional content chunking via offset/length parameters.
     /// </summary>
-    Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<ProjectDetailsV1?> GetByIdAsync(Guid projectId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all projects for the current user.

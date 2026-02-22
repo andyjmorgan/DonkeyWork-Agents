@@ -51,9 +51,11 @@ public class NotesTools
         ReadOnlyHint = true)]
     public async Task<NoteV1?> GetNote(
         [Description("The unique identifier of the note")] Guid id,
-        CancellationToken ct)
+        [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
+        [Description("Optional number of characters to read from the offset (for chunked reading of large content fields)")] int? contentLength = null,
+        CancellationToken ct = default)
     {
-        return await _noteService.GetByIdAsync(id, ct);
+        return await _noteService.GetByIdAsync(id, contentOffset, contentLength, ct);
     }
 
     /// <summary>
@@ -63,7 +65,7 @@ public class NotesTools
     [McpTool(
         Name = "notes_create",
         Title = "Create Note",
-        Description = "Create a new note. Notes can be standalone (no project or milestone), associated with a project only, or associated with a specific milestone within a project. Provide projectId for project-level notes, or milestoneId for milestone-level notes.",
+        Description = "Create a new note. Notes can be standalone, or associated with a project, milestone, or research item. Provide projectId for project-level notes, milestoneId for milestone-level notes, or researchId for research-level notes.",
         Icon = "plus")]
     public async Task<NoteV1> CreateNote(
         [Description("The title of the note")] string title,
@@ -71,7 +73,8 @@ public class NotesTools
         [Description("Optional sort order for display")] int? sortOrder,
         [Description("Optional project ID - set to associate this note with a project (note becomes project-level)")] Guid? projectId,
         [Description("Optional milestone ID - set to associate this note with a milestone (note becomes milestone-level)")] Guid? milestoneId,
-        CancellationToken ct)
+        [Description("Optional research ID - set to associate this note with a research item (note becomes research-level)")] Guid? researchId = null,
+        CancellationToken ct = default)
     {
         var request = new CreateNoteRequestV1
         {
@@ -79,7 +82,8 @@ public class NotesTools
             Content = content,
             SortOrder = sortOrder ?? 0,
             ProjectId = projectId,
-            MilestoneId = milestoneId
+            MilestoneId = milestoneId,
+            ResearchId = researchId
         };
 
         return await _noteService.CreateAsync(request, ct);
@@ -92,7 +96,7 @@ public class NotesTools
     [McpTool(
         Name = "notes_update",
         Title = "Update Note",
-        Description = "Update an existing note. Only provided fields are updated - omit fields to keep their current values. You can move notes between standalone/project/milestone associations by setting projectId and milestoneId.",
+        Description = "Update an existing note. Only provided fields are updated - omit fields to keep their current values. You can move notes between standalone/project/milestone/research associations by setting projectId, milestoneId, or researchId.",
         Icon = "edit")]
     public async Task<NoteV1?> UpdateNote(
         [Description("The unique identifier of the note to update")] Guid id,
@@ -101,10 +105,11 @@ public class NotesTools
         [Description("New sort order for display (omit to keep current)")] int? sortOrder = null,
         [Description("Project ID to associate with (omit to keep current)")] Guid? projectId = null,
         [Description("Milestone ID to associate with (omit to keep current)")] Guid? milestoneId = null,
+        [Description("Research ID to associate with (omit to keep current)")] Guid? researchId = null,
         CancellationToken ct = default)
     {
         // Fetch current note to merge with provided values
-        var current = await _noteService.GetByIdAsync(id, ct);
+        var current = await _noteService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {
             return null;
@@ -116,7 +121,8 @@ public class NotesTools
             Content = content ?? current.Content,
             SortOrder = sortOrder ?? current.SortOrder,
             ProjectId = projectId ?? current.ProjectId,
-            MilestoneId = milestoneId ?? current.MilestoneId
+            MilestoneId = milestoneId ?? current.MilestoneId,
+            ResearchId = researchId ?? current.ResearchId
         };
 
         return await _noteService.UpdateAsync(id, request, ct);
@@ -174,5 +180,23 @@ public class NotesTools
         CancellationToken ct)
     {
         return await _noteService.GetByMilestoneIdAsync(milestoneId, ct);
+    }
+
+    /// <summary>
+    /// Lists all notes for a specific research item.
+    /// Returns summary models without content - use notes_get for full details.
+    /// </summary>
+    [McpServerTool(Name = "notes_list_by_research")]
+    [McpTool(
+        Name = "notes_list_by_research",
+        Title = "List Notes by Research",
+        Description = "List all notes associated with a specific research item. Research items track investigation topics, and notes contain the research material and findings. Returns summary models - use notes_get for full content.",
+        Icon = "list",
+        ReadOnlyHint = true)]
+    public async Task<IReadOnlyList<NoteSummaryV1>> ListNotesByResearch(
+        [Description("The unique identifier of the research item")] Guid researchId,
+        CancellationToken ct)
+    {
+        return await _noteService.GetByResearchIdAsync(researchId, ct);
     }
 }

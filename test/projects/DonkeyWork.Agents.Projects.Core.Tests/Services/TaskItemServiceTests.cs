@@ -336,6 +336,48 @@ public class TaskItemServiceTests : IDisposable
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task UpdateAsync_ToCompletedWithoutNotes_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var taskItem = _builder.CreateTaskItemEntity();
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
+
+        var updateRequest = new UpdateTaskItemRequestV1
+        {
+            Title = taskItem.Title,
+            Status = TaskItemStatus.Completed,
+            Priority = (TaskItemPriority)taskItem.Priority,
+            SortOrder = taskItem.SortOrder,
+            CompletionNotes = null
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateAsync(taskItem.Id, updateRequest));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToCancelledWithoutNotes_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var taskItem = _builder.CreateTaskItemEntity();
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
+
+        var updateRequest = new UpdateTaskItemRequestV1
+        {
+            Title = taskItem.Title,
+            Status = TaskItemStatus.Cancelled,
+            Priority = (TaskItemPriority)taskItem.Priority,
+            SortOrder = taskItem.SortOrder,
+            CompletionNotes = null
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateAsync(taskItem.Id, updateRequest));
+    }
+
     #endregion
 
     #region DeleteAsync Tests
@@ -404,6 +446,125 @@ public class TaskItemServiceTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Equal(TaskItemStatus.Pending, result.Status);
+    }
+
+    #endregion
+
+    #region Content Truncation and Chunking Tests
+
+    [Fact]
+    public async Task ListAsync_WithLongDescription_IncludesTruncatedPreview()
+    {
+        // Arrange
+        var longDescription = new string('a', 1000);
+        var taskItem = _builder.CreateTaskItemEntity();
+        taskItem.Description = longDescription;
+        _dbContext.TaskItems.Add(taskItem);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.NotNull(summary.DescriptionPreview);
+        Assert.Equal(503, summary.DescriptionPreview.Length); // 500 + "..."
+        Assert.EndsWith("...", summary.DescriptionPreview);
+        Assert.Equal(1000, summary.DescriptionLength);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithShortDescription_PreviewEqualsDescription()
+    {
+        // Arrange
+        var shortDescription = "Short description";
+        var taskItem = _builder.CreateTaskItemEntity();
+        taskItem.Description = shortDescription;
+        _dbContext.TaskItems.Add(taskItem);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Equal(shortDescription, summary.DescriptionPreview);
+        Assert.Equal(shortDescription.Length, summary.DescriptionLength);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithNullDescription_PreviewIsNull()
+    {
+        // Arrange
+        var taskItem = _builder.CreateTaskItemEntity();
+        taskItem.Description = null;
+        _dbContext.TaskItems.Add(taskItem);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Null(summary.DescriptionPreview);
+        Assert.Equal(0, summary.DescriptionLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithoutChunking_ReturnsFullDescription()
+    {
+        // Arrange
+        var longDescription = new string('x', 2000);
+        var taskItem = _builder.CreateTaskItemEntity();
+        taskItem.Description = longDescription;
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
+
+        // Act
+        var result = await _service.GetByIdAsync(taskItem.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(longDescription, result.Description);
+        Assert.Equal(2000, result.DescriptionLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithChunking_ReturnsChunkedDescription()
+    {
+        // Arrange
+        var description = "Hello World! This is test content.";
+        var taskItem = _builder.CreateTaskItemEntity();
+        taskItem.Description = description;
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
+
+        // Act
+        var result = await _service.GetByIdAsync(taskItem.Id, contentOffset: 6, contentLength: 5);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World", result.Description);
+        Assert.Equal(description.Length, result.DescriptionLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithOffsetOnly_ReturnsFromOffset()
+    {
+        // Arrange
+        var description = "Hello World!";
+        var taskItem = _builder.CreateTaskItemEntity();
+        taskItem.Description = description;
+        MockDbContext.SeedTaskItem(_dbContext, taskItem);
+
+        // Act
+        var result = await _service.GetByIdAsync(taskItem.Id, contentOffset: 6);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World!", result.Description);
+        Assert.Equal(12, result.DescriptionLength);
     }
 
     #endregion

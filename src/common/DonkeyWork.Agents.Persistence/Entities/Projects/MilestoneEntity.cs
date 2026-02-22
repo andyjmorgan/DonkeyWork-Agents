@@ -26,6 +26,16 @@ public class MilestoneEntity : BaseEntity
     public MilestoneStatus Status { get; set; } = MilestoneStatus.NotStarted;
 
     /// <summary>
+    /// Notes on completion (markdown supported).
+    /// </summary>
+    public string? CompletionNotes { get; set; }
+
+    /// <summary>
+    /// Date when the milestone was completed.
+    /// </summary>
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>
     /// Target completion date for the milestone.
     /// </summary>
     public DateTimeOffset? DueDate { get; set; }

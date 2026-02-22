@@ -293,6 +293,115 @@ public class ProjectServiceTests : IDisposable
         Assert.True(result.UpdatedAt > originalUpdatedAt);
     }
 
+    [Fact]
+    public async Task UpdateAsync_ToCompletedWithoutNotes_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var updateRequest = new UpdateProjectRequestV1
+        {
+            Name = project.Name,
+            Status = ProjectStatus.Completed,
+            CompletionNotes = null
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateAsync(project.Id, updateRequest));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToCancelledWithoutNotes_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var updateRequest = new UpdateProjectRequestV1
+        {
+            Name = project.Name,
+            Status = ProjectStatus.Cancelled,
+            CompletionNotes = null
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateAsync(project.Id, updateRequest));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToCompletedWithNotes_SetsCompletedAt()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var updateRequest = new UpdateProjectRequestV1
+        {
+            Name = project.Name,
+            Status = ProjectStatus.Completed,
+            CompletionNotes = "All tasks finished successfully."
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(project.Id, updateRequest);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(ProjectStatus.Completed, result.Status);
+        Assert.NotNull(result.CompletedAt);
+        Assert.Equal("All tasks finished successfully.", result.CompletionNotes);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_FromCompletedToInProgress_ClearsCompletedAt()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity(
+            status: Persistence.Entities.Projects.ProjectStatus.Completed);
+        project.CompletionNotes = "Done";
+        project.CompletedAt = DateTimeOffset.UtcNow.AddDays(-1);
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var updateRequest = new UpdateProjectRequestV1
+        {
+            Name = project.Name,
+            Status = ProjectStatus.InProgress
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(project.Id, updateRequest);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(ProjectStatus.InProgress, result.Status);
+        Assert.Null(result.CompletedAt);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToInProgress_DoesNotRequireNotes()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        MockDbContext.SeedProject(_dbContext, project);
+
+        var updateRequest = new UpdateProjectRequestV1
+        {
+            Name = project.Name,
+            Status = ProjectStatus.InProgress,
+            CompletionNotes = null
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(project.Id, updateRequest);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(ProjectStatus.InProgress, result.Status);
+    }
+
     #endregion
 
     #region DeleteAsync Tests
@@ -381,6 +490,123 @@ public class ProjectServiceTests : IDisposable
 
         // Assert
         Assert.Null(result);
+    }
+
+    #endregion
+
+    #region Content Truncation and Chunking Tests
+
+    [Fact]
+    public async Task ListAsync_WithLongContent_IncludesTruncatedPreview()
+    {
+        // Arrange
+        var longContent = new string('a', 1000);
+        var project = _builder.CreateProjectEntity();
+        // Set the content directly on the entity
+        project.Content = longContent;
+        MockDbContext.SeedProject(_dbContext, project);
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.NotNull(summary.ContentPreview);
+        Assert.Equal(503, summary.ContentPreview.Length); // 500 + "..."
+        Assert.EndsWith("...", summary.ContentPreview);
+        Assert.Equal(1000, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithShortContent_PreviewEqualsContent()
+    {
+        // Arrange
+        var shortContent = "Short content";
+        var project = _builder.CreateProjectEntity();
+        project.Content = shortContent;
+        MockDbContext.SeedProject(_dbContext, project);
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Equal(shortContent, summary.ContentPreview);
+        Assert.Equal(shortContent.Length, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithNullContent_PreviewIsNull()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        project.Content = null;
+        MockDbContext.SeedProject(_dbContext, project);
+
+        // Act
+        var results = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Null(summary.ContentPreview);
+        Assert.Equal(0, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithoutChunking_ReturnsFullContent()
+    {
+        // Arrange
+        var longContent = new string('x', 2000);
+        var project = _builder.CreateProjectEntity();
+        project.Content = longContent;
+        MockDbContext.SeedProject(_dbContext, project);
+
+        // Act
+        var result = await _service.GetByIdAsync(project.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(longContent, result.Content);
+        Assert.Equal(2000, result.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithChunking_ReturnsChunkedContent()
+    {
+        // Arrange
+        var content = "Hello World! This is test content.";
+        var project = _builder.CreateProjectEntity();
+        project.Content = content;
+        MockDbContext.SeedProject(_dbContext, project);
+
+        // Act
+        var result = await _service.GetByIdAsync(project.Id, contentOffset: 6, contentLength: 5);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World", result.Content);
+        Assert.Equal(content.Length, result.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithOffsetOnly_ReturnsFromOffset()
+    {
+        // Arrange
+        var content = "Hello World!";
+        var project = _builder.CreateProjectEntity();
+        project.Content = content;
+        MockDbContext.SeedProject(_dbContext, project);
+
+        // Act
+        var result = await _service.GetByIdAsync(project.Id, contentOffset: 6);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World!", result.Content);
+        Assert.Equal(12, result.ContentLength);
     }
 
     #endregion

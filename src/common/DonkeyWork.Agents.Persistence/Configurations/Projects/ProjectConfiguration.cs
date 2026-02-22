@@ -32,6 +32,12 @@ public class ProjectConfiguration : IEntityTypeConfiguration<ProjectEntity>
             .HasColumnName("status")
             .IsRequired();
 
+        builder.Property(e => e.CompletionNotes)
+            .HasColumnName("completion_notes");
+
+        builder.Property(e => e.CompletedAt)
+            .HasColumnName("completed_at");
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();

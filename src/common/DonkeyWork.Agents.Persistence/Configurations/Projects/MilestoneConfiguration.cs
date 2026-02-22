@@ -35,6 +35,12 @@ public class MilestoneConfiguration : IEntityTypeConfiguration<MilestoneEntity>
             .HasColumnName("status")
             .IsRequired();
 
+        builder.Property(e => e.CompletionNotes)
+            .HasColumnName("completion_notes");
+
+        builder.Property(e => e.CompletedAt)
+            .HasColumnName("completed_at");
+
         builder.Property(e => e.DueDate)
             .HasColumnName("due_date");
 

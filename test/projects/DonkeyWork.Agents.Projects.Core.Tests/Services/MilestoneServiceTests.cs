@@ -279,6 +279,131 @@ public class MilestoneServiceTests : IDisposable
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task UpdateAsync_ToCompletedWithoutNotes_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        var updateRequest = new UpdateMilestoneRequestV1
+        {
+            Name = milestone.Name,
+            Status = MilestoneStatus.Completed,
+            SortOrder = milestone.SortOrder,
+            CompletionNotes = null
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateAsync(milestone.Id, updateRequest));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToCancelledWithoutNotes_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        var updateRequest = new UpdateMilestoneRequestV1
+        {
+            Name = milestone.Name,
+            Status = MilestoneStatus.Cancelled,
+            SortOrder = milestone.SortOrder,
+            CompletionNotes = null
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateAsync(milestone.Id, updateRequest));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToCompletedWithNotes_SetsCompletedAt()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        var updateRequest = new UpdateMilestoneRequestV1
+        {
+            Name = milestone.Name,
+            Status = MilestoneStatus.Completed,
+            SortOrder = milestone.SortOrder,
+            CompletionNotes = "Milestone achieved successfully."
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(milestone.Id, updateRequest);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(MilestoneStatus.Completed, result.Status);
+        Assert.NotNull(result.CompletedAt);
+        Assert.Equal("Milestone achieved successfully.", result.CompletionNotes);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_FromCompletedToInProgress_ClearsCompletedAt()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(
+            projectId: project.Id,
+            status: Persistence.Entities.Projects.MilestoneStatus.Completed);
+        milestone.CompletionNotes = "Done";
+        milestone.CompletedAt = DateTimeOffset.UtcNow.AddDays(-1);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        var updateRequest = new UpdateMilestoneRequestV1
+        {
+            Name = milestone.Name,
+            Status = MilestoneStatus.InProgress,
+            SortOrder = milestone.SortOrder
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(milestone.Id, updateRequest);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(MilestoneStatus.InProgress, result.Status);
+        Assert.Null(result.CompletedAt);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ToInProgress_DoesNotRequireNotes()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        var updateRequest = new UpdateMilestoneRequestV1
+        {
+            Name = milestone.Name,
+            Status = MilestoneStatus.InProgress,
+            SortOrder = milestone.SortOrder,
+            CompletionNotes = null
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(milestone.Id, updateRequest);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(MilestoneStatus.InProgress, result.Status);
+    }
+
     #endregion
 
     #region DeleteAsync Tests
@@ -314,6 +439,132 @@ public class MilestoneServiceTests : IDisposable
 
         // Assert
         Assert.False(result);
+    }
+
+    #endregion
+
+    #region Content Truncation and Chunking Tests
+
+    [Fact]
+    public async Task GetByProjectIdAsync_WithLongContent_IncludesTruncatedPreview()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        milestone.Content = new string('a', 1000);
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var results = await _service.GetByProjectIdAsync(project.Id);
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.NotNull(summary.ContentPreview);
+        Assert.Equal(503, summary.ContentPreview.Length); // 500 + "..."
+        Assert.EndsWith("...", summary.ContentPreview);
+        Assert.Equal(1000, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByProjectIdAsync_WithShortContent_PreviewEqualsContent()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        milestone.Content = "Short content";
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var results = await _service.GetByProjectIdAsync(project.Id);
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Equal("Short content", summary.ContentPreview);
+        Assert.Equal(13, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByProjectIdAsync_WithNullContent_PreviewIsNull()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        milestone.Content = null;
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var results = await _service.GetByProjectIdAsync(project.Id);
+
+        // Assert
+        Assert.Single(results);
+        var summary = results[0];
+        Assert.Null(summary.ContentPreview);
+        Assert.Equal(0, summary.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithoutChunking_ReturnsFullContent()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        var longContent = new string('x', 2000);
+        milestone.Content = longContent;
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var result = await _service.GetByIdAsync(milestone.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(longContent, result.Content);
+        Assert.Equal(2000, result.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithChunking_ReturnsChunkedContent()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        var content = "Hello World! This is test content.";
+        milestone.Content = content;
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var result = await _service.GetByIdAsync(milestone.Id, contentOffset: 6, contentLength: 5);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World", result.Content);
+        Assert.Equal(content.Length, result.ContentLength);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithOffsetOnly_ReturnsFromOffset()
+    {
+        // Arrange
+        var project = _builder.CreateProjectEntity();
+        var milestone = _builder.CreateMilestoneEntity(projectId: project.Id);
+        var content = "Hello World!";
+        milestone.Content = content;
+        _dbContext.Projects.Add(project);
+        MockDbContext.SeedMilestone(_dbContext, milestone);
+
+        // Act
+        var result = await _service.GetByIdAsync(milestone.Id, contentOffset: 6);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("World!", result.Content);
+        Assert.Equal(12, result.ContentLength);
     }
 
     #endregion

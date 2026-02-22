@@ -14,8 +14,9 @@ public interface INoteService
 
     /// <summary>
     /// Gets a note by ID.
+    /// Supports optional content chunking via offset/length parameters.
     /// </summary>
-    Task<NoteV1?> GetByIdAsync(Guid noteId, CancellationToken cancellationToken = default);
+    Task<NoteV1?> GetByIdAsync(Guid noteId, int? contentOffset = null, int? contentLength = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists all standalone notes for the current user (not associated with any project or milestone).
@@ -40,6 +41,12 @@ public interface INoteService
     /// Returns summary models without content - use GetByIdAsync for full details.
     /// </summary>
     Task<IReadOnlyList<NoteSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all notes for a research item.
+    /// Returns summary models without content - use GetByIdAsync for full details.
+    /// </summary>
+    Task<IReadOnlyList<NoteSummaryV1>> GetByResearchIdAsync(Guid researchId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates a note.
