@@ -16,6 +16,8 @@ using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authorization;
+using ModelContextProtocol.AspNetCore.Authentication;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -140,7 +142,10 @@ app.MapControllers();
 // Map SignalR hub for real-time notifications
 app.MapHub<NotificationHub>("/hubs/notifications");
 
-app.MapMcp().RequireAuthorization();
+app.MapMcp().RequireAuthorization(new AuthorizeAttribute
+{
+    AuthenticationSchemes = McpAuthenticationDefaults.AuthenticationScheme
+});
 
 app.MapHealthChecks("/healthz");
 

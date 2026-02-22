@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
+using ModelContextProtocol.Authentication;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 
@@ -166,6 +167,13 @@ public static class DependencyInjection
 
                         return Task.CompletedTask;
                     }
+                };
+            })
+            .AddMcp(options =>
+            {
+                options.ResourceMetadata = new ProtectedResourceMetadata
+                {
+                    AuthorizationServers = { new Uri(keycloakOptions.Authority) },
                 };
             });
 
