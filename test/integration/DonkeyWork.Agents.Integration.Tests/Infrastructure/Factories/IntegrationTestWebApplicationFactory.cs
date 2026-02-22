@@ -101,7 +101,9 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                     options.DefaultScheme = TestAuthenticationHandler.SchemeName;
                 })
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                    TestAuthenticationHandler.SchemeName, _ => { });
+                    TestAuthenticationHandler.SchemeName, _ => { })
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                    "McpAuth", _ => { });
 
             // Remove and re-register StreamSystem with our test container config
             services.RemoveAll<StreamSystem>();
