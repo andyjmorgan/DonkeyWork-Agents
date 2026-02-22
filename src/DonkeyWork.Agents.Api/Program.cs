@@ -142,7 +142,7 @@ app.MapControllers();
 // Map SignalR hub for real-time notifications
 app.MapHub<NotificationHub>("/hubs/notifications");
 
-app.MapMcp().RequireAuthorization(new AuthorizeAttribute
+app.MapMcp("/mcp").RequireAuthorization(new AuthorizeAttribute
 {
     AuthenticationSchemes = McpAuthenticationDefaults.AuthenticationScheme
 });
