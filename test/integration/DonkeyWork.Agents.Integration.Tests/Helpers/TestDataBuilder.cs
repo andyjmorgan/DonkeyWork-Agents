@@ -44,13 +44,15 @@ public static class TestDataBuilder
     public static UpdateProjectRequestV1 UpdateProjectRequest(
         string? name = null,
         string? content = null,
-        ProjectStatus status = ProjectStatus.InProgress)
+        ProjectStatus status = ProjectStatus.InProgress,
+        string? completionNotes = null)
     {
         return new UpdateProjectRequestV1
         {
             Name = name ?? $"Updated Project {Guid.NewGuid().ToString("N")[..8]}",
             Content = content ?? "Updated project content",
-            Status = status
+            Status = status,
+            CompletionNotes = completionNotes ?? (status is ProjectStatus.Completed or ProjectStatus.Cancelled ? "Auto-generated completion notes for testing" : null)
         };
     }
 
@@ -178,13 +180,15 @@ public static class TestDataBuilder
     public static UpdateMilestoneRequestV1 UpdateMilestoneRequest(
         string? name = null,
         string? content = null,
-        MilestoneStatus status = MilestoneStatus.InProgress)
+        MilestoneStatus status = MilestoneStatus.InProgress,
+        string? completionNotes = null)
     {
         return new UpdateMilestoneRequestV1
         {
             Name = name ?? $"Updated Milestone {Guid.NewGuid().ToString("N")[..8]}",
             Content = content ?? "Updated milestone content",
-            Status = status
+            Status = status,
+            CompletionNotes = completionNotes ?? (status is MilestoneStatus.Completed or MilestoneStatus.Cancelled ? "Auto-generated completion notes for testing" : null)
         };
     }
 
@@ -215,14 +219,16 @@ public static class TestDataBuilder
         string? title = null,
         string? description = null,
         TaskItemStatus status = TaskItemStatus.InProgress,
-        TaskItemPriority priority = TaskItemPriority.High)
+        TaskItemPriority priority = TaskItemPriority.High,
+        string? completionNotes = null)
     {
         return new UpdateTaskItemRequestV1
         {
             Title = title ?? $"Updated Task {Guid.NewGuid().ToString("N")[..8]}",
             Description = description ?? "Updated task description",
             Status = status,
-            Priority = priority
+            Priority = priority,
+            CompletionNotes = completionNotes ?? (status is TaskItemStatus.Completed or TaskItemStatus.Cancelled ? "Auto-generated completion notes for testing" : null)
         };
     }
 
