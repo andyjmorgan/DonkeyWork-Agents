@@ -93,6 +93,11 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 });
             });
 
+            // Remove all existing auth option configurations (JWT, API Key, McpAuth, MultiAuth)
+            // to avoid "Scheme already exists" errors when re-registering
+            services.RemoveAll<IConfigureOptions<AuthenticationOptions>>();
+            services.RemoveAll<IPostConfigureOptions<AuthenticationOptions>>();
+
             // Replace authentication with test handler
             services.AddAuthentication(options =>
                 {
