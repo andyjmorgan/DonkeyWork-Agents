@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, CheckSqua
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import {
   Select,
@@ -31,6 +32,7 @@ export function TaskEditorPage() {
   const [priority, setPriority] = useState<TaskPriority>('Medium')
   const [status, setStatus] = useState<TaskStatus>('Pending')
   const [dueDate, setDueDate] = useState('')
+  const [completionNotes, setCompletionNotes] = useState('')
 
   useEffect(() => {
     if (taskId && !isNewTask) {
@@ -50,6 +52,7 @@ export function TaskEditorPage() {
       setPriority(taskData.priority)
       setStatus(taskData.status)
       setDueDate(taskData.dueDate || '')
+      setCompletionNotes(taskData.completionNotes || '')
 
       // Load project if task belongs to one
       if (taskData.projectId) {
@@ -93,6 +96,7 @@ export function TaskEditorPage() {
           description,
           priority,
           status,
+          completionNotes: (status === 'Completed' || status === 'Cancelled') ? completionNotes || undefined : undefined,
           dueDate: dueDate || undefined,
           sortOrder: task.sortOrder,
           projectId: task.projectId,
@@ -214,7 +218,10 @@ export function TaskEditorPage() {
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
-          <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !title.trim() || ((status === 'Completed' || status === 'Cancelled') && !completionNotes.trim())}
+          >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             <Save className="h-4 w-4 mr-2" />
             {isNewTask ? 'Create' : 'Save'}
@@ -268,6 +275,21 @@ export function TaskEditorPage() {
           </div>
 
         </div>
+
+        {/* Completion Notes - shown when status is terminal */}
+        {(status === 'Completed' || status === 'Cancelled') && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <Label className="text-sm text-muted-foreground mb-1.5 block">
+              {status === 'Completed' ? 'Completion Notes' : 'Cancellation Reason'} <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              value={completionNotes}
+              onChange={(e) => setCompletionNotes(e.target.value)}
+              placeholder={status === 'Completed' ? 'What was accomplished...' : 'Why is this being cancelled...'}
+              rows={3}
+            />
+          </div>
+        )}
       </div>
 
       {/* Task Editor */}

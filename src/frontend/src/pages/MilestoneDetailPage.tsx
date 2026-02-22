@@ -15,9 +15,12 @@ import {
   LayoutDashboard,
   StickyNote,
   RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
 import { ContentCard } from '@/components/workspace/ContentCard'
@@ -28,6 +31,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +84,12 @@ export function MilestoneDetailPage() {
   // Refresh states
   const [isRefreshingNotes, setIsRefreshingNotes] = useState(false)
   const [isRefreshingTasks, setIsRefreshingTasks] = useState(false)
+
+  // Completion notes dialog state
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState<MilestoneStatus | null>(null)
+  const [completionNotesValue, setCompletionNotesValue] = useState('')
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false)
 
   useEffect(() => {
     if (projectId && milestoneId) {
@@ -173,6 +190,14 @@ export function MilestoneDetailPage() {
   const handleStatusChange = async (newStatus: MilestoneStatus) => {
     if (!projectId || !milestone) return
 
+    // Terminal statuses require completion notes
+    if (newStatus === 'Completed' || newStatus === 'Cancelled') {
+      setPendingStatus(newStatus)
+      setCompletionNotesValue('')
+      setShowCompletionDialog(true)
+      return
+    }
+
     try {
       setStatusValue(newStatus)
       await milestones.update(projectId, milestone.id, {
@@ -186,6 +211,31 @@ export function MilestoneDetailPage() {
     } catch (error) {
       console.error('Failed to update status:', error)
       setStatusValue(milestone.status)
+    }
+  }
+
+  const handleSubmitCompletionNotes = async () => {
+    if (!projectId || !milestone || !pendingStatus || !completionNotesValue.trim()) return
+
+    try {
+      setIsSubmittingCompletion(true)
+      const updated = await milestones.update(projectId, milestone.id, {
+        name: milestone.name,
+        content: milestone.content,
+        status: pendingStatus,
+        completionNotes: completionNotesValue.trim(),
+        dueDate: milestone.dueDate || undefined,
+        sortOrder: milestone.sortOrder,
+      })
+      setMilestone(updated)
+      setStatusValue(pendingStatus)
+      setShowCompletionDialog(false)
+      setPendingStatus(null)
+      setCompletionNotesValue('')
+    } catch (error) {
+      console.error('Failed to update milestone status:', error)
+    } finally {
+      setIsSubmittingCompletion(false)
     }
   }
 
@@ -492,6 +542,26 @@ export function MilestoneDetailPage() {
             </div>
           </div>
 
+          {/* Completion Notes */}
+          {(milestone.status === 'Completed' || milestone.status === 'Cancelled') && milestone.completionNotes && (
+            <div className={`rounded-lg border p-4 ${milestone.status === 'Completed' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                {milestone.status === 'Completed' ? (
+                  <CheckSquare className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                )}
+                {milestone.status === 'Completed' ? 'Completion Notes' : 'Cancellation Notes'}
+              </h3>
+              <MarkdownViewer content={milestone.completionNotes} />
+              {milestone.completedAt && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {milestone.status === 'Completed' ? 'Completed' : 'Cancelled'} on {new Date(milestone.completedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Milestone Content */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -647,6 +717,47 @@ export function MilestoneDetailPage() {
           )}
         </div>
       )}
+
+      {/* Completion Notes Dialog */}
+      <Dialog open={showCompletionDialog} onOpenChange={() => { setShowCompletionDialog(false); setPendingStatus(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingStatus === 'Completed' ? 'Complete Milestone' : 'Cancel Milestone'}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingStatus === 'Completed'
+                ? 'Provide notes about what was accomplished.'
+                : 'Provide a reason for cancellation.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="completion-notes">
+                {pendingStatus === 'Completed' ? 'Completion Notes' : 'Cancellation Reason'}
+              </Label>
+              <Textarea
+                id="completion-notes"
+                value={completionNotesValue}
+                onChange={(e) => setCompletionNotesValue(e.target.value)}
+                placeholder={pendingStatus === 'Completed' ? 'What was accomplished...' : 'Why is this being cancelled...'}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCompletionDialog(false); setPendingStatus(null) }}>Cancel</Button>
+            <Button
+              onClick={handleSubmitCompletionNotes}
+              disabled={isSubmittingCompletion || !completionNotesValue.trim()}
+              variant={pendingStatus === 'Cancelled' ? 'destructive' : 'default'}
+            >
+              {isSubmittingCompletion && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {pendingStatus === 'Completed' ? 'Complete' : 'Cancel Milestone'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   )

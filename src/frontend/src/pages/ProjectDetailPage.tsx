@@ -58,7 +58,7 @@ import {
   type MilestoneStatus,
 } from '@/lib/api'
 
-type DialogType = 'milestone' | null
+type DialogType = 'milestone' | 'completionNotes' | null
 type TabType = 'overview' | 'milestones' | 'notes' | 'tasks'
 
 export function ProjectDetailPage() {
@@ -83,6 +83,10 @@ export function ProjectDetailPage() {
   const [isRefreshingMilestones, setIsRefreshingMilestones] = useState(false)
   const [isRefreshingNotes, setIsRefreshingNotes] = useState(false)
   const [isRefreshingTasks, setIsRefreshingTasks] = useState(false)
+
+  // Completion notes dialog state
+  const [pendingStatus, setPendingStatus] = useState<ProjectStatus | null>(null)
+  const [completionNotesValue, setCompletionNotesValue] = useState('')
 
   // Form states
   const [milestoneForm, setMilestoneForm] = useState<CreateMilestoneRequest>({
@@ -176,6 +180,14 @@ export function ProjectDetailPage() {
   const handleStatusChange = async (newStatus: ProjectStatus) => {
     if (!id || !project) return
 
+    // Terminal statuses require completion notes
+    if (newStatus === 'Completed' || newStatus === 'Cancelled') {
+      setPendingStatus(newStatus)
+      setCompletionNotesValue('')
+      setDialogType('completionNotes')
+      return
+    }
+
     try {
       await projects.update(id, {
         name: project.name,
@@ -185,6 +197,28 @@ export function ProjectDetailPage() {
       setProject({ ...project, status: newStatus })
     } catch (error) {
       console.error('Failed to update project status:', error)
+    }
+  }
+
+  const handleSubmitCompletionNotes = async () => {
+    if (!id || !project || !pendingStatus || !completionNotesValue.trim()) return
+
+    try {
+      setIsSubmitting(true)
+      const updated = await projects.update(id, {
+        name: project.name,
+        status: pendingStatus,
+        content: project.content,
+        completionNotes: completionNotesValue.trim(),
+      })
+      setProject(updated)
+      setDialogType(null)
+      setPendingStatus(null)
+      setCompletionNotesValue('')
+    } catch (error) {
+      console.error('Failed to update project status:', error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -529,6 +563,26 @@ export function ProjectDetailPage() {
             </div>
           )}
 
+          {/* Completion Notes */}
+          {(project.status === 'Completed' || project.status === 'Cancelled') && project.completionNotes && (
+            <div className={`rounded-lg border p-4 ${project.status === 'Completed' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                {project.status === 'Completed' ? (
+                  <CheckSquare className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                )}
+                {project.status === 'Completed' ? 'Completion Notes' : 'Cancellation Notes'}
+              </h3>
+              <MarkdownViewer content={project.completionNotes} />
+              {project.completedAt && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {project.status === 'Completed' ? 'Completed' : 'Cancelled'} on {new Date(project.completedAt).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Project Content */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -860,6 +914,47 @@ export function ProjectDetailPage() {
           )}
         </div>
       )}
+
+      {/* Completion Notes Dialog */}
+      <Dialog open={dialogType === 'completionNotes'} onOpenChange={() => { setDialogType(null); setPendingStatus(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {pendingStatus === 'Completed' ? 'Complete Project' : 'Cancel Project'}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingStatus === 'Completed'
+                ? 'Provide notes about what was accomplished.'
+                : 'Provide a reason for cancellation.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="completion-notes">
+                {pendingStatus === 'Completed' ? 'Completion Notes' : 'Cancellation Reason'}
+              </Label>
+              <Textarea
+                id="completion-notes"
+                value={completionNotesValue}
+                onChange={(e) => setCompletionNotesValue(e.target.value)}
+                placeholder={pendingStatus === 'Completed' ? 'What was accomplished...' : 'Why is this being cancelled...'}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDialogType(null); setPendingStatus(null) }}>Cancel</Button>
+            <Button
+              onClick={handleSubmitCompletionNotes}
+              disabled={isSubmitting || !completionNotesValue.trim()}
+              variant={pendingStatus === 'Cancelled' ? 'destructive' : 'default'}
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {pendingStatus === 'Completed' ? 'Complete' : 'Cancel Project'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Milestone Dialog */}
       <Dialog open={dialogType === 'milestone'} onOpenChange={closeDialog}>

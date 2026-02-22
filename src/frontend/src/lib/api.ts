@@ -588,6 +588,8 @@ export interface ProjectSummary {
   id: string
   name: string
   status: ProjectStatus
+  completionNotes?: string
+  completedAt?: string
   tags: Tag[]
   milestoneCount: number
   taskCount: number
@@ -602,6 +604,8 @@ export interface ProjectDetails {
   content?: string
   successCriteria?: string
   status: ProjectStatus
+  completionNotes?: string
+  completedAt?: string
   tags: Tag[]
   fileReferences: FileReference[]
   milestones: MilestoneSummary[]
@@ -625,6 +629,7 @@ export interface UpdateProjectRequest {
   content?: string
   successCriteria?: string
   status: ProjectStatus
+  completionNotes?: string
   tags?: TagRequest[]
   fileReferences?: FileReferenceRequest[]
 }
@@ -635,6 +640,8 @@ export interface MilestoneSummary {
   name: string
   content?: string
   status: MilestoneStatus
+  completionNotes?: string
+  completedAt?: string
   dueDate?: string
   sortOrder: number
   tags: Tag[]
@@ -651,6 +658,8 @@ export interface MilestoneDetails {
   content?: string
   successCriteria?: string
   status: MilestoneStatus
+  completionNotes?: string
+  completedAt?: string
   dueDate?: string
   sortOrder: number
   tags: Tag[]
@@ -677,6 +686,7 @@ export interface UpdateMilestoneRequest {
   content?: string
   successCriteria?: string
   status: MilestoneStatus
+  completionNotes?: string
   dueDate?: string
   sortOrder: number
   tags?: TagRequest[]
@@ -791,6 +801,63 @@ export const notes = {
   create: (data: CreateNoteRequest) => api.post<Note>('/api/v1/notes', data),
   update: (id: string, data: UpdateNoteRequest) => api.put<Note>(`/api/v1/notes/${id}`, data),
   delete: (id: string) => api.delete(`/api/v1/notes/${id}`),
+}
+
+// Research Types
+export type ResearchStatus = 'NotStarted' | 'InProgress' | 'Completed' | 'Cancelled'
+
+export interface ResearchSummary {
+  id: string
+  subject: string
+  contentPreview?: string
+  contentLength: number
+  status: ResearchStatus
+  completedAt?: string
+  tags: Tag[]
+  noteCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface ResearchDetails {
+  id: string
+  subject: string
+  content?: string
+  contentLength: number
+  summary?: string
+  summaryLength: number
+  status: ResearchStatus
+  completionNotes?: string
+  completedAt?: string
+  tags: Tag[]
+  notes: Note[]
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateResearchRequest {
+  subject: string
+  content?: string
+  status?: ResearchStatus
+  tags?: TagRequest[]
+}
+
+export interface UpdateResearchRequest {
+  subject: string
+  content?: string
+  summary?: string
+  status: ResearchStatus
+  completionNotes?: string
+  tags?: TagRequest[]
+}
+
+// Research API
+export const research = {
+  list: () => api.get<ResearchSummary[]>('/api/v1/research'),
+  get: (id: string) => api.get<ResearchDetails>(`/api/v1/research/${id}`),
+  create: (data: CreateResearchRequest) => api.post<ResearchDetails>('/api/v1/research', data),
+  update: (id: string, data: UpdateResearchRequest) => api.put<ResearchDetails>(`/api/v1/research/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/research/${id}`),
 }
 
 // Node Types - Schema API
