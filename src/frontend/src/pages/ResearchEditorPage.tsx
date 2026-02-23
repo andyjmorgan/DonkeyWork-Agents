@@ -9,6 +9,7 @@ import {
   FlaskConical,
   Search,
   FileText,
+  StickyNote,
   X,
   Plus,
 } from 'lucide-react'
@@ -18,6 +19,12 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -61,6 +68,9 @@ export function ResearchEditorPage() {
   const [pendingStatus, setPendingStatus] = useState<ResearchStatus | null>(null)
   const [completionNotesValue, setCompletionNotesValue] = useState('')
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false)
+
+  // Active tab
+  const [activeTab, setActiveTab] = useState('result')
 
   useEffect(() => {
     if (researchId && !isNew) {
@@ -309,50 +319,70 @@ export function ResearchEditorPage() {
         className="resize-none"
       />
 
-      {/* Notes */}
-      {!isNew && researchData?.notes && researchData.notes.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium text-muted-foreground">Notes ({researchData.notes.length})</h3>
-          {researchData.notes.map((note) => (
-            <div
-              key={note.id}
-              className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-all cursor-pointer"
-              onClick={() => navigate(`/notes/${note.id}`)}
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-500 shrink-0" />
-                <h4 className="font-medium truncate">{note.title}</h4>
-              </div>
-              {note.content && (
-                <p className="text-sm text-muted-foreground line-clamp-2 mt-1 pl-6">
-                  {note.content}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Tabs for Result and Notes */}
+      {!isNew && (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="result">Result</TabsTrigger>
+            <TabsTrigger value="notes">
+              Notes {researchData?.notes && researchData.notes.length > 0 && `(${researchData.notes.length})`}
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Result */}
-      {researchData?.completionNotes ? (
-        <div className="rounded-lg border border-border bg-card p-4">
-          <MarkdownViewer
-            content={researchData.completionNotes}
-            className="min-h-[200px]"
-          />
-          {researchData.completedAt && (
-            <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
-              {status === 'Completed' ? 'Completed' : 'Cancelled'} {new Date(researchData.completedAt).toLocaleDateString()}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center">
-          <FlaskConical className="h-8 w-8 text-muted-foreground" />
-          <p className="mt-2 text-sm text-muted-foreground">
-            No result yet &mdash; mark as completed to add findings
-          </p>
-        </div>
+          <TabsContent value="result" className="mt-4">
+            {researchData?.completionNotes ? (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <MarkdownViewer
+                  content={researchData.completionNotes}
+                  className="min-h-[200px]"
+                />
+                {researchData.completedAt && (
+                  <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
+                    {status === 'Completed' ? 'Completed' : 'Cancelled'} {new Date(researchData.completedAt).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center">
+                <FlaskConical className="h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No result yet &mdash; mark as completed to add findings
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="notes" className="mt-4">
+            {researchData?.notes && researchData.notes.length > 0 ? (
+              <div className="space-y-3">
+                {researchData.notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => navigate(`/notes/${note.id}`)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                      <h4 className="font-medium truncate">{note.title}</h4>
+                    </div>
+                    {note.content && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1 pl-6">
+                        {note.content}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
+                <StickyNote className="h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No notes attached to this research yet
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Completion Notes Dialog */}
