@@ -172,6 +172,7 @@ public static class DependencyInjection
             .AddMcp(options =>
             {
                 options.ForwardAuthenticate = DefaultScheme;
+                options.ResourceMetadataUri = new Uri("/.well-known/oauth-protected-resource", UriKind.Relative);
                 options.ResourceMetadata = new ProtectedResourceMetadata
                 {
                     AuthorizationServers = { new Uri(keycloakOptions.Authority) },
