@@ -3,6 +3,7 @@ using DonkeyWork.Agents.Conversations.Api;
 using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Identity.Api;
+using DonkeyWork.Agents.Identity.Api.Options;
 using DonkeyWork.Agents.Mcp.Api;
 using DonkeyWork.Agents.Mcp.Core;
 using DonkeyWork.Agents.Notifications.Core;
@@ -17,6 +18,7 @@ using DonkeyWork.Agents.Storage.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.AspNetCore.Authentication;
 using Scalar.AspNetCore;
 using Serilog;
@@ -142,10 +144,18 @@ app.MapControllers();
 // Map SignalR hub for real-time notifications
 app.MapHub<NotificationHub>("/hubs/notifications");
 
-app.MapMcp("/mcp").RequireAuthorization(new AuthorizeAttribute
+app.MapMcp().RequireAuthorization(new AuthorizeAttribute
 {
     AuthenticationSchemes = McpAuthenticationDefaults.AuthenticationScheme
 });
+
+// Redirect OAuth/OIDC discovery to Keycloak for clients that don't implement RFC 9728
+// (e.g., MCP Inspector tries /.well-known/openid-configuration on the resource server directly)
+var keycloakAuthority = app.Services.GetRequiredService<IOptions<KeycloakOptions>>().Value.Authority.TrimEnd('/');
+app.MapGet("/.well-known/openid-configuration",
+    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true));
+app.MapGet("/.well-known/oauth-authorization-server",
+    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true));
 
 app.MapHealthChecks("/healthz");
 
