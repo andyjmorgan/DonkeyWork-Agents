@@ -1,9 +1,9 @@
 import { oauth, type OAuthProvider } from '@/lib/api'
 
 export function useOAuthFlow() {
-  const initiateFlow = async (provider: OAuthProvider) => {
+  const initiateFlow = async (provider: OAuthProvider, scopes?: string[]) => {
     try {
-      const response = await oauth.getAuthorizationUrl(provider)
+      const response = await oauth.getAuthorizationUrl(provider, scopes)
       // Backend sets cookies, just redirect to authorization URL
       window.location.href = response.authorizationUrl
     } catch (error) {
