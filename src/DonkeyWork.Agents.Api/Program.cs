@@ -104,6 +104,15 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddHealthChecks();
 
+// CORS for MCP OAuth discovery (browser-based clients like MCP Inspector send preflight OPTIONS)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("McpDiscovery", policy => policy
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
 // Configure forwarded headers for reverse proxy (must be first)
@@ -137,6 +146,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // No HTTPS redirection - API is always behind a traffic shaper/load balancer that handles TLS
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -147,15 +157,17 @@ app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapMcp().RequireAuthorization(new AuthorizeAttribute
 {
     AuthenticationSchemes = McpAuthenticationDefaults.AuthenticationScheme
-});
+}).RequireCors("McpDiscovery");
 
 // Redirect OAuth/OIDC discovery to Keycloak for clients that don't implement RFC 9728
 // (e.g., MCP Inspector tries /.well-known/openid-configuration on the resource server directly)
 var keycloakAuthority = app.Services.GetRequiredService<IOptions<KeycloakOptions>>().Value.Authority.TrimEnd('/');
 app.MapGet("/.well-known/openid-configuration",
-    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true));
+    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true))
+    .RequireCors("McpDiscovery");
 app.MapGet("/.well-known/oauth-authorization-server",
-    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true));
+    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true))
+    .RequireCors("McpDiscovery");
 
 app.MapHealthChecks("/healthz");
 
