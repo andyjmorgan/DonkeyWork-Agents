@@ -20,8 +20,6 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.AspNetCore.Authentication;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -105,7 +103,6 @@ builder.Services.AddDataProtection()
     .PersistKeysToDbContext<AgentsDbContext>();
 
 builder.Services.AddHealthChecks();
-builder.Services.AddHttpClient("KeycloakProxy");
 
 // CORS policy for MCP clients (browser-based clients like MCP Inspector need cross-origin access).
 // Set as the default policy so it applies to all requests, including those handled by middleware
@@ -165,50 +162,12 @@ app.MapMcp().RequireAuthorization(new AuthorizeAttribute
     AuthenticationSchemes = McpAuthenticationDefaults.AuthenticationScheme
 });
 
-// Proxy OAuth discovery metadata from Keycloak, rewriting the registration_endpoint to route
-// through our server. Keycloak's client registration endpoint doesn't support CORS, so
-// browser-based MCP clients (like MCP Inspector) can't call it directly.
+// Redirect OAuth/OIDC discovery to Keycloak for clients that don't implement RFC 9728
 var keycloakAuthority = app.Services.GetRequiredService<IOptions<KeycloakOptions>>().Value.Authority.TrimEnd('/');
-
-app.MapGet("/.well-known/openid-configuration", async (HttpContext context, IHttpClientFactory httpClientFactory) =>
-{
-    var resourceUri = $"{context.Request.Scheme}://{context.Request.Host}";
-    return await ProxyOAuthMetadata(httpClientFactory, keycloakAuthority, "openid-configuration", resourceUri);
-});
-
-app.MapGet("/.well-known/oauth-authorization-server", async (HttpContext context, IHttpClientFactory httpClientFactory) =>
-{
-    var resourceUri = $"{context.Request.Scheme}://{context.Request.Host}";
-    return await ProxyOAuthMetadata(httpClientFactory, keycloakAuthority, "oauth-authorization-server", resourceUri);
-});
-
-// Proxy client registration requests to Keycloak (Keycloak's registration endpoint lacks CORS)
-app.MapPost("/oauth/register", async (HttpContext context, IHttpClientFactory httpClientFactory) =>
-{
-    var client = httpClientFactory.CreateClient("KeycloakProxy");
-    var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-    var request = new HttpRequestMessage(HttpMethod.Post, $"{keycloakAuthority}/clients-registrations/openid-connect")
-    {
-        Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
-    };
-    var response = await client.SendAsync(request);
-    var responseBody = await response.Content.ReadAsStringAsync();
-    return Results.Content(responseBody, "application/json", statusCode: (int)response.StatusCode);
-});
-
-static async Task<IResult> ProxyOAuthMetadata(
-    IHttpClientFactory httpClientFactory, string keycloakAuthority, string metadataType, string resourceUri)
-{
-    var client = httpClientFactory.CreateClient("KeycloakProxy");
-    var response = await client.GetStringAsync($"{keycloakAuthority}/.well-known/{metadataType}");
-    var metadata = JsonNode.Parse(response);
-    if (metadata is not null)
-    {
-        // Rewrite registration_endpoint to our proxy
-        metadata["registration_endpoint"] = $"{resourceUri}/oauth/register";
-    }
-    return Results.Content(metadata?.ToJsonString() ?? response, "application/json");
-}
+app.MapGet("/.well-known/openid-configuration",
+    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true));
+app.MapGet("/.well-known/oauth-authorization-server",
+    () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true));
 
 app.MapHealthChecks("/healthz");
 
