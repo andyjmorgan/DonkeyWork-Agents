@@ -8,8 +8,6 @@ import {
   ChevronRight,
   FlaskConical,
   Search,
-  StickyNote,
-  FileText,
   X,
   Plus,
 } from 'lucide-react'
@@ -18,7 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
+import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
 import {
   Select,
   SelectContent,
@@ -34,12 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
 import {
   research,
   type ResearchDetails,
@@ -58,8 +50,6 @@ export function ResearchEditorPage() {
 
   // Form fields
   const [subject, setSubject] = useState('')
-  const [content, setContent] = useState('')
-  const [summary, setSummary] = useState('')
   const [status, setStatus] = useState<ResearchStatus>('NotStarted')
   const [tags, setTags] = useState<TagRequest[]>([])
   const [newTagName, setNewTagName] = useState('')
@@ -69,9 +59,6 @@ export function ResearchEditorPage() {
   const [pendingStatus, setPendingStatus] = useState<ResearchStatus | null>(null)
   const [completionNotesValue, setCompletionNotesValue] = useState('')
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false)
-
-  // Active tab
-  const [activeTab, setActiveTab] = useState('content')
 
   useEffect(() => {
     if (researchId && !isNew) {
@@ -87,8 +74,6 @@ export function ResearchEditorPage() {
       const data = await research.get(researchId)
       setResearchData(data)
       setSubject(data.subject)
-      setContent(data.content || '')
-      setSummary(data.summary || '')
       setStatus(data.status)
       setTags(data.tags.map((t) => ({ name: t.name })))
       setCompletionNotesValue(data.completionNotes || '')
@@ -108,7 +93,6 @@ export function ResearchEditorPage() {
       if (isNew) {
         const created = await research.create({
           subject,
-          content,
           status,
           tags,
         })
@@ -116,8 +100,8 @@ export function ResearchEditorPage() {
       } else if (researchData) {
         await research.update(researchData.id, {
           subject,
-          content,
-          summary,
+          content: researchData.content,
+          summary: researchData.summary,
           status,
           completionNotes: (status === 'Completed' || status === 'Cancelled') ? completionNotesValue || undefined : undefined,
           tags,
@@ -160,8 +144,8 @@ export function ResearchEditorPage() {
         setIsSubmittingCompletion(true)
         await research.update(researchData.id, {
           subject,
-          content,
-          summary,
+          content: researchData.content,
+          summary: researchData.summary,
           status: pendingStatus,
           completionNotes: completionNotesValue,
           tags,
@@ -302,95 +286,37 @@ export function ResearchEditorPage() {
           </div>
         </div>
 
-        {/* Completion Notes display */}
-        {researchData?.completionNotes && (status === 'Completed' || status === 'Cancelled') && (
-          <div className={`mt-3 pt-3 border-t border-border rounded-md p-3 ${
-            status === 'Completed' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-destructive/10 border-destructive/20'
-          }`}>
-            <p className="text-xs font-medium text-muted-foreground mb-1">
-              {status === 'Completed' ? 'Completion Notes' : 'Cancellation Reason'}
-            </p>
-            <p className="text-sm">{researchData.completionNotes}</p>
-            {researchData.completedAt && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {new Date(researchData.completedAt).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Subject */}
+      {/* Topic */}
       <Input
         value={subject}
         onChange={(e) => setSubject(e.target.value)}
-        placeholder="Research subject"
+        placeholder="Research topic"
         className="text-xl font-semibold border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
       />
 
-      {/* Tabs for Content, Summary, Notes */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          {!isNew && (
-            <TabsTrigger value="notes">
-              Notes {researchData?.notes && researchData.notes.length > 0 && `(${researchData.notes.length})`}
-            </TabsTrigger>
+      {/* Result */}
+      {researchData?.completionNotes ? (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <MarkdownViewer
+            content={researchData.completionNotes}
+            className="min-h-[200px]"
+          />
+          {researchData.completedAt && (
+            <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
+              {status === 'Completed' ? 'Completed' : 'Cancelled'} {new Date(researchData.completedAt).toLocaleDateString()}
+            </p>
           )}
-        </TabsList>
-
-        <TabsContent value="content" className="mt-4">
-          <MarkdownEditor
-            content={content}
-            onChange={setContent}
-            placeholder="Write your research content here..."
-            className="min-h-[calc(100vh-500px)]"
-          />
-        </TabsContent>
-
-        <TabsContent value="summary" className="mt-4">
-          <MarkdownEditor
-            content={summary}
-            onChange={setSummary}
-            placeholder="Write a summary of your research findings..."
-            className="min-h-[calc(100vh-500px)]"
-          />
-        </TabsContent>
-
-        {!isNew && (
-          <TabsContent value="notes" className="mt-4">
-            {researchData?.notes && researchData.notes.length > 0 ? (
-              <div className="space-y-3">
-                {researchData.notes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => navigate(`/notes/${note.id}`)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-500 shrink-0" />
-                      <h4 className="font-medium truncate">{note.title}</h4>
-                    </div>
-                    {note.content && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1 pl-6">
-                        {note.content}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
-                <StickyNote className="h-8 w-8 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  No notes attached to this research yet
-                </p>
-              </div>
-            )}
-          </TabsContent>
-        )}
-      </Tabs>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center">
+          <FlaskConical className="h-8 w-8 text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            No result yet &mdash; mark as completed to add findings
+          </p>
+        </div>
+      )}
 
       {/* Completion Notes Dialog */}
       <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
