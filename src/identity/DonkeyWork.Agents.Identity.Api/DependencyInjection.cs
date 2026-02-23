@@ -176,14 +176,14 @@ public static class DependencyInjection
                 options.ResourceMetadata = new ProtectedResourceMetadata
                 {
                     AuthorizationServers = { new Uri(keycloakOptions.Authority) },
-                    ScopesSupported = { "openid", "profile", "email", "offline_access" },
+                    ScopesSupported = { "openid", "profile", "email", "offline_access", "mcp-audience" },
                 };
                 options.Events.OnResourceMetadataRequest = context =>
                 {
                     context.ResourceMetadata ??= new ProtectedResourceMetadata
                     {
                         AuthorizationServers = { new Uri(keycloakOptions.Authority) },
-                        ScopesSupported = { "openid", "profile", "email", "offline_access" },
+                        ScopesSupported = { "openid", "profile", "email", "offline_access", "mcp-audience" },
                     };
                     context.ResourceMetadata.Resource ??=
                         new Uri($"{context.Request.Scheme}://{context.Request.Host}");
