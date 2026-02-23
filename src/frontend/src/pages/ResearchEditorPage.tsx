@@ -8,6 +8,7 @@ import {
   ChevronRight,
   FlaskConical,
   Search,
+  FileText,
   X,
   Plus,
 } from 'lucide-react'
@@ -50,6 +51,7 @@ export function ResearchEditorPage() {
 
   // Form fields
   const [subject, setSubject] = useState('')
+  const [content, setContent] = useState('')
   const [status, setStatus] = useState<ResearchStatus>('NotStarted')
   const [tags, setTags] = useState<TagRequest[]>([])
   const [newTagName, setNewTagName] = useState('')
@@ -74,6 +76,7 @@ export function ResearchEditorPage() {
       const data = await research.get(researchId)
       setResearchData(data)
       setSubject(data.subject)
+      setContent(data.content || '')
       setStatus(data.status)
       setTags(data.tags.map((t) => ({ name: t.name })))
       setCompletionNotesValue(data.completionNotes || '')
@@ -93,6 +96,7 @@ export function ResearchEditorPage() {
       if (isNew) {
         const created = await research.create({
           subject,
+          content,
           status,
           tags,
         })
@@ -100,7 +104,7 @@ export function ResearchEditorPage() {
       } else if (researchData) {
         await research.update(researchData.id, {
           subject,
-          content: researchData.content,
+          content,
           summary: researchData.summary,
           status,
           completionNotes: (status === 'Completed' || status === 'Cancelled') ? completionNotesValue || undefined : undefined,
@@ -144,7 +148,7 @@ export function ResearchEditorPage() {
         setIsSubmittingCompletion(true)
         await research.update(researchData.id, {
           subject,
-          content: researchData.content,
+          content,
           summary: researchData.summary,
           status: pendingStatus,
           completionNotes: completionNotesValue,
@@ -295,6 +299,39 @@ export function ResearchEditorPage() {
         placeholder="Research topic"
         className="text-xl font-semibold border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
       />
+
+      {/* Description */}
+      <Textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Describe what needs to be researched..."
+        rows={3}
+        className="resize-none"
+      />
+
+      {/* Notes */}
+      {!isNew && researchData?.notes && researchData.notes.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">Notes ({researchData.notes.length})</h3>
+          {researchData.notes.map((note) => (
+            <div
+              key={note.id}
+              className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-all cursor-pointer"
+              onClick={() => navigate(`/notes/${note.id}`)}
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                <h4 className="font-medium truncate">{note.title}</h4>
+              </div>
+              {note.content && (
+                <p className="text-sm text-muted-foreground line-clamp-2 mt-1 pl-6">
+                  {note.content}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Result */}
       {researchData?.completionNotes ? (
