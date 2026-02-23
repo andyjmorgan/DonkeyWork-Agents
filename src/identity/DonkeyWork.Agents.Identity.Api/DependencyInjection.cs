@@ -177,6 +177,16 @@ public static class DependencyInjection
                 {
                     AuthorizationServers = { new Uri(keycloakOptions.Authority) },
                 };
+                options.Events.OnResourceMetadataRequest = context =>
+                {
+                    context.ResourceMetadata ??= new ProtectedResourceMetadata
+                    {
+                        AuthorizationServers = { new Uri(keycloakOptions.Authority) },
+                    };
+                    context.ResourceMetadata.Resource ??=
+                        new Uri($"{context.Request.Scheme}://{context.Request.Host}");
+                    return Task.CompletedTask;
+                };
             });
 
         services.AddAuthorization();
