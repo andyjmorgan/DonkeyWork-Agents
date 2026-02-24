@@ -51,6 +51,10 @@ interface ContentCardProps {
   onToggleComplete?: () => void
   /** Whether the card content should be strikethrough (completed state) */
   isCompleted?: boolean
+  /** Whether the card is selected (for multiselect) */
+  selected?: boolean
+  /** Handler for toggling card selection */
+  onSelect?: () => void
 }
 
 /**
@@ -73,16 +77,35 @@ export function ContentCard({
   onMilestoneClick,
   onToggleComplete,
   isCompleted,
+  selected,
+  onSelect,
 }: ContentCardProps) {
   const isTask = status !== undefined
 
   return (
     <div
-      className={`group rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer h-[330px] flex flex-col ${
+      className={`group relative rounded-lg border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer h-[330px] flex flex-col ${
         isCompleted ? 'opacity-75 bg-card/50' : ''
-      }`}
+      } ${selected ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
       onClick={onClick}
     >
+      {/* Selection checkbox */}
+      {onSelect && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelect()
+          }}
+          className={`absolute top-2 left-2 h-5 w-5 rounded border-2 flex items-center justify-center transition-all z-10 ${
+            selected
+              ? 'bg-primary border-primary text-primary-foreground'
+              : 'border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          {selected && <CheckSquare className="h-3 w-3" />}
+        </button>
+      )}
+
       {/* Title row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">

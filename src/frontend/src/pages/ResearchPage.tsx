@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, Search, FlaskConical } from 'lucide-react'
+import { Plus, Loader2, Search, FlaskConical, Trash2, X, CheckSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { research, type ResearchSummary, type ResearchStatus } from '@/lib/api'
@@ -17,6 +17,8 @@ export function ResearchPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [researchList, setResearchList] = useState<ResearchSummary[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   useEffect(() => {
     loadResearch()
@@ -52,6 +54,34 @@ export function ResearchPage() {
     }
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!window.confirm(`Delete ${selectedIds.size} selected research item${selectedIds.size > 1 ? 's' : ''}?`)) return
+
+    try {
+      setIsBulkDeleting(true)
+      await Promise.all(Array.from(selectedIds).map((id) => research.delete(id)))
+      setSelectedIds(new Set())
+      await loadResearch()
+    } catch (error) {
+      console.error('Failed to bulk delete research:', error)
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -75,6 +105,34 @@ export function ResearchPage() {
         </Button>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-2">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={isBulkDeleting}
+          >
+            {isBulkDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Delete
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            <X className="h-3.5 w-3.5 mr-1.5" />
+            Clear
+          </Button>
+        </div>
+      )}
+
       {researchList.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center">
           <div className="rounded-full bg-muted p-4">
@@ -91,60 +149,78 @@ export function ResearchPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {researchList.map((item) => (
-            <div
-              key={item.id}
-              className={`group relative rounded-lg border border-border bg-card hover:shadow-md transition-all cursor-pointer flex flex-col h-[250px] ${
-                item.status === 'Completed' || item.status === 'Cancelled' ? 'opacity-75' : ''
-              }`}
-              onClick={() => navigate(`/research/${item.id}`)}
-            >
-              <div className="flex-1 p-4 min-h-0">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Search className="h-4 w-4 text-cyan-500 shrink-0" />
-                    <h3 className="font-semibold truncate">{item.subject}</h3>
-                  </div>
-                  <Badge variant={statusVariants[item.status]} className="shrink-0">
-                    {item.status.replace(/([A-Z])/g, ' $1').trim()}
-                  </Badge>
-                </div>
-                {item.contentPreview && (
-                  <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                    {item.contentPreview}
-                  </p>
-                )}
-                {item.tags.length > 0 && (
-                  <div className="flex gap-1 flex-wrap mt-2">
-                    {item.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag.id} variant="secondary" className="text-xs">
-                        {tag.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="border-t border-border px-4 py-2.5 flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-3">
-                  <span>{item.noteCount} note{item.noteCount !== 1 ? 's' : ''}</span>
-                  {item.completedAt && (
-                    <span>{new Date(item.completedAt).toLocaleDateString()}</span>
-                  )}
-                </div>
+          {researchList.map((item) => {
+            const isSelected = selectedIds.has(item.id)
+            return (
+              <div
+                key={item.id}
+                className={`group relative rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer flex flex-col h-[250px] ${
+                  item.status === 'Completed' || item.status === 'Cancelled' ? 'opacity-75' : ''
+                } ${isSelected ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
+                onClick={() => navigate(`/research/${item.id}`)}
+              >
+                {/* Selection checkbox */}
                 <button
-                  className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive/80 transition-opacity"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.subject) }}
-                  disabled={deletingId === item.id}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleSelect(item.id)
+                  }}
+                  className={`absolute top-2 left-2 h-5 w-5 rounded border-2 flex items-center justify-center transition-all z-10 ${
+                    isSelected
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100'
+                  }`}
                 >
-                  {deletingId === item.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    'Delete'
-                  )}
+                  {isSelected && <CheckSquare className="h-3 w-3" />}
                 </button>
+
+                <div className="flex-1 p-4 min-h-0">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Search className="h-4 w-4 text-cyan-500 shrink-0" />
+                      <h3 className="font-semibold truncate">{item.subject}</h3>
+                    </div>
+                    <Badge variant={statusVariants[item.status]} className="shrink-0">
+                      {item.status.replace(/([A-Z])/g, ' $1').trim()}
+                    </Badge>
+                  </div>
+                  {item.contentPreview && (
+                    <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
+                      {item.contentPreview}
+                    </p>
+                  )}
+                  {item.tags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {item.tags.slice(0, 3).map((tag) => (
+                        <Badge key={tag.id} variant="secondary" className="text-xs">
+                          {tag.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-border px-4 py-2.5 flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    <span>{item.noteCount} note{item.noteCount !== 1 ? 's' : ''}</span>
+                    {item.completedAt && (
+                      <span>{new Date(item.completedAt).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                  <button
+                    className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive/80 transition-opacity"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.subject) }}
+                    disabled={deletingId === item.id}
+                  >
+                    {deletingId === item.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      'Delete'
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

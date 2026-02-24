@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, FileText, StickyNote } from 'lucide-react'
+import { Plus, Loader2, FileText, StickyNote, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ContentCard } from '@/components/workspace/ContentCard'
 import { notes, type Note } from '@/lib/api'
@@ -11,6 +11,8 @@ export function NotesPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [notesList, setNotesList] = useState<Note[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   useEffect(() => {
     loadNotes()
@@ -66,6 +68,34 @@ export function NotesPage() {
     }
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!window.confirm(`Delete ${selectedIds.size} selected note${selectedIds.size > 1 ? 's' : ''}?`)) return
+
+    try {
+      setIsBulkDeleting(true)
+      await Promise.all(Array.from(selectedIds).map((id) => notes.delete(id)))
+      setSelectedIds(new Set())
+      await loadNotes()
+    } catch (error) {
+      console.error('Failed to bulk delete notes:', error)
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -92,6 +122,34 @@ export function NotesPage() {
           <span className="hidden sm:inline">New Note</span>
         </Button>
       </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-2">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={isBulkDeleting}
+          >
+            {isBulkDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Delete
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            <X className="h-3.5 w-3.5 mr-1.5" />
+            Clear
+          </Button>
+        </div>
+      )}
 
       {notesList.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center">
@@ -124,6 +182,8 @@ export function NotesPage() {
               date={note.updatedAt || note.createdAt}
               icon={<FileText className="h-5 w-5 text-muted-foreground" />}
               tags={note.tags}
+              selected={selectedIds.has(note.id)}
+              onSelect={() => toggleSelect(note.id)}
             />
           ))}
         </div>
