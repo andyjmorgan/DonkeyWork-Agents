@@ -54,7 +54,19 @@ public class OAuthProviderConfigsController : ControllerBase
                 DefaultScopes = ["openid", "profile", "email", "https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/drive.file"],
                 SetupUrl = "https://console.cloud.google.com/apis/credentials",
                 SetupInstructions = "Create a project in Google Cloud Console, enable the Gmail and Drive APIs, then create OAuth 2.0 credentials under APIs & Services > Credentials. Set the authorized redirect URI to the callback URL shown below.",
-                IsBuiltIn = true
+                IsBuiltIn = true,
+                AvailableScopes =
+                [
+                    new() { Name = "openid", Description = "Verify your identity", IsRequired = true, IsDefault = true },
+                    new() { Name = "profile", Description = "View your basic profile info", IsRequired = true, IsDefault = true },
+                    new() { Name = "email", Description = "View your email address", IsRequired = true, IsDefault = true },
+                    new() { Name = "https://www.googleapis.com/auth/gmail.readonly", Description = "Read your Gmail messages", IsRequired = false, IsDefault = true },
+                    new() { Name = "https://www.googleapis.com/auth/gmail.send", Description = "Send emails on your behalf", IsRequired = false, IsDefault = false },
+                    new() { Name = "https://www.googleapis.com/auth/drive.file", Description = "Access files you open or create with this app", IsRequired = false, IsDefault = true },
+                    new() { Name = "https://www.googleapis.com/auth/drive.readonly", Description = "View all your Google Drive files", IsRequired = false, IsDefault = false },
+                    new() { Name = "https://www.googleapis.com/auth/calendar.readonly", Description = "View your calendar events", IsRequired = false, IsDefault = false },
+                    new() { Name = "https://www.googleapis.com/auth/calendar.events", Description = "Manage your calendar events", IsRequired = false, IsDefault = false },
+                ]
             },
             new()
             {
@@ -66,7 +78,20 @@ public class OAuthProviderConfigsController : ControllerBase
                 DefaultScopes = ["openid", "offline_access", "profile", "email", "User.Read", "Mail.Read", "Files.ReadWrite.All"],
                 SetupUrl = "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
                 SetupInstructions = "Register an application in Azure Portal under App registrations. Add a Web platform with the redirect URI shown below. Create a client secret under Certificates & secrets. Grant the required Microsoft Graph API permissions.",
-                IsBuiltIn = true
+                IsBuiltIn = true,
+                AvailableScopes =
+                [
+                    new() { Name = "openid", Description = "Sign you in", IsRequired = true, IsDefault = true },
+                    new() { Name = "offline_access", Description = "Maintain access when you're not using the app", IsRequired = true, IsDefault = true },
+                    new() { Name = "profile", Description = "View your basic profile", IsRequired = true, IsDefault = true },
+                    new() { Name = "email", Description = "View your email address", IsRequired = true, IsDefault = true },
+                    new() { Name = "User.Read", Description = "Read your user profile", IsRequired = true, IsDefault = true },
+                    new() { Name = "Mail.Read", Description = "Read your mail", IsRequired = false, IsDefault = true },
+                    new() { Name = "Mail.Send", Description = "Send mail on your behalf", IsRequired = false, IsDefault = false },
+                    new() { Name = "Files.ReadWrite.All", Description = "Read and write all your files", IsRequired = false, IsDefault = true },
+                    new() { Name = "Calendars.Read", Description = "Read your calendars", IsRequired = false, IsDefault = false },
+                    new() { Name = "Calendars.ReadWrite", Description = "Read and write your calendars", IsRequired = false, IsDefault = false },
+                ]
             },
             new()
             {
@@ -78,7 +103,16 @@ public class OAuthProviderConfigsController : ControllerBase
                 DefaultScopes = ["user:email", "repo"],
                 SetupUrl = "https://github.com/settings/developers",
                 SetupInstructions = "Go to GitHub Settings > Developer settings > OAuth Apps and create a new OAuth App. Set the Authorization callback URL to the redirect URI shown below.",
-                IsBuiltIn = true
+                IsBuiltIn = true,
+                AvailableScopes =
+                [
+                    new() { Name = "user:email", Description = "Access your email addresses", IsRequired = true, IsDefault = true },
+                    new() { Name = "repo", Description = "Full control of private repositories", IsRequired = false, IsDefault = true },
+                    new() { Name = "read:org", Description = "Read organization membership", IsRequired = false, IsDefault = false },
+                    new() { Name = "gist", Description = "Create and manage gists", IsRequired = false, IsDefault = false },
+                    new() { Name = "notifications", Description = "Access your notifications", IsRequired = false, IsDefault = false },
+                    new() { Name = "read:packages", Description = "Read packages from GitHub Packages", IsRequired = false, IsDefault = false },
+                ]
             },
             new()
             {
@@ -90,7 +124,8 @@ public class OAuthProviderConfigsController : ControllerBase
                 DefaultScopes = [],
                 SetupUrl = "",
                 SetupInstructions = "Enter the OAuth 2.0 authorization and token endpoint URLs from your provider. The user info endpoint is optional but recommended for identifying connected accounts.",
-                IsBuiltIn = false
+                IsBuiltIn = false,
+                AvailableScopes = []
             }
         };
 
@@ -116,7 +151,8 @@ public class OAuthProviderConfigsController : ControllerBase
             RedirectUri = c.RedirectUri,
             CreatedAt = c.CreatedAt,
             HasToken = tokens.Any(t => t.Provider == c.Provider),
-            CustomProviderName = c.CustomProviderName
+            CustomProviderName = c.CustomProviderName,
+            Scopes = c.Scopes
         }).ToList();
 
         return Ok(items);
@@ -195,7 +231,8 @@ public class OAuthProviderConfigsController : ControllerBase
                 RedirectUri = config.RedirectUri,
                 CreatedAt = config.CreatedAt,
                 HasToken = false,
-                CustomProviderName = config.CustomProviderName
+                CustomProviderName = config.CustomProviderName,
+                Scopes = config.Scopes
             };
 
             return CreatedAtAction(nameof(Get), new { id = config.Id }, item);

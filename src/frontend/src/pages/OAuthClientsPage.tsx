@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Link as LinkIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CreateOAuthConfigDialog } from '@/components/oauth/CreateOAuthConfigDialog'
+import { ConnectAccountDialog } from '@/components/oauth/ConnectAccountDialog'
 import { ProviderIcon } from '@/components/oauth/ProviderIcon'
-import { oauth, type OAuthProviderConfig } from '@/lib/api'
+import { oauth, type OAuthProvider, type OAuthProviderConfig } from '@/lib/api'
 import { useOAuthFlow } from '@/hooks/useOAuthFlow'
 
 export function OAuthClientsPage() {
   const [oauthConfigs, setOAuthConfigs] = useState<OAuthProviderConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [connectConfig, setConnectConfig] = useState<OAuthProviderConfig | null>(null)
   const { initiateFlow } = useOAuthFlow()
 
   const loadOAuthConfigs = async () => {
@@ -29,12 +32,15 @@ export function OAuthClientsPage() {
     loadOAuthConfigs()
   }, [])
 
-  const handleConnect = async (configId: string) => {
-    const provider = oauthConfigs.find(c => c.id === configId)?.provider
-    if (!provider) return
+  const handleConnectClick = (configId: string) => {
+    const config = oauthConfigs.find(c => c.id === configId)
+    if (!config) return
+    setConnectConfig(config)
+  }
 
+  const handleConnect = async (provider: OAuthProvider, scopes: string[]) => {
     try {
-      await initiateFlow(provider)
+      await initiateFlow(provider, scopes.length > 0 ? scopes : undefined)
     } catch {
       alert('Failed to initiate OAuth flow')
     }
@@ -114,12 +120,26 @@ export function OAuthClientsPage() {
                   {config.redirectUri}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                {config.scopes && config.scopes.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {config.scopes.slice(0, 4).map((scope) => (
+                      <Badge key={scope} variant="outline" className="text-[10px] font-mono px-1.5 py-0">
+                        {scope.length > 30 ? `${scope.slice(0, 27)}...` : scope}
+                      </Badge>
+                    ))}
+                    {config.scopes.length > 4 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        +{config.scopes.length - 4} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 {!config.hasToken ? (
                   <Button
                     size="sm"
                     className="w-full"
-                    onClick={() => handleConnect(config.id)}
+                    onClick={() => handleConnectClick(config.id)}
                   >
                     <LinkIcon className="h-4 w-4 mr-2" />
                     Connect Account
@@ -139,6 +159,13 @@ export function OAuthClientsPage() {
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onSuccess={handleConfigCreated}
+      />
+
+      <ConnectAccountDialog
+        open={connectConfig !== null}
+        onOpenChange={(open) => { if (!open) setConnectConfig(null) }}
+        config={connectConfig}
+        onConnect={handleConnect}
       />
     </div>
   )

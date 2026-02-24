@@ -39,6 +39,7 @@ public sealed class OAuthFlowService : IOAuthFlowService
     public async Task<(string AuthorizationUrl, string State)> GenerateAuthorizationUrlAsync(
         Guid userId,
         OAuthProvider provider,
+        IReadOnlyList<string>? scopes = null,
         CancellationToken cancellationToken = default)
     {
         // Get provider configuration for the user
@@ -72,12 +73,16 @@ public sealed class OAuthFlowService : IOAuthFlowService
         // Get provider instance (pass config for custom providers)
         var oauthProvider = _providerFactory.GetProvider(provider, config);
 
-        // Build authorization URL
+        // Determine scopes: use explicitly passed scopes, then config scopes, then provider defaults
+        var effectiveScopes = scopes ?? config.Scopes;
+
+        // Build authorization URL with scopes
         var authorizationUrl = oauthProvider.BuildAuthorizationUrl(
             config.ClientId,
             config.RedirectUri,
             codeChallenge,
-            state);
+            state,
+            effectiveScopes);
 
         return (authorizationUrl, state);
     }

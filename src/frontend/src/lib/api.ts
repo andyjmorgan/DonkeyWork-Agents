@@ -414,6 +414,13 @@ export const executions = {
 export type OAuthProvider = 'Google' | 'Microsoft' | 'GitHub' | 'Custom'
 export type OAuthTokenStatus = 'Active' | 'ExpiringSoon' | 'Expired'
 
+export interface OAuthScopeMetadata {
+  name: string
+  description: string
+  isRequired: boolean
+  isDefault: boolean
+}
+
 export interface OAuthProviderMetadata {
   provider: OAuthProvider
   displayName: string
@@ -424,6 +431,7 @@ export interface OAuthProviderMetadata {
   setupUrl: string
   setupInstructions: string
   isBuiltIn: boolean
+  availableScopes: OAuthScopeMetadata[]
 }
 
 export interface OAuthProviderConfig {
@@ -433,6 +441,7 @@ export interface OAuthProviderConfig {
   createdAt: string
   hasToken: boolean
   customProviderName?: string
+  scopes?: string[]
 }
 
 export interface OAuthProviderConfigDetail {
@@ -537,7 +546,10 @@ export const oauth = {
   deleteConfig: (id: string) => api.delete(`/api/v1/oauth/configs/${id}`),
 
   // OAuth flow
-  getAuthorizationUrl: (provider: OAuthProvider) => api.get<GetAuthorizationUrlResponse>(`/api/v1/oauth/${provider}/authorize`),
+  getAuthorizationUrl: (provider: OAuthProvider, scopes?: string[]) => {
+    const params = scopes?.length ? `?${scopes.map(s => `scopes=${encodeURIComponent(s)}`).join('&')}` : ''
+    return api.get<GetAuthorizationUrlResponse>(`/api/v1/oauth/${provider}/authorize${params}`)
+  },
 
   // Tokens
   listTokens: () => api.get<OAuthToken[]>('/api/v1/oauth/tokens'),

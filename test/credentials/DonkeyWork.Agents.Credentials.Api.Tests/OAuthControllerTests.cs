@@ -51,11 +51,11 @@ public class OAuthControllerTests
         var state = "random_state_123";
 
         _oauthFlowServiceMock
-            .Setup(s => s.GenerateAuthorizationUrlAsync(_userId, provider, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAuthorizationUrlAsync(_userId, provider, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync((authUrl, state));
 
         // Act
-        var result = await _controller.GetAuthorizationUrl(provider, CancellationToken.None);
+        var result = await _controller.GetAuthorizationUrl(provider, [], CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -71,11 +71,11 @@ public class OAuthControllerTests
         var provider = OAuthProvider.Microsoft;
 
         _oauthFlowServiceMock
-            .Setup(s => s.GenerateAuthorizationUrlAsync(_userId, provider, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAuthorizationUrlAsync(_userId, provider, null, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("OAuth provider configuration not found"));
 
         // Act
-        var result = await _controller.GetAuthorizationUrl(provider, CancellationToken.None);
+        var result = await _controller.GetAuthorizationUrl(provider, [], CancellationToken.None);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);

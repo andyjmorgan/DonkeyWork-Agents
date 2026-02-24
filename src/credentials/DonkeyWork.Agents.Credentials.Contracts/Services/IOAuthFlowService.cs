@@ -14,11 +14,13 @@ public interface IOAuthFlowService
     /// </summary>
     /// <param name="userId">User ID.</param>
     /// <param name="provider">OAuth provider.</param>
+    /// <param name="scopes">Optional scopes to request. If null, uses the scopes from the provider configuration or provider defaults.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Authorization URL and state parameter.</returns>
     Task<(string AuthorizationUrl, string State)> GenerateAuthorizationUrlAsync(
         Guid userId,
         OAuthProvider provider,
+        IReadOnlyList<string>? scopes = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

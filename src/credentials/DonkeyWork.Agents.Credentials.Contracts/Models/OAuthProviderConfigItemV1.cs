@@ -36,4 +36,9 @@ public sealed class OAuthProviderConfigItemV1
     /// Display name for custom providers.
     /// </summary>
     public string? CustomProviderName { get; init; }
+
+    /// <summary>
+    /// Configured scopes for this provider.
+    /// </summary>
+    public IReadOnlyList<string>? Scopes { get; init; }
 }

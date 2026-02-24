@@ -38,6 +38,7 @@ public class OAuthController : ControllerBase
     /// Stores flow state server-side for secure callback validation.
     /// </summary>
     /// <param name="provider">OAuth provider (Google, Microsoft, GitHub).</param>
+    /// <param name="scopes">Optional scopes to request. If not specified, uses the scopes from the provider configuration.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <response code="200">Returns the authorization URL.</response>
     /// <response code="400">Provider configuration not found.</response>
@@ -47,6 +48,7 @@ public class OAuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetAuthorizationUrl(
         [FromRoute] OAuthProvider provider,
+        [FromQuery] List<string> scopes,
         CancellationToken cancellationToken)
     {
         try
@@ -54,6 +56,7 @@ public class OAuthController : ControllerBase
             var (authorizationUrl, state) = await _oauthFlowService.GenerateAuthorizationUrlAsync(
                 _identityContext.UserId,
                 provider,
+                scopes.Count > 0 ? scopes : null,
                 cancellationToken);
 
             return Ok(new GetAuthorizationUrlResponseV1

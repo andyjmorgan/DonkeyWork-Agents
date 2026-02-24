@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { ProviderIcon } from './ProviderIcon'
 import {
   oauth,
@@ -18,7 +19,7 @@ import {
   type OAuthProviderMetadata,
   type CreateOAuthProviderConfigRequest,
 } from '@/lib/api'
-import { Loader2, ExternalLink, Globe, ChevronLeft } from 'lucide-react'
+import { Loader2, ExternalLink, Globe, ChevronLeft, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface CreateOAuthConfigDialogProps {
@@ -49,6 +50,9 @@ export function CreateOAuthConfigDialog({
   const [tokenUrl, setTokenUrl] = useState('')
   const [userInfoUrl, setUserInfoUrl] = useState('')
   const [scopes, setScopes] = useState('')
+
+  // Scope selection for built-in providers
+  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set())
 
   // Load provider metadata on mount
   useEffect(() => {
@@ -84,13 +88,32 @@ export function CreateOAuthConfigDialog({
       setUserInfoUrl('')
       setScopes('')
       setCustomProviderName('')
+      setSelectedScopes(new Set())
     } else if (meta) {
       setAuthorizationUrl(meta.authorizationUrl)
       setTokenUrl(meta.tokenUrl)
       setUserInfoUrl(meta.userInfoUrl)
-      setScopes(meta.defaultScopes.join(', '))
+      // Initialize selected scopes from available scopes metadata
+      const defaults = new Set(
+        meta.availableScopes
+          .filter((s) => s.isDefault || s.isRequired)
+          .map((s) => s.name)
+      )
+      setSelectedScopes(defaults)
     }
     setStep('configure')
+  }
+
+  const handleScopeToggle = (scopeName: string, checked: boolean) => {
+    setSelectedScopes((prev) => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(scopeName)
+      } else {
+        next.delete(scopeName)
+      }
+      return next
+    })
   }
 
   const handleBack = () => {
@@ -108,6 +131,7 @@ export function CreateOAuthConfigDialog({
     setTokenUrl('')
     setUserInfoUrl('')
     setScopes('')
+    setSelectedScopes(new Set())
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +155,11 @@ export function CreateOAuthConfigDialog({
         request.customProviderName = customProviderName || undefined
         if (scopes.trim()) {
           request.scopes = scopes.split(',').map((s) => s.trim()).filter(Boolean)
+        }
+      } else {
+        // For built-in providers, send the selected scopes
+        if (selectedScopes.size > 0) {
+          request.scopes = Array.from(selectedScopes)
         }
       }
 
@@ -156,7 +185,7 @@ export function CreateOAuthConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {step === 'select' ? 'Add OAuth Client' : (
@@ -322,7 +351,7 @@ export function CreateOAuthConfigDialog({
               </p>
             </div>
 
-            {/* Endpoint URLs - shown for all, editable for custom */}
+            {/* Endpoint URLs and scopes - different for built-in vs custom */}
             {provider === 'Custom' ? (
               <>
                 <div className="space-y-2">
@@ -365,38 +394,69 @@ export function CreateOAuthConfigDialog({
                     onChange={(e) => setScopes(e.target.value)}
                     placeholder="openid, profile, email (comma-separated)"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the scopes you need, separated by commas
+                  </p>
                 </div>
               </>
             ) : selectedMeta && (
-              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  OAuth Endpoints (auto-configured)
-                </p>
-                <div className="space-y-1.5 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Authorization: </span>
-                    <span className="font-mono text-[11px] break-all">{selectedMeta.authorizationUrl}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Token: </span>
-                    <span className="font-mono text-[11px] break-all">{selectedMeta.tokenUrl}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">User Info: </span>
-                    <span className="font-mono text-[11px] break-all">{selectedMeta.userInfoUrl}</span>
-                  </div>
-                </div>
-                <div className="pt-1">
-                  <span className="text-muted-foreground text-xs">Scopes: </span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedMeta.defaultScopes.map((scope) => (
-                      <Badge key={scope} variant="outline" className="text-[10px] font-mono px-1.5 py-0">
-                        {scope}
-                      </Badge>
-                    ))}
+              <>
+                {/* OAuth endpoints info */}
+                <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    OAuth Endpoints (auto-configured)
+                  </p>
+                  <div className="space-y-1.5 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Authorization: </span>
+                      <span className="font-mono text-[11px] break-all">{selectedMeta.authorizationUrl}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Token: </span>
+                      <span className="font-mono text-[11px] break-all">{selectedMeta.tokenUrl}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">User Info: </span>
+                      <span className="font-mono text-[11px] break-all">{selectedMeta.userInfoUrl}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Scope selection for built-in providers */}
+                {selectedMeta.availableScopes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Scopes</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Select the permissions this connector should request
+                    </p>
+                    <div className="rounded-md border border-border divide-y divide-border">
+                      {selectedMeta.availableScopes.map((scope) => (
+                        <div
+                          key={scope.name}
+                          className="flex items-center justify-between gap-3 px-3 py-2.5"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium truncate">{scope.description}</span>
+                              {scope.isRequired && (
+                                <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                              {scope.name}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={selectedScopes.has(scope.name)}
+                            onCheckedChange={(checked) => handleScopeToggle(scope.name, checked)}
+                            disabled={scope.isRequired}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <DialogFooter>

@@ -52,4 +52,10 @@ public sealed class OAuthProviderMetadataV1
     /// Whether this is a built-in provider (vs custom).
     /// </summary>
     public required bool IsBuiltIn { get; init; }
+
+    /// <summary>
+    /// Available scopes with descriptions and required/default flags.
+    /// Used to present scope selection during connector registration.
+    /// </summary>
+    public required IReadOnlyList<OAuthScopeMetadataV1> AvailableScopes { get; init; }
 }
