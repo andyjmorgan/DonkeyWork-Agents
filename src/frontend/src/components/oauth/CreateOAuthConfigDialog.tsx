@@ -95,7 +95,7 @@ export function CreateOAuthConfigDialog({
       setUserInfoUrl(meta.userInfoUrl)
       // Initialize selected scopes from available scopes metadata
       const defaults = new Set(
-        meta.availableScopes
+        (meta.availableScopes ?? [])
           .filter((s) => s.isDefault || s.isRequired)
           .map((s) => s.name)
       )
@@ -423,7 +423,7 @@ export function CreateOAuthConfigDialog({
                 </div>
 
                 {/* Scope selection for built-in providers */}
-                {selectedMeta.availableScopes.length > 0 && (
+                {(selectedMeta.availableScopes ?? []).length > 0 && (
                   <div className="space-y-2">
                     <Label>Scopes</Label>
                     <p className="text-xs text-muted-foreground">
