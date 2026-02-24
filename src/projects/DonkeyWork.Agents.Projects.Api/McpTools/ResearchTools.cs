@@ -66,7 +66,7 @@ public class ResearchTools
         Title = "Create Research",
         Description = "Create a new research item. Research items track investigation topics. After creating, add notes with notes_create using the researchId to attach research material and findings.",
         Icon = "plus")]
-    public async Task<ResearchDetailsV1> CreateResearch(
+    public async Task<object> CreateResearch(
         [Description("The research subject/question - the original ask")] string subject,
         [Description("Optional detailed content/scope of the research (supports markdown and mermaid diagrams)")] string? content,
         [Description("Status: NotStarted (default), InProgress, Completed, or Cancelled")] ResearchStatus? status,
@@ -79,7 +79,8 @@ public class ResearchTools
             Status = status ?? ResearchStatus.NotStarted
         };
 
-        return await _researchService.CreateAsync(request, ct);
+        var result = await _researchService.CreateAsync(request, ct);
+        return new { result.Id, result.Subject };
     }
 
     /// <summary>
