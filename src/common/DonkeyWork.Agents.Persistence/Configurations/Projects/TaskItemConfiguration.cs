@@ -36,6 +36,9 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItemEntity>
             .HasColumnName("priority")
             .IsRequired();
 
+        builder.Property(e => e.Summary)
+            .HasColumnName("summary");
+
         builder.Property(e => e.CompletionNotes)
             .HasColumnName("completion_notes");
 

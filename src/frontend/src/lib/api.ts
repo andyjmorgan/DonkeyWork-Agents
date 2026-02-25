@@ -709,6 +709,7 @@ export interface Task {
   id: string
   title: string
   description?: string
+  summary?: string
   status: TaskStatus
   priority: TaskPriority
   completionNotes?: string
@@ -725,6 +726,7 @@ export interface Task {
 export interface CreateTaskRequest {
   title: string
   description?: string
+  summary?: string
   status?: TaskStatus
   priority?: TaskPriority
   dueDate?: string
@@ -737,6 +739,7 @@ export interface CreateTaskRequest {
 export interface UpdateTaskRequest {
   title: string
   description?: string
+  summary?: string
   status: TaskStatus
   priority: TaskPriority
   completionNotes?: string

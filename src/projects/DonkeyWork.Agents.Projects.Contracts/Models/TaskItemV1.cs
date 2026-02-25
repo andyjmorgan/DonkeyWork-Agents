@@ -16,6 +16,9 @@ public sealed class CreateTaskItemRequestV1
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
+    [JsonPropertyName("summary")]
+    public string? Summary { get; init; }
+
     [JsonPropertyName("status")]
     public TaskItemStatus Status { get; init; } = TaskItemStatus.Pending;
 
@@ -50,6 +53,9 @@ public sealed class UpdateTaskItemRequestV1
 
     [JsonPropertyName("description")]
     public string? Description { get; init; }
+
+    [JsonPropertyName("summary")]
+    public string? Summary { get; init; }
 
     [JsonPropertyName("status")]
     public TaskItemStatus Status { get; init; }
@@ -92,6 +98,9 @@ public sealed class TaskItemV1
 
     [JsonPropertyName("descriptionLength")]
     public int DescriptionLength { get; init; }
+
+    [JsonPropertyName("summary")]
+    public string? Summary { get; init; }
 
     [JsonPropertyName("status")]
     public TaskItemStatus Status { get; init; }
