@@ -19,7 +19,6 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
-import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
 import {
   Tabs,
   TabsContent,
@@ -72,7 +71,7 @@ export function ResearchEditorPage() {
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false)
 
   // Active tab
-  const [activeTab, setActiveTab] = useState('question')
+  const [activeTab, setActiveTab] = useState('results')
 
   useEffect(() => {
     if (researchId && !isNew) {
@@ -145,7 +144,7 @@ export function ResearchEditorPage() {
 
   const handleStatusChange = (newStatus: ResearchStatus) => {
     if (newStatus === 'Completed') {
-      if (!summary.trim()) {
+      if (!content.trim()) {
         setActiveTab('results')
         return
       }
@@ -162,7 +161,7 @@ export function ResearchEditorPage() {
 
   const handleSubmitCompletionNotes = async () => {
     if (!pendingStatus || !completionNotesValue.trim()) return
-    if (pendingStatus === 'Completed' && !summary.trim()) return
+    if (pendingStatus === 'Completed' && !content.trim()) return
 
     if (!isNew && researchData) {
       try {
@@ -280,7 +279,7 @@ export function ResearchEditorPage() {
               <SelectContent>
                 <SelectItem value="NotStarted">Not Started</SelectItem>
                 <SelectItem value="InProgress">In Progress</SelectItem>
-                <SelectItem value="Completed" disabled={!summary.trim()}>Completed</SelectItem>
+                <SelectItem value="Completed" disabled={!content.trim()}>Completed</SelectItem>
                 <SelectItem value="Cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
@@ -323,83 +322,53 @@ export function ResearchEditorPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="question">Question</TabsTrigger>
+          <TabsTrigger value="results">Results</TabsTrigger>
           {!isNew && (
-            <>
-              <TabsTrigger value="results">
-                Results {summary.trim() ? '' : '(empty)'}
-              </TabsTrigger>
-              <TabsTrigger value="notes">
-                Notes {researchData?.notes && researchData.notes.length > 0 && `(${researchData.notes.length})`}
-              </TabsTrigger>
-            </>
+            <TabsTrigger value="notes">
+              Notes {researchData?.notes && researchData.notes.length > 0 && `(${researchData.notes.length})`}
+            </TabsTrigger>
           )}
         </TabsList>
 
-        <TabsContent value="question" className="mt-4">
+        <TabsContent value="results" className="mt-4">
           <MarkdownEditor
             content={content}
             onChange={setContent}
-            placeholder="Describe what needs to be researched..."
+            placeholder="Research findings and results..."
           />
         </TabsContent>
 
         {!isNew && (
-          <>
-            <TabsContent value="results" className="mt-4">
-              <div className="space-y-4">
-                <MarkdownEditor
-                  content={summary}
-                  onChange={setSummary}
-                  placeholder="Write up the research findings here... This is required before marking as completed."
-                />
-                {researchData?.completionNotes && (
-                  <div className="rounded-lg border border-border bg-card p-4">
-                    <Label className="text-sm text-muted-foreground mb-2 block">
-                      {status === 'Completed' ? 'Completion Notes' : 'Cancellation Notes'}
-                    </Label>
-                    <MarkdownViewer content={researchData.completionNotes} />
-                    {researchData.completedAt && (
-                      <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
-                        {status === 'Completed' ? 'Completed' : 'Cancelled'} {new Date(researchData.completedAt).toLocaleDateString()}
+          <TabsContent value="notes" className="mt-4">
+            {researchData?.notes && researchData.notes.length > 0 ? (
+              <div className="space-y-3">
+                {researchData.notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-all cursor-pointer"
+                    onClick={() => navigate(`/notes/${note.id}`)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                      <h4 className="font-medium truncate">{note.title}</h4>
+                    </div>
+                    {note.content && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1 pl-6">
+                        {note.content}
                       </p>
                     )}
                   </div>
-                )}
+                ))}
               </div>
-            </TabsContent>
-
-            <TabsContent value="notes" className="mt-4">
-              {researchData?.notes && researchData.notes.length > 0 ? (
-                <div className="space-y-3">
-                  {researchData.notes.map((note) => (
-                    <div
-                      key={note.id}
-                      className="rounded-lg border border-border bg-card p-4 hover:shadow-md transition-all cursor-pointer"
-                      onClick={() => navigate(`/notes/${note.id}`)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-blue-500 shrink-0" />
-                        <h4 className="font-medium truncate">{note.title}</h4>
-                      </div>
-                      {note.content && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1 pl-6">
-                          {note.content}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
-                  <StickyNote className="h-8 w-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    No notes attached to this research yet
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
+                <StickyNote className="h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No notes attached to this research yet
+                </p>
+              </div>
+            )}
+          </TabsContent>
         )}
       </Tabs>
 
