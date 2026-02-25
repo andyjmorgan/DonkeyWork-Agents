@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { Trash2, Loader2, Calendar, CheckSquare, Circle, Clock, CheckCircle2, AlertCircle, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
 import type { TaskStatus, TaskPriority } from '@/lib/api'
 
 const statusIcons: Record<TaskStatus, ReactNode> = {
@@ -89,23 +88,6 @@ export function ContentCard({
       } ${selected ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
       onClick={onClick}
     >
-      {/* Selection checkbox */}
-      {onSelect && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onSelect()
-          }}
-          className={`absolute top-2 left-2 h-5 w-5 rounded border-2 flex items-center justify-center transition-all z-10 ${
-            selected
-              ? 'bg-primary border-primary text-primary-foreground'
-              : 'border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100'
-          }`}
-        >
-          {selected && <CheckSquare className="h-3 w-3" />}
-        </button>
-      )}
-
       {/* Title row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -139,33 +121,51 @@ export function ContentCard({
           </h4>
         </div>
 
-        {/* Delete button */}
-        {onDelete && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Trash2 className="h-3 w-3" />
-            )}
-          </Button>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Selection checkbox */}
+          {onSelect && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onSelect()
+              }}
+              className={`h-7 w-7 rounded flex items-center justify-center transition-all ${
+                selected
+                  ? 'bg-primary text-primary-foreground'
+                  : 'opacity-0 group-hover:opacity-100 hover:bg-accent'
+              }`}
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {/* Delete button */}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Trash2 className="h-3 w-3" />
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Content - rendered as markdown */}
+      {/* Content preview - plain text truncation for card view */}
       {content && (
         <div className="mt-3 flex-1 overflow-hidden">
-          <div className="text-sm text-muted-foreground line-clamp-4">
-            <MarkdownViewer content={content} className="prose-p:my-1 prose-headings:my-1" />
-          </div>
+          <p className="text-sm text-muted-foreground line-clamp-5">
+            {content.replace(/[#*_`~\[\]()>|\\-]/g, '').replace(/\n+/g, ' ').trim()}
+          </p>
         </div>
       )}
 

@@ -159,30 +159,31 @@ export function ResearchPage() {
                 } ${isSelected ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
                 onClick={() => navigate(`/research/${item.id}`)}
               >
-                {/* Selection checkbox */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    toggleSelect(item.id)
-                  }}
-                  className={`absolute top-2 left-2 h-5 w-5 rounded border-2 flex items-center justify-center transition-all z-10 ${
-                    isSelected
-                      ? 'bg-primary border-primary text-primary-foreground'
-                      : 'border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100'
-                  }`}
-                >
-                  {isSelected && <CheckSquare className="h-3 w-3" />}
-                </button>
-
                 <div className="flex-1 p-4 min-h-0">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <Search className="h-4 w-4 text-cyan-500 shrink-0" />
                       <h3 className="font-semibold truncate">{item.subject}</h3>
                     </div>
-                    <Badge variant={statusVariants[item.status]} className="shrink-0">
-                      {item.status.replace(/([A-Z])/g, ' $1').trim()}
-                    </Badge>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Selection checkbox */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSelect(item.id)
+                        }}
+                        className={`h-7 w-7 rounded flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'bg-primary text-primary-foreground'
+                            : 'opacity-0 group-hover:opacity-100 hover:bg-accent'
+                        }`}
+                      >
+                        <CheckSquare className="h-3.5 w-3.5" />
+                      </button>
+                      <Badge variant={statusVariants[item.status]}>
+                        {item.status.replace(/([A-Z])/g, ' $1').trim()}
+                      </Badge>
+                    </div>
                   </div>
                   {item.contentPreview && (
                     <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
