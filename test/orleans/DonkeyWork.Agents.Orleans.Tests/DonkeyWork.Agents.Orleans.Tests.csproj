@@ -26,6 +26,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\src\orleans\DonkeyWork.Agents.Orleans.Contracts\DonkeyWork.Agents.Orleans.Contracts.csproj" />
         <ProjectReference Include="..\..\..\src\orleans\DonkeyWork.Agents.Orleans.Core\DonkeyWork.Agents.Orleans.Core.csproj" />
+        <ProjectReference Include="..\..\..\src\orleans\DonkeyWork.Agents.Orleans.Api\DonkeyWork.Agents.Orleans.Api.csproj" />
         <ProjectReference Include="..\..\..\src\lib\Orleans.Persistence.SeaweedFs\Orleans.Persistence.SeaweedFs.csproj" />
     </ItemGroup>
 

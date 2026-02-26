@@ -117,11 +117,18 @@ public static class DependencyInjection
                     OnMessageReceived = context =>
                     {
                         var accessToken = context.Request.Query["access_token"];
+
+                        // Also support "token" param for Orleans WebSocket connections
+                        if (string.IsNullOrEmpty(accessToken))
+                            accessToken = context.Request.Query["token"];
+
                         var path = context.HttpContext.Request.Path;
 
-                        // If token is in query string and path is a SignalR hub, use it
+                        // Use token from query string for:
+                        // - SignalR hubs (/hubs/*)
+                        // - Orleans WebSocket connections (*/ws)
                         if (!string.IsNullOrEmpty(accessToken) &&
-                            path.StartsWithSegments("/hubs"))
+                            (path.StartsWithSegments("/hubs") || path.Value?.EndsWith("/ws") == true))
                         {
                             context.Token = accessToken;
                         }

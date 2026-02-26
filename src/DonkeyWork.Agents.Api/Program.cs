@@ -160,6 +160,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+// Map Orleans WebSocket endpoints for conversation interaction
+app.MapOrleansEndpoints();
+
 // Map SignalR hub for real-time notifications
 app.MapHub<NotificationHub>("/hubs/notifications");
 

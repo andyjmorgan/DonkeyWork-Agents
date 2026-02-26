@@ -1,6 +1,8 @@
+using DonkeyWork.Agents.Orleans.Api.Endpoints;
 using DonkeyWork.Agents.Orleans.Api.Options;
 using DonkeyWork.Agents.Orleans.Core.Interceptors;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -46,5 +48,11 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         return services;
+    }
+
+    public static IEndpointRouteBuilder MapOrleansEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapConversationWebSocket();
+        return endpoints;
     }
 }

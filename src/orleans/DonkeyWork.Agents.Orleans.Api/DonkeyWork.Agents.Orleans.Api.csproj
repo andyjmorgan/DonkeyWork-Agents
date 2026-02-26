@@ -7,12 +7,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="DonkeyWork.Agents.Orleans.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Server" Version="10.0.1" />
+        <PackageReference Include="StreamJsonRpc" Version="2.24.84" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Orleans.Core\DonkeyWork.Agents.Orleans.Core.csproj" />
         <ProjectReference Include="..\..\lib\Orleans.Persistence.SeaweedFs\Orleans.Persistence.SeaweedFs.csproj" />
+        <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
