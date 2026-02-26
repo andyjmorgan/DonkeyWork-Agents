@@ -1,8 +1,6 @@
-using System.Text.Json;
 using Asp.Versioning;
 using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Conversations.Contracts.Models;
-using DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,17 +22,11 @@ public class ConversationsController : ControllerBase
 {
     private readonly IConversationService _conversationService;
     private readonly ILogger<ConversationsController> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
 
     public ConversationsController(IConversationService conversationService, ILogger<ConversationsController> logger)
     {
         _conversationService = conversationService;
         _logger = logger;
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false
-        };
     }
 
     /// <summary>
@@ -145,69 +137,26 @@ public class ConversationsController : ControllerBase
 
     /// <summary>
     /// Send a message in a conversation.
-    /// Supports both streaming (Accept: text/event-stream) and non-streaming responses.
-    /// Streaming: Executes the orchestration and streams token deltas via SSE.
-    /// Non-streaming: Saves the user message and returns it (assistant response saved asynchronously).
+    /// Saves the user message and returns it. Conversation execution is handled via WebSocket.
     /// </summary>
     /// <param name="id">The conversation ID.</param>
     /// <param name="request">The message request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <response code="200">Returns SSE stream with response events for streaming requests.</response>
-    /// <response code="201">Returns the created user message for non-streaming requests.</response>
+    /// <response code="201">Returns the created user message.</response>
     /// <response code="404">Conversation not found.</response>
     /// <response code="400">Invalid request.</response>
     [HttpPost("{id:guid}/messages")]
     [ProducesResponseType<ConversationMessageV1>(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SendMessage(Guid id, [FromBody] SendMessageRequestV1 request, CancellationToken cancellationToken)
     {
-        // Check Accept header for streaming vs non-streaming
-        var acceptHeader = Request.Headers["Accept"].ToString();
-        if (acceptHeader.Contains("text/event-stream"))
-        {
-            return await SendMessageStreamingAsync(id, request);
-        }
-
-        // Non-streaming: just save the user message
         var message = await _conversationService.SendMessageAsync(id, request, cancellationToken);
 
         if (message == null)
             return NotFound();
 
         return Created($"/api/v1/conversations/{id}/messages/{message.Id}", message);
-    }
-
-    private async Task<IActionResult> SendMessageStreamingAsync(Guid id, SendMessageRequestV1 request)
-    {
-        Response.Headers["Content-Type"] = "text/event-stream";
-        Response.Headers["Cache-Control"] = "no-cache";
-        Response.Headers["Connection"] = "keep-alive";
-
-        var events = _conversationService.SendMessageStreamingAsync(id, request, HttpContext.RequestAborted);
-
-        if (events == null)
-        {
-            // Reset headers and return 404
-            Response.Headers.Remove("Content-Type");
-            Response.Headers.Remove("Cache-Control");
-            Response.Headers.Remove("Connection");
-            return NotFound();
-        }
-
-        await foreach (var evt in events)
-        {
-            var json = JsonSerializer.Serialize<ConversationStreamEvent>(evt, _jsonOptions);
-            await Response.WriteAsync($"data: {json}\n\n");
-            await Response.Body.FlushAsync();
-
-            // Stop on terminal events
-            if (evt is ResponseEndEvent or ResponseErrorEvent)
-                break;
-        }
-
-        return new EmptyResult();
     }
 
     /// <summary>

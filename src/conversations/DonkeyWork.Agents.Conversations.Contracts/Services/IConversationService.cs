@@ -1,6 +1,5 @@
 using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Conversations.Contracts.Models;
-using DonkeyWork.Agents.Conversations.Contracts.Models.Events;
 
 namespace DonkeyWork.Agents.Conversations.Contracts.Services;
 
@@ -59,16 +58,6 @@ public interface IConversationService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The created user message or null if conversation not found.</returns>
     Task<ConversationMessageV1?> SendMessageAsync(Guid conversationId, SendMessageRequestV1 request, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Sends a message to a conversation with streaming response.
-    /// Saves the user message, executes the orchestration, and streams the response.
-    /// </summary>
-    /// <param name="conversationId">The conversation ID.</param>
-    /// <param name="request">The message request.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Async enumerable of conversation stream events, or null if conversation not found.</returns>
-    IAsyncEnumerable<ConversationStreamEvent>? SendMessageStreamingAsync(Guid conversationId, SendMessageRequestV1 request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes an individual message from a conversation.

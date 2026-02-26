@@ -11,7 +11,6 @@
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
         <ProjectReference Include="..\..\orchestrations\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />
-        <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
         <ProjectReference Include="..\..\storage\DonkeyWork.Agents.Storage.Contracts\DonkeyWork.Agents.Storage.Contracts.csproj" />
     </ItemGroup>
 
