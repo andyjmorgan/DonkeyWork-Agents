@@ -66,7 +66,10 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 ["OAuth:TokenRefreshCheckInterval"] = "00:05:00",
                 ["OAuth:TokenRefreshWindow"] = "00:10:00",
                 ["OAuth:MaxRefreshRetries"] = "3",
-                ["OAuth:RefreshRetryDelay"] = "00:01:00"
+                ["OAuth:RefreshRetryDelay"] = "00:01:00",
+
+                // Orleans options
+                ["Orleans:SeaweedFsBaseUrl"] = "http://localhost:8888"
             };
 
             config.AddInMemoryCollection(testConfig);

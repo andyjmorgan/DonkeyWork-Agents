@@ -1,5 +1,6 @@
 using DonkeyWork.Agents.Orleans.Api.Endpoints;
 using DonkeyWork.Agents.Orleans.Api.Options;
+using DonkeyWork.Agents.Orleans.Core;
 using DonkeyWork.Agents.Orleans.Core.Interceptors;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -46,6 +47,8 @@ public static class DependencyInjection
             .BindConfiguration(OrleansOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
+
+        services.AddScoped<GrainContext>();
 
         return services;
     }
