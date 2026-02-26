@@ -1,0 +1,27 @@
+# Runtime-only Dockerfile - uses pre-built artifacts from CI
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+
+WORKDIR /app
+
+# Allow running on newer/older patch versions
+ENV DOTNET_ROLL_FORWARD=LatestMajor
+
+# Create non-root user with non-conflicting IDs
+RUN groupadd --system --gid 10000 appuser \
+    && useradd --system --uid 10000 --gid 10000 --home-dir /app appuser
+
+# Copy pre-built publish output
+COPY publish/ .
+
+# Change ownership to non-root user
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+EXPOSE 8080 8081
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:8081/healthz || exit 1
+
+ENTRYPOINT ["dotnet", "CodeSandbox.AuthProxy.dll"]

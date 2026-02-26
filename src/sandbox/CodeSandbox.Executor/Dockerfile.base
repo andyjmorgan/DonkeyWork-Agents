@@ -1,0 +1,70 @@
+# Base image for the CodeSandbox Executor
+# Contains: .NET ASP.NET runtime, Python 3, Node.js 20, Git, GitHub CLI
+# Rebuilt only when this file changes (see .github/workflows/executor-base.yml)
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+
+WORKDIR /app
+
+# Install bash, Python, Node.js, git, GitHub CLI, and skill dependencies
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    git \
+    python3 \
+    python3-pip \
+    python3-venv \
+    # PDF/document tooling
+    pandoc \
+    poppler-utils \
+    qpdf \
+    tesseract-ocr \
+    libreoffice \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+       | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+       | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && apt-get update && apt-get install -y gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages (common + skill dependencies)
+RUN pip3 install --no-cache-dir --break-system-packages \
+    requests \
+    numpy \
+    pandas \
+    # pdf skill
+    pypdf \
+    pdfplumber \
+    reportlab \
+    pytesseract \
+    pdf2image \
+    # xlsx skill
+    openpyxl \
+    # pptx skill
+    python-pptx \
+    "markitdown[pptx]" \
+    # gif/image skills
+    Pillow \
+    imageio \
+    imageio-ffmpeg
+
+# Install Node.js packages globally (common + skill dependencies)
+RUN npm install -g \
+    typescript \
+    ts-node \
+    # docx skill
+    docx \
+    # pptx skill
+    pptxgenjs
+
+# Reuse the existing ubuntu user (uid/gid 1000) from the base image.
+# This matches the SeaweedFS filer ownership so files are readable without
+# permission workarounds. VM-level isolation via kata-qemu provides the
+# security boundary.
+RUN usermod --home /home/sandbox --move-home --login sandbox ubuntu \
+    && groupmod --new-name sandbox ubuntu \
+    && chown -R sandbox:sandbox /app
+
+ENV HOME=/home/sandbox

@@ -1,0 +1,15 @@
+# Runtime-only Dockerfile - uses pre-built artifacts from CI
+# Based on the executor base image with Python, Node.js, Git, GH CLI
+FROM ghcr.io/andyjmorgan/codesandbox-executor-base:latest
+
+# Allow running on newer/older patch versions
+ENV DOTNET_ROLL_FORWARD=LatestMajor
+
+# Copy pre-built publish output
+COPY --chown=sandbox:sandbox publish/ .
+
+USER sandbox
+
+EXPOSE 8666
+
+ENTRYPOINT ["dotnet", "CodeSandbox.Executor.dll"]

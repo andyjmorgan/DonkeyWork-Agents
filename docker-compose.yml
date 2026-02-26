@@ -80,3 +80,13 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+
+  sandbox-manager:
+    build:
+      context: ./src/sandbox
+      dockerfile: CodeSandbox.Manager/Dockerfile
+    container_name: donkeywork-sandbox-manager
+    ports:
+      - "8668:8668"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development

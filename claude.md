@@ -665,6 +665,63 @@ var nodeConfigurations = """
 4. **Pagination** - List endpoints with offset/limit
 5. **Validation** - Invalid requests return 400 with error details
 
+## Sandbox Module (Code Execution)
+
+The `src/sandbox/` directory contains independently deployable code execution services. These are **separate containers** from the modular monolith API - they share the solution but have no code dependencies on the monolith.
+
+### Structure
+
+```
+src/sandbox/
+├── CodeSandbox.Contracts/     # Shared models, DTOs, service interfaces
+├── CodeSandbox.Manager/       # Orchestrates sandbox lifecycle (port 8668)
+├── CodeSandbox.Executor/      # Runs user code inside Kata VM pods (port 8666)
+├── CodeSandbox.AuthProxy/     # OAuth proxy for sandbox auth (ports 8080/8081)
+└── Directory.Packages.props   # Central NuGet package versions for sandbox
+
+test/sandbox/
+├── CodeSandbox.Executor.IntegrationTests/  # Testcontainers-based integration tests
+└── Directory.Packages.props                # Test package versions
+```
+
+### Components
+
+- **Manager** (`CodeSandbox.Manager`): Kubernetes-aware service that creates/destroys sandbox pods, proxies code execution requests, and provides WebSocket terminal access. Uses SSE for streaming output.
+- **Executor** (`CodeSandbox.Executor`): Runs inside each sandbox pod (Kata container for VM isolation). Executes code, manages files, and streams results back to Manager.
+- **AuthProxy** (`CodeSandbox.AuthProxy`): Handles OAuth authentication for sandbox endpoints.
+- **Contracts** (`CodeSandbox.Contracts`): Shared request/response models used by Manager and Executor.
+
+### Docker Images
+
+| Image | Dockerfile | Base |
+|-------|-----------|------|
+| `sandbox-manager` | `src/sandbox/CodeSandbox.Manager/Dockerfile` | `mcr.microsoft.com/dotnet/aspnet:10.0` |
+| `sandbox-executor` | `src/sandbox/CodeSandbox.Executor/Dockerfile` | Custom base with SDK + languages |
+| `sandbox-authproxy` | `src/sandbox/CodeSandbox.AuthProxy/Dockerfile` | `mcr.microsoft.com/dotnet/aspnet:10.0` |
+| `codesandbox-executor-base` | `src/sandbox/CodeSandbox.Executor/Dockerfile.base` | Ubuntu + .NET SDK + Node.js + Python |
+
+### Building & Running
+
+```bash
+# Build all sandbox projects
+dotnet build src/sandbox/CodeSandbox.Manager/
+dotnet build src/sandbox/CodeSandbox.Executor/
+dotnet build src/sandbox/CodeSandbox.AuthProxy/
+
+# Run via docker-compose (includes sandbox-manager service)
+docker compose up sandbox-manager
+
+# Run integration tests (requires Docker)
+dotnet test test/sandbox/CodeSandbox.Executor.IntegrationTests/
+```
+
+### CI/CD
+
+Sandbox components use **path-based selective builds** in GitHub Actions:
+- Changes in `src/sandbox/**` or `test/sandbox/**` trigger sandbox-specific jobs
+- Changes outside sandbox don't rebuild sandbox images (and vice versa)
+- `Dockerfile.runtime` variants are used in CI for faster builds (pre-built artifacts, no SDK layer)
+
 ## Pre-Push Verification
 
 **IMPORTANT**: Always run these checks before pushing code to ensure CI will pass.

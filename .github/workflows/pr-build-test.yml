@@ -19,6 +19,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      sandbox: ${{ steps.filter.outputs.sandbox }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,11 +30,16 @@ jobs:
             backend:
               - 'src/**'
               - '!src/frontend/**'
+              - '!src/sandbox/**'
               - 'test/**'
+              - '!test/sandbox/**'
               - '*.sln'
               - 'Dockerfile'
             frontend:
               - 'src/frontend/**'
+            sandbox:
+              - 'src/sandbox/**'
+              - 'test/sandbox/**'
 
   backend-build-test:
     name: Backend Build & Test
@@ -68,6 +74,41 @@ jobs:
         if: always()
         with:
           name: backend-test-results
+          path: ./test-results/*.trx
+
+  sandbox-build-test:
+    name: Sandbox Build & Test
+    needs: [changes]
+    if: needs.changes.outputs.sandbox == 'true'
+    runs-on: [self-hosted, Linux, X64]
+    env:
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Configure NuGet for local proxy
+        run: cp _nuget.config nuget.config
+
+      - name: Restore dependencies
+        run: dotnet restore DonkeyWork.Agents.sln
+
+      - name: Build
+        run: dotnet build DonkeyWork.Agents.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=sandbox-test-results.trx" --results-directory ./test-results
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sandbox-test-results
           path: ./test-results/*.trx
 
   frontend-build-test:

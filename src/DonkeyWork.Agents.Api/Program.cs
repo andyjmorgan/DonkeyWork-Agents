@@ -15,6 +15,7 @@ using DonkeyWork.Agents.Projects.Api.McpTools;
 using DonkeyWork.Agents.Identity.Api.McpTools;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
+using DonkeyWork.Agents.Orleans.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authorization;
@@ -94,6 +95,10 @@ builder.Services.AddProvidersApi();
 // Add Storage module
 builder.Services.AddStorageApi(builder.Configuration);
 
+// Add Orleans module (actor-based agent orchestration)
+builder.Host.AddOrleansApi(builder.Configuration);
+builder.Services.AddOrleansServices(builder.Configuration);
+
 // Add Notifications module (includes SignalR)
 builder.Services.AddNotificationsCore();
 
@@ -149,6 +154,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // No HTTPS redirection - API is always behind a traffic shaper/load balancer that handles TLS
+app.UseWebSockets();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

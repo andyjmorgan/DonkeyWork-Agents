@@ -30,6 +30,7 @@
         <ProjectReference Include="..\projects\DonkeyWork.Agents.Projects.Api\DonkeyWork.Agents.Projects.Api.csproj" />
         <ProjectReference Include="..\providers\DonkeyWork.Agents.Providers.Api\DonkeyWork.Agents.Providers.Api.csproj" />
         <ProjectReference Include="..\storage\DonkeyWork.Agents.Storage.Api\DonkeyWork.Agents.Storage.Api.csproj" />
+        <ProjectReference Include="..\orleans\DonkeyWork.Agents.Orleans.Api\DonkeyWork.Agents.Orleans.Api.csproj" />
     </ItemGroup>
 
 </Project>
