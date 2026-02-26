@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DonkeyWork.Agents.Orleans.Core.Middleware;
 
-internal sealed class ModelPipeline
+public sealed class ModelPipeline
 {
     private readonly IServiceProvider _services;
 
