@@ -31,7 +31,7 @@ public interface IExternalApiKeyService
     /// Gets the decrypted API key value for a specific provider.
     /// Used internally for making API calls.
     /// </summary>
-    Task<string?> GetApiKeyValueAsync(Guid userId, ExternalApiKeyProvider provider, CancellationToken cancellationToken = default);
+    Task<string?> GetApiKeyValueAsync(ExternalApiKeyProvider provider, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets which LLM providers the user has credentials for.

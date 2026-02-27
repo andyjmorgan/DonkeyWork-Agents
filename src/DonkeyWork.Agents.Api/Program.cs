@@ -15,7 +15,7 @@ using DonkeyWork.Agents.Projects.Api.McpTools;
 using DonkeyWork.Agents.Identity.Api.McpTools;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
-using DonkeyWork.Agents.Orleans.Api;
+using DonkeyWork.Agents.Actors.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authorization;
@@ -95,9 +95,9 @@ builder.Services.AddProvidersApi();
 // Add Storage module
 builder.Services.AddStorageApi(builder.Configuration);
 
-// Add Orleans module (actor-based agent orchestration)
-builder.Host.AddOrleansApi(builder.Configuration);
-builder.Services.AddOrleansServices(builder.Configuration);
+// Add Actors module (agent orchestration via Orleans)
+builder.Host.AddActorsApi(builder.Configuration);
+builder.Services.AddActorsServices(builder.Configuration);
 
 // Add Notifications module (includes SignalR)
 builder.Services.AddNotificationsCore();
@@ -160,8 +160,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Map Orleans WebSocket endpoints for conversation interaction
-app.MapOrleansEndpoints();
+// Map Actors WebSocket endpoints for conversation interaction
+app.MapActorsEndpoints();
 
 // Map SignalR hub for real-time notifications
 app.MapHub<NotificationHub>("/hubs/notifications");

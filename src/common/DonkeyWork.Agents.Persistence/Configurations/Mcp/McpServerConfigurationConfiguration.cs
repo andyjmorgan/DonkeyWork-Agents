@@ -1,4 +1,3 @@
-using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Persistence.Entities.Mcp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

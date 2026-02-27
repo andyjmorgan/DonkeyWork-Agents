@@ -1,7 +1,6 @@
 using DonkeyWork.Agents.Credentials.Core.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
-using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Moq;

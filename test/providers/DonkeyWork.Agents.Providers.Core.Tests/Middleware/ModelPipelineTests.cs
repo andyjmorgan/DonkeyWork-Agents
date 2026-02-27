@@ -2,14 +2,9 @@ using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
 using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline.Events;
 using DonkeyWork.Agents.Providers.Core.Middleware;
-using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
-using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Messages;
-using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
 using DonkeyWork.Agents.Providers.Core.Providers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using Xunit;
 
 namespace DonkeyWork.Agents.Providers.Core.Tests.Middleware;

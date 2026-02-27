@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
 using GenerativeAI;

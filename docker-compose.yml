@@ -23,6 +23,7 @@ services:
     command: "server -s3 -dir=/data"
     ports:
       - "8333:8333"  # S3 API
+      - "8888:8888"  # Filer
       - "9333:9333"  # Master
     volumes:
       - ./data/seaweedfs:/data

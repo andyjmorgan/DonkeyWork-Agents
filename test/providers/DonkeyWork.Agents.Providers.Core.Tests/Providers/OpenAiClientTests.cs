@@ -1,5 +1,4 @@
 using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
-using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
 using DonkeyWork.Agents.Providers.Core.Providers;
 using DonkeyWork.Agents.Providers.Core.Providers.OpenAi;

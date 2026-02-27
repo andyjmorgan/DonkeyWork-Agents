@@ -3,9 +3,6 @@ using DonkeyWork.Agents.Persistence.Entities.Research;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 
 // Aliases to resolve ambiguous references between Contracts.Models and Persistence.Entities
-using ContractProjectStatus = DonkeyWork.Agents.Projects.Contracts.Models.ProjectStatus;
-using ContractMilestoneStatus = DonkeyWork.Agents.Projects.Contracts.Models.MilestoneStatus;
-using ContractTaskItemStatus = DonkeyWork.Agents.Projects.Contracts.Models.TaskItemStatus;
 using ContractTaskItemPriority = DonkeyWork.Agents.Projects.Contracts.Models.TaskItemPriority;
 using EntityProjectStatus = DonkeyWork.Agents.Persistence.Entities.Projects.ProjectStatus;
 using EntityMilestoneStatus = DonkeyWork.Agents.Persistence.Entities.Projects.MilestoneStatus;

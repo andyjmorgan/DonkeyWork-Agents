@@ -3,7 +3,6 @@ using DonkeyWork.Agents.Identity.Api.Authentication;
 using DonkeyWork.Agents.Identity.Api.Options;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Identity.Core.Services;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -118,7 +117,7 @@ public static class DependencyInjection
                     {
                         var accessToken = context.Request.Query["access_token"];
 
-                        // Also support "token" param for Orleans WebSocket connections
+                        // Also support "token" param for Actors WebSocket connections
                         if (string.IsNullOrEmpty(accessToken))
                             accessToken = context.Request.Query["token"];
 
@@ -126,7 +125,7 @@ public static class DependencyInjection
 
                         // Use token from query string for:
                         // - SignalR hubs (/hubs/*)
-                        // - Orleans WebSocket connections (*/ws)
+                        // - Actors WebSocket connections (*/ws)
                         if (!string.IsNullOrEmpty(accessToken) &&
                             (path.StartsWithSegments("/hubs") || path.Value?.EndsWith("/ws") == true))
                         {

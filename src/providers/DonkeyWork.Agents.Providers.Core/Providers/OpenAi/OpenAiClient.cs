@@ -1,14 +1,11 @@
 using System.ClientModel;
 using System.Runtime.CompilerServices;
-using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 
 namespace DonkeyWork.Agents.Providers.Core.Providers.OpenAi;
-
-using GenerativeAI.Types;
 
 /// <summary>
 /// OpenAI provider client using the official OpenAI C# SDK.

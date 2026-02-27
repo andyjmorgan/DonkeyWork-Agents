@@ -9,7 +9,7 @@ import { AgentCardGrid, type AgentEntry } from "@/components/agent-chat/AgentCar
 import { AgentDetailModal } from "@/components/agent-chat/AgentDetailModal";
 import { AgentSidePanel } from "@/components/agent-chat/AgentSidePanel";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "@/components/agent-chat/agentTreeUtils";
-import { BotMessageSquare, RefreshCw, MessageSquare, Send, Square, X, PanelRightOpen } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen } from "lucide-react";
 
 function MessageBubble({
   message,
@@ -221,9 +221,9 @@ export function AgentChatPanel() {
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600">
-              <BotMessageSquare className="w-4 h-4 text-white" />
+              <Bubbles className="w-4 h-4 text-white" />
             </div>
-            <h1 className="text-lg font-semibold text-foreground">Agent Chat</h1>
+            <h1 className="text-lg font-semibold text-foreground">Navii</h1>
             {isConnected && (
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -267,11 +267,11 @@ export function AgentChatPanel() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-24 px-6">
                 <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 mb-6">
-                  <MessageSquare className="w-8 h-8 text-cyan-400" strokeWidth={1.5} />
+                  <Bubbles className="w-8 h-8 text-cyan-400" strokeWidth={1.5} />
                 </div>
-                <p className="text-base font-medium text-foreground mb-1">Start an agent conversation</p>
+                <p className="text-base font-medium text-foreground mb-1">Hey, I'm Navii</p>
                 <p className="text-sm text-muted-foreground text-center max-w-sm">
-                  Send messages anytime. Agent results are delivered automatically.
+                  Send me a message and I'll get to work. Results are delivered automatically.
                   You can cancel active work or clear the queue.
                 </p>
               </div>

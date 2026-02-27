@@ -31,4 +31,10 @@ public interface IMcpServerConfigurationService
     /// Deletes an MCP server configuration.
     /// </summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets connection-ready configurations for all enabled HTTP MCP servers,
+    /// with decrypted header values for authentication.
+    /// </summary>
+    Task<IReadOnlyList<McpConnectionConfigV1>> GetEnabledConnectionConfigsAsync(CancellationToken cancellationToken = default);
 }

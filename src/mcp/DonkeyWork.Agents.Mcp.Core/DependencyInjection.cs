@@ -9,7 +9,6 @@ using ModelContextProtocol.Server;
 
 namespace DonkeyWork.Agents.Mcp.Core;
 
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 
 /// <summary>

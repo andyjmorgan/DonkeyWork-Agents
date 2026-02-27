@@ -126,13 +126,12 @@ public sealed class ExternalApiKeyService : IExternalApiKeyService
     }
 
     public async Task<string?> GetApiKeyValueAsync(
-        Guid userId,
         ExternalApiKeyProvider provider,
         CancellationToken cancellationToken = default)
     {
         var providerName = provider.ToString();
         var entity = await _dbContext.ExternalApiKeys
-            .FirstOrDefaultAsync(e => e.UserId == userId && e.Provider == providerName, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Provider == providerName, cancellationToken);
 
         if (entity == null)
             return null;

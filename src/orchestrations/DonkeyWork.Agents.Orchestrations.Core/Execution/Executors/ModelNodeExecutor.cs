@@ -2,7 +2,6 @@ using System.Text;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
-using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;

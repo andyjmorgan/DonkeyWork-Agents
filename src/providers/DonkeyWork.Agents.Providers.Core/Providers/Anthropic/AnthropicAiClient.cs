@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Anthropic;
 using Anthropic.Models.Messages;
-using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal;
 using DonkeyWork.Agents.Providers.Core.Middleware.Internal.Responses;
 using Microsoft.Extensions.Logging;

@@ -340,6 +340,56 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         };
     }
 
+    public async Task<IReadOnlyList<McpConnectionConfigV1>> GetEnabledConnectionConfigsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.McpServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.IsEnabled && c.TransportType == McpTransportType.Http)
+            .Include(c => c.HttpConfiguration)
+                .ThenInclude(h => h!.HeaderConfigurations)
+            .ToListAsync(cancellationToken);
+
+        var configs = new List<McpConnectionConfigV1>();
+
+        foreach (var entity in entities)
+        {
+            if (entity.HttpConfiguration is null)
+            {
+                _logger.LogWarning("Enabled HTTP MCP server {Id} ({Name}) has no HTTP configuration, skipping", entity.Id, entity.Name);
+                continue;
+            }
+
+            var headers = new Dictionary<string, string>();
+
+            if (entity.HttpConfiguration.AuthType == McpHttpAuthType.Header)
+            {
+                foreach (var header in entity.HttpConfiguration.HeaderConfigurations)
+                {
+                    try
+                    {
+                        var decryptedValue = Decrypt(Convert.FromBase64String(header.HeaderValueEncrypted));
+                        headers[header.HeaderName] = decryptedValue;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to decrypt header {HeaderName} for MCP server {Id} ({Name})", header.HeaderName, entity.Id, entity.Name);
+                    }
+                }
+            }
+
+            configs.Add(new McpConnectionConfigV1
+            {
+                Id = entity.Id,
+                Name = entity.Name,
+                Endpoint = entity.HttpConfiguration.Endpoint,
+                TransportMode = entity.HttpConfiguration.TransportMode,
+                Headers = headers,
+            });
+        }
+
+        return configs;
+    }
+
     #region Encryption
 
     private byte[] Encrypt(string plainText)
@@ -356,6 +406,21 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         aes.IV.CopyTo(result, 0);
         cipherBytes.CopyTo(result, aes.IV.Length);
         return result;
+    }
+
+    private string Decrypt(byte[] encryptedData)
+    {
+        using var aes = Aes.Create();
+        aes.Key = _encryptionKey;
+
+        var ivLength = aes.BlockSize / 8;
+        var iv = encryptedData[..ivLength];
+        var cipherBytes = encryptedData[ivLength..];
+
+        aes.IV = iv;
+        using var decryptor = aes.CreateDecryptor();
+        var plainBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
+        return Encoding.UTF8.GetString(plainBytes);
     }
 
     private static byte[] DeriveKey(string password)
