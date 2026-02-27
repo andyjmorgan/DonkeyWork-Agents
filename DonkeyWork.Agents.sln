@@ -135,11 +135,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeSandbox.Executor.Integr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Actors", "Actors", "{0D1ABEEB-E0AE-F2A4-D9AA-CFF3262AEDF2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actors.Contracts", "src\Actors\DonkeyWork.Agents.Actors.Contracts\DonkeyWork.Agents.Actors.Contracts.csproj", "{3507BD44-0DED-4D73-A428-7BB0007B2213}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actors.Contracts", "src\actors\DonkeyWork.Agents.Actors.Contracts\DonkeyWork.Agents.Actors.Contracts.csproj", "{3507BD44-0DED-4D73-A428-7BB0007B2213}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actors.Core", "src\Actors\DonkeyWork.Agents.Actors.Core\DonkeyWork.Agents.Actors.Core.csproj", "{AA13F208-6654-45D0-AB03-494A6E1F3A3F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actors.Core", "src\actors\DonkeyWork.Agents.Actors.Core\DonkeyWork.Agents.Actors.Core.csproj", "{AA13F208-6654-45D0-AB03-494A6E1F3A3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actors.Api", "src\Actors\DonkeyWork.Agents.Actors.Api\DonkeyWork.Agents.Actors.Api.csproj", "{4EDCAA10-21C7-4F0F-863F-53262D569FEB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Actors.Api", "src\actors\DonkeyWork.Agents.Actors.Api\DonkeyWork.Agents.Actors.Api.csproj", "{4EDCAA10-21C7-4F0F-863F-53262D569FEB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{60F8C46A-F32D-BE63-A7A0-43DD10EE6710}"
 EndProject
