@@ -56,15 +56,12 @@ jobs:
             sandbox-manager:
               - 'src/sandbox/CodeSandbox.Manager/**'
               - 'src/sandbox/CodeSandbox.Contracts/**'
-              - '.github/workflows/docker-build.yml'
             sandbox-executor:
               - 'src/sandbox/CodeSandbox.Executor/**'
               - 'src/sandbox/CodeSandbox.Contracts/**'
-              - '.github/workflows/docker-build.yml'
             sandbox-authproxy:
               - 'src/sandbox/CodeSandbox.AuthProxy/**'
               - 'src/sandbox/CodeSandbox.Contracts/**'
-              - '.github/workflows/docker-build.yml'
 
   test-backend:
     name: Test Backend
