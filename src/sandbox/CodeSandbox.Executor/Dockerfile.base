@@ -1,5 +1,5 @@
 # Base image for the CodeSandbox Executor
-# Contains: .NET 10 SDK, Python 3, Node.js 20, Git, GitHub CLI
+# Contains: .NET 10 SDK + ASP.NET runtime, Python 3, Node.js 20, Git, GitHub CLI
 # Rebuilt only when this file changes
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
