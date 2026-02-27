@@ -6,6 +6,9 @@ WORKDIR /src
 # Copy Directory.Packages.props for central package management
 COPY Directory.Packages.props ./
 
+# Copy NuGet config if present (CI uses local proxy)
+COPY nuget.config* ./
+
 # Copy project files and restore dependencies
 COPY CodeSandbox.Contracts/CodeSandbox.Contracts.csproj CodeSandbox.Contracts/
 COPY CodeSandbox.Executor/CodeSandbox.Executor.csproj CodeSandbox.Executor/

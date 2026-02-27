@@ -143,7 +143,9 @@ jobs:
         run: docker pull ghcr.io/andyjmorgan/codesandbox-executor-base:latest
 
       - name: Build Executor Docker Image for Tests
-        run: docker build -t codesandbox-executor:test -f src/sandbox/CodeSandbox.Executor/Dockerfile src/sandbox/
+        run: |
+          cp nuget.config src/sandbox/nuget.config
+          docker build -t codesandbox-executor:test -f src/sandbox/CodeSandbox.Executor/Dockerfile src/sandbox/
 
       - name: Test
         run: >-
