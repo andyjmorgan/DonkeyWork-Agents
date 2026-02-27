@@ -127,6 +127,24 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
         return new { messages = messagesJson };
     }
 
+    /// <summary>
+    /// Client request: { jsonrpc: "2.0", id: N, method: "getAgentMessages", params: { agentKey: "..." } }
+    /// Returns the full execution transcript for a specific sub-agent.
+    /// </summary>
+    public async Task<object> GetAgentMessages(string agentKey)
+    {
+        SetCallContext();
+        var messages = await grain.GetAgentMessagesAsync(agentKey);
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter() },
+            AllowOutOfOrderMetadataProperties = true,
+        };
+        var messagesJson = JsonSerializer.SerializeToElement(messages, options);
+        return new { messages = messagesJson };
+    }
+
     private void SetCallContext()
     {
         RequestContext.Set(GrainCallContextKeys.UserId, userId);

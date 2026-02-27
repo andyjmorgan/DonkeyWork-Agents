@@ -796,6 +796,7 @@ export function useAgentConversation(initialConversationId?: string) {
     isConnected,
     isReconnecting,
     sendMessage,
+    sendRpc,
     cancel,
     resetConversation,
   };

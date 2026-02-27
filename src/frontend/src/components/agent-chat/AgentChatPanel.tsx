@@ -1,8 +1,10 @@
-import { useRef, useEffect, useState, useMemo, type FormEvent } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAgentConversation } from "@/hooks/useAgentConversation";
+import { internalToChat } from "@/components/agent-chat/MessageRenderer";
 import type { ChatMessage, ContentBox } from "@/types/agent-chat";
+import type { InternalMessage, GetStateResponse } from "@/types/internal-messages";
 import { BoxList } from "@/components/agent-chat/BoxRenderer";
 import { PulseDots } from "@/components/agent-chat/PulseDots";
 import { AgentCardGrid, type AgentEntry } from "@/components/agent-chat/AgentCardGrid";
@@ -128,6 +130,7 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
     pendingCount,
     conversationId,
     sendMessage,
+    sendRpc,
     cancel,
     resetConversation,
     isConnected,
@@ -144,6 +147,13 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
   const agentTree = useMemo(() => extractAgentTree(messages), [messages]);
   const agentTotal = useMemo(() => countAll(agentTree), [agentTree]);
   const agentActiveCount = useMemo(() => countActive(agentTree), [agentTree]);
+
+  const fetchAgentMessages = useCallback(async (agentKey: string): Promise<ContentBox[]> => {
+    const result = await sendRpc("getAgentMessages", { agentKey }) as GetStateResponse;
+    const msgs: InternalMessage[] = result?.messages ?? [];
+    const chatMessages = internalToChat(msgs);
+    return chatMessages.flatMap((m) => m.role === "assistant" ? m.boxes : []);
+  }, [sendRpc]);
 
   const [selectedAgent, setSelectedAgent] = useState<{
     messageId: string;
@@ -371,6 +381,7 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
           isComplete={modalProps.isComplete}
           isStreaming={isProcessing}
           onCancel={handleAgentCancel}
+          onFetchMessages={fetchAgentMessages}
         />
       )}
     </div>

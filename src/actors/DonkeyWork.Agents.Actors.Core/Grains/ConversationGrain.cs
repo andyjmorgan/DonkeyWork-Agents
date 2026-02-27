@@ -166,6 +166,21 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         return Task.FromResult<IReadOnlyList<InternalMessage>>(_state.State.Messages.AsReadOnly());
     }
 
+    public async Task<IReadOnlyList<InternalMessage>> GetAgentMessagesAsync(string agentKey)
+    {
+        var registryKey = AgentKeys.Conversation(_identityContext.UserId, Guid.Parse(_grainContext.ConversationId));
+        var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+        var agents = await registry.ListAsync();
+
+        if (!agents.Any(a => a.AgentKey == agentKey))
+        {
+            return Array.Empty<InternalMessage>();
+        }
+
+        var agentGrain = GrainFactory.GetGrain<IAgentGrain>(agentKey);
+        return await agentGrain.GetMessagesAsync();
+    }
+
     #endregion
 
     #region Processing Loop

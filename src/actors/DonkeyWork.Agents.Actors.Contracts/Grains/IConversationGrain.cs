@@ -16,4 +16,6 @@ public interface IConversationGrain : IGrainWithStringKey
     Task<IReadOnlyList<TrackedAgent>> ListAgentsAsync();
 
     Task<IReadOnlyList<InternalMessage>> GetMessagesAsync();
+
+    Task<IReadOnlyList<InternalMessage>> GetAgentMessagesAsync(string agentKey);
 }

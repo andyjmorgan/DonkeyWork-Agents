@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import { BoxList } from "@/components/agent-chat/BoxRenderer";
 import { PulseDots, ActivityIndicator } from "@/components/agent-chat/PulseDots";
 import { AgentCard } from "@/components/agent-chat/AgentCard";
 import type { ContentBox } from "@/types/agent-chat";
-import { Check, Square } from "lucide-react";
+import { Check, Square, Loader2 } from "lucide-react";
 
 type NestedAgent = {
   agentType: string;
@@ -53,6 +53,7 @@ export function AgentDetailModal({
   isComplete,
   isStreaming,
   onCancel,
+  onFetchMessages,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,8 +64,12 @@ export function AgentDetailModal({
   isComplete: boolean;
   isStreaming: boolean;
   onCancel?: (agentKey: string) => void;
+  onFetchMessages?: (agentKey: string) => Promise<ContentBox[]>;
 }) {
   const [selectedChild, setSelectedChild] = useState<NestedAgent | null>(null);
+  const [fetchedBoxes, setFetchedBoxes] = useState<ContentBox[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+  const fetchedKeyRef = useRef<string | null>(null);
   const isActive = isStreaming && !isComplete;
 
   useEffect(() => {
@@ -73,9 +78,33 @@ export function AgentDetailModal({
     }
   }, [open, agentKey]);
 
+  // Fetch messages when opening a completed agent with empty boxes
+  useEffect(() => {
+    if (!open || !isComplete || !onFetchMessages) return;
+    if (boxes.length > 0) return;
+    if (fetchedKeyRef.current === agentKey) return;
+
+    fetchedKeyRef.current = agentKey;
+    setIsFetching(true);
+    onFetchMessages(agentKey)
+      .then((result) => setFetchedBoxes(result))
+      .catch(() => setFetchedBoxes([]))
+      .finally(() => setIsFetching(false));
+  }, [open, isComplete, boxes.length, agentKey, onFetchMessages]);
+
+  // Reset fetched state when modal closes or agent changes
+  useEffect(() => {
+    if (!open) {
+      setFetchedBoxes([]);
+      fetchedKeyRef.current = null;
+    }
+  }, [open]);
+
+  const displayBoxes = boxes.length > 0 ? boxes : fetchedBoxes;
+
   const refreshedChild = selectedChild
     ? (() => {
-        for (const box of boxes) {
+        for (const box of displayBoxes) {
           const nested = extractNestedAgent(box);
           if (nested && nested.agentKey === selectedChild.agentKey) return nested;
         }
@@ -117,35 +146,44 @@ export function AgentDetailModal({
 
           <ScrollArea className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-6 py-4 flex flex-col gap-1">
-              <BoxList
-                boxes={boxes}
-                isStreaming={isActive}
-                renderOverride={(box) => {
-                  const nested = extractNestedAgent(box);
-                  if (nested) {
-                    return (
-                      <div className="my-1">
-                        <AgentCard
-                          agentType={nested.agentType}
-                          isComplete={nested.isComplete}
-                          boxes={nested.boxes}
-                          onClick={() => setSelectedChild(nested)}
-                        />
-                      </div>
-                    );
-                  }
-                  return undefined;
-                }}
-              />
-              {isActive && (
-                <span className="ml-1.5"><PulseDots color="bg-cyan-400" size="w-1 h-1" /></span>
-              )}
-              {boxes.length === 0 && (
+              {isFetching ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <p className="text-sm text-muted-foreground">
-                    {isActive ? "Waiting for activity..." : "No activity recorded."}
-                  </p>
+                  <Loader2 className="w-6 h-6 text-cyan-400 animate-spin mb-2" />
+                  <p className="text-sm text-muted-foreground">Loading transcript...</p>
                 </div>
+              ) : (
+                <>
+                  <BoxList
+                    boxes={displayBoxes}
+                    isStreaming={isActive}
+                    renderOverride={(box) => {
+                      const nested = extractNestedAgent(box);
+                      if (nested) {
+                        return (
+                          <div className="my-1">
+                            <AgentCard
+                              agentType={nested.agentType}
+                              isComplete={nested.isComplete}
+                              boxes={nested.boxes}
+                              onClick={() => setSelectedChild(nested)}
+                            />
+                          </div>
+                        );
+                      }
+                      return undefined;
+                    }}
+                  />
+                  {isActive && (
+                    <span className="ml-1.5"><PulseDots color="bg-cyan-400" size="w-1 h-1" /></span>
+                  )}
+                  {displayBoxes.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <p className="text-sm text-muted-foreground">
+                        {isActive ? "Waiting for activity..." : "No activity recorded."}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </ScrollArea>
@@ -163,6 +201,7 @@ export function AgentDetailModal({
           isComplete={refreshedChild.isComplete}
           isStreaming={isStreaming}
           onCancel={onCancel}
+          onFetchMessages={onFetchMessages}
         />
       )}
     </>
