@@ -92,7 +92,9 @@ jobs:
         run: dotnet build DonkeyWork.Agents.sln -c Release --no-restore
 
       - name: Test
-        run: dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
+        run: >-
+          dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
+          --filter "FullyQualifiedName!~CodeSandbox"
 
       - name: Publish
         run: dotnet publish src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj -c Release -o ./publish --no-build
@@ -133,7 +135,9 @@ jobs:
         run: dotnet build DonkeyWork.Agents.sln -c Release --no-restore
 
       - name: Test
-        run: dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
+        run: >-
+          dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
+          --filter "FullyQualifiedName~CodeSandbox"
 
       - name: Publish Manager
         run: dotnet publish src/sandbox/CodeSandbox.Manager/CodeSandbox.Manager.csproj -c Release -o ./publish-sandbox-manager --no-build
