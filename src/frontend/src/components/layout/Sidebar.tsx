@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, FlaskConical } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, FlaskConical, Plus, ChevronDown, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Logo } from '@/components/branding/Logo'
+import { NaviConversationList } from '@/components/layout/NaviConversationList'
 
 interface SidebarProps {
   open: boolean
@@ -24,19 +27,11 @@ interface NavGroup {
 
 const navigationGroups: NavGroup[] = [
   {
-    name: 'Navii',
-    icon: Bubbles,
-    items: [
-      { name: 'Navii', href: '/agent-chat', icon: Bubbles, iconColor: 'text-cyan-500' },
-    ],
-  },
-  {
     name: 'Orchestrations',
     icon: Bot,
     items: [
       { name: 'All Orchestrations', href: '/orchestrations', icon: List, iconColor: 'text-cyan-500' },
       { name: 'Executions', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
-      { name: 'MCP Servers', href: '/mcp-servers', icon: Server, iconColor: 'text-teal-500' },
     ],
   },
   {
@@ -48,6 +43,13 @@ const navigationGroups: NavGroup[] = [
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
       { name: 'Research', href: '/research', icon: FlaskConical, iconColor: 'text-cyan-500' },
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
+    ],
+  },
+  {
+    name: 'Utilities',
+    icon: Wrench,
+    items: [
+      { name: 'MCP Servers', href: '/mcp-servers', icon: Server, iconColor: 'text-teal-500' },
     ],
   },
   {
@@ -63,6 +65,8 @@ const navigationGroups: NavGroup[] = [
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {
+  const [historyOpen, setHistoryOpen] = useState(false)
+
   return (
     <>
       {/* Mobile overlay */}
@@ -95,7 +99,42 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-4 p-4">
+          <nav className="flex-1 space-y-4 p-4 overflow-y-auto">
+            {/* Navi section */}
+            <div>
+              <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
+                <Bubbles className="h-4 w-4" />
+                Navi
+              </div>
+              <div className="mt-1 space-y-1">
+                <NavLink
+                  to="/agent-chat"
+                  end
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )
+                  }
+                >
+                  <Plus className={cn('h-4 w-4', 'text-cyan-500')} />
+                  New Chat
+                </NavLink>
+              </div>
+              <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+                <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 pl-9 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground/80 transition-colors cursor-pointer">
+                  <ChevronDown className={cn('h-3 w-3 transition-transform', historyOpen && 'rotate-180')} />
+                  Past conversations
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <NaviConversationList onNavigate={onClose} />
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
             {/* Grouped navigation */}
             {navigationGroups.map((group) => (
               <div key={group.name}>

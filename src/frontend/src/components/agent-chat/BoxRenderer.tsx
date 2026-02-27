@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import type { ContentBox, CitationBox } from "@/types/agent-chat";
 import { CitationChipRow } from "@/components/agent-chat/CitationChip";
 import { PulseDots } from "@/components/agent-chat/PulseDots";
+import { JsonViewer } from "@/components/ui/json-viewer";
 import { BrainCircuit, Wrench, Globe, Check, CircleX, Clock, ExternalLink } from "lucide-react";
 
 const BLOCK_TAGS_RE = /<(?:system_warning|function_results|result|output)\b[^>]*>[\s\S]*?<\/(?:system_warning|function_results|result|output)>/g;
@@ -59,8 +60,11 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
         return `${(ms / 1000).toFixed(1)}s`;
       };
 
-      const formatArgs = (raw: string) => {
-        try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return raw; }
+      const tryParseJson = (raw: string): unknown | null => {
+        try {
+          const parsed = JSON.parse(raw);
+          return typeof parsed === "object" && parsed !== null ? parsed : null;
+        } catch { return null; }
       };
 
       const accentColor = isWebSearch ? "cyan" : "purple";
@@ -116,18 +120,32 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
             )}
           </summary>
           <div className={`border-t ${isWebSearch ? "border-cyan-500/10" : "border-border"} divide-y ${isWebSearch ? "divide-cyan-500/10" : "divide-border"}`}>
-            {hasArgs && !isWebSearch && (
-              <div className="px-3 py-2">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Request</span>
-                <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed max-h-36 overflow-y-auto">{formatArgs(box.arguments!)}</pre>
-              </div>
-            )}
-            {hasResult && (
-              <div className="px-3 py-2">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Response</span>
-                <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed max-h-48 overflow-y-auto">{box.result}</pre>
-              </div>
-            )}
+            {hasArgs && !isWebSearch && (() => {
+              const parsed = tryParseJson(box.arguments!);
+              return (
+                <div className="px-3 py-2">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Request</span>
+                  {parsed ? (
+                    <JsonViewer data={parsed} collapsed={1} className="mt-1 max-h-36 overflow-y-auto" />
+                  ) : (
+                    <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed max-h-36 overflow-y-auto">{box.arguments}</pre>
+                  )}
+                </div>
+              );
+            })()}
+            {hasResult && (() => {
+              const parsed = tryParseJson(box.result!);
+              return (
+                <div className="px-3 py-2">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Response</span>
+                  {parsed ? (
+                    <JsonViewer data={parsed} collapsed={1} className="mt-1 max-h-48 overflow-y-auto" />
+                  ) : (
+                    <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed max-h-48 overflow-y-auto">{box.result}</pre>
+                  )}
+                </div>
+              );
+            })()}
             {hasWebResults && (
               <div className="px-3 py-2 space-y-1.5">
                 {box.webSearchResults!.map((r, i) => (

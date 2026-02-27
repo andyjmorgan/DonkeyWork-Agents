@@ -1005,8 +1005,8 @@ export interface ConversationMessage {
 
 export interface ConversationSummary {
   id: string
-  orchestrationId: string
-  orchestrationName: string
+  orchestrationId?: string | null
+  orchestrationName?: string | null
   title: string
   messageCount: number
   createdAt: string
@@ -1015,8 +1015,8 @@ export interface ConversationSummary {
 
 export interface ConversationDetails {
   id: string
-  orchestrationId: string
-  orchestrationName: string
+  orchestrationId?: string | null
+  orchestrationName?: string | null
   title: string
   messages: ConversationMessage[]
   createdAt: string
@@ -1024,7 +1024,7 @@ export interface ConversationDetails {
 }
 
 export interface CreateConversationRequest {
-  orchestrationId: string
+  orchestrationId?: string | null
   title?: string
 }
 
@@ -1095,6 +1095,10 @@ export const conversations = {
   // List conversations (paginated, newest first)
   list: (offset = 0, limit = 20) =>
     api.get<PaginatedResponse<ConversationSummary>>(`/api/v1/conversations?offset=${offset}&limit=${limit}`),
+
+  // List Navi (agent-only) conversations
+  listNavi: (offset = 0, limit = 10) =>
+    api.get<PaginatedResponse<ConversationSummary>>(`/api/v1/conversations?agentOnly=true&offset=${offset}&limit=${limit}`),
 
   // Create a new conversation
   create: (data: CreateConversationRequest) =>

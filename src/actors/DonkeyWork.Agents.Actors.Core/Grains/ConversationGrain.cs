@@ -15,10 +15,12 @@ using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
+using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Concurrency;
@@ -159,6 +161,11 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         return await registry.ListAsync();
     }
 
+    public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
+    {
+        return Task.FromResult<IReadOnlyList<InternalMessage>>(_state.State.Messages.AsReadOnly());
+    }
+
     #endregion
 
     #region Processing Loop
@@ -200,6 +207,11 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                     : "Agent result";
                 var source = message is UserConversationMessage ? "user" : "agent";
 
+                if (message is UserConversationMessage)
+                {
+                    await EnsureSqlRecordAsync();
+                }
+
                 Emit(new StreamTurnStartEvent(_grainContext.GrainKey, source, preview));
                 EmitQueueStatus();
 
@@ -207,6 +219,12 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 {
                     await RunPipelineAsync(contract, ct);
                     await _state.WriteStateAsync();
+
+                    if (message is UserConversationMessage userMsg)
+                    {
+                        await GenerateTitleAsync(userMsg.Text);
+                    }
+                    await TouchTimestampAsync();
                 }
                 catch (OperationCanceledException)
                 {
@@ -520,6 +538,14 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             return $"[Agent Notification] Agent '{msg.Label}' (key: {msg.AgentKey}) FAILED:\n{detail}";
         }
 
+        // Deep research agents persist their own results — no need to wait for them
+        if (msg.AgentKey.StartsWith(AgentKeys.DeepResearchPrefix))
+        {
+            return $"[Agent Notification] Deep research agent '{msg.Label}' (key: {msg.AgentKey}) has completed. " +
+                   $"Results have been saved to the research store. You do NOT need to call wait_for_agent — " +
+                   $"inform the user their research is ready in the research store.";
+        }
+
         return $"[Agent Notification] Agent '{msg.Label}' (key: {msg.AgentKey}) has completed successfully. " +
                $"Use the wait_for_agent tool with agent_key=\"{msg.AgentKey}\" to retrieve the full results.";
     }
@@ -569,6 +595,45 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         {
             _logger.LogDebug(ex, "Failed to emit event {EventType}", evt.EventType);
         }
+    }
+
+    private async Task EnsureSqlRecordAsync()
+    {
+        if (_state.State.SqlRecordCreated) return;
+
+        using var scope = ServiceProvider.CreateScope();
+        var metadataService = scope.ServiceProvider.GetRequiredService<IConversationMetadataService>();
+        await metadataService.EnsureExistsAsync(
+            Guid.Parse(_grainContext.ConversationId),
+            _identityContext.UserId,
+            "New conversation");
+
+        _state.State.SqlRecordCreated = true;
+    }
+
+    private async Task GenerateTitleAsync(string firstUserMessage)
+    {
+        if (_state.State.TitleGenerated) return;
+
+        var title = firstUserMessage.Length > 50 ? firstUserMessage[..50] + "..." : firstUserMessage;
+
+        using var scope = ServiceProvider.CreateScope();
+        var metadataService = scope.ServiceProvider.GetRequiredService<IConversationMetadataService>();
+        await metadataService.UpdateTitleAsync(
+            Guid.Parse(_grainContext.ConversationId),
+            _identityContext.UserId,
+            title);
+
+        _state.State.TitleGenerated = true;
+    }
+
+    private async Task TouchTimestampAsync()
+    {
+        using var scope = ServiceProvider.CreateScope();
+        var metadataService = scope.ServiceProvider.GetRequiredService<IConversationMetadataService>();
+        await metadataService.TouchTimestampAsync(
+            Guid.Parse(_grainContext.ConversationId),
+            _identityContext.UserId);
     }
 
     #endregion

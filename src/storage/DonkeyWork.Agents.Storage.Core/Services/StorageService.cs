@@ -199,12 +199,14 @@ public sealed class StorageService : IStorageService
         var searchPattern = $"\"{metadataKey}\":\"{metadataValue}\"";
         var now = DateTimeOffset.UtcNow;
 
-        // Find all active files where metadata contains the key-value pair
-        var entities = await _dbContext.StoredFiles
+        // Fetch active files with metadata, then filter in memory.
+        // string.Contains translates to LIKE which PostgreSQL rejects on jsonb columns.
+        var candidates = await _dbContext.StoredFiles
             .Where(f => f.Status == FileStatus.Active &&
-                        f.Metadata != null &&
-                        f.Metadata.Contains(searchPattern))
+                        f.Metadata != null)
             .ToListAsync(cancellationToken);
+
+        var entities = candidates.Where(f => f.Metadata!.Contains(searchPattern)).ToList();
 
         if (entities.Count == 0)
             return 0;

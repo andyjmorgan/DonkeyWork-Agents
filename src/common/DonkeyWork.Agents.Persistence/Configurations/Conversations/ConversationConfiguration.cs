@@ -21,8 +21,7 @@ public class ConversationConfiguration : IEntityTypeConfiguration<ConversationEn
             .IsRequired();
 
         builder.Property(e => e.OrchestrationId)
-            .HasColumnName("orchestration_id")
-            .IsRequired();
+            .HasColumnName("orchestration_id");
 
         builder.Property(e => e.Title)
             .HasColumnName("title")
@@ -50,6 +49,7 @@ public class ConversationConfiguration : IEntityTypeConfiguration<ConversationEn
         builder.HasOne(e => e.Orchestration)
             .WithMany()
             .HasForeignKey(e => e.OrchestrationId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(e => e.Messages)

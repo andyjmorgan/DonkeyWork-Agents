@@ -39,35 +39,39 @@ public class ConversationService : IConversationService
         var userId = _identityContext.UserId;
         _logger.LogInformation("Creating conversation for user {UserId} with orchestration {OrchestrationId}", userId, request.OrchestrationId);
 
-        // Verify orchestration exists and belongs to user
-        var orchestration = await _dbContext.Orchestrations
-            .AsNoTracking()
-            .Include(o => o.CurrentVersion)
-            .FirstOrDefaultAsync(o => o.Id == request.OrchestrationId, cancellationToken);
+        string? orchestrationName = null;
 
-        if (orchestration == null)
+        if (request.OrchestrationId.HasValue)
         {
-            throw new InvalidOperationException($"Orchestration {request.OrchestrationId} not found");
-        }
+            // Verify orchestration exists and belongs to user
+            var orchestration = await _dbContext.Orchestrations
+                .AsNoTracking()
+                .Include(o => o.CurrentVersion)
+                .FirstOrDefaultAsync(o => o.Id == request.OrchestrationId.Value, cancellationToken);
 
-        // Verify orchestration has Chat interface
-        if (orchestration.CurrentVersion == null)
-        {
-            throw new InvalidOperationException($"Orchestration {request.OrchestrationId} has no published version");
-        }
+            if (orchestration == null)
+            {
+                throw new InvalidOperationException($"Orchestration {request.OrchestrationId} not found");
+            }
 
-        if (orchestration.CurrentVersion.Interface is not ChatInterfaceConfig)
-        {
-            throw new InvalidOperationException($"Orchestration {request.OrchestrationId} does not support Chat interface");
+            // Verify orchestration has Chat interface
+            if (orchestration.CurrentVersion == null)
+            {
+                throw new InvalidOperationException($"Orchestration {request.OrchestrationId} has no published version");
+            }
+
+            if (orchestration.CurrentVersion.Interface is not ChatInterfaceConfig)
+            {
+                throw new InvalidOperationException($"Orchestration {request.OrchestrationId} does not support Chat interface");
+            }
+
+            orchestrationName = orchestration.Name;
         }
 
         var conversationId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        // Generate default title if not provided
-        var conversationNumber = await _dbContext.Conversations
-            .CountAsync(cancellationToken) + 1;
-        var title = request.Title ?? $"Conversation_{conversationNumber}";
+        var title = request.Title ?? "New conversation";
 
         var conversation = new ConversationEntity
         {
@@ -88,7 +92,7 @@ public class ConversationService : IConversationService
         {
             Id = conversationId,
             OrchestrationId = request.OrchestrationId,
-            OrchestrationName = orchestration.Name,
+            OrchestrationName = orchestrationName,
             Title = title,
             Messages = [],
             CreatedAt = now,
@@ -112,14 +116,24 @@ public class ConversationService : IConversationService
         return MapToDetails(conversation);
     }
 
-    public async Task<PaginatedResponse<ConversationSummaryV1>> ListAsync(PaginationRequest pagination, CancellationToken cancellationToken = default)
+    public async Task<PaginatedResponse<ConversationSummaryV1>> ListAsync(PaginationRequest pagination, bool? agentOnly = null, CancellationToken cancellationToken = default)
     {
         var limit = Math.Min(pagination.Limit, 20); // Default page size 20
 
         var query = _dbContext.Conversations
             .AsNoTracking()
             .Include(c => c.Orchestration)
-            .Include(c => c.Messages);
+            .Include(c => c.Messages)
+            .AsQueryable();
+
+        if (agentOnly == true)
+        {
+            query = query.Where(c => c.OrchestrationId == null);
+        }
+        else if (agentOnly == false)
+        {
+            query = query.Where(c => c.OrchestrationId != null);
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -317,7 +331,7 @@ public class ConversationService : IConversationService
         {
             Id = conversation.Id,
             OrchestrationId = conversation.OrchestrationId,
-            OrchestrationName = conversation.Orchestration?.Name ?? "Unknown",
+            OrchestrationName = conversation.Orchestration?.Name,
             Title = conversation.Title,
             MessageCount = conversation.Messages.Count,
             CreatedAt = conversation.CreatedAt,
@@ -331,7 +345,7 @@ public class ConversationService : IConversationService
         {
             Id = conversation.Id,
             OrchestrationId = conversation.OrchestrationId,
-            OrchestrationName = conversation.Orchestration?.Name ?? "Unknown",
+            OrchestrationName = conversation.Orchestration?.Name,
             Title = conversation.Title,
             Messages = conversation.Messages.Select(MapMessage).ToList(),
             CreatedAt = conversation.CreatedAt,

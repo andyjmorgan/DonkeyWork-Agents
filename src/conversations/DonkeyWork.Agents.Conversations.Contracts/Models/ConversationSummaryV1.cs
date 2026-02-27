@@ -14,16 +14,16 @@ public sealed class ConversationSummaryV1
     public Guid Id { get; init; }
 
     /// <summary>
-    /// Orchestration ID.
+    /// Orchestration ID (null for agent-only conversations).
     /// </summary>
     [JsonPropertyName("orchestrationId")]
-    public Guid OrchestrationId { get; init; }
+    public Guid? OrchestrationId { get; init; }
 
     /// <summary>
-    /// Orchestration name.
+    /// Orchestration name (null for agent-only conversations).
     /// </summary>
     [JsonPropertyName("orchestrationName")]
-    public required string OrchestrationName { get; init; }
+    public string? OrchestrationName { get; init; }
 
     /// <summary>
     /// Conversation title.

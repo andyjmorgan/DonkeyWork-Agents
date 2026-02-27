@@ -26,6 +26,7 @@ public static class DependencyInjection
 
         // Register services
         services.AddScoped<IConversationService, ConversationService>();
+        services.AddScoped<IConversationMetadataService, ConversationMetadataService>();
         services.AddScoped<IImageValidationService, ImageValidationService>();
 
         return services;

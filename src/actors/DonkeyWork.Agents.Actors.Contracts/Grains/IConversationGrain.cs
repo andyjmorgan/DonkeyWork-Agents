@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Actors.Contracts.Messages;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 
 namespace DonkeyWork.Agents.Actors.Contracts.Grains;
@@ -13,4 +14,6 @@ public interface IConversationGrain : IGrainWithStringKey
     Task CancelByKeyAsync(string key, string? scope = null);
 
     Task<IReadOnlyList<TrackedAgent>> ListAgentsAsync();
+
+    Task<IReadOnlyList<InternalMessage>> GetMessagesAsync();
 }

@@ -8,9 +8,9 @@ namespace DonkeyWork.Agents.Persistence.Entities.Conversations;
 public class ConversationEntity : BaseEntity
 {
     /// <summary>
-    /// The orchestration this conversation is with.
+    /// The orchestration this conversation is with (null for agent-only conversations).
     /// </summary>
-    public Guid OrchestrationId { get; set; }
+    public Guid? OrchestrationId { get; set; }
 
     /// <summary>
     /// Conversation title.

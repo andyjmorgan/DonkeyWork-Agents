@@ -9,7 +9,7 @@ import { AgentCardGrid, type AgentEntry } from "@/components/agent-chat/AgentCar
 import { AgentDetailModal } from "@/components/agent-chat/AgentDetailModal";
 import { AgentSidePanel } from "@/components/agent-chat/AgentSidePanel";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "@/components/agent-chat/agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Loader2 } from "lucide-react";
 
 function MessageBubble({
   message,
@@ -121,7 +121,7 @@ function findAgentInBoxes(
   return null;
 }
 
-export function AgentChatPanel() {
+export function AgentChatPanel({ conversationId: initialConversationId }: { conversationId?: string }) {
   const {
     messages,
     isProcessing,
@@ -131,7 +131,8 @@ export function AgentChatPanel() {
     cancel,
     resetConversation,
     isConnected,
-  } = useAgentConversation();
+    isReconnecting,
+  } = useAgentConversation(initialConversationId);
 
   const swarmKey = conversationId ? `swarm:${conversationId}` : null;
 
@@ -223,7 +224,7 @@ export function AgentChatPanel() {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600">
               <Bubbles className="w-4 h-4 text-white" />
             </div>
-            <h1 className="text-lg font-semibold text-foreground">Navii</h1>
+            <h1 className="text-lg font-semibold text-foreground">Navi</h1>
             {isConnected && (
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -265,16 +266,23 @@ export function AgentChatPanel() {
         <ScrollArea className="h-full">
           <div className="flex flex-col gap-1 py-6">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-24 px-6">
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 mb-6">
-                  <Bubbles className="w-8 h-8 text-cyan-400" strokeWidth={1.5} />
+              isReconnecting ? (
+                <div className="flex flex-col items-center justify-center py-24 px-6">
+                  <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-4" />
+                  <p className="text-sm text-muted-foreground">Restoring conversation...</p>
                 </div>
-                <p className="text-base font-medium text-foreground mb-1">Hey, I'm Navii</p>
-                <p className="text-sm text-muted-foreground text-center max-w-sm">
-                  Send me a message and I'll get to work. Results are delivered automatically.
-                  You can cancel active work or clear the queue.
-                </p>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-24 px-6">
+                  <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 mb-6">
+                    <Bubbles className="w-8 h-8 text-cyan-400" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-base font-medium text-foreground mb-1">Hey, I'm Navi</p>
+                  <p className="text-sm text-muted-foreground text-center max-w-sm">
+                    Send me a message and I'll get to work. Results are delivered automatically.
+                    You can cancel active work or clear the queue.
+                  </p>
+                </div>
+              )
             )}
             {messages.map((msg, i) => (
               <MessageBubble

@@ -40,6 +40,7 @@ export default function App() {
                 <Route path="/orchestrations" element={<OrchestrationsPage />} />
                 <Route path="/chat" element={<Navigate to="/agent-chat" replace />} />
                 <Route path="/agent-chat" element={<AgentChatPage />} />
+                <Route path="/agent-chat/:conversationId" element={<AgentChatPage />} />
                 <Route path="/executions" element={<ExecutionsPage />} />
                 <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
                 <Route path="/workspace" element={<ProjectsPage />} />

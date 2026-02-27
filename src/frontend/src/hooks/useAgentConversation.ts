@@ -1,5 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/auth";
+import { conversations } from "@/lib/api";
+import { internalToChat } from "@/components/agent-chat/MessageRenderer";
 import type {
   ContentBox,
   TextBox,
@@ -8,21 +11,31 @@ import type {
   ChatMessage,
   WebSearchResult,
 } from "@/types/agent-chat";
+import type { InternalMessage, GetStateResponse, TrackedAgent } from "@/types/internal-messages";
 
 type AgentGroupEntry = { messageId: string; boxIndex: number };
 
-export function useAgentConversation() {
+export function useAgentConversation(initialConversationId?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
+  const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null);
   const nextIdRef = useRef(1);
   const agentGroupIndexRef = useRef<Map<string, AgentGroupEntry>>(new Map());
   const currentAssistantIdRef = useRef<string | null>(null);
   const handleEventRef = useRef<(data: Record<string, unknown>) => void>(() => {});
+
+  // Buffer for events received during reconnection
+  const eventBufferRef = useRef<Record<string, unknown>[]>([]);
+  const isBufferingRef = useRef(false);
+
+  // Track pending RPC requests for getState
+  const pendingRpcRef = useRef<Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>>(new Map());
 
   // --- Box update helpers ---
 
@@ -489,6 +502,28 @@ export function useAgentConversation() {
     handleEventRef.current = handleEvent;
   });
 
+  // --- RPC helper ---
+
+  const sendRpc = useCallback((method: string, params?: Record<string, unknown>): Promise<unknown> => {
+    return new Promise((resolve, reject) => {
+      const id = nextIdRef.current++;
+      pendingRpcRef.current.set(id, { resolve, reject });
+      wsRef.current?.send(JSON.stringify({
+        jsonrpc: "2.0",
+        id,
+        method,
+        params: params ?? {},
+      }));
+      // Timeout after 10s
+      setTimeout(() => {
+        if (pendingRpcRef.current.has(id)) {
+          pendingRpcRef.current.delete(id);
+          reject(new Error(`RPC timeout: ${method}`));
+        }
+      }, 10000);
+    });
+  }, []);
+
   // --- WebSocket connection ---
 
   const connect = useCallback(async (convId: string) => {
@@ -510,10 +545,33 @@ export function useAgentConversation() {
         return;
       }
 
+      // Handle RPC responses (has id and result/error)
+      if (frame.id !== undefined && frame.id !== null) {
+        const id = frame.id as number;
+        const pending = pendingRpcRef.current.get(id);
+        if (pending) {
+          pendingRpcRef.current.delete(id);
+          if (frame.error) {
+            const err = frame.error as Record<string, unknown>;
+            pending.reject(new Error((err.message as string) ?? "RPC error"));
+          } else {
+            pending.resolve(frame.result);
+          }
+          return;
+        }
+      }
+
+      // Handle server notifications (events)
       if (frame.method === "event" && Array.isArray(frame.params)) {
         const eventData = (frame.params as unknown[])[0] as Record<string, unknown>;
-        if (eventData) handleEventRef.current(eventData);
-      } else if (frame.error) {
+        if (eventData) {
+          if (isBufferingRef.current) {
+            eventBufferRef.current.push(eventData);
+          } else {
+            handleEventRef.current(eventData);
+          }
+        }
+      } else if (frame.error && !frame.id) {
         const err = frame.error as Record<string, unknown>;
         const assistantId = currentAssistantIdRef.current;
         if (assistantId) {
@@ -534,14 +592,149 @@ export function useAgentConversation() {
     };
   }, []);
 
+  // --- Rebuild agent group index from restored messages ---
+
+  function rebuildAgentGroupIndex(chatMessages: ChatMessage[]) {
+    agentGroupIndexRef.current = new Map();
+    for (const msg of chatMessages) {
+      for (let boxIdx = 0; boxIdx < msg.boxes.length; boxIdx++) {
+        const box = msg.boxes[boxIdx];
+        indexAgentBoxes(box, msg.id, boxIdx);
+      }
+    }
+  }
+
+  function indexAgentBoxes(box: ContentBox, messageId: string, boxIndex: number) {
+    if (box.type === "tool_use" && box.subAgent) {
+      agentGroupIndexRef.current.set(box.subAgent.agentKey, { messageId, boxIndex });
+      for (const inner of box.subAgent.boxes) {
+        indexAgentBoxes(inner, messageId, boxIndex);
+      }
+    }
+    if (box.type === "agent_group") {
+      agentGroupIndexRef.current.set(box.agentKey, { messageId, boxIndex });
+      for (const inner of box.boxes) {
+        indexAgentBoxes(inner, messageId, boxIndex);
+      }
+    }
+  }
+
+  // --- Reconnection ---
+
+  const reconnect = useCallback(async (convId: string) => {
+    setIsReconnecting(true);
+    isBufferingRef.current = true;
+    eventBufferRef.current = [];
+
+    // Connect WebSocket (events start flowing but are buffered)
+    await connect(convId);
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) resolve();
+        else setTimeout(check, 50);
+      };
+      check();
+    });
+
+    try {
+      // Get state and agents from grain in parallel
+      const [stateResult, agentsResult] = await Promise.all([
+        sendRpc("getState") as Promise<GetStateResponse>,
+        sendRpc("listAgents").catch(() => [] as TrackedAgent[]) as Promise<TrackedAgent[]>,
+      ]);
+      const grainMessages: InternalMessage[] = stateResult?.messages ?? [];
+      const agents: TrackedAgent[] = Array.isArray(agentsResult) ? agentsResult : [];
+
+      console.debug("[reconnect] getState returned", grainMessages.length, "messages, listAgents returned", agents.length, "agents");
+      if (grainMessages.length > 0) {
+        console.debug("[reconnect] first message $type:", grainMessages[0]?.$type);
+      }
+
+      // Convert grain state to ChatMessage[] format, overlaying agent info
+      if (grainMessages.length > 0) {
+        const chatMessages = internalToChat(grainMessages, agents);
+        setMessages(chatMessages);
+
+        // Populate agentGroupIndexRef so live events can target agent groups
+        rebuildAgentGroupIndex(chatMessages);
+
+        // Set currentAssistantIdRef to last assistant message so live events append correctly
+        const lastAssistant = chatMessages.filter((m) => m.role === "assistant").pop();
+        if (lastAssistant) {
+          currentAssistantIdRef.current = lastAssistant.id;
+        }
+      }
+
+      // If there are still-running agents, mark processing
+      if (agents.some((a) => a.status === "Pending")) {
+        setIsProcessing(true);
+      }
+
+      // Stop buffering and replay
+      isBufferingRef.current = false;
+      const buffered = eventBufferRef.current;
+      eventBufferRef.current = [];
+      for (const evt of buffered) {
+        handleEventRef.current(evt);
+      }
+    } catch {
+      // If getState fails, just stop buffering and let live events flow
+      isBufferingRef.current = false;
+      const buffered = eventBufferRef.current;
+      eventBufferRef.current = [];
+      for (const evt of buffered) {
+        handleEventRef.current(evt);
+      }
+    } finally {
+      setIsReconnecting(false);
+    }
+  }, [connect, sendRpc]);
+
+  // --- Auto-connect on mount when conversationId is in URL ---
+
+  useEffect(() => {
+    if (initialConversationId) {
+      // Reconnect to existing conversation
+      setConversationId(initialConversationId);
+      reconnect(initialConversationId);
+    } else {
+      // Fresh chat — reset everything
+      wsRef.current?.close();
+      wsRef.current = null;
+      setMessages([]);
+      setConversationId(null);
+      setIsProcessing(false);
+      setPendingCount(0);
+      setIsConnected(false);
+      setIsReconnecting(false);
+      agentGroupIndexRef.current = new Map();
+      currentAssistantIdRef.current = null;
+      nextIdRef.current = 1;
+      pendingRpcRef.current.clear();
+      eventBufferRef.current = [];
+      isBufferingRef.current = false;
+    }
+
+    return () => {
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [initialConversationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // --- Actions ---
 
   const sendMessage = useCallback(async (text: string) => {
     let activeConvId = conversationId;
 
     if (!activeConvId) {
-      activeConvId = crypto.randomUUID();
+      // Create a conversation record and connect
+      const result = await conversations.create({});
+      activeConvId = result.id;
       setConversationId(activeConvId);
+
+      // Update URL without triggering React Router remount
+      window.history.replaceState(null, "", `/agent-chat/${activeConvId}`);
+
       await connect(activeConvId);
       await new Promise<void>((resolve) => {
         const check = () => {
@@ -585,10 +778,15 @@ export function useAgentConversation() {
     setIsProcessing(false);
     setPendingCount(0);
     setIsConnected(false);
+    setIsReconnecting(false);
     agentGroupIndexRef.current = new Map();
     currentAssistantIdRef.current = null;
     nextIdRef.current = 1;
-  }, []);
+    pendingRpcRef.current.clear();
+    eventBufferRef.current = [];
+    isBufferingRef.current = false;
+    navigate("/agent-chat", { replace: true });
+  }, [navigate]);
 
   return {
     messages,
@@ -596,6 +794,7 @@ export function useAgentConversation() {
     pendingCount,
     conversationId,
     isConnected,
+    isReconnecting,
     sendMessage,
     cancel,
     resetConversation,

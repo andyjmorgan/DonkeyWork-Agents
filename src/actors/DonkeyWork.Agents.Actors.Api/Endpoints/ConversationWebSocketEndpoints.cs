@@ -107,6 +107,26 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
         return await grain.ListAgentsAsync();
     }
 
+    /// <summary>
+    /// Client request: { jsonrpc: "2.0", id: N, method: "getState" }
+    /// Returns the current conversation state including all messages.
+    /// Pre-serializes messages to preserve $type polymorphic discriminators
+    /// that would be lost through StreamJsonRpc's object serialization.
+    /// </summary>
+    public async Task<object> GetState()
+    {
+        SetCallContext();
+        var messages = await grain.GetMessagesAsync();
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter() },
+            AllowOutOfOrderMetadataProperties = true,
+        };
+        var messagesJson = JsonSerializer.SerializeToElement(messages, options);
+        return new { messages = messagesJson };
+    }
+
     private void SetCallContext()
     {
         RequestContext.Set(GrainCallContextKeys.UserId, userId);

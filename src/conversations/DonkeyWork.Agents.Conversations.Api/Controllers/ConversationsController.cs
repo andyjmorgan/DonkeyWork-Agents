@@ -82,13 +82,14 @@ public class ConversationsController : ControllerBase
     /// List all conversations for the current user (paginated, newest first).
     /// </summary>
     /// <param name="pagination">Pagination parameters.</param>
+    /// <param name="agentOnly">When true, only agent-only conversations. When false, only orchestration conversations. When null, all conversations.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <response code="200">Returns the list of conversations.</response>
     [HttpGet]
     [ProducesResponseType<PaginatedResponse<ConversationSummaryV1>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> List([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] PaginationRequest pagination, [FromQuery] bool? agentOnly, CancellationToken cancellationToken)
     {
-        var conversations = await _conversationService.ListAsync(pagination, cancellationToken);
+        var conversations = await _conversationService.ListAsync(pagination, agentOnly, cancellationToken);
         return Ok(conversations);
     }
 
