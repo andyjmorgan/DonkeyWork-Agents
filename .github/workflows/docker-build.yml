@@ -147,7 +147,7 @@ jobs:
       - name: Build Executor Docker Image for Tests
         run: |
           cp nuget.config src/sandbox/nuget.config
-          docker build --no-cache -t codesandbox-executor:test -f src/sandbox/CodeSandbox.Executor/Dockerfile src/sandbox/
+          docker build -t codesandbox-executor:test -f src/sandbox/CodeSandbox.Executor/Dockerfile src/sandbox/
 
       - name: Test
         run: >-
