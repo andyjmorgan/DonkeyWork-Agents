@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Orleans.Clustering.Kubernetes;
 using Orleans.Configuration;
+using Orleans.Hosting.Kubernetes;
 
 namespace DonkeyWork.Agents.Actors.Api;
 
@@ -24,9 +26,24 @@ public static class DependencyInjection
         // scoped services consumed by grain call filters.
         hostBuilder.UseDefaultServiceProvider(o => o.ValidateScopes = false);
 
-        hostBuilder.UseOrleans(siloBuilder =>
+        hostBuilder.UseOrleans((context, siloBuilder) =>
         {
-            siloBuilder.UseLocalhostClustering();
+            if (context.HostingEnvironment.IsProduction())
+            {
+                // UseKubernetesHosting reads ClusterId/ServiceId from pod labels
+                // (orleans/clusterId, orleans/serviceId) and sets silo name to the pod name.
+                siloBuilder.UseKubernetesHosting();
+                siloBuilder.UseKubeMembership();
+            }
+            else
+            {
+                // UseLocalhostClustering uses PostConfigure<ClusterOptions> internally,
+                // so ClusterId/ServiceId must be passed here rather than via a separate
+                // Configure<ClusterOptions> call (which it would override).
+                siloBuilder.UseLocalhostClustering(
+                    serviceId: "donkeywork-agents",
+                    clusterId: "donkeywork-agents");
+            }
 
             siloBuilder.Configure<SiloMessagingOptions>(o =>
             {
