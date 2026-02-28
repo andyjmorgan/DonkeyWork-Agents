@@ -23,7 +23,7 @@ FROM build AS publish
 RUN dotnet publish "CodeSandbox.Executor.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime stage - pre-built base with Python, Node.js, Git, GH CLI
-FROM ghcr.io/andyjmorgan/codesandbox-executor-base:latest
+FROM ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest
 
 COPY --from=publish --chown=sandbox:sandbox /app/publish .
 

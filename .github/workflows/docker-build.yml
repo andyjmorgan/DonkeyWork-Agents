@@ -135,12 +135,12 @@ jobs:
         run: |
           if [ "${{ needs.changes.outputs.sandbox-executor-base }}" == "true" ]; then
             echo "Dockerfile.base changed, building locally..."
-            docker build -t ghcr.io/andyjmorgan/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+            docker build -t ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
           else
             echo "Pulling base image from GHCR..."
-            docker pull ghcr.io/andyjmorgan/codesandbox-executor-base:latest || {
+            docker pull ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest || {
               echo "Pull failed, building locally as fallback..."
-              docker build -t ghcr.io/andyjmorgan/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+              docker build -t ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
             }
           fi
 
@@ -396,12 +396,12 @@ jobs:
         run: |
           if [ "${{ needs.changes.outputs.sandbox-executor-base }}" == "true" ]; then
             echo "Dockerfile.base changed, building locally..."
-            docker build -t ghcr.io/andyjmorgan/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+            docker build -t ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
           else
             echo "Pulling base image from GHCR..."
-            docker pull ghcr.io/andyjmorgan/codesandbox-executor-base:latest || {
+            docker pull ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest || {
               echo "Pull failed, building locally as fallback..."
-              docker build -t ghcr.io/andyjmorgan/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+              docker build -t ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
             }
           fi
 
@@ -444,7 +444,7 @@ jobs:
 
       - name: Push Executor Base Image
         if: github.event_name != 'pull_request' && needs.changes.outputs.sandbox-executor-base == 'true'
-        run: docker push ghcr.io/andyjmorgan/codesandbox-executor-base:latest
+        run: docker push ghcr.io/andyjmorgan/donkeywork-agents/codesandbox-executor-base:latest
 
   build-sandbox-authproxy:
     name: Build Sandbox AuthProxy Docker Image
