@@ -23,7 +23,7 @@ public class SandboxManagerConfig
     public string PodNamePrefix { get; set; } = "sandbox";
 
     [Required]
-    public string DefaultImage { get; set; } = "ghcr.io/andyjmorgan/codesandbox-executor:latest";
+    public string DefaultImage { get; set; } = "ghcr.io/andyjmorgan/donkeywork-agents/sandbox-executor:latest";
 
     [Range(30, 300, ErrorMessage = "Pod ready timeout must be between 30 and 300 seconds")]
     public int PodReadyTimeoutSeconds { get; set; } = 90;
@@ -40,7 +40,7 @@ public class SandboxManagerConfig
     // Auth proxy sidecar settings
     public bool EnableAuthProxy { get; set; } = false;
 
-    public string AuthProxyImage { get; set; } = "ghcr.io/andyjmorgan/codesandbox-authproxy:latest";
+    public string AuthProxyImage { get; set; } = "ghcr.io/andyjmorgan/donkeywork-agents/sandbox-authproxy:latest";
 
     public ResourceConfig AuthProxySidecarResourceRequests { get; set; } = new() { MemoryMi = 64, CpuMillicores = 100 };
     public ResourceConfig AuthProxySidecarResourceLimits { get; set; } = new() { MemoryMi = 128, CpuMillicores = 250 };
