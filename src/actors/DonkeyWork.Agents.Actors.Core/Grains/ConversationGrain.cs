@@ -14,6 +14,7 @@ using DonkeyWork.Agents.Actors.Core.Providers.Responses;
 using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
+using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
@@ -64,6 +65,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             typeof(NoteAgentTools),
             typeof(ResearchAgentTools),
         ],
+        ["sandbox"] = [typeof(SandboxTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public ConversationGrain(

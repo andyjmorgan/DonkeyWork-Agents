@@ -15,4 +15,7 @@ public interface ISandboxService
     Task<string> GetPodIpAsync(string sandboxId, CancellationToken cancellationToken = default);
     Task UpdateLastActivityAsync(string sandboxId, CancellationToken cancellationToken = default);
     Task<DateTime?> GetLastActivityAsync(string sandboxId, CancellationToken cancellationToken = default);
+
+    // Lookup by user and conversation
+    Task<SandboxInfo?> FindSandboxAsync(string userId, string conversationId, CancellationToken cancellationToken = default);
 }

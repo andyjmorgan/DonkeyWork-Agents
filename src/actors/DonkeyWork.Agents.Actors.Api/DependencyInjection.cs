@@ -3,6 +3,7 @@ using DonkeyWork.Agents.Actors.Api.Options;
 using DonkeyWork.Agents.Actors.Core;
 using DonkeyWork.Agents.Actors.Core.Interceptors;
 using DonkeyWork.Agents.Actors.Core.Options;
+using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,6 +76,18 @@ public static class DependencyInjection
             .BindConfiguration("Anthropic")
             .ValidateDataAnnotations()
             .ValidateOnStart();
+
+        services.AddOptions<SandboxOptions>()
+            .BindConfiguration(SandboxOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        var sandboxOptions = configuration.GetSection(SandboxOptions.SectionName).Get<SandboxOptions>();
+        services.AddHttpClient<SandboxManagerClient>(client =>
+        {
+            if (sandboxOptions is not null)
+                client.BaseAddress = new Uri(sandboxOptions.ManagerBaseUrl);
+        });
 
         services.AddHttpClient();
         services.AddActorsCore();

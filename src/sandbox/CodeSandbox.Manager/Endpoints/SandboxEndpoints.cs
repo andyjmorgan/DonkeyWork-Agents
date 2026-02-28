@@ -27,6 +27,13 @@ public static class SandboxEndpoints
             .Produces<List<SandboxInfo>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status500InternalServerError);
 
+        group.MapGet("/find", FindSandbox)
+            .WithName("FindSandbox")
+            .WithSummary("Find a sandbox by user and conversation")
+            .WithDescription("Finds an existing sandbox for the given user and conversation IDs.")
+            .Produces<SandboxInfo>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
+
         group.MapGet("/{podName}", GetSandbox)
             .WithName("GetSandbox")
             .WithSummary("Get a specific sandbox")
@@ -138,6 +145,31 @@ public static class SandboxEndpoints
             var sseMessage = $"data: {json}\n\n";
             await context.Response.Body.WriteAsync(System.Text.Encoding.UTF8.GetBytes(sseMessage), cancellationToken);
             await context.Response.Body.FlushAsync(cancellationToken);
+        }
+    }
+
+    private static async Task<Results<Ok<SandboxInfo>, NotFound, ProblemHttpResult>> FindSandbox(
+        [AsParameters] FindSandboxQuery query,
+        ISandboxService sandboxService,
+        ILogger<Program> logger,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var container = await sandboxService.FindSandboxAsync(query.UserId, query.ConversationId, cancellationToken);
+            if (container is null)
+                return TypedResults.NotFound();
+
+            return TypedResults.Ok(container);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to find sandbox for user {UserId}, conversation {ConversationId}",
+                query.UserId, query.ConversationId);
+            return TypedResults.Problem(
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Failed to find sandbox");
         }
     }
 
