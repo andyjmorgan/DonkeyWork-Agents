@@ -37,4 +37,9 @@ public interface IMcpServerConfigurationService
     /// with decrypted header values for authentication.
     /// </summary>
     Task<IReadOnlyList<McpConnectionConfigV1>> GetEnabledConnectionConfigsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets connection-ready configurations for all enabled stdio MCP servers.
+    /// </summary>
+    Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetEnabledStdioConfigsAsync(CancellationToken cancellationToken = default);
 }

@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="Anthropic" Version="12.5.0" />
+        <PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
         <PackageReference Include="Microsoft.Orleans.Server" Version="10.0.1" />
         <PackageReference Include="ModelContextProtocol" Version="1.0.0" />
@@ -25,6 +26,7 @@
         <ProjectReference Include="..\..\mcp\DonkeyWork.Agents.Mcp.Contracts\DonkeyWork.Agents.Mcp.Contracts.csproj" />
         <ProjectReference Include="..\..\conversations\DonkeyWork.Agents.Conversations.Contracts\DonkeyWork.Agents.Conversations.Contracts.csproj" />
         <ProjectReference Include="..\..\projects\DonkeyWork.Agents.Projects.Contracts\DonkeyWork.Agents.Projects.Contracts.csproj" />
+        <ProjectReference Include="..\..\sandbox\CodeSandbox.Manager.Contracts\CodeSandbox.Manager.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

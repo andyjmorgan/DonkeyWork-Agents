@@ -37,6 +37,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private readonly SandboxOptions _sandboxOptions;
     private readonly IExternalApiKeyService _apiKeyService;
     private readonly IMcpServerConfigurationService _mcpServerConfigService;
+    private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
     private readonly IPersistentState<AgentState> _state;
 
     private AgentContract? _contract;
@@ -70,6 +71,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         IOptions<SandboxOptions> sandboxOptions,
         IExternalApiKeyService apiKeyService,
         IMcpServerConfigurationService mcpServerConfigService,
+        McpSandboxManagerClient mcpSandboxManagerClient,
         [PersistentState("agent", Actors.Contracts.StorageProviders.SeaweedFs)] IPersistentState<AgentState> state)
     {
         _logger = logger;
@@ -81,6 +83,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _sandboxOptions = sandboxOptions.Value;
         _apiKeyService = apiKeyService;
         _mcpServerConfigService = mcpServerConfigService;
+        _mcpSandboxManagerClient = mcpSandboxManagerClient;
         _state = state;
     }
 
@@ -164,14 +167,23 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         // Initialize MCP tools (lazy, once per activation)
         if (_mcpToolProvider is null)
         {
-            var mcpConfigs = await _mcpServerConfigService.GetEnabledConnectionConfigsAsync(ct);
-            if (mcpConfigs.Count > 0)
+            var httpConfigs = await _mcpServerConfigService.GetEnabledConnectionConfigsAsync(ct);
+            var stdioConfigs = await _mcpServerConfigService.GetEnabledStdioConfigsAsync(ct);
+
+            if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
             {
                 _mcpToolProvider = new McpToolProvider();
-                await _mcpToolProvider.InitializeAsync(mcpConfigs, _logger, (name, success, ms, toolCount, error) =>
-                {
-                    Emit(new StreamMcpServerStatusEvent(_grainContext.GrainKey, name, success, ms, toolCount, error));
-                }, ct);
+                await _mcpToolProvider.InitializeAsync(
+                    httpConfigs,
+                    stdioConfigs,
+                    _mcpSandboxManagerClient,
+                    _identityContext.UserId.ToString(),
+                    _logger,
+                    (name, success, ms, toolCount, error) =>
+                    {
+                        Emit(new StreamMcpServerStatusEvent(_grainContext.GrainKey, name, success, ms, toolCount, error));
+                    },
+                    ct);
             }
         }
 

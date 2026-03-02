@@ -1,8 +1,10 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using CodeSandbox.Contracts.Grpc.Executor;
 using CodeSandbox.Manager.Configuration;
 using CodeSandbox.Manager.Models;
+using Grpc.Core;
+using Grpc.Net.Client;
 using k8s;
 using k8s.Models;
 using Microsoft.Extensions.Options;
@@ -14,18 +16,15 @@ public class SandboxService : ISandboxService
     private readonly IKubernetes _client;
     private readonly SandboxManagerConfig _config;
     private readonly ILogger<SandboxService> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
 
     public SandboxService(
         IKubernetes client,
         IOptions<SandboxManagerConfig> config,
-        ILogger<SandboxService> logger,
-        IHttpClientFactory httpClientFactory)
+        ILogger<SandboxService> logger)
     {
         _client = client;
         _config = config.Value;
         _logger = logger;
-        _httpClientFactory = httpClientFactory;
     }
 
     public async IAsyncEnumerable<ContainerCreationEvent> CreateSandboxAsync(
@@ -764,7 +763,7 @@ public class SandboxService : ISandboxService
         return readyCondition?.Status == "True";
     }
 
-    // Execution passthrough implementation
+    // Execution passthrough implementation using gRPC
     public async Task ExecuteCommandAsync(
         string sandboxId,
         ExecutionRequest request,
@@ -779,32 +778,43 @@ public class SandboxService : ISandboxService
         // Get pod IP
         var podIp = await GetPodIpAsync(sandboxId, cancellationToken);
 
-        // Create HTTP request to CodeExecution API
-        var httpClient = _httpClientFactory.CreateClient();
-        var apiUrl = $"http://{podIp}:8666/api/execute";
+        // Create gRPC channel to executor pod
+        using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");
+        var client = new ExecutorService.ExecutorServiceClient(channel);
 
-        var jsonContent = JsonSerializer.Serialize(request);
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, apiUrl)
+        var grpcRequest = new ExecuteRequest
         {
-            Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
+            Command = request.Command,
+            TimeoutSeconds = request.TimeoutSeconds
         };
-        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
-        HttpResponseMessage response;
         try
         {
-            response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            using var call = client.Execute(grpcRequest, cancellationToken: cancellationToken);
+            var writer = new StreamWriter(responseStream, Encoding.UTF8, leaveOpen: true);
+            await using (writer.ConfigureAwait(false))
+            {
+                await foreach (var evt in call.ResponseStream.ReadAllAsync(cancellationToken))
+                {
+                    // Convert gRPC events to SSE format for Manager's external API
+                    var sseData = JsonSerializer.Serialize(new
+                    {
+                        eventType = evt.EventType,
+                        data = evt.Data,
+                        pid = evt.Pid,
+                        exitCode = evt.HasExitCode ? evt.ExitCode : (int?)null
+                    });
+
+                    await writer.WriteAsync($"event: {evt.EventType}\ndata: {sseData}\n\n");
+                    await writer.FlushAsync(cancellationToken);
+                }
+            }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, "Failed to connect to sandbox {SandboxId} CodeExecution API", sandboxId);
+            _logger.LogError(ex, "Failed to execute command in sandbox {SandboxId} via gRPC", sandboxId);
             throw;
         }
-
-        // Stream the response directly through without parsing
-        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        await stream.CopyToAsync(responseStream, cancellationToken);
 
         _logger.LogInformation("Command execution stream completed for sandbox {SandboxId}", sandboxId);
     }
@@ -883,6 +893,7 @@ public static class AnnotationHelper
 {
     public const string CreatedAtAnnotation = "codesandbox.donkeywork.dev/created-at";
     public const string LastActivityAnnotation = "codesandbox.donkeywork.dev/last-activity";
+    public const string McpLaunchCommandAnnotation = "codesandbox.donkeywork.dev/mcp-launch-command";
 
     public static DateTime? ParseTimestampAnnotation(IDictionary<string, string>? annotations, string key)
     {

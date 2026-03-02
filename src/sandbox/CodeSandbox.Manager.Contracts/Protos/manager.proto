@@ -1,0 +1,226 @@
+syntax = "proto3";
+
+package codesandbox.manager;
+
+option csharp_namespace = "CodeSandbox.Manager.Contracts.Grpc";
+
+// ============================================================
+// Sandbox pod lifecycle and command execution
+// ============================================================
+service SandboxManagerService {
+  rpc CreateSandbox(CreateSandboxRequest) returns (stream ContainerEvent);
+  rpc FindSandbox(FindSandboxRequest) returns (SandboxInfo);
+  rpc ListSandboxes(ListSandboxesRequest) returns (ListSandboxesResponse);
+  rpc GetSandbox(GetSandboxRequest) returns (SandboxInfo);
+  rpc DeleteSandbox(DeleteSandboxRequest) returns (DeleteSandboxResponse);
+  rpc DeleteAllSandboxes(DeleteAllSandboxesRequest) returns (DeleteAllSandboxesResponse);
+  rpc ExecuteCommand(ExecuteCommandRequest) returns (stream ExecuteEvent);
+}
+
+// ============================================================
+// MCP server pod lifecycle and JSON-RPC proxying
+// ============================================================
+service McpManagerService {
+  rpc CreateMcpServer(CreateMcpServerRequest) returns (stream ContainerEvent);
+  rpc FindMcpServer(FindMcpServerRequest) returns (McpServerInfo);
+  rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse);
+  rpc GetMcpServer(GetMcpServerRequest) returns (McpServerInfo);
+  rpc DeleteMcpServer(DeleteMcpServerRequest) returns (DeleteSandboxResponse);
+  rpc StartMcpProcess(StartMcpProcessRequest) returns (stream McpStartEvent);
+  rpc ProxyMcpRequest(ProxyMcpRequestMessage) returns (ProxyMcpResponse);
+  rpc GetMcpStatus(GetMcpStatusRequest) returns (McpStatusResponse);
+  rpc StopMcpProcess(StopMcpProcessRequest) returns (StopMcpProcessResponse);
+}
+
+// ============================================================
+// Shared messages
+// ============================================================
+
+message ResourceValues {
+  optional int32 memory_mi = 1;
+  optional int32 cpu_millicores = 2;
+}
+
+message ResourceRequirements {
+  optional ResourceValues requests = 1;
+  optional ResourceValues limits = 2;
+}
+
+// Generic container lifecycle event (used by both sandbox and MCP create streams)
+message ContainerEvent {
+  string event_type = 1;       // "created", "waiting", "ready", "failed", "mcp_starting", "mcp_started", "mcp_start_failed"
+  string pod_name = 2;
+  string message = 3;
+
+  // Fields present depending on event_type:
+  optional string phase = 4;            // "created", "waiting"
+  optional int32 attempt_number = 5;    // "waiting"
+  optional double elapsed_seconds = 6;  // "ready", "mcp_started"
+  optional string reason = 7;           // "failed", "mcp_start_failed"
+
+  optional SandboxInfo sandbox_info = 8;      // "ready" (for sandbox)
+  optional McpServerInfo mcp_server_info = 9; // "mcp_started" (for mcp)
+}
+
+// ============================================================
+// Sandbox messages
+// ============================================================
+
+message CreateSandboxRequest {
+  string user_id = 1;
+  string conversation_id = 2;
+  map<string, string> environment_variables = 3;
+  optional ResourceRequirements resources = 4;
+}
+
+message FindSandboxRequest {
+  string user_id = 1;
+  string conversation_id = 2;
+}
+
+message ListSandboxesRequest {}
+
+message ListSandboxesResponse {
+  repeated SandboxInfo sandboxes = 1;
+}
+
+message GetSandboxRequest {
+  string pod_name = 1;
+}
+
+message DeleteSandboxRequest {
+  string pod_name = 1;
+}
+
+message DeleteSandboxResponse {
+  bool success = 1;
+  string message = 2;
+  string pod_name = 3;
+}
+
+message DeleteAllSandboxesRequest {}
+
+message DeleteAllSandboxesResponse {
+  int32 deleted_count = 1;
+  int32 failed_count = 2;
+  repeated string deleted_pods = 3;
+  repeated string failed_pods = 4;
+}
+
+message SandboxInfo {
+  string name = 1;
+  string phase = 2;
+  bool is_ready = 3;
+  optional string created_at = 4;    // ISO 8601
+  optional string last_activity = 5; // ISO 8601
+  optional string node_name = 6;
+  optional string pod_ip = 7;
+  map<string, string> labels = 8;
+  optional string image = 9;
+}
+
+message ExecuteCommandRequest {
+  string sandbox_id = 1;
+  string command = 2;
+  int32 timeout_seconds = 3;
+}
+
+message ExecuteEvent {
+  string event_type = 1;   // "output", "exit", "error", "timeout"
+  string data = 2;
+  int32 pid = 3;
+  optional int32 exit_code = 4;
+}
+
+// ============================================================
+// MCP messages
+// ============================================================
+
+message CreateMcpServerRequest {
+  string user_id = 1;
+  string mcp_server_config_id = 2;
+  optional string command = 3;
+  repeated string arguments = 4;
+  repeated string pre_exec_scripts = 5;
+  int32 timeout_seconds = 6;
+  map<string, string> environment_variables = 7;
+  optional string working_directory = 8;
+}
+
+message FindMcpServerRequest {
+  string user_id = 1;
+  string mcp_server_config_id = 2;
+}
+
+message ListMcpServersRequest {}
+
+message ListMcpServersResponse {
+  repeated McpServerInfo servers = 1;
+}
+
+message GetMcpServerRequest {
+  string pod_name = 1;
+}
+
+message McpServerInfo {
+  string name = 1;
+  string phase = 2;
+  bool is_ready = 3;
+  optional string created_at = 4;    // ISO 8601
+  optional string last_activity = 5; // ISO 8601
+  optional string node_name = 6;
+  optional string pod_ip = 7;
+  map<string, string> labels = 8;
+  optional string image = 9;
+  optional string launch_command = 10;
+  string mcp_status = 11;            // "Unknown", "Idle", "Initializing", "Ready", "Error", "Disposed"
+}
+
+message StartMcpProcessRequest {
+  string pod_name = 1;
+  string command = 2;
+  repeated string arguments = 3;
+  repeated string pre_exec_scripts = 4;
+  int32 timeout_seconds = 5;
+  optional string working_directory = 6;
+}
+
+message McpStartEvent {
+  string event_type = 1;  // "pre_exec_start", "pre_exec_complete", "process_starting", "process_started", "ready", "error"
+  string message = 2;
+  optional string error = 3;
+}
+
+message ProxyMcpRequestMessage {
+  string pod_name = 1;
+  string body = 2;           // Raw JSON-RPC body
+  int32 timeout_seconds = 3;
+}
+
+message ProxyMcpResponse {
+  string body = 1;           // Raw JSON-RPC response body
+  bool is_notification = 2;
+}
+
+message GetMcpStatusRequest {
+  string pod_name = 1;
+}
+
+message McpStatusResponse {
+  string state = 1;                    // "Idle", "Initializing", "Ready", "Error", "Disposed"
+  optional string error = 2;
+  optional string started_at = 3;      // ISO 8601
+  optional string last_request_at = 4; // ISO 8601
+}
+
+message StopMcpProcessRequest {
+  string pod_name = 1;
+}
+
+message StopMcpProcessResponse {
+  bool success = 1;
+}
+
+message DeleteMcpServerRequest {
+  string pod_name = 1;
+}

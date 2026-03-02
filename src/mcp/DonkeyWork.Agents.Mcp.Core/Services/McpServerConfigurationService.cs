@@ -408,6 +408,39 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         return configs;
     }
 
+    public async Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetEnabledStdioConfigsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.McpServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.IsEnabled && c.TransportType == McpTransportType.Stdio)
+            .Include(c => c.StdioConfiguration)
+            .ToListAsync(cancellationToken);
+
+        var configs = new List<McpStdioConnectionConfigV1>();
+
+        foreach (var entity in entities)
+        {
+            if (entity.StdioConfiguration is null)
+            {
+                _logger.LogWarning("Enabled stdio MCP server {Id} ({Name}) has no stdio configuration, skipping", entity.Id, entity.Name);
+                continue;
+            }
+
+            configs.Add(new McpStdioConnectionConfigV1
+            {
+                Id = entity.Id,
+                Name = entity.Name,
+                Command = entity.StdioConfiguration.Command,
+                Arguments = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.Arguments) ?? [],
+                EnvironmentVariables = JsonSerializer.Deserialize<Dictionary<string, string>>(entity.StdioConfiguration.EnvironmentVariables) ?? new(),
+                PreExecScripts = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.PreExecScripts) ?? [],
+                WorkingDirectory = entity.StdioConfiguration.WorkingDirectory,
+            });
+        }
+
+        return configs;
+    }
+
     #region Encryption
 
     private byte[] Encrypt(string plainText)

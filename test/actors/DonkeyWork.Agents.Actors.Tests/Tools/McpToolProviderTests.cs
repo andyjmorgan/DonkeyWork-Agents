@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
+using DonkeyWork.Agents.Mcp.Contracts.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -107,7 +108,10 @@ public class McpToolProviderTests : IAsyncDisposable
         var callbackInvoked = false;
 
         await _provider.InitializeAsync(
-            [],
+            Array.Empty<McpConnectionConfigV1>(),
+            Array.Empty<McpStdioConnectionConfigV1>(),
+            null,
+            "test-user",
             _loggerMock.Object,
             (_, _, _, _, _) => callbackInvoked = true,
             CancellationToken.None);
@@ -124,7 +128,7 @@ public class McpToolProviderTests : IAsyncDisposable
 
         var configs = new[]
         {
-            new DonkeyWork.Agents.Mcp.Contracts.Models.McpConnectionConfigV1
+            new McpConnectionConfigV1
             {
                 Id = Guid.NewGuid(),
                 Name = "cancelled-server",
@@ -134,6 +138,9 @@ public class McpToolProviderTests : IAsyncDisposable
 
         await _provider.InitializeAsync(
             configs,
+            Array.Empty<McpStdioConnectionConfigV1>(),
+            null,
+            "test-user",
             _loggerMock.Object,
             (name, success, _, _, error) => callbackResults.Add((name, success, error)),
             cts.Token);
@@ -151,13 +158,13 @@ public class McpToolProviderTests : IAsyncDisposable
 
         var configs = new[]
         {
-            new DonkeyWork.Agents.Mcp.Contracts.Models.McpConnectionConfigV1
+            new McpConnectionConfigV1
             {
                 Id = Guid.NewGuid(),
                 Name = "server-a",
                 Endpoint = "http://localhost:19998/mcp",
             },
-            new DonkeyWork.Agents.Mcp.Contracts.Models.McpConnectionConfigV1
+            new McpConnectionConfigV1
             {
                 Id = Guid.NewGuid(),
                 Name = "server-b",
@@ -167,6 +174,9 @@ public class McpToolProviderTests : IAsyncDisposable
 
         await _provider.InitializeAsync(
             configs,
+            Array.Empty<McpStdioConnectionConfigV1>(),
+            null,
+            "test-user",
             _loggerMock.Object,
             (name, _, _, _, _) => callbackNames.Add(name),
             cts.Token);
@@ -184,7 +194,7 @@ public class McpToolProviderTests : IAsyncDisposable
 
         var configs = new[]
         {
-            new DonkeyWork.Agents.Mcp.Contracts.Models.McpConnectionConfigV1
+            new McpConnectionConfigV1
             {
                 Id = Guid.NewGuid(),
                 Name = "dead-server",
@@ -194,6 +204,9 @@ public class McpToolProviderTests : IAsyncDisposable
 
         await _provider.InitializeAsync(
             configs,
+            Array.Empty<McpStdioConnectionConfigV1>(),
+            null,
+            "test-user",
             _loggerMock.Object,
             null,
             cts.Token);
@@ -210,7 +223,7 @@ public class McpToolProviderTests : IAsyncDisposable
 
         var configs = new[]
         {
-            new DonkeyWork.Agents.Mcp.Contracts.Models.McpConnectionConfigV1
+            new McpConnectionConfigV1
             {
                 Id = Guid.NewGuid(),
                 Name = "server",
@@ -221,6 +234,9 @@ public class McpToolProviderTests : IAsyncDisposable
         // Should not throw even with null callback
         await _provider.InitializeAsync(
             configs,
+            Array.Empty<McpStdioConnectionConfigV1>(),
+            null,
+            "test-user",
             _loggerMock.Object,
             null,
             cts.Token);

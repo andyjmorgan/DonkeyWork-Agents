@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CodeSandbox.McpServer.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Formatting.Compact" />
     <PackageReference Include="Serilog.Sinks.File" />
@@ -16,5 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\CodeSandbox.Contracts\CodeSandbox.Contracts.csproj" />
   </ItemGroup>
+
 
 </Project>

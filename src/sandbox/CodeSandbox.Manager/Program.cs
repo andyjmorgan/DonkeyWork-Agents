@@ -2,16 +2,25 @@ using CodeSandbox.Manager.Configuration;
 using CodeSandbox.Manager.Endpoints;
 using CodeSandbox.Manager.Services.Background;
 using CodeSandbox.Manager.Services.Container;
+using CodeSandbox.Manager.Services.Grpc;
+using CodeSandbox.Manager.Services.Mcp;
 using CodeSandbox.Manager.Services.Terminal;
 using k8s;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure listening address and port
-builder.WebHost.UseUrls("http://0.0.0.0:8668");
+// Configure Kestrel for HTTP/1.1 (WebSocket, REST) + HTTP/2 (gRPC)
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(8668, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+    });
+});
 
 // Add Serilog
 builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -64,15 +73,16 @@ builder.Services.AddSingleton<IKubernetes>(sp =>
     return new Kubernetes(defaultConfig);
 });
 
-// Register HTTP client for passthrough requests
-builder.Services.AddHttpClient();
-
 // Register application services
 builder.Services.AddScoped<ISandboxService, SandboxService>();
+builder.Services.AddScoped<IMcpContainerService, McpContainerService>();
 builder.Services.AddScoped<ITerminalService, TerminalService>();
 
 // Register background services
 builder.Services.AddHostedService<ContainerCleanupService>();
+
+// Add gRPC services
+builder.Services.AddGrpc();
 
 // Add health checks
 builder.Services.AddHealthChecks();
@@ -122,8 +132,12 @@ app.UseWebSockets(new WebSocketOptions
 // Map health checks
 app.MapHealthChecks("/healthz");
 
-// Map endpoints
-app.MapSandboxEndpoints();
+// Map gRPC services
+app.MapGrpcService<SandboxManagerGrpcService>();
+app.MapGrpcService<McpManagerGrpcService>();
+
+// Map WebSocket terminal endpoint (HTTP/1.1 only — not available via gRPC)
+app.MapTerminalEndpoints();
 
 Log.Information("Sandbox Manager API started successfully");
 await app.RunAsync();

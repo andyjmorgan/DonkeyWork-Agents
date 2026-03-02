@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>CodeSandbox.Contracts</RootNamespace>
+    <RootNamespace>CodeSandbox.Manager.Contracts</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,8 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos/executor.proto" GrpcServices="Both" />
-    <Protobuf Include="Protos/mcp_server.proto" GrpcServices="Both" />
+    <Protobuf Include="Protos/manager.proto" GrpcServices="Both" />
   </ItemGroup>
 
 </Project>

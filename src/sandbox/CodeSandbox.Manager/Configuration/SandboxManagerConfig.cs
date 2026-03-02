@@ -70,6 +70,41 @@ public class SandboxManagerConfig
 
     public string SkillsMountPath { get; set; } = "/home/sandbox/skills";
 
+    // MCP Server Settings
+
+    /// <summary>
+    /// Docker image for MCP server pods.
+    /// </summary>
+    public string McpServerImage { get; set; } = "ghcr.io/andyjmorgan/donkeywork-agents/sandbox-executor:latest";
+
+    /// <summary>
+    /// Prefix for MCP server pod names (e.g. "mcp-a1b2c3d4").
+    /// </summary>
+    [RegularExpression(@"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", ErrorMessage = "Invalid MCP pod name prefix")]
+    public string McpPodNamePrefix { get; set; } = "mcp";
+
+    /// <summary>
+    /// Idle timeout in minutes before MCP server pods are cleaned up.
+    /// </summary>
+    [Range(1, 1440, ErrorMessage = "MCP idle timeout must be between 1 and 1440 minutes")]
+    public int McpIdleTimeoutMinutes { get; set; } = 60;
+
+    /// <summary>
+    /// Maximum lifetime in minutes for MCP server pods regardless of activity.
+    /// </summary>
+    [Range(1, 1440, ErrorMessage = "MCP max container lifetime must be between 1 and 1440 minutes")]
+    public int McpMaxContainerLifetimeMinutes { get; set; } = 480;
+
+    /// <summary>
+    /// Default resource requests for MCP server containers (lighter than code sandboxes).
+    /// </summary>
+    public ResourceConfig McpDefaultResourceRequests { get; set; } = new() { MemoryMi = 128, CpuMillicores = 250 };
+
+    /// <summary>
+    /// Default resource limits for MCP server containers.
+    /// </summary>
+    public ResourceConfig McpDefaultResourceLimits { get; set; } = new() { MemoryMi = 256, CpuMillicores = 500 };
+
     // Optional: Direct k8s connection (alternative to kubeconfig)
     public KubernetesConnectionConfig? Connection { get; set; }
 }

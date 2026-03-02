@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package codesandbox.executor;
+
+option csharp_namespace = "CodeSandbox.Contracts.Grpc.Executor";
+
+service ExecutorService {
+  // Execute a command and stream output events.
+  // Replaces: POST /api/execute (SSE stream response)
+  // Source: CodeSandbox.Executor/Controllers/ExecutionController.cs
+  rpc Execute(ExecuteRequest) returns (stream ExecuteEvent);
+
+  // Reconnect to a running process and resume streaming output.
+  // Replaces: GET /api/processes/{pid}/reconnect (SSE stream response)
+  rpc ReconnectProcess(ReconnectProcessRequest) returns (stream ExecuteEvent);
+
+  // List all tracked processes.
+  // Replaces: GET /api/processes
+  rpc ListProcesses(ListProcessesRequest) returns (ListProcessesResponse);
+
+  // Kill a running process.
+  // Replaces: DELETE /api/processes/{pid}
+  rpc KillProcess(KillProcessRequest) returns (KillProcessResponse);
+}
+
+message ExecuteRequest {
+  string command = 1;
+  int32 timeout_seconds = 2;  // Default 300 in current impl
+}
+
+message ExecuteEvent {
+  // Event types from current SSE implementation:
+  // "output" (stdout/stderr line), "exit" (process completed), "error" (execution error), "timeout"
+  string event_type = 1;
+  string data = 2;           // The event payload (output line, exit code, error message)
+  int32 pid = 3;             // Process ID (set on first event)
+  optional int32 exit_code = 4;  // Set on "exit" event
+}
+
+message ReconnectProcessRequest {
+  int32 pid = 1;
+}
+
+message ListProcessesRequest {}
+
+message ListProcessesResponse {
+  repeated ProcessInfo processes = 1;
+}
+
+message ProcessInfo {
+  int32 pid = 1;
+  string command = 2;
+  bool is_running = 3;
+  string started_at = 4;     // ISO8601 timestamp
+}
+
+message KillProcessRequest {
+  int32 pid = 1;
+}
+
+message KillProcessResponse {
+  bool success = 1;
+  string message = 2;
+}

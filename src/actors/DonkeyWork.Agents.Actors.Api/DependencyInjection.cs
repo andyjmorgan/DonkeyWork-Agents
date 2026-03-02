@@ -3,11 +3,14 @@ using DonkeyWork.Agents.Actors.Api.Options;
 using DonkeyWork.Agents.Actors.Core;
 using DonkeyWork.Agents.Actors.Core.Interceptors;
 using DonkeyWork.Agents.Actors.Core.Options;
+using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
+using Grpc.Net.Client;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Orleans.Clustering.Kubernetes;
 using Orleans.Configuration;
 using Orleans.Hosting.Kubernetes;
@@ -83,10 +86,23 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         var sandboxOptions = configuration.GetSection(SandboxOptions.SectionName).Get<SandboxOptions>();
-        services.AddHttpClient<SandboxManagerClient>(client =>
+        if (sandboxOptions is not null)
         {
-            if (sandboxOptions is not null)
-                client.BaseAddress = new Uri(sandboxOptions.ManagerBaseUrl);
+            services.AddSingleton(_ => GrpcChannel.ForAddress(sandboxOptions.ManagerBaseUrl));
+        }
+
+        services.AddTransient<SandboxManagerClient>(sp =>
+        {
+            var channel = sp.GetRequiredService<GrpcChannel>();
+            var logger = sp.GetRequiredService<ILogger<SandboxManagerClient>>();
+            return new SandboxManagerClient(channel, logger);
+        });
+
+        services.AddTransient<McpSandboxManagerClient>(sp =>
+        {
+            var channel = sp.GetRequiredService<GrpcChannel>();
+            var logger = sp.GetRequiredService<ILogger<McpSandboxManagerClient>>();
+            return new McpSandboxManagerClient(channel, logger);
         });
 
         services.AddHttpClient();

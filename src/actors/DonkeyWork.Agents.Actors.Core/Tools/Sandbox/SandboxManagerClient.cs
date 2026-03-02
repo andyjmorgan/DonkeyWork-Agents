@@ -1,25 +1,23 @@
-using System.Net;
-using System.Net.Http.Json;
 using System.Text;
-using System.Text.Json;
+using CodeSandbox.Manager.Contracts.Grpc;
+using Grpc.Core;
+using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 
+/// <summary>
+/// gRPC client for communicating with the CodeSandbox Manager's sandbox endpoints.
+/// Handles pod lifecycle (find/create) and command execution.
+/// </summary>
 public sealed class SandboxManagerClient
 {
-    private readonly HttpClient _httpClient;
+    private readonly SandboxManagerService.SandboxManagerServiceClient _client;
     private readonly ILogger<SandboxManagerClient> _logger;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public SandboxManagerClient(GrpcChannel channel, ILogger<SandboxManagerClient> logger)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
-
-    public SandboxManagerClient(HttpClient httpClient, ILogger<SandboxManagerClient> logger)
-    {
-        _httpClient = httpClient;
+        _client = new SandboxManagerService.SandboxManagerServiceClient(channel);
         _logger = logger;
     }
 
@@ -29,21 +27,23 @@ public sealed class SandboxManagerClient
     /// </summary>
     public async Task<string?> FindSandboxAsync(string userId, string conversationId, CancellationToken ct)
     {
-        var url = $"/api/sandbox/find?userId={Uri.EscapeDataString(userId)}&conversationId={Uri.EscapeDataString(conversationId)}";
-        var response = await _httpClient.GetAsync(url, ct);
+        try
+        {
+            var response = await _client.FindSandboxAsync(
+                new FindSandboxRequest { UserId = userId, ConversationId = conversationId },
+                cancellationToken: ct);
 
-        if (response.StatusCode == HttpStatusCode.NotFound)
+            return response.Name;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
             return null;
-
-        response.EnsureSuccessStatusCode();
-
-        using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
-        return doc.RootElement.GetProperty("name").GetString();
+        }
     }
 
     /// <summary>
     /// Create a new sandbox for the given user and conversation.
-    /// Streams SSE creation events and returns the pod name when ready.
+    /// Streams gRPC creation events and returns the pod name when ready.
     /// </summary>
     public async Task<string> CreateSandboxAsync(
         string userId,
@@ -51,55 +51,38 @@ public sealed class SandboxManagerClient
         Action<string>? onProgress,
         CancellationToken ct)
     {
-        var request = new { userId, conversationId };
-        var response = await _httpClient.PostAsJsonAsync("/api/sandbox/", request, JsonOptions, ct);
-        response.EnsureSuccessStatusCode();
+        var request = new CreateSandboxRequest
+        {
+            UserId = userId,
+            ConversationId = conversationId,
+        };
 
-        using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var reader = new StreamReader(stream);
+        using var call = _client.CreateSandbox(request, cancellationToken: ct);
 
         string? podName = null;
         string? failReason = null;
 
-        string? line;
-        while ((line = await reader.ReadLineAsync(ct)) is not null)
+        await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
         {
-            if (!line.StartsWith("data: ", StringComparison.Ordinal))
-                continue;
-
-            var json = line[6..];
-
-            try
+            switch (evt.EventType)
             {
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                var eventType = root.GetProperty("eventType").GetString();
+                case "ContainerCreatedEvent":
+                    onProgress?.Invoke("Sandbox pod created, waiting for ready...");
+                    break;
 
-                switch (eventType)
-                {
-                    case "ContainerCreatedEvent":
-                        onProgress?.Invoke("Sandbox pod created, waiting for ready...");
-                        break;
+                case "ContainerWaitingEvent":
+                    onProgress?.Invoke(evt.Message is { Length: > 0 } ? evt.Message : "Waiting for sandbox...");
+                    break;
 
-                    case "ContainerWaitingEvent":
-                        var message = root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : null;
-                        onProgress?.Invoke(message ?? "Waiting for sandbox...");
-                        break;
+                case "ContainerReadyEvent":
+                    podName = evt.PodName;
+                    _logger.LogInformation("Sandbox ready: {PodName}", podName);
+                    break;
 
-                    case "ContainerReadyEvent":
-                        podName = root.GetProperty("podName").GetString();
-                        _logger.LogInformation("Sandbox ready: {PodName}", podName);
-                        break;
-
-                    case "ContainerFailedEvent":
-                        failReason = root.TryGetProperty("reason", out var reasonProp) ? reasonProp.GetString() : "Unknown failure";
-                        _logger.LogWarning("Sandbox creation failed: {Reason}", failReason);
-                        break;
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogDebug(ex, "Failed to parse SSE event: {Json}", json);
+                case "ContainerFailedEvent":
+                    failReason = evt.Reason is { Length: > 0 } ? evt.Reason : "Unknown failure";
+                    _logger.LogWarning("Sandbox creation failed: {Reason}", failReason);
+                    break;
             }
         }
 
@@ -111,7 +94,7 @@ public sealed class SandboxManagerClient
 
     /// <summary>
     /// Execute a command in the given sandbox.
-    /// Reads the SSE stream and returns collected stdout, stderr, exit code, and timeout status.
+    /// Reads the gRPC stream and returns collected stdout, stderr, exit code, and timeout status.
     /// </summary>
     public async Task<CommandResult> ExecuteCommandAsync(
         string sandboxId,
@@ -119,73 +102,45 @@ public sealed class SandboxManagerClient
         int timeoutSeconds,
         CancellationToken ct)
     {
-        var request = new { command, timeoutSeconds };
-        var response = await _httpClient.PostAsJsonAsync($"/api/sandbox/{Uri.EscapeDataString(sandboxId)}/execute", request, JsonOptions, ct);
-        response.EnsureSuccessStatusCode();
+        var request = new ExecuteCommandRequest
+        {
+            SandboxId = sandboxId,
+            Command = command,
+            TimeoutSeconds = timeoutSeconds,
+        };
 
-        using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var reader = new StreamReader(stream);
+        using var call = _client.ExecuteCommand(request, cancellationToken: ct);
 
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
         var exitCode = -1;
         var timedOut = false;
 
-        string? currentEventType = null;
-        string? line;
-
-        while ((line = await reader.ReadLineAsync(ct)) is not null)
+        await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
         {
-
-            if (line.StartsWith("event: ", StringComparison.Ordinal))
+            switch (evt.EventType)
             {
-                currentEventType = line[7..].Trim();
-                continue;
-            }
+                case "OutputEvent":
+                    // Data contains the output text; pid > 0 with stderr stream indicator
+                    // The Manager forwards the executor's stream type in the data field
+                    stdout.Append(evt.Data);
+                    break;
 
-            if (!line.StartsWith("data: ", StringComparison.Ordinal))
-            {
-                if (line.Length == 0)
-                    currentEventType = null;
-                continue;
-            }
+                case "StderrEvent":
+                    stderr.Append(evt.Data);
+                    break;
 
-            var json = line[6..];
+                case "CompletedEvent":
+                case "exit":
+                    if (evt.HasExitCode)
+                        exitCode = evt.ExitCode;
+                    break;
 
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                // Determine event type from SSE event field or JSON $type discriminator
-                var effectiveType = currentEventType
-                    ?? (root.TryGetProperty("$type", out var typeProp) ? typeProp.GetString() : null);
-
-                switch (effectiveType)
-                {
-                    case "OutputEvent":
-                        var data = root.TryGetProperty("data", out var dataProp) ? dataProp.GetString() ?? "" : "";
-                        var streamType = root.TryGetProperty("stream", out var streamProp) ? streamProp : default;
-
-                        var isStderr = streamType.ValueKind == JsonValueKind.String
-                            ? string.Equals(streamType.GetString(), "Stderr", StringComparison.OrdinalIgnoreCase)
-                            : streamType.ValueKind == JsonValueKind.Number && streamType.GetInt32() == 1;
-
-                        if (isStderr)
-                            stderr.Append(data);
-                        else
-                            stdout.Append(data);
-                        break;
-
-                    case "CompletedEvent":
-                        exitCode = root.TryGetProperty("exitCode", out var exitProp) ? exitProp.GetInt32() : -1;
-                        timedOut = root.TryGetProperty("timedOut", out var toProp) && toProp.GetBoolean();
-                        break;
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogDebug(ex, "Failed to parse execution SSE event: {Json}", json);
+                case "timeout":
+                    timedOut = true;
+                    if (evt.HasExitCode)
+                        exitCode = evt.ExitCode;
+                    break;
             }
         }
 
@@ -197,7 +152,18 @@ public sealed class SandboxManagerClient
     /// </summary>
     public async Task<bool> DeleteSandboxAsync(string sandboxId, CancellationToken ct)
     {
-        var response = await _httpClient.DeleteAsync($"/api/sandbox/{Uri.EscapeDataString(sandboxId)}", ct);
-        return response.IsSuccessStatusCode;
+        try
+        {
+            var response = await _client.DeleteSandboxAsync(
+                new DeleteSandboxRequest { PodName = sandboxId },
+                cancellationToken: ct);
+
+            return response.Success;
+        }
+        catch (RpcException)
+        {
+            return false;
+        }
     }
+
 }

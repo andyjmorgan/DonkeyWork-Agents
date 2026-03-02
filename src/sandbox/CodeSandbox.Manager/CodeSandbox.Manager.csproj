@@ -7,10 +7,17 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Grpc.AspNetCore" />
+        <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="KubernetesClient" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Scalar.AspNetCore" />
         <PackageReference Include="Serilog.AspNetCore" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CodeSandbox.Contracts\CodeSandbox.Contracts.csproj" />
+        <ProjectReference Include="..\CodeSandbox.Manager.Contracts\CodeSandbox.Manager.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

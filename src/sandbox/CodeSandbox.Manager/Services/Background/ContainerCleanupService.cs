@@ -53,10 +53,15 @@ public class ContainerCleanupService : BackgroundService
 
     private async Task CleanupContainersAsync(CancellationToken cancellationToken)
     {
-        // Find all sandbox containers with a user-id label (assigned containers)
+        await CleanupContainersByTypeAsync("sandbox", _config.IdleTimeoutMinutes, cancellationToken);
+        await CleanupContainersByTypeAsync("mcp", _config.McpIdleTimeoutMinutes, cancellationToken);
+    }
+
+    private async Task CleanupContainersByTypeAsync(string containerType, int idleTimeoutMinutes, CancellationToken cancellationToken)
+    {
         var userPods = await _client.CoreV1.ListNamespacedPodAsync(
             _config.TargetNamespace,
-            labelSelector: "managed-by=CodeSandbox-Manager,container-type=sandbox",
+            labelSelector: $"managed-by=CodeSandbox-Manager,container-type={containerType}",
             cancellationToken: cancellationToken);
 
         // Filter to only pods that have a user-id label (i.e., they've been assigned)
@@ -66,7 +71,7 @@ public class ContainerCleanupService : BackgroundService
 
         if (!assignedPods.Any())
         {
-            _logger.LogDebug("No assigned containers to check for cleanup");
+            _logger.LogDebug("No assigned {ContainerType} containers to check for cleanup", containerType);
             return;
         }
 
@@ -83,12 +88,12 @@ public class ContainerCleanupService : BackgroundService
         foreach (var pod in completedPods)
         {
             var reason = pod.Status.Phase == "Failed" ? "failed" : "completed";
-            await DeletePodAsync(pod.Metadata.Name, reason, cancellationToken, forceDelete: true);
+            await DeletePodAsync(pod.Metadata.Name, $"{containerType} {reason}", cancellationToken, forceDelete: true);
         }
 
         // Check running pods for idle timeout
         var now = DateTimeOffset.UtcNow;
-        var idleThreshold = TimeSpan.FromMinutes(_config.IdleTimeoutMinutes);
+        var idleThreshold = TimeSpan.FromMinutes(idleTimeoutMinutes);
         var idleContainers = new List<V1Pod>();
 
         foreach (var pod in runningPods)
@@ -110,14 +115,14 @@ public class ContainerCleanupService : BackgroundService
         if (completedPods.Count > 0 || idleContainers.Count > 0)
         {
             _logger.LogInformation(
-                "Container cleanup: {Running} running, {Idle} idle, {Completed} completed/failed",
-                runningPods.Count, idleContainers.Count, completedPods.Count);
+                "{ContainerType} cleanup: {Running} running, {Idle} idle, {Completed} completed/failed",
+                containerType, runningPods.Count, idleContainers.Count, completedPods.Count);
         }
 
         // Delete idle containers
         foreach (var pod in idleContainers)
         {
-            await DeletePodAsync(pod.Metadata.Name, "idle timeout", cancellationToken);
+            await DeletePodAsync(pod.Metadata.Name, $"{containerType} idle timeout", cancellationToken);
         }
     }
 
