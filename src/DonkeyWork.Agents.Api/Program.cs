@@ -134,7 +134,19 @@ forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
 // Add Serilog request logging
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(options =>
+{
+    options.GetLevel = (httpContext, elapsed, ex) =>
+    {
+        if (ex is null && httpContext.Response.StatusCode < 400 &&
+            httpContext.Request.Path.StartsWithSegments("/healthz"))
+        {
+            return Serilog.Events.LogEventLevel.Verbose;
+        }
+
+        return Serilog.Events.LogEventLevel.Information;
+    };
+});
 
 // Enable developer exception page in all environments for debugging
 app.UseDeveloperExceptionPage();
