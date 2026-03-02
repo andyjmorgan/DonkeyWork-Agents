@@ -3,6 +3,7 @@ import {
   HubConnection,
   HubConnectionBuilder,
   HubConnectionState,
+  HttpTransportType,
   LogLevel,
 } from '@microsoft/signalr'
 import { useAuthStore } from '@/store/auth'
@@ -104,6 +105,8 @@ export function useNotifications(
           const currentToken = useAuthStore.getState().accessToken
           return currentToken ?? ''
         },
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets,
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {
