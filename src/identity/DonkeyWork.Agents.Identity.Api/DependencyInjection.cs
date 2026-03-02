@@ -181,18 +181,18 @@ public static class DependencyInjection
                 options.ResourceMetadataUri = new Uri("/.well-known/oauth-protected-resource", UriKind.Relative);
                 options.ResourceMetadata = new ProtectedResourceMetadata
                 {
-                    AuthorizationServers = { new Uri(keycloakOptions.Authority) },
+                    AuthorizationServers = { keycloakOptions.Authority },
                     ScopesSupported = { "openid", "profile", "email", "offline_access", "mcp-audience" },
                 };
                 options.Events.OnResourceMetadataRequest = context =>
                 {
                     context.ResourceMetadata ??= new ProtectedResourceMetadata
                     {
-                        AuthorizationServers = { new Uri(keycloakOptions.Authority) },
+                        AuthorizationServers = { keycloakOptions.Authority },
                         ScopesSupported = { "openid", "profile", "email", "offline_access", "mcp-audience" },
                     };
                     context.ResourceMetadata.Resource ??=
-                        new Uri($"{context.Request.Scheme}://{context.Request.Host}");
+                        $"{context.Request.Scheme}://{context.Request.Host}";
                     return Task.CompletedTask;
                 };
             });
