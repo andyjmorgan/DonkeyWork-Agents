@@ -130,6 +130,7 @@ message ExecuteEvent {
   string data = 2;
   int32 pid = 3;
   optional int32 exit_code = 4;
+  optional string stream = 5;   // "stdout" or "stderr" (set on "output" events)
 }
 
 // ============================================================

@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Net;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Grpc.Net.Client;
 using Xunit;
 
 namespace CodeSandbox.Executor.IntegrationTests;
@@ -11,6 +13,7 @@ public class ServerFixture : IAsyncLifetime
     private const int ServerPort = 8666;
 
     public string ServerUrl { get; private set; } = string.Empty;
+    public GrpcChannel GrpcChannel { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
@@ -38,6 +41,7 @@ public class ServerFixture : IAsyncLifetime
 
         var mappedPort = _container.GetMappedPublicPort(ServerPort);
         ServerUrl = $"http://localhost:{mappedPort}";
+        GrpcChannel = GrpcChannel.ForAddress(ServerUrl);
 
         await Task.Delay(2000);
         await WaitForServerHealthAsync();
@@ -48,16 +52,23 @@ public class ServerFixture : IAsyncLifetime
         var maxRetries = 30;
         var retryDelay = TimeSpan.FromSeconds(1);
 
+        using var handler = new SocketsHttpHandler();
+        using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(2) };
+
         for (int i = 0; i < maxRetries; i++)
         {
             try
             {
-                using var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(2);
+                // Executor uses HTTP/2-only Kestrel, so health check must use HTTP/2
+                var request = new HttpRequestMessage(HttpMethod.Get,
+                    $"http://localhost:{_container!.GetMappedPublicPort(ServerPort)}/healthz")
+                {
+                    Version = HttpVersion.Version20,
+                    VersionPolicy = HttpVersionPolicy.RequestVersionExact,
+                };
 
-                var response = await httpClient.GetAsync($"http://localhost:{_container!.GetMappedPublicPort(ServerPort)}/healthz");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                var response = await httpClient.SendAsync(request);
+                if (response.StatusCode == HttpStatusCode.OK)
                 {
                     return;
                 }
@@ -76,6 +87,8 @@ public class ServerFixture : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        GrpcChannel?.Dispose();
+
         if (_container != null)
         {
             await _container.StopAsync();

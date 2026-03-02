@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Xunit;
@@ -48,16 +49,23 @@ public class ServerFixture : IAsyncLifetime
         var maxRetries = 30;
         var retryDelay = TimeSpan.FromSeconds(1);
 
+        using var handler = new SocketsHttpHandler();
+        using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(2) };
+
         for (int i = 0; i < maxRetries; i++)
         {
             try
             {
-                using var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(2);
+                // Executor uses HTTP/2-only Kestrel, so health check must use HTTP/2
+                var request = new HttpRequestMessage(HttpMethod.Get,
+                    $"http://localhost:{_container!.GetMappedPublicPort(ServerPort)}/healthz")
+                {
+                    Version = HttpVersion.Version20,
+                    VersionPolicy = HttpVersionPolicy.RequestVersionExact,
+                };
 
-                var response = await httpClient.GetAsync($"http://localhost:{_container!.GetMappedPublicPort(ServerPort)}/healthz");
-
-                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                var response = await httpClient.SendAsync(request);
+                if (response.StatusCode == HttpStatusCode.OK)
                 {
                     return;
                 }

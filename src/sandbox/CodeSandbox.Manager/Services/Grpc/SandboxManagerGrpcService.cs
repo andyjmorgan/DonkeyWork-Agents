@@ -150,6 +150,8 @@ public class SandboxManagerGrpcService : SandboxManagerService.SandboxManagerSer
             };
             if (evt.HasExitCode)
                 managerEvent.ExitCode = evt.ExitCode;
+            if (evt.HasStream)
+                managerEvent.Stream = evt.Stream;
 
             await responseStream.WriteAsync(managerEvent, context.CancellationToken);
         }

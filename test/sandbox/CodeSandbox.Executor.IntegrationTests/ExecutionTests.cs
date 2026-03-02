@@ -1,111 +1,55 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using CodeSandbox.Contracts.Events;
-using CodeSandbox.Contracts.Requests;
-using CodeSandbox.Contracts.Responses;
+using CodeSandbox.Contracts.Grpc.Executor;
+using Grpc.Core;
 using Xunit;
 
 namespace CodeSandbox.Executor.IntegrationTests;
 
+[Trait("Category", "Integration")]
 public class ExecutionTests : IClassFixture<ServerFixture>
 {
-    private readonly ServerFixture _fixture;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly ExecutorService.ExecutorServiceClient _client;
 
     public ExecutionTests(ServerFixture fixture)
     {
-        _fixture = fixture;
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
+        _client = new ExecutorService.ExecutorServiceClient(fixture.GrpcChannel);
     }
 
-    private async Task<List<ExecutionEvent>> ExecuteCommandAsync(string command, int timeoutSeconds = 30)
+    private async Task<List<ExecuteEvent>> ExecuteCommandAsync(string command, int timeoutSeconds = 30)
     {
-        using var httpClient = new HttpClient();
-        httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds + 10);
+        var request = new ExecuteRequest { Command = command, TimeoutSeconds = timeoutSeconds };
+        using var call = _client.Execute(request, deadline: DateTime.UtcNow.AddSeconds(timeoutSeconds + 10));
 
-        var request = new ExecuteCommand { Command = command, TimeoutSeconds = timeoutSeconds };
-        var response = await httpClient.PostAsJsonAsync($"{_fixture.ServerUrl}/api/execute", request);
-        response.EnsureSuccessStatusCode();
-
-        var events = new List<ExecutionEvent>();
-        using var stream = await response.Content.ReadAsStreamAsync();
-        using var reader = new StreamReader(stream);
-
-        string? line;
-        while ((line = await reader.ReadLineAsync()) != null)
+        var events = new List<ExecuteEvent>();
+        await foreach (var evt in call.ResponseStream.ReadAllAsync())
         {
-            if (line.StartsWith("data: "))
-            {
-                var json = line["data: ".Length..];
-                var evt = JsonSerializer.Deserialize<ExecutionEvent>(json, _jsonOptions);
-                if (evt != null)
-                {
-                    events.Add(evt);
-                    if (evt is CompletedEvent)
-                    {
-                        break;
-                    }
-                }
-            }
+            events.Add(evt);
         }
 
         return events;
     }
 
-    private async Task<List<ExecutionEvent>> ReconnectAsync(int pid, int timeoutSeconds = 30)
+    private async Task<List<ExecuteEvent>> ReconnectAsync(int pid, int timeoutSeconds = 30)
     {
-        using var httpClient = new HttpClient();
-        httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        var request = new ReconnectProcessRequest { Pid = pid };
+        using var call = _client.ReconnectProcess(request, deadline: DateTime.UtcNow.AddSeconds(timeoutSeconds));
 
-        var response = await httpClient.GetAsync(
-            $"{_fixture.ServerUrl}/api/processes/{pid}/reconnect",
-            HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
-
-        var events = new List<ExecutionEvent>();
-        using var stream = await response.Content.ReadAsStreamAsync();
-        using var reader = new StreamReader(stream);
-
-        string? line;
-        while ((line = await reader.ReadLineAsync()) != null)
+        var events = new List<ExecuteEvent>();
+        await foreach (var evt in call.ResponseStream.ReadAllAsync())
         {
-            if (line.StartsWith("data: "))
-            {
-                var json = line["data: ".Length..];
-                var evt = JsonSerializer.Deserialize<ExecutionEvent>(json, _jsonOptions);
-                if (evt != null)
-                {
-                    events.Add(evt);
-                    if (evt is CompletedEvent)
-                    {
-                        break;
-                    }
-                }
-            }
+            events.Add(evt);
         }
 
         return events;
     }
 
-    private async Task<List<TrackedProcessInfo>> ListProcessesAsync()
+    private async Task<ListProcessesResponse> ListProcessesAsync()
     {
-        using var httpClient = new HttpClient();
-        var response = await httpClient.GetAsync($"{_fixture.ServerUrl}/api/processes");
-        response.EnsureSuccessStatusCode();
-
-        return await response.Content.ReadFromJsonAsync<List<TrackedProcessInfo>>(_jsonOptions)
-               ?? [];
+        return await _client.ListProcessesAsync(new ListProcessesRequest());
     }
 
-    private async Task<bool> KillProcessAsync(int pid)
+    private async Task<KillProcessResponse> KillProcessAsync(int pid)
     {
-        using var httpClient = new HttpClient();
-        var response = await httpClient.DeleteAsync($"{_fixture.ServerUrl}/api/processes/{pid}");
-        return response.IsSuccessStatusCode;
+        return await _client.KillProcessAsync(new KillProcessRequest { Pid = pid });
     }
 
     [Fact]
@@ -113,14 +57,13 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("echo 'Hello, World!'");
 
-        var outputEvents = events.OfType<OutputEvent>().ToList();
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var outputEvents = events.Where(e => e.EventType == "output").ToList();
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.NotEmpty(outputEvents);
         Assert.Contains(outputEvents, e => e.Data.Contains("Hello, World!"));
         Assert.True(completedEvent.Pid > 0);
         Assert.Equal(0, completedEvent.ExitCode);
-        Assert.False(completedEvent.TimedOut);
     }
 
     [Fact]
@@ -128,11 +71,11 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("echo 'Line 1'; sleep 1; echo 'Line 2'; sleep 1; echo 'Line 3'");
 
-        var outputLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stdout)
+        var outputLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stdout")
             .Select(e => e.Data)
             .ToList();
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.Equal(0, completedEvent.ExitCode);
         Assert.Contains(outputLines, l => l.Contains("Line 1"));
@@ -145,8 +88,8 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("echo 'This is an error' >&2");
 
-        var errorLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stderr)
+        var errorLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stderr")
             .Select(e => e.Data)
             .ToList();
 
@@ -158,10 +101,9 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("exit 42");
 
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.Equal(42, completedEvent.ExitCode);
-        Assert.False(completedEvent.TimedOut);
     }
 
     [Fact]
@@ -185,8 +127,8 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("echo 'Error 1' >&2; sleep 1; echo 'Error 2' >&2; sleep 1; echo 'Error 3' >&2");
 
-        var errorLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stderr)
+        var errorLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stderr")
             .Select(e => e.Data)
             .ToList();
 
@@ -200,12 +142,12 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("echo 'stdout message'; echo 'stderr message' >&2");
 
-        var stdoutLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stdout)
+        var stdoutLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stdout")
             .Select(e => e.Data)
             .ToList();
-        var stderrLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stderr)
+        var stderrLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stderr")
             .Select(e => e.Data)
             .ToList();
 
@@ -218,13 +160,12 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("echo testmarker123");
 
-        var outputEvent = events.OfType<OutputEvent>().FirstOrDefault(e => e.Data.Contains("testmarker123"));
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var outputEvent = events.FirstOrDefault(e => e.EventType == "output" && e.Data.Contains("testmarker123"));
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.NotNull(outputEvent);
-        Assert.NotNull(completedEvent);
         Assert.Equal(completedEvent.Pid, outputEvent!.Pid);
-        Assert.Equal(OutputStreamType.Stdout, outputEvent.Stream);
+        Assert.Equal("stdout", outputEvent.Stream);
     }
 
     [Fact]
@@ -232,11 +173,10 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("exit 7");
 
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.True(completedEvent.Pid > 0);
         Assert.Equal(7, completedEvent.ExitCode);
-        Assert.False(completedEvent.TimedOut);
     }
 
     [Fact]
@@ -244,11 +184,11 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("for i in $(seq 1 50); do echo \"Line $i\"; sleep 0.01; done");
 
-        var outputLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stdout)
+        var outputLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stdout")
             .Select(e => e.Data)
             .ToList();
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.Equal(0, completedEvent.ExitCode);
         Assert.Contains(outputLines, l => l.Contains("Line 1"));
@@ -261,7 +201,7 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("");
 
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.Equal(0, completedEvent.ExitCode);
     }
@@ -271,8 +211,8 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("TEST_VAR=hello; echo $TEST_VAR");
 
-        var outputLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stdout)
+        var outputLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stdout")
             .Select(e => e.Data)
             .ToList();
 
@@ -284,8 +224,8 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("echo hello world | grep world");
 
-        var outputLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stdout)
+        var outputLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stdout")
             .Select(e => e.Data)
             .ToList();
 
@@ -297,11 +237,11 @@ public class ExecutionTests : IClassFixture<ServerFixture>
     {
         var events = await ExecuteCommandAsync("(sleep 1 &); echo 'done'");
 
-        var outputLines = events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stdout)
+        var outputLines = events
+            .Where(e => e.EventType == "output" && e.Stream == "stdout")
             .Select(e => e.Data)
             .ToList();
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var completedEvent = events.Single(e => e.EventType == "exit");
 
         Assert.Equal(0, completedEvent.ExitCode);
         Assert.Contains(outputLines, l => l.Contains("done"));
@@ -315,16 +255,15 @@ public class ExecutionTests : IClassFixture<ServerFixture>
             "echo 'before timeout'; sleep 10; echo 'after timeout'",
             timeoutSeconds: 3);
 
-        var outputEvents = events.OfType<OutputEvent>().ToList();
-        var completedEvent = events.OfType<CompletedEvent>().Single();
+        var outputEvents = events.Where(e => e.EventType == "output").ToList();
+        var timeoutEvent = events.Single(e => e.EventType == "timeout");
 
         // Should have received output before timeout
         Assert.Contains(outputEvents, e => e.Data.Contains("before timeout"));
 
-        // Should report timeout with a valid PID for reconnect
-        Assert.True(completedEvent.TimedOut);
-        Assert.True(completedEvent.Pid > 0);
-        Assert.Equal(-1, completedEvent.ExitCode);
+        // Should report timeout with a valid PID
+        Assert.True(timeoutEvent.Pid > 0);
+        Assert.Equal(-1, timeoutEvent.ExitCode);
     }
 
     [Fact]
@@ -335,19 +274,18 @@ public class ExecutionTests : IClassFixture<ServerFixture>
             "echo 'tracked process'; sleep 30",
             timeoutSeconds: 2);
 
-        var completedEvent = events.OfType<CompletedEvent>().Single();
-        Assert.True(completedEvent.TimedOut);
+        var timeoutEvent = events.Single(e => e.EventType == "timeout");
 
         // The process should appear in the tracked processes list
         var trackedProcesses = await ListProcessesAsync();
-        var tracked = trackedProcesses.FirstOrDefault(p => p.Pid == completedEvent.Pid);
+        var tracked = trackedProcesses.Processes.FirstOrDefault(p => p.Pid == timeoutEvent.Pid);
 
         Assert.NotNull(tracked);
         Assert.Contains("tracked process", tracked!.Command);
-        Assert.False(tracked.IsCompleted);
+        Assert.True(tracked.IsRunning);
 
         // Clean up - kill the process
-        await KillProcessAsync(completedEvent.Pid);
+        await KillProcessAsync(timeoutEvent.Pid);
     }
 
     [Fact]
@@ -358,10 +296,8 @@ public class ExecutionTests : IClassFixture<ServerFixture>
             "for i in $(seq 1 8); do echo \"tick $i\"; sleep 1; done",
             timeoutSeconds: 3);
 
-        var completedEvent = events.OfType<CompletedEvent>().Single();
-        Assert.True(completedEvent.TimedOut);
-
-        var pid = completedEvent.Pid;
+        var timeoutEvent = events.Single(e => e.EventType == "timeout");
+        var pid = timeoutEvent.Pid;
 
         // Wait a moment for more output to be buffered
         await Task.Delay(2000);
@@ -369,18 +305,18 @@ public class ExecutionTests : IClassFixture<ServerFixture>
         // Reconnect to get remaining output
         var reconnectEvents = await ReconnectAsync(pid, timeoutSeconds: 15);
 
-        var reconnectOutput = reconnectEvents.OfType<OutputEvent>()
+        var reconnectOutput = reconnectEvents
+            .Where(e => e.EventType == "output")
             .Select(e => e.Data)
             .ToList();
-        var reconnectCompleted = reconnectEvents.OfType<CompletedEvent>().SingleOrDefault();
+        var reconnectCompleted = reconnectEvents.SingleOrDefault(e => e.EventType == "exit");
 
         // Should have output lines that came after the timeout
         Assert.NotEmpty(reconnectOutput);
 
         // The process should eventually complete
         Assert.NotNull(reconnectCompleted);
-        Assert.False(reconnectCompleted!.TimedOut);
-        Assert.Equal(0, reconnectCompleted.ExitCode);
+        Assert.Equal(0, reconnectCompleted!.ExitCode);
     }
 
     [Fact]
@@ -391,10 +327,8 @@ public class ExecutionTests : IClassFixture<ServerFixture>
             "echo 'line A'; sleep 1; echo 'line B'; sleep 1; echo 'line C'; sleep 1; echo 'line D'",
             timeoutSeconds: 2);
 
-        var completedEvent = events.OfType<CompletedEvent>().Single();
-        Assert.True(completedEvent.TimedOut);
-
-        var pid = completedEvent.Pid;
+        var timeoutEvent = events.Single(e => e.EventType == "timeout");
+        var pid = timeoutEvent.Pid;
 
         // Wait for the process to fully complete
         await Task.Delay(6000);
@@ -402,10 +336,11 @@ public class ExecutionTests : IClassFixture<ServerFixture>
         // Reconnect after the process has already completed
         var reconnectEvents = await ReconnectAsync(pid, timeoutSeconds: 10);
 
-        var reconnectOutput = reconnectEvents.OfType<OutputEvent>()
+        var reconnectOutput = reconnectEvents
+            .Where(e => e.EventType == "output")
             .Select(e => e.Data)
             .ToList();
-        var reconnectCompleted = reconnectEvents.OfType<CompletedEvent>().SingleOrDefault();
+        var reconnectCompleted = reconnectEvents.SingleOrDefault(e => e.EventType == "exit");
 
         // Should have received the remaining output from the buffer
         Assert.NotEmpty(reconnectOutput);
@@ -413,7 +348,6 @@ public class ExecutionTests : IClassFixture<ServerFixture>
         // Should have the real completion event
         Assert.NotNull(reconnectCompleted);
         Assert.Equal(0, reconnectCompleted!.ExitCode);
-        Assert.False(reconnectCompleted.TimedOut);
     }
 
     [Fact]
@@ -424,52 +358,52 @@ public class ExecutionTests : IClassFixture<ServerFixture>
             "echo 'will be killed'; sleep 300",
             timeoutSeconds: 2);
 
-        var completedEvent = events.OfType<CompletedEvent>().Single();
-        Assert.True(completedEvent.TimedOut);
-
-        var pid = completedEvent.Pid;
+        var timeoutEvent = events.Single(e => e.EventType == "timeout");
+        var pid = timeoutEvent.Pid;
 
         // Verify it's tracked
         var tracked = await ListProcessesAsync();
-        Assert.Contains(tracked, p => p.Pid == pid);
+        Assert.Contains(tracked.Processes, p => p.Pid == pid);
 
         // Kill it
-        var killed = await KillProcessAsync(pid);
-        Assert.True(killed);
+        var killResponse = await KillProcessAsync(pid);
+        Assert.True(killResponse.Success);
 
         // Should no longer be in the tracked list
         await Task.Delay(1000);
         tracked = await ListProcessesAsync();
-        Assert.DoesNotContain(tracked, p => p.Pid == pid);
+        Assert.DoesNotContain(tracked.Processes, p => p.Pid == pid);
     }
 
     [Fact]
-    public async Task KillProcess_UnknownPid_ReturnsNotFound()
+    public async Task KillProcess_UnknownPid_ReturnsFalse()
     {
-        using var httpClient = new HttpClient();
-        var response = await httpClient.DeleteAsync($"{_fixture.ServerUrl}/api/processes/99999");
-        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+        var response = await KillProcessAsync(99999);
+        Assert.False(response.Success);
     }
 
     [Fact]
-    public async Task ReconnectProcess_UnknownPid_ReturnsNotFound()
+    public async Task ReconnectProcess_UnknownPid_ThrowsNotFound()
     {
-        using var httpClient = new HttpClient();
-        var response = await httpClient.GetAsync($"{_fixture.ServerUrl}/api/processes/99999/reconnect");
-        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+        var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+        {
+            await ReconnectAsync(99999);
+        });
+
+        Assert.Equal(StatusCode.NotFound, ex.StatusCode);
     }
 
     private async Task<(int Pid, int ExitCode, string Stdout, string Stderr)> CollectResultAsync(string command)
     {
         var events = await ExecuteCommandAsync(command);
 
-        var stdout = string.Join('\n', events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stdout)
+        var stdout = string.Join('\n', events
+            .Where(e => e.EventType == "output" && e.Stream == "stdout")
             .Select(e => e.Data));
-        var stderr = string.Join('\n', events.OfType<OutputEvent>()
-            .Where(e => e.Stream == OutputStreamType.Stderr)
+        var stderr = string.Join('\n', events
+            .Where(e => e.EventType == "output" && e.Stream == "stderr")
             .Select(e => e.Data));
-        var completedEvent = events.OfType<CompletedEvent>().SingleOrDefault();
+        var completedEvent = events.SingleOrDefault(e => e.EventType == "exit");
 
         return (completedEvent?.Pid ?? 0, completedEvent?.ExitCode ?? -1, stdout, stderr);
     }

@@ -35,6 +35,7 @@ message ExecuteEvent {
   string data = 2;           // The event payload (output line, exit code, error message)
   int32 pid = 3;             // Process ID (set on first event)
   optional int32 exit_code = 4;  // Set on "exit" event
+  optional string stream = 5;   // "stdout" or "stderr" (set on "output" events)
 }
 
 message ReconnectProcessRequest {

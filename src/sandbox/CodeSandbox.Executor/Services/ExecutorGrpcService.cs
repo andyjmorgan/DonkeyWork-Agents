@@ -139,7 +139,8 @@ public class ExecutorGrpcService : ExecutorService.ExecutorServiceBase
             {
                 EventType = "output",
                 Data = output.Data,
-                Pid = output.Pid
+                Pid = output.Pid,
+                Stream = output.Stream == OutputStreamType.Stderr ? "stderr" : "stdout",
             },
             CompletedEvent completed => new Contracts.Grpc.Executor.ExecuteEvent
             {
