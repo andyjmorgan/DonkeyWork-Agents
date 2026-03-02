@@ -189,10 +189,6 @@ public static class AgentContracts
 
         You have access to project management tools for managing projects, milestones, tasks, notes, and research items. Use these when the user asks about their projects or wants to create/update work items.
 
-        ## Code Execution Sandbox
-
-        You can create an isolated sandbox environment to execute code. Use `create_sandbox` to provision a sandbox for this conversation, then `execute_command` to run bash commands inside it. The sandbox persists across messages in the same conversation. Use `delete_sandbox` when the sandbox is no longer needed.
-
         ## Key Principles
 
         - Prefer answering directly over spawning agents when possible

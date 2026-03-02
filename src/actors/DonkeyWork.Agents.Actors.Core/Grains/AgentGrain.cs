@@ -33,6 +33,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private readonly ModelPipeline _pipeline;
     private readonly AgentToolRegistry _toolRegistry;
     private readonly AnthropicOptions _anthropicOptions;
+    private readonly SandboxOptions _sandboxOptions;
     private readonly IExternalApiKeyService _apiKeyService;
     private readonly IMcpServerConfigurationService _mcpServerConfigService;
     private readonly IPersistentState<AgentState> _state;
@@ -65,6 +66,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         ModelPipeline pipeline,
         AgentToolRegistry toolRegistry,
         IOptions<AnthropicOptions> anthropicOptions,
+        IOptions<SandboxOptions> sandboxOptions,
         IExternalApiKeyService apiKeyService,
         IMcpServerConfigurationService mcpServerConfigService,
         [PersistentState("agent", Actors.Contracts.StorageProviders.SeaweedFs)] IPersistentState<AgentState> state)
@@ -75,6 +77,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _pipeline = pipeline;
         _toolRegistry = toolRegistry;
         _anthropicOptions = anthropicOptions.Value;
+        _sandboxOptions = sandboxOptions.Value;
         _apiKeyService = apiKeyService;
         _mcpServerConfigService = mcpServerConfigService;
         _state = state;
@@ -179,10 +182,16 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         if (string.IsNullOrEmpty(apiKey))
             throw new InvalidOperationException("No Anthropic API key configured. Add one in Settings > API Keys.");
 
+        // Append sandbox documentation when sandbox tools are in scope
+        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
+        var systemPrompt = hasSandbox
+            ? contract.SystemPrompt + SandboxTools.SystemPromptFragment
+            : contract.SystemPrompt;
+
         var context = new ModelMiddlewareContext
         {
             Messages = messages,
-            SystemPrompt = contract.SystemPrompt,
+            SystemPrompt = systemPrompt,
             Tools = tools,
             ProviderOptions = new ProviderOptions
             {
@@ -363,6 +372,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _grainContext.Observer = observer;
         _grainContext.GrainFactory = GrainFactory;
         _grainContext.Logger = _logger;
+        _grainContext.UserId = _identityContext.UserId.ToString();
+        _grainContext.SeaweedFsBaseUrl = _sandboxOptions.SeaweedFsBaseUrl;
         _grainContext.ProgressCallback = breadcrumb =>
             Emit(new StreamProgressEvent(_grainContext.GrainKey, breadcrumb));
     }
