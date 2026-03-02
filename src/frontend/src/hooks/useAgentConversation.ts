@@ -10,6 +10,7 @@ import type {
   AgentCompleteReason,
   ChatMessage,
   WebSearchResult,
+  McpServerStatus,
 } from "@/types/agent-chat";
 import type { InternalMessage, GetStateResponse, TrackedAgent } from "@/types/internal-messages";
 
@@ -22,6 +23,7 @@ export function useAgentConversation(initialConversationId?: string) {
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null);
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [mcpServerStatuses, setMcpServerStatuses] = useState<McpServerStatus[]>([]);
 
   const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null);
@@ -224,6 +226,21 @@ export function useAgentConversation(initialConversationId?: string) {
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
         currentAssistantIdRef.current = null;
       }
+      return;
+    }
+
+    if (eventType === "mcp_server_status") {
+      const serverName = (data.serverName as string) ?? "";
+      setMcpServerStatuses((prev) => {
+        const existing = prev.filter((s) => s.name !== serverName);
+        return [...existing, {
+          name: serverName,
+          success: (data.success as boolean) ?? false,
+          durationMs: (data.durationMs as number) ?? 0,
+          toolCount: (data.toolCount as number) ?? 0,
+          error: (data.error as string) ?? undefined,
+        }];
+      });
       return;
     }
 
@@ -779,6 +796,7 @@ export function useAgentConversation(initialConversationId?: string) {
     setPendingCount(0);
     setIsConnected(false);
     setIsReconnecting(false);
+    setMcpServerStatuses([]);
     agentGroupIndexRef.current = new Map();
     currentAssistantIdRef.current = null;
     nextIdRef.current = 1;
@@ -795,6 +813,7 @@ export function useAgentConversation(initialConversationId?: string) {
     conversationId,
     isConnected,
     isReconnecting,
+    mcpServerStatuses,
     sendMessage,
     sendRpc,
     cancel,

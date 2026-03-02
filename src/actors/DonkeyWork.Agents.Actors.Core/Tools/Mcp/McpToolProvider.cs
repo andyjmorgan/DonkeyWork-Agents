@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Core.Providers;
 using DonkeyWork.Agents.Common.Contracts.Enums;
@@ -14,50 +16,44 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 /// </summary>
 internal sealed class McpToolProvider : IAsyncDisposable
 {
+    private static readonly TimeSpan PerServerTimeout = TimeSpan.FromSeconds(30);
+
     private readonly List<McpClient> _clients = [];
     private readonly Dictionary<string, McpClientTool> _toolsByName = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _toolServerNames = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<InternalToolDefinition>? _cachedDefinitions;
 
     /// <summary>
-    /// Connects to each MCP server, discovers tools, and caches them.
+    /// Connects to each MCP server in parallel, discovers tools, and caches them.
     /// </summary>
     public async Task InitializeAsync(
         IReadOnlyList<McpConnectionConfigV1> configs,
         ILogger logger,
+        Action<string, bool, long, int, string?>? onServerStatus,
         CancellationToken ct)
     {
-        foreach (var config in configs)
+        var results = new ConcurrentBag<(McpClient Client, string ServerName, IList<McpClientTool> Tools)>();
+
+        var tasks = configs.Select(config => ConnectServerAsync(config, logger, onServerStatus, results, ct));
+        await Task.WhenAll(tasks);
+
+        // Merge results into shared dictionaries (single-threaded after WhenAll)
+        foreach (var (client, serverName, tools) in results)
         {
-            try
+            _clients.Add(client);
+            foreach (var tool in tools)
             {
-                var client = await ConnectAsync(config, logger, ct);
-                _clients.Add(client);
-
-                var tools = await client.ListToolsAsync(cancellationToken: ct);
-                foreach (var tool in tools)
+                if (_toolsByName.ContainsKey(tool.Name))
                 {
-                    if (_toolsByName.ContainsKey(tool.Name))
-                    {
-                        logger.LogWarning(
-                            "Duplicate MCP tool name '{ToolName}' from server '{ServerName}', " +
-                            "already registered from '{ExistingServer}'. Skipping.",
-                            tool.Name, config.Name, _toolServerNames[tool.Name]);
-                        continue;
-                    }
-
-                    _toolsByName[tool.Name] = tool;
-                    _toolServerNames[tool.Name] = config.Name;
+                    logger.LogWarning(
+                        "Duplicate MCP tool name '{ToolName}' from server '{ServerName}', " +
+                        "already registered from '{ExistingServer}'. Skipping.",
+                        tool.Name, serverName, _toolServerNames[tool.Name]);
+                    continue;
                 }
 
-                logger.LogInformation(
-                    "Connected to MCP server '{ServerName}' at {Endpoint}, discovered {ToolCount} tools",
-                    config.Name, config.Endpoint, tools.Count);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to connect to MCP server '{ServerName}' at {Endpoint}, skipping",
-                    config.Name, config.Endpoint);
+                _toolsByName[tool.Name] = tool;
+                _toolServerNames[tool.Name] = serverName;
             }
         }
     }
@@ -159,6 +155,51 @@ internal sealed class McpToolProvider : IAsyncDisposable
         _toolsByName.Clear();
         _toolServerNames.Clear();
         _cachedDefinitions = null;
+    }
+
+    private static async Task ConnectServerAsync(
+        McpConnectionConfigV1 config,
+        ILogger logger,
+        Action<string, bool, long, int, string?>? onServerStatus,
+        ConcurrentBag<(McpClient, string, IList<McpClientTool>)> results,
+        CancellationToken ct)
+    {
+        var sw = Stopwatch.StartNew();
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(PerServerTimeout);
+
+        try
+        {
+            var client = await ConnectAsync(config, logger, timeoutCts.Token);
+            var tools = await client.ListToolsAsync(cancellationToken: timeoutCts.Token);
+            sw.Stop();
+
+            results.Add((client, config.Name, tools));
+
+            logger.LogInformation(
+                "Connected to MCP server '{ServerName}' at {Endpoint}, discovered {ToolCount} tools in {ElapsedMs}ms",
+                config.Name, config.Endpoint, tools.Count, sw.ElapsedMilliseconds);
+
+            onServerStatus?.Invoke(config.Name, true, sw.ElapsedMilliseconds, tools.Count, null);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            sw.Stop();
+            logger.LogError(
+                "Timed out connecting to MCP server '{ServerName}' at {Endpoint} after {ElapsedMs}ms",
+                config.Name, config.Endpoint, sw.ElapsedMilliseconds);
+
+            onServerStatus?.Invoke(config.Name, false, sw.ElapsedMilliseconds, 0, "Connection timed out");
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            logger.LogError(ex,
+                "Failed to connect to MCP server '{ServerName}' at {Endpoint} after {ElapsedMs}ms, skipping",
+                config.Name, config.Endpoint, sw.ElapsedMilliseconds);
+
+            onServerStatus?.Invoke(config.Name, false, sw.ElapsedMilliseconds, 0, ex.Message);
+        }
     }
 
     private static async Task<McpClient> ConnectAsync(

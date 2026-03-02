@@ -79,6 +79,25 @@ public class StreamEventTests
         Assert.Equal("cancelled", evt.EventType);
     }
 
+    [Fact]
+    public void StreamMcpServerStatusEvent_EventType_ReturnsMcpServerStatus()
+    {
+        var evt = new StreamMcpServerStatusEvent(TestAgentKey, "my-server", true, 142, 8, null);
+        Assert.Equal("mcp_server_status", evt.EventType);
+    }
+
+    [Fact]
+    public void StreamMcpServerStatusEvent_PreservesAllProperties()
+    {
+        var evt = new StreamMcpServerStatusEvent(TestAgentKey, "test-server", false, 5000, 0, "Connection timed out");
+
+        Assert.Equal("test-server", evt.ServerName);
+        Assert.False(evt.Success);
+        Assert.Equal(5000, evt.DurationMs);
+        Assert.Equal(0, evt.ToolCount);
+        Assert.Equal("Connection timed out", evt.Error);
+    }
+
     #endregion
 
     #region AgentKey Propagation Tests
@@ -105,6 +124,7 @@ public class StreamEventTests
             new StreamTurnEndEvent(TestAgentKey),
             new StreamQueueStatusEvent(TestAgentKey, 0, false),
             new StreamCancelledEvent(TestAgentKey, "Both"),
+            new StreamMcpServerStatusEvent(TestAgentKey, "server", true, 100, 5, null),
         ];
 
         foreach (var evt in events)

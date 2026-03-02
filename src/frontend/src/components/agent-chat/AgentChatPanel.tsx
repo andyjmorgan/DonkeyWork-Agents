@@ -10,8 +10,9 @@ import { PulseDots } from "@/components/agent-chat/PulseDots";
 import { AgentCardGrid, type AgentEntry } from "@/components/agent-chat/AgentCardGrid";
 import { AgentDetailModal } from "@/components/agent-chat/AgentDetailModal";
 import { AgentSidePanel } from "@/components/agent-chat/AgentSidePanel";
+import { McpSidePanel } from "@/components/agent-chat/McpSidePanel";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "@/components/agent-chat/agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Loader2 } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2 } from "lucide-react";
 
 function MessageBubble({
   message,
@@ -135,6 +136,7 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
     resetConversation,
     isConnected,
     isReconnecting,
+    mcpServerStatuses,
   } = useAgentConversation(initialConversationId);
 
   const swarmKey = conversationId ? `swarm:${conversationId}` : null;
@@ -143,6 +145,10 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
+  const [mcpPanelOpen, setMcpPanelOpen] = useState(false);
+
+  const mcpConnectedCount = mcpServerStatuses.filter((s) => s.success).length;
+  const mcpHasFailures = mcpServerStatuses.some((s) => !s.success);
 
   const agentTree = useMemo(() => extractAgentTree(messages), [messages]);
   const agentTotal = useMemo(() => countAll(agentTree), [agentTree]);
@@ -243,11 +249,25 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
             )}
           </div>
           <div className="flex items-center gap-1">
+            {mcpServerStatuses.length > 0 && !mcpPanelOpen && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setMcpPanelOpen(true); setSidePanelOpen(false); }}
+                className="text-muted-foreground hover:text-foreground gap-1.5"
+              >
+                <Plug className="w-4 h-4" />
+                <span className="text-xs">{mcpConnectedCount}</span>
+                {mcpHasFailures && (
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-amber-400" />
+                )}
+              </Button>
+            )}
             {agentTotal > 0 && !sidePanelOpen && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setSidePanelOpen(true)}
+                onClick={() => { setSidePanelOpen(true); setMcpPanelOpen(false); }}
                 className="text-muted-foreground hover:text-foreground gap-1.5"
               >
                 <PanelRightOpen className="w-4 h-4" />
@@ -362,12 +382,17 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
 
     </div>
 
-      {/* Side panel */}
+      {/* Side panels (mutually exclusive) */}
       <AgentSidePanel
         messages={messages}
         isOpen={sidePanelOpen}
         onToggle={() => setSidePanelOpen((v) => !v)}
         onAgentClick={handleSidePanelAgentClick}
+      />
+      <McpSidePanel
+        servers={mcpServerStatuses}
+        isOpen={mcpPanelOpen}
+        onToggle={() => setMcpPanelOpen((v) => !v)}
       />
 
       {modalProps && (

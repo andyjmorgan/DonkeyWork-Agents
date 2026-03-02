@@ -139,6 +139,38 @@ public class EventSerializationTests
 
     #endregion
 
+    #region StreamMcpServerStatusEvent Tests
+
+    [Fact]
+    public void Serialize_StreamMcpServerStatusEvent_Success_ContainsAllFields()
+    {
+        var evt = new StreamMcpServerStatusEvent("agent-1", "my-mcp-server", true, 142, 8, null);
+        var json = Serialize(evt, AgentJsonContext.Default.StreamMcpServerStatusEvent);
+
+        Assert.Contains("\"eventType\"", json);
+        Assert.Contains("\"mcp_server_status\"", json);
+        Assert.Contains("\"serverName\"", json);
+        Assert.Contains("my-mcp-server", json);
+        Assert.Contains("\"success\"", json);
+        Assert.Contains("\"durationMs\"", json);
+        Assert.Contains("\"toolCount\"", json);
+        Assert.Contains("142", json);
+        Assert.Contains("8", json);
+    }
+
+    [Fact]
+    public void Serialize_StreamMcpServerStatusEvent_Failure_ContainsError()
+    {
+        var evt = new StreamMcpServerStatusEvent("agent-1", "broken-server", false, 30000, 0, "Connection timed out");
+        var json = Serialize(evt, AgentJsonContext.Default.StreamMcpServerStatusEvent);
+
+        Assert.Contains("\"error\"", json);
+        Assert.Contains("Connection timed out", json);
+        Assert.Contains("\"success\":false", json.Replace(" ", ""));
+    }
+
+    #endregion
+
     #region All Event Types Tests
 
     [Fact]
@@ -191,6 +223,7 @@ public class EventSerializationTests
             (new StreamTurnEndEvent("a"), AgentJsonContext.Default.StreamTurnEndEvent),
             (new StreamQueueStatusEvent("a", 0, false), AgentJsonContext.Default.StreamQueueStatusEvent),
             (new StreamCancelledEvent("a", "active"), AgentJsonContext.Default.StreamCancelledEvent),
+            (new StreamMcpServerStatusEvent("a", "server", true, 100, 5, null), AgentJsonContext.Default.StreamMcpServerStatusEvent),
         ];
     }
 

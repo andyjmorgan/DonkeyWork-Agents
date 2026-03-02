@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -34,6 +35,7 @@ public sealed class SeaweedFsGrainStorage : IGrainStorage
 
     public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
+        var sw = Stopwatch.StartNew();
         var path = BuildPath(stateName, grainId);
         var client = _httpClientFactory.CreateClient(_name);
 
@@ -43,7 +45,9 @@ public sealed class SeaweedFsGrainStorage : IGrainStorage
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogDebug("No state found at {Path} for grain {GrainId}, returning default", path, grainId);
+                sw.Stop();
+                _logger.LogDebug("No state found at {Path} for grain {GrainId}, returning default ({ElapsedMs}ms)",
+                    path, grainId, sw.ElapsedMilliseconds);
                 grainState.State = Activator.CreateInstance<T>();
                 grainState.RecordExists = false;
                 grainState.ETag = null;
@@ -56,8 +60,10 @@ public sealed class SeaweedFsGrainStorage : IGrainStorage
             grainState.State = JsonSerializer.Deserialize<T>(json, _jsonOptions)!;
             grainState.RecordExists = true;
             grainState.ETag = response.Headers.ETag?.Tag;
+            sw.Stop();
 
-            _logger.LogDebug("Read state from {Path} for grain {GrainId}", path, grainId);
+            _logger.LogInformation("Hydrated grain state from {Path} for {GrainId} ({ElapsedMs}ms, exists: {Exists})",
+                path, grainId, sw.ElapsedMilliseconds, grainState.RecordExists);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -69,6 +75,7 @@ public sealed class SeaweedFsGrainStorage : IGrainStorage
 
     public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
     {
+        var sw = Stopwatch.StartNew();
         var path = BuildPath(stateName, grainId);
         var client = _httpClientFactory.CreateClient(_name);
 
@@ -80,8 +87,10 @@ public sealed class SeaweedFsGrainStorage : IGrainStorage
 
         grainState.RecordExists = true;
         grainState.ETag = response.Headers.ETag?.Tag;
+        sw.Stop();
 
-        _logger.LogDebug("Wrote state to {Path} for grain {GrainId}", path, grainId);
+        _logger.LogInformation("Persisted grain state to {Path} for {GrainId} ({ElapsedMs}ms)",
+            path, grainId, sw.ElapsedMilliseconds);
     }
 
     public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)

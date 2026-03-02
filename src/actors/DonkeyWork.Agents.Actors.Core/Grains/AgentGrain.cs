@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
@@ -167,7 +168,10 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             if (mcpConfigs.Count > 0)
             {
                 _mcpToolProvider = new McpToolProvider();
-                await _mcpToolProvider.InitializeAsync(mcpConfigs, _logger, ct);
+                await _mcpToolProvider.InitializeAsync(mcpConfigs, _logger, (name, success, ms, toolCount, error) =>
+                {
+                    Emit(new StreamMcpServerStatusEvent(_grainContext.GrainKey, name, success, ms, toolCount, error));
+                }, ct);
             }
         }
 
@@ -352,8 +356,19 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     #region Lifecycle
 
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(
+            "Grain activated {GrainType} {GrainKey} (messages: {MessageCount}, recordExists: {RecordExists})",
+            nameof(AgentGrain), this.GetPrimaryKeyString(),
+            _state.State.Messages.Count, _state.RecordExists);
+        return base.OnActivateAsync(cancellationToken);
+    }
+
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
+        var sw = Stopwatch.StartNew();
+
         if (_mcpToolProvider is not null)
         {
             await _mcpToolProvider.DisposeAsync();
@@ -361,6 +376,12 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         }
 
         await base.OnDeactivateAsync(reason, cancellationToken);
+        sw.Stop();
+
+        _logger.LogInformation(
+            "Grain deactivated {GrainType} {GrainKey} (reason: {Reason}, cleanup: {CleanupMs}ms)",
+            nameof(AgentGrain), this.GetPrimaryKeyString(),
+            reason.ReasonCode, sw.ElapsedMilliseconds);
     }
 
     #endregion

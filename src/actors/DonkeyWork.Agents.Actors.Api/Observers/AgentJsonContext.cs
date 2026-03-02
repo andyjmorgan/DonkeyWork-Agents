@@ -27,4 +27,5 @@ namespace DonkeyWork.Agents.Actors.Api.Observers;
 [JsonSerializable(typeof(StreamTurnEndEvent))]
 [JsonSerializable(typeof(StreamQueueStatusEvent))]
 [JsonSerializable(typeof(StreamCancelledEvent))]
+[JsonSerializable(typeof(StreamMcpServerStatusEvent))]
 internal partial class AgentJsonContext : JsonSerializerContext;

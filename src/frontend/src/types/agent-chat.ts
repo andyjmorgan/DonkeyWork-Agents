@@ -38,6 +38,14 @@ export type ContentBox =
   | UsageBox
   | AgentGroupBox;
 
+export interface McpServerStatus {
+  name: string
+  success: boolean
+  durationMs: number
+  toolCount: number
+  error?: string
+}
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "progress";

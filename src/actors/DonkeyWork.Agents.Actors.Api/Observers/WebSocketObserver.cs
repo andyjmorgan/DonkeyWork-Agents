@@ -69,6 +69,7 @@ public sealed class WebSocketObserver : IAgentResponseObserver, IDisposable
             StreamTurnEndEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamTurnEndEvent),
             StreamQueueStatusEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamQueueStatusEvent),
             StreamCancelledEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamCancelledEvent),
+            StreamMcpServerStatusEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamMcpServerStatusEvent),
             _ => JsonSerializer.SerializeToUtf8Bytes(new { agentKey = evt.AgentKey, eventType = evt.EventType }),
         };
 
