@@ -1382,6 +1382,7 @@ export interface CreateMcpServerRequest {
 export interface UpdateMcpServerRequest {
   name: string
   description?: string
+  transportType: McpTransportType
   isEnabled?: boolean
   stdioConfiguration?: CreateMcpStdioConfigurationRequest
   httpConfiguration?: CreateMcpHttpConfigurationRequest

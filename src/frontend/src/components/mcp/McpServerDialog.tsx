@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Terminal, Globe } from 'lucide-react'
+import { Plus, Trash2, Terminal, Globe, Eye, EyeOff } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -83,6 +83,9 @@ export function McpServerDialog({
   // Header auth fields
   const [headers, setHeaders] = useState<HeaderConfig[]>([])
 
+  // Visibility toggles
+  const [revealedHeaders, setRevealedHeaders] = useState<Set<number>>(new Set())
+
   // Form state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -133,7 +136,7 @@ export function McpServerDialog({
             setHeaders(
               http.headerConfigurations.map((h) => ({
                 headerName: h.headerName,
-                headerValue: h.headerValue,
+                headerValue: h.headerValue || '',
               }))
             )
           }
@@ -165,6 +168,7 @@ export function McpServerDialog({
     setAuthorizationEndpoint('')
     setTokenEndpoint('')
     setHeaders([])
+    setRevealedHeaders(new Set())
     setError(null)
   }
 
@@ -178,6 +182,7 @@ export function McpServerDialog({
         const updateRequest: UpdateMcpServerRequest = {
           name,
           description: description || undefined,
+          transportType,
           isEnabled,
           ...(transportType === 'Stdio'
             ? {
@@ -316,6 +321,23 @@ export function McpServerDialog({
 
   const removeHeader = (index: number) => {
     setHeaders(headers.filter((_, i) => i !== index))
+    setRevealedHeaders((prev) => {
+      const next = new Set<number>()
+      for (const i of prev) {
+        if (i < index) next.add(i)
+        else if (i > index) next.add(i - 1)
+      }
+      return next
+    })
+  }
+
+  const toggleHeaderReveal = (index: number) => {
+    setRevealedHeaders((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
   }
 
   return (
@@ -661,8 +683,21 @@ export function McpServerDialog({
                               value={header.headerValue}
                               onChange={(e) => updateHeader(index, 'headerValue', e.target.value)}
                               className="flex-1"
-                              type="password"
+                              type={revealedHeaders.has(index) ? 'text' : 'password'}
                             />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleHeaderReveal(index)}
+                              tabIndex={-1}
+                            >
+                              {revealedHeaders.has(index) ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
                             <Button
                               type="button"
                               variant="ghost"

@@ -169,6 +169,11 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         entity.IsEnabled = request.IsEnabled;
         entity.UpdatedAt = now;
 
+        // Capture existing encrypted header values so we can preserve them if the update doesn't provide new values
+        var existingHeaderValues = entity.HttpConfiguration?.HeaderConfigurations
+            .ToDictionary(h => h.HeaderName, h => h.HeaderValueEncrypted, StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         // Remove old transport configurations
         if (entity.StdioConfiguration != null)
         {
@@ -236,12 +241,24 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             {
                 foreach (var headerConfig in request.HttpConfiguration.HeaderConfigurations)
                 {
+                    // Preserve existing encrypted value when the update doesn't provide a new one
+                    string encryptedValue;
+                    if (string.IsNullOrEmpty(headerConfig.HeaderValue)
+                        && existingHeaderValues.TryGetValue(headerConfig.HeaderName, out var existing))
+                    {
+                        encryptedValue = existing;
+                    }
+                    else
+                    {
+                        encryptedValue = Convert.ToBase64String(Encrypt(headerConfig.HeaderValue));
+                    }
+
                     var headerEntity = new McpHttpHeaderConfigurationEntity
                     {
                         Id = Guid.NewGuid(),
                         McpHttpConfigurationId = httpConfigId,
                         HeaderName = headerConfig.HeaderName,
-                        HeaderValueEncrypted = Convert.ToBase64String(Encrypt(headerConfig.HeaderValue))
+                        HeaderValueEncrypted = encryptedValue
                     };
                     _dbContext.McpHttpHeaderConfigurations.Add(headerEntity);
                 }
@@ -323,7 +340,8 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             OAuthConfiguration = entity.OAuthConfiguration == null ? null : MapOAuthConfiguration(entity.OAuthConfiguration),
             HeaderConfigurations = entity.HeaderConfigurations.Select(h => new McpHttpHeaderConfigurationV1
             {
-                HeaderName = h.HeaderName
+                HeaderName = h.HeaderName,
+                HeaderValue = Decrypt(Convert.FromBase64String(h.HeaderValueEncrypted))
             }).ToList()
         };
     }

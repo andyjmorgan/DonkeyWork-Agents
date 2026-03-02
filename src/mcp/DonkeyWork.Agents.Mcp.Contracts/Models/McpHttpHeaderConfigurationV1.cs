@@ -9,4 +9,7 @@ public sealed class McpHttpHeaderConfigurationV1
 {
     [JsonPropertyName("headerName")]
     public required string HeaderName { get; init; }
+
+    [JsonPropertyName("headerValue")]
+    public required string HeaderValue { get; init; }
 }
