@@ -115,36 +115,39 @@ public sealed class SandboxManagerClient
         var stderr = new StringBuilder();
         var exitCode = -1;
         var timedOut = false;
+        var pid = 0;
 
         await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
         {
             switch (evt.EventType)
             {
-                case "OutputEvent":
-                    // Data contains the output text; pid > 0 with stderr stream indicator
-                    // The Manager forwards the executor's stream type in the data field
-                    stdout.Append(evt.Data);
+                case "output":
+                    if (evt.HasStream && evt.Stream == "stderr")
+                        stderr.Append(evt.Data);
+                    else
+                        stdout.Append(evt.Data);
+                    if (evt.Pid > 0)
+                        pid = evt.Pid;
                     break;
 
-                case "StderrEvent":
-                    stderr.Append(evt.Data);
-                    break;
-
-                case "CompletedEvent":
                 case "exit":
                     if (evt.HasExitCode)
                         exitCode = evt.ExitCode;
+                    if (evt.Pid > 0)
+                        pid = evt.Pid;
                     break;
 
                 case "timeout":
                     timedOut = true;
                     if (evt.HasExitCode)
                         exitCode = evt.ExitCode;
+                    if (evt.Pid > 0)
+                        pid = evt.Pid;
                     break;
             }
         }
 
-        return new CommandResult(stdout.ToString(), stderr.ToString(), exitCode, timedOut);
+        return new CommandResult(stdout.ToString(), stderr.ToString(), exitCode, timedOut, pid);
     }
 
     /// <summary>
