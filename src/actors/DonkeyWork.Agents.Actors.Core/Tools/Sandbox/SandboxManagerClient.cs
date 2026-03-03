@@ -27,16 +27,21 @@ public sealed class SandboxManagerClient
     /// </summary>
     public async Task<string?> FindSandboxAsync(string userId, string conversationId, CancellationToken ct)
     {
+        _logger.LogDebug("Finding sandbox for UserId={UserId}, ConversationId={ConversationId}", userId, conversationId);
+
         try
         {
             var response = await _client.FindSandboxAsync(
                 new FindSandboxRequest { UserId = userId, ConversationId = conversationId },
                 cancellationToken: ct);
 
+            _logger.LogInformation("Found existing sandbox {PodName} for UserId={UserId}, ConversationId={ConversationId}",
+                response.Name, userId, conversationId);
             return response.Name;
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
         {
+            _logger.LogDebug("No existing sandbox found for UserId={UserId}, ConversationId={ConversationId}", userId, conversationId);
             return null;
         }
     }
@@ -51,6 +56,8 @@ public sealed class SandboxManagerClient
         Action<string>? onProgress,
         CancellationToken ct)
     {
+        _logger.LogInformation("Creating sandbox for UserId={UserId}, ConversationId={ConversationId}", userId, conversationId);
+
         var request = new CreateSandboxRequest
         {
             UserId = userId,
@@ -64,6 +71,9 @@ public sealed class SandboxManagerClient
 
         await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
         {
+            _logger.LogDebug("Sandbox creation event: Type={EventType}, PodName={PodName}, Message={Message}",
+                evt.EventType, evt.PodName, evt.Message);
+
             switch (evt.EventType)
             {
                 case "ContainerCreatedEvent":
@@ -76,7 +86,7 @@ public sealed class SandboxManagerClient
 
                 case "ContainerReadyEvent":
                     podName = evt.PodName;
-                    _logger.LogInformation("Sandbox ready: {PodName}", podName);
+                    _logger.LogInformation("Sandbox ready: {PodName} (elapsed: {Elapsed}s)", podName, evt.ElapsedSeconds);
                     break;
 
                 case "ContainerFailedEvent":
@@ -102,6 +112,9 @@ public sealed class SandboxManagerClient
         int timeoutSeconds,
         CancellationToken ct)
     {
+        _logger.LogInformation("Executing command in sandbox {SandboxId}: {Command} (timeout={Timeout}s)",
+            sandboxId, Truncate(command, 100), timeoutSeconds);
+
         var request = new ExecuteCommandRequest
         {
             SandboxId = sandboxId,
@@ -116,9 +129,12 @@ public sealed class SandboxManagerClient
         var exitCode = -1;
         var timedOut = false;
         var pid = 0;
+        var eventCount = 0;
 
         await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
         {
+            eventCount++;
+
             switch (evt.EventType)
             {
                 case "output":
@@ -143,9 +159,18 @@ public sealed class SandboxManagerClient
                         exitCode = evt.ExitCode;
                     if (evt.Pid > 0)
                         pid = evt.Pid;
+                    _logger.LogWarning("Command timed out in sandbox {SandboxId}: PID={Pid}", sandboxId, pid);
+                    break;
+
+                default:
+                    _logger.LogDebug("Unknown event type from sandbox {SandboxId}: {EventType}", sandboxId, evt.EventType);
                     break;
             }
         }
+
+        _logger.LogInformation(
+            "Command completed in sandbox {SandboxId}: PID={Pid}, ExitCode={ExitCode}, TimedOut={TimedOut}, Events={EventCount}, StdoutLen={StdoutLen}, StderrLen={StderrLen}",
+            sandboxId, pid, exitCode, timedOut, eventCount, stdout.Length, stderr.Length);
 
         return new CommandResult(stdout.ToString(), stderr.ToString(), exitCode, timedOut, pid);
     }
@@ -155,18 +180,28 @@ public sealed class SandboxManagerClient
     /// </summary>
     public async Task<bool> DeleteSandboxAsync(string sandboxId, CancellationToken ct)
     {
+        _logger.LogInformation("Deleting sandbox {SandboxId}", sandboxId);
+
         try
         {
             var response = await _client.DeleteSandboxAsync(
                 new DeleteSandboxRequest { PodName = sandboxId },
                 cancellationToken: ct);
 
+            if (response.Success)
+                _logger.LogInformation("Sandbox {SandboxId} deleted successfully", sandboxId);
+            else
+                _logger.LogWarning("Sandbox {SandboxId} deletion returned failure: {Message}", sandboxId, response.Message);
+
             return response.Success;
         }
-        catch (RpcException)
+        catch (RpcException ex)
         {
+            _logger.LogWarning(ex, "Failed to delete sandbox {SandboxId}: {Status}", sandboxId, ex.StatusCode);
             return false;
         }
     }
 
+    private static string Truncate(string text, int maxLength)
+        => text.Length <= maxLength ? text : text[..maxLength] + "...";
 }
