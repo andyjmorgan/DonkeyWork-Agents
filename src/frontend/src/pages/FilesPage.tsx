@@ -9,28 +9,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { files, type StoredFileItem, type PaginatedResponse } from '@/lib/api'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-
-const PAGE_SIZE = 20
+import { files, type FileItem } from '@/lib/api'
 
 export function FilesPage() {
-  const [allFiles, setAllFiles] = useState<StoredFileItem[]>([])
+  const [allFiles, setAllFiles] = useState<FileItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [downloadingId, setDownloadingId] = useState<string | null>(null)
-  const [copyingId, setCopyingId] = useState<string | null>(null)
+  const [deletingName, setDeletingName] = useState<string | null>(null)
+  const [downloadingName, setDownloadingName] = useState<string | null>(null)
+  const [copyingName, setCopyingName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [page, setPage] = useState(0)
-  const [totalCount, setTotalCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadFiles = async () => {
     try {
       setLoading(true)
-      const data: PaginatedResponse<StoredFileItem> = await files.list(page * PAGE_SIZE, PAGE_SIZE)
-      setAllFiles(data.items)
-      setTotalCount(data.totalCount)
+      const data = await files.list()
+      setAllFiles(data)
     } catch (error) {
       console.error('Failed to load files:', error)
     } finally {
@@ -40,30 +34,29 @@ export function FilesPage() {
 
   useEffect(() => {
     loadFiles()
-  }, [page])
+  }, [])
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (fileName: string) => {
     if (!confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
       return
     }
 
     try {
-      setDeletingId(id)
-      await files.delete(id)
-      setAllFiles(prev => prev.filter(f => f.id !== id))
-      setTotalCount(prev => prev - 1)
+      setDeletingName(fileName)
+      await files.delete(fileName)
+      setAllFiles(prev => prev.filter(f => f.fileName !== fileName))
     } catch (error) {
       console.error('Failed to delete file:', error)
       alert('Failed to delete file')
     } finally {
-      setDeletingId(null)
+      setDeletingName(null)
     }
   }
 
-  const handleDownload = async (file: StoredFileItem) => {
+  const handleDownload = async (file: FileItem) => {
     try {
-      setDownloadingId(file.id)
-      const { blob, fileName } = await files.download(file.id)
+      setDownloadingName(file.fileName)
+      const { blob, fileName } = await files.download(file.fileName)
 
       // Create download link
       const url = URL.createObjectURL(blob)
@@ -78,21 +71,21 @@ export function FilesPage() {
       console.error('Failed to download file:', error)
       alert('Failed to download file')
     } finally {
-      setDownloadingId(null)
+      setDownloadingName(null)
     }
   }
 
-  const handleCopyLink = async (id: string) => {
+  const handleCopyLink = async (fileName: string) => {
     try {
-      setCopyingId(id)
-      const result = await files.getPublicUrl(id, 60) // 1 hour expiry
+      setCopyingName(fileName)
+      const result = await files.getPublicUrl(fileName, 60) // 1 hour expiry
       await navigator.clipboard.writeText(result.url)
       alert('Link copied to clipboard. Expires in 1 hour.')
     } catch (error) {
       console.error('Failed to get public URL:', error)
       alert('Failed to copy link')
     } finally {
-      setCopyingId(null)
+      setCopyingName(null)
     }
   }
 
@@ -135,26 +128,24 @@ export function FilesPage() {
     })
   }
 
-  const getFileTypeLabel = (contentType: string): string => {
+  const getFileTypeLabel = (fileName: string): string => {
+    const ext = fileName.split('.').pop()?.toLowerCase()
     const typeMap: Record<string, string> = {
-      'application/pdf': 'PDF',
-      'image/png': 'PNG Image',
-      'image/jpeg': 'JPEG Image',
-      'image/gif': 'GIF Image',
-      'image/webp': 'WebP Image',
-      'text/plain': 'Text',
-      'text/csv': 'CSV',
-      'application/json': 'JSON',
-      'application/zip': 'ZIP Archive',
-      'application/x-tar': 'TAR Archive',
-      'application/gzip': 'GZIP Archive',
+      'pdf': 'PDF',
+      'png': 'PNG Image',
+      'jpg': 'JPEG Image',
+      'jpeg': 'JPEG Image',
+      'gif': 'GIF Image',
+      'webp': 'WebP Image',
+      'txt': 'Text',
+      'csv': 'CSV',
+      'json': 'JSON',
+      'zip': 'ZIP Archive',
+      'tar': 'TAR Archive',
+      'gz': 'GZIP Archive',
     }
-    return typeMap[contentType] || contentType.split('/')[1]?.toUpperCase() || 'File'
+    return typeMap[ext || ''] || ext?.toUpperCase() || 'File'
   }
-
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
-  const canGoBack = page > 0
-  const canGoForward = page < totalPages - 1
 
   return (
     <div className="space-y-8">
@@ -218,7 +209,7 @@ export function FilesPage() {
             {/* Mobile view - card layout */}
             <div className="space-y-3 md:hidden">
               {allFiles.map((file) => (
-                <div key={file.id} className="rounded-lg border border-border bg-card p-4 space-y-2">
+                <div key={file.fileName} className="rounded-lg border border-border bg-card p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -227,15 +218,15 @@ export function FilesPage() {
                       </div>
                       <div className="text-sm">
                         <span className="text-muted-foreground">Type: </span>
-                        <span>{getFileTypeLabel(file.contentType)}</span>
+                        <span>{getFileTypeLabel(file.fileName)}</span>
                       </div>
                       <div className="text-sm">
                         <span className="text-muted-foreground">Size: </span>
                         <span>{formatFileSize(file.sizeBytes)}</span>
                       </div>
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Uploaded: </span>
-                        <span>{formatDate(file.createdAt)}</span>
+                        <span className="text-muted-foreground">Modified: </span>
+                        <span>{formatDate(file.lastModified)}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -243,9 +234,9 @@ export function FilesPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDownload(file)}
-                        disabled={downloadingId === file.id}
+                        disabled={downloadingName === file.fileName}
                       >
-                        {downloadingId === file.id ? (
+                        {downloadingName === file.fileName ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Download className="h-4 w-4" />
@@ -254,10 +245,10 @@ export function FilesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleCopyLink(file.id)}
-                        disabled={copyingId === file.id}
+                        onClick={() => handleCopyLink(file.fileName)}
+                        disabled={copyingName === file.fileName}
                       >
-                        {copyingId === file.id ? (
+                        {copyingName === file.fileName ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <LinkIcon className="h-4 w-4" />
@@ -266,10 +257,10 @@ export function FilesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(file.id)}
-                        disabled={deletingId === file.id}
+                        onClick={() => handleDelete(file.fileName)}
+                        disabled={deletingName === file.fileName}
                       >
-                        {deletingId === file.id ? (
+                        {deletingName === file.fileName ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Trash2 className="h-4 w-4 text-red-500" />
@@ -289,32 +280,32 @@ export function FilesPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Size</TableHead>
-                    <TableHead>Uploaded</TableHead>
+                    <TableHead>Modified</TableHead>
                     <TableHead className="w-[140px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {allFiles.map((file) => (
-                    <TableRow key={file.id}>
+                    <TableRow key={file.fileName}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <File className="h-4 w-4 text-amber-500 shrink-0" />
                           <span className="font-medium truncate max-w-[300px]">{file.fileName}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{getFileTypeLabel(file.contentType)}</TableCell>
+                      <TableCell>{getFileTypeLabel(file.fileName)}</TableCell>
                       <TableCell>{formatFileSize(file.sizeBytes)}</TableCell>
-                      <TableCell>{formatDate(file.createdAt)}</TableCell>
+                      <TableCell>{formatDate(file.lastModified)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDownload(file)}
-                            disabled={downloadingId === file.id}
+                            disabled={downloadingName === file.fileName}
                             title="Download"
                           >
-                            {downloadingId === file.id ? (
+                            {downloadingName === file.fileName ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <Download className="h-4 w-4" />
@@ -323,11 +314,11 @@ export function FilesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleCopyLink(file.id)}
-                            disabled={copyingId === file.id}
+                            onClick={() => handleCopyLink(file.fileName)}
+                            disabled={copyingName === file.fileName}
                             title="Copy Link"
                           >
-                            {copyingId === file.id ? (
+                            {copyingName === file.fileName ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <LinkIcon className="h-4 w-4" />
@@ -336,11 +327,11 @@ export function FilesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(file.id)}
-                            disabled={deletingId === file.id}
+                            onClick={() => handleDelete(file.fileName)}
+                            disabled={deletingName === file.fileName}
                             title="Delete"
                           >
-                            {deletingId === file.id ? (
+                            {deletingName === file.fileName ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <Trash2 className="h-4 w-4 text-red-500" />
@@ -353,35 +344,6 @@ export function FilesPage() {
                 </TableBody>
               </Table>
             </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => p - 1)}
-                    disabled={!canGoBack}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => p + 1)}
-                    disabled={!canGoForward}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            )}
           </>
         )}
       </section>

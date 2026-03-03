@@ -8,5 +8,8 @@ public sealed class UploadFileRequest
 
     public required Stream Content { get; init; }
 
-    public Dictionary<string, string>? Metadata { get; init; }
+    /// <summary>
+    /// Optional key prefix within the user's namespace (e.g., "conversations/{convId}").
+    /// </summary>
+    public string? KeyPrefix { get; init; }
 }

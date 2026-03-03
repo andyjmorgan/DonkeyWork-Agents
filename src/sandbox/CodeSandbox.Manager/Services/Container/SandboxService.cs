@@ -512,8 +512,8 @@ public class SandboxService : ISandboxService
 
             // Per-user files (read-write)
             var userSubPath = string.IsNullOrEmpty(_config.UserFilesSubPathPrefix)
-                ? $"{request.UserId}/files"
-                : $"{_config.UserFilesSubPathPrefix}/{request.UserId}/files";
+                ? $"{request.UserId}"
+                : $"{_config.UserFilesSubPathPrefix}/{request.UserId}";
 
             workloadMounts.Add(new V1VolumeMount
             {

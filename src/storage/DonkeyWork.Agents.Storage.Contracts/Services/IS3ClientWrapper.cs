@@ -1,3 +1,5 @@
+using DonkeyWork.Agents.Storage.Contracts.Models;
+
 namespace DonkeyWork.Agents.Storage.Contracts.Services;
 
 public interface IS3ClientWrapper
@@ -13,11 +15,22 @@ public interface IS3ClientWrapper
     Task DeleteAsync(string bucketName, string objectKey, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists objects in a bucket with the given prefix.
+    /// </summary>
+    Task<List<S3ObjectInfo>> ListObjectsAsync(string bucketName, string prefix, string? delimiter = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets metadata for a specific object (HeadObject).
+    /// </summary>
+    Task<S3ObjectMetadata?> GetObjectMetadataAsync(string bucketName, string objectKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes all objects matching a prefix (list + batch delete).
+    /// </summary>
+    Task DeleteByPrefixAsync(string bucketName, string prefix, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Generates a presigned URL for direct access to an object.
     /// </summary>
-    /// <param name="bucketName">The bucket containing the object.</param>
-    /// <param name="objectKey">The object key.</param>
-    /// <param name="expiry">How long the URL should be valid.</param>
-    /// <returns>A presigned URL string.</returns>
     string GetPreSignedUrl(string bucketName, string objectKey, TimeSpan expiry);
 }

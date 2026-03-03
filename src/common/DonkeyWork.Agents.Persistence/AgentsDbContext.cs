@@ -6,7 +6,6 @@ using DonkeyWork.Agents.Persistence.Entities.Mcp;
 using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Persistence.Entities.Research;
-using DonkeyWork.Agents.Persistence.Entities.Storage;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,10 +32,6 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<UserApiKeyEntity> UserApiKeys => Set<UserApiKeyEntity>();
     public DbSet<OAuthProviderConfigEntity> OAuthProviderConfigs => Set<OAuthProviderConfigEntity>();
     public DbSet<OAuthStateEntity> OAuthStates => Set<OAuthStateEntity>();
-
-    // Storage module
-    public DbSet<StoredFileEntity> StoredFiles => Set<StoredFileEntity>();
-    public DbSet<FileShareEntity> FileShares => Set<FileShareEntity>();
 
     // Orchestrations module
     public DbSet<OrchestrationEntity> Orchestrations => Set<OrchestrationEntity>();

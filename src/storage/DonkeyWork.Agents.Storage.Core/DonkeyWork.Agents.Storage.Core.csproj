@@ -8,14 +8,11 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Storage.Contracts\DonkeyWork.Agents.Storage.Contracts.csproj" />
-        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="AWSSDK.S3" Version="3.7.*" />
-        <PackageReference Include="BCrypt.Net-Next" Version="4.*" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.*" />
         <PackageReference Include="Microsoft.Extensions.Options" Version="10.*" />
     </ItemGroup>
 

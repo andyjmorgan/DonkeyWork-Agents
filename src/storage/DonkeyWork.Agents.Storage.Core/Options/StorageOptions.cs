@@ -18,10 +18,6 @@ public class StorageOptions
     [Required]
     public string DefaultBucket { get; set; } = "files";
 
-    public TimeSpan DefaultShareExpiry { get; set; } = TimeSpan.FromDays(1);
-
-    public TimeSpan FileDeletionGracePeriod { get; set; } = TimeSpan.FromDays(30);
-
     public bool UsePathStyleAddressing { get; set; } = true;
 
     /// <summary>

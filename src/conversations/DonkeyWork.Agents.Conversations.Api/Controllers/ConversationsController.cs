@@ -216,7 +216,7 @@ public class ConversationsController : ControllerBase
             if (result == null)
                 return NotFound();
 
-            return Created($"/api/v1/files/{result.FileId}", result);
+            return Created($"/api/v1/files/download/{result.ObjectKey}", result);
         }
         catch (InvalidOperationException ex)
         {

@@ -62,7 +62,7 @@ public class SandboxManagerConfig
 
     public string StoragePvcName { get; set; } = "seaweedfs-buckets";
 
-    public string UserFilesSubPathPrefix { get; set; } = "users";
+    public string UserFilesSubPathPrefix { get; set; } = "files";
 
     public string UserFilesMountPath { get; set; } = "/home/sandbox/files";
 

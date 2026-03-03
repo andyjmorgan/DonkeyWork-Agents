@@ -1,12 +1,8 @@
-using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Identity.Contracts.Services;
-using DonkeyWork.Agents.Persistence;
-using DonkeyWork.Agents.Persistence.Entities.Storage;
 using DonkeyWork.Agents.Storage.Contracts.Models;
 using DonkeyWork.Agents.Storage.Contracts.Services;
 using DonkeyWork.Agents.Storage.Core.Options;
 using DonkeyWork.Agents.Storage.Core.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -18,7 +14,7 @@ public class StorageServiceTests
     private readonly Mock<IS3ClientWrapper> _s3ClientMock;
     private readonly Mock<IIdentityContext> _identityContextMock;
     private readonly IOptions<StorageOptions> _options;
-    private readonly Guid _userId = Guid.NewGuid();
+    private readonly Guid _userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     public StorageServiceTests()
     {
@@ -35,22 +31,18 @@ public class StorageServiceTests
         });
     }
 
-    private AgentsDbContext CreateDbContext()
+    private StorageService CreateService(IOptions<StorageOptions>? options = null)
     {
-        var options = new DbContextOptionsBuilder<AgentsDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-
-        return new AgentsDbContext(options, _identityContextMock.Object);
+        return new StorageService(_s3ClientMock.Object, _identityContextMock.Object, options ?? _options);
     }
 
+    #region UploadAsync Tests
+
     [Fact]
-    public async Task UploadAsync_ValidFile_ReturnsStoredFile()
+    public async Task UploadAsync_ValidFile_ReturnsUploadResult()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
+        var service = CreateService();
         _s3ClientMock.Setup(x => x.BucketExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         _s3ClientMock.Setup(x => x.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -71,18 +63,42 @@ public class StorageServiceTests
         Assert.NotNull(result);
         Assert.Equal("test.txt", result.FileName);
         Assert.Equal("text/plain", result.ContentType);
-        Assert.Equal(_userId, result.UserId);
-        Assert.Equal(FileStatus.Active, result.Status);
-        Assert.NotNull(result.ChecksumSha256);
+        Assert.Equal(12, result.SizeBytes);
+        Assert.Equal($"{_userId}/test.txt", result.ObjectKey);
+    }
+
+    [Fact]
+    public async Task UploadAsync_WithKeyPrefix_IncludesPrefixInObjectKey()
+    {
+        // Arrange
+        var service = CreateService();
+        _s3ClientMock.Setup(x => x.BucketExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _s3ClientMock.Setup(x => x.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var convId = Guid.NewGuid();
+        var content = new MemoryStream("image data"u8.ToArray());
+        var request = new UploadFileRequest
+        {
+            FileName = "photo.png",
+            ContentType = "image/png",
+            Content = content,
+            KeyPrefix = $"conversations/{convId}"
+        };
+
+        // Act
+        var result = await service.UploadAsync(request);
+
+        // Assert
+        Assert.Equal($"{_userId}/conversations/{convId}/photo.png", result.ObjectKey);
     }
 
     [Fact]
     public async Task UploadAsync_BucketNotExists_CreatesBucket()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
+        var service = CreateService();
         _s3ClientMock.Setup(x => x.BucketExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _s3ClientMock.Setup(x => x.CreateBucketAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -105,198 +121,170 @@ public class StorageServiceTests
         _s3ClientMock.Verify(x => x.CreateBucketAsync("test-bucket", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    #endregion
+
+    #region ListAsync Tests
+
     [Fact]
-    public async Task GetByIdAsync_ExistingFile_ReturnsFile()
+    public async Task ListAsync_ReturnsTopLevelFiles()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
+        var service = CreateService();
+        var objects = new List<S3ObjectInfo>
         {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "test.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "test-key",
-            Status = FileStatus.Active
+            new() { Key = $"{_userId}/file1.txt", SizeBytes = 100, LastModified = DateTimeOffset.UtcNow },
+            new() { Key = $"{_userId}/file2.png", SizeBytes = 2000, LastModified = DateTimeOffset.UtcNow.AddHours(-1) }
         };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+        _s3ClientMock.Setup(x => x.ListObjectsAsync("test-bucket", $"{_userId}/", "/", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(objects);
 
         // Act
-        var result = await service.GetByIdAsync(entity.Id);
+        var result = await service.ListAsync();
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(entity.Id, result.Id);
-        Assert.Equal("test.txt", result.FileName);
+        Assert.Equal(2, result.Count);
+        Assert.Equal("file1.txt", result[0].FileName);
+        Assert.Equal("file2.png", result[1].FileName);
     }
 
     [Fact]
-    public async Task GetByIdAsync_NonExistingFile_ReturnsNull()
+    public async Task ListAsync_EmptyBucket_ReturnsEmpty()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+        var service = CreateService();
+        _s3ClientMock.Setup(x => x.ListObjectsAsync("test-bucket", $"{_userId}/", "/", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<S3ObjectInfo>());
 
         // Act
-        var result = await service.GetByIdAsync(Guid.NewGuid());
+        var result = await service.ListAsync();
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    #endregion
+
+    #region DownloadAsync Tests
+
+    [Fact]
+    public async Task DownloadAsync_ExistingFile_ReturnsFileContent()
+    {
+        // Arrange
+        var service = CreateService();
+        var fullKey = $"{_userId}/test.txt";
+
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "text/plain", SizeBytes = 12, LastModified = DateTimeOffset.UtcNow });
+
+        var contentStream = new MemoryStream("test content"u8.ToArray());
+        _s3ClientMock.Setup(x => x.DownloadAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(contentStream);
+
+        // Act
+        var result = await service.DownloadAsync("test.txt");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("test.txt", result.FileName);
+        Assert.Equal("text/plain", result.ContentType);
+        Assert.Equal(12, result.SizeBytes);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_NonExistingFile_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateService();
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", $"{_userId}/missing.txt", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((S3ObjectMetadata?)null);
+
+        // Act
+        var result = await service.DownloadAsync("missing.txt");
 
         // Assert
         Assert.Null(result);
     }
 
-    [Fact]
-    public async Task ListAsync_ReturnsOnlyActiveFiles()
-    {
-        // Arrange
-        var dbContext = CreateDbContext();
-        var activeFile = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "active.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "active-key",
-            Status = FileStatus.Active
-        };
-        var deletedFile = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "deleted.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "deleted-key",
-            Status = FileStatus.MarkedForDeletion
-        };
-        dbContext.StoredFiles.AddRange(activeFile, deletedFile);
-        await dbContext.SaveChangesAsync();
+    #endregion
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
-        // Act
-        var (items, totalCount) = await service.ListAsync();
-
-        // Assert
-        Assert.Single(items);
-        Assert.Equal(1, totalCount);
-        Assert.Equal("active.txt", items[0].FileName);
-    }
+    #region DeleteAsync Tests
 
     [Fact]
-    public async Task DeleteAsync_ExistingFile_MarksForDeletion()
+    public async Task DeleteAsync_ExistingFile_DeletesAndReturnsTrue()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "test.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "test-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
+        var service = CreateService();
+        var fullKey = $"{_userId}/test.txt";
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "text/plain", SizeBytes = 100, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.DeleteAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
-        var result = await service.DeleteAsync(entity.Id);
+        var result = await service.DeleteAsync("test.txt");
 
         // Assert
         Assert.True(result);
-        var updatedEntity = await dbContext.StoredFiles.IgnoreQueryFilters().FirstAsync(f => f.Id == entity.Id);
-        Assert.Equal(FileStatus.MarkedForDeletion, updatedEntity.Status);
-        Assert.NotNull(updatedEntity.MarkedForDeletionAt);
+        _s3ClientMock.Verify(x => x.DeleteAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task DeleteAsync_NonExistingFile_ReturnsFalse()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+        var service = CreateService();
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", $"{_userId}/missing.txt", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((S3ObjectMetadata?)null);
 
         // Act
-        var result = await service.DeleteAsync(Guid.NewGuid());
+        var result = await service.DeleteAsync("missing.txt");
 
         // Assert
         Assert.False(result);
     }
 
+    #endregion
+
+    #region DeleteByPrefixAsync Tests
+
     [Fact]
-    public async Task DownloadAsync_ExistingFile_ReturnsFileContent()
+    public async Task DeleteByPrefixAsync_DelegatesWithUserPrefix()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "test.txt",
-            ContentType = "text/plain",
-            SizeBytes = 12,
-            BucketName = "test-bucket",
-            ObjectKey = "test-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
+        var service = CreateService();
+        var convId = Guid.NewGuid();
+        var prefix = $"conversations/{convId}";
 
-        var contentStream = new MemoryStream("test content"u8.ToArray());
-        _s3ClientMock.Setup(x => x.DownloadAsync("test-bucket", "test-key", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(contentStream);
-
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+        _s3ClientMock.Setup(x => x.DeleteByPrefixAsync("test-bucket", $"{_userId}/{prefix}", It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
-        var result = await service.DownloadAsync(entity.Id);
+        await service.DeleteByPrefixAsync(prefix);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("test.txt", result.FileName);
-        Assert.Equal("text/plain", result.ContentType);
+        _s3ClientMock.Verify(x => x.DeleteByPrefixAsync("test-bucket", $"{_userId}/{prefix}", It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    #endregion
 
     #region GetPublicUrlAsync Tests
 
     [Fact]
-    public async Task GetPublicUrlAsync_ExistingActiveFile_ReturnsPresignedUrl()
+    public async Task GetPublicUrlAsync_ExistingFile_ReturnsPresignedUrl()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "test.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "test-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
+        var service = CreateService();
+        var fullKey = $"{_userId}/test.txt";
 
-        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "test-key", It.IsAny<TimeSpan>()))
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "text/plain", SizeBytes = 100, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", fullKey, It.IsAny<TimeSpan>()))
             .Returns("http://localhost:8333/test-bucket/test-key?signature=abc");
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
         // Act
-        var result = await service.GetPublicUrlAsync(entity.Id);
+        var result = await service.GetPublicUrlAsync("test.txt");
 
         // Assert
         Assert.NotNull(result);
@@ -308,39 +296,12 @@ public class StorageServiceTests
     public async Task GetPublicUrlAsync_NonExistingFile_ReturnsNull()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+        var service = CreateService();
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", $"{_userId}/missing.txt", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((S3ObjectMetadata?)null);
 
         // Act
-        var result = await service.GetPublicUrlAsync(Guid.NewGuid());
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task GetPublicUrlAsync_DeletedFile_ReturnsNull()
-    {
-        // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "test.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "test-key",
-            Status = FileStatus.MarkedForDeletion
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
-
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
-        // Act
-        var result = await service.GetPublicUrlAsync(entity.Id);
+        var result = await service.GetPublicUrlAsync("missing.txt");
 
         // Assert
         Assert.Null(result);
@@ -359,28 +320,16 @@ public class StorageServiceTests
             DefaultBucket = "test-bucket"
         });
 
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "test.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "test-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
+        var service = CreateService(optionsWithPublicUrl);
+        var fullKey = $"{_userId}/test.txt";
 
-        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "test-key", It.IsAny<TimeSpan>()))
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "text/plain", SizeBytes = 100, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", fullKey, It.IsAny<TimeSpan>()))
             .Returns("http://localhost:8333/test-bucket/test-key?signature=abc");
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, optionsWithPublicUrl);
-
         // Act
-        var result = await service.GetPublicUrlAsync(entity.Id);
+        var result = await service.GetPublicUrlAsync("test.txt");
 
         // Assert
         Assert.NotNull(result);
@@ -392,33 +341,21 @@ public class StorageServiceTests
     public async Task GetPublicUrlAsync_WithCustomExpiry_UsesProvidedExpiry()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "test.txt",
-            ContentType = "text/plain",
-            SizeBytes = 100,
-            BucketName = "test-bucket",
-            ObjectKey = "test-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
-
+        var service = CreateService();
+        var fullKey = $"{_userId}/test.txt";
         var customExpiry = TimeSpan.FromMinutes(30);
-        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "test-key", customExpiry))
+
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "text/plain", SizeBytes = 100, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", fullKey, customExpiry))
             .Returns("http://localhost:8333/test-bucket/test-key?signature=abc");
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
         // Act
-        var result = await service.GetPublicUrlAsync(entity.Id, customExpiry);
+        var result = await service.GetPublicUrlAsync("test.txt", customExpiry);
 
         // Assert
         Assert.NotNull(result);
-        _s3ClientMock.Verify(x => x.GetPreSignedUrl("test-bucket", "test-key", customExpiry), Times.Once);
+        _s3ClientMock.Verify(x => x.GetPreSignedUrl("test-bucket", fullKey, customExpiry), Times.Once);
     }
 
     #endregion
@@ -429,28 +366,16 @@ public class StorageServiceTests
     public async Task GetPreviewUrlAsync_ExistingFile_ReturnsUrlWithResizeParams()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "image.png",
-            ContentType = "image/png",
-            SizeBytes = 1000,
-            BucketName = "test-bucket",
-            ObjectKey = "image-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
+        var service = CreateService();
+        var fullKey = $"{_userId}/image.png";
 
-        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "image-key", It.IsAny<TimeSpan>()))
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "image/png", SizeBytes = 1000, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", fullKey, It.IsAny<TimeSpan>()))
             .Returns("http://localhost:8333/test-bucket/image-key?signature=abc");
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
         // Act
-        var result = await service.GetPreviewUrlAsync(entity.Id, width: 200, height: 150);
+        var result = await service.GetPreviewUrlAsync("image.png", width: 200, height: 150);
 
         // Assert
         Assert.NotNull(result);
@@ -463,28 +388,16 @@ public class StorageServiceTests
     public async Task GetPreviewUrlAsync_WithOnlyWidth_ReturnsUrlWithWidthParam()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "image.png",
-            ContentType = "image/png",
-            SizeBytes = 1000,
-            BucketName = "test-bucket",
-            ObjectKey = "image-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
+        var service = CreateService();
+        var fullKey = $"{_userId}/image.png";
 
-        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "image-key", It.IsAny<TimeSpan>()))
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "image/png", SizeBytes = 1000, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", fullKey, It.IsAny<TimeSpan>()))
             .Returns("http://localhost:8333/test-bucket/image-key?signature=abc");
 
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
         // Act
-        var result = await service.GetPreviewUrlAsync(entity.Id, width: 300);
+        var result = await service.GetPreviewUrlAsync("image.png", width: 300);
 
         // Assert
         Assert.NotNull(result);
@@ -494,48 +407,15 @@ public class StorageServiceTests
     }
 
     [Fact]
-    public async Task GetPreviewUrlAsync_WithNoResizeParams_ReturnsBaseUrl()
-    {
-        // Arrange
-        var dbContext = CreateDbContext();
-        var entity = new StoredFileEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            FileName = "image.png",
-            ContentType = "image/png",
-            SizeBytes = 1000,
-            BucketName = "test-bucket",
-            ObjectKey = "image-key",
-            Status = FileStatus.Active
-        };
-        dbContext.StoredFiles.Add(entity);
-        await dbContext.SaveChangesAsync();
-
-        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", "image-key", It.IsAny<TimeSpan>()))
-            .Returns("http://localhost:8333/test-bucket/image-key?signature=abc");
-
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
-
-        // Act
-        var result = await service.GetPreviewUrlAsync(entity.Id);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.DoesNotContain("width=", result.Url);
-        Assert.DoesNotContain("height=", result.Url);
-        Assert.DoesNotContain("mode=fit", result.Url);
-    }
-
-    [Fact]
     public async Task GetPreviewUrlAsync_NonExistingFile_ReturnsNull()
     {
         // Arrange
-        var dbContext = CreateDbContext();
-        var service = new StorageService(dbContext, _s3ClientMock.Object, _identityContextMock.Object, _options);
+        var service = CreateService();
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", $"{_userId}/missing.png", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((S3ObjectMetadata?)null);
 
         // Act
-        var result = await service.GetPreviewUrlAsync(Guid.NewGuid(), width: 200);
+        var result = await service.GetPreviewUrlAsync("missing.png", width: 200);
 
         // Assert
         Assert.Null(result);

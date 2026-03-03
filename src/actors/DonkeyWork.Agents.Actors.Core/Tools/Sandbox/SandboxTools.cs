@@ -80,7 +80,7 @@ public sealed class SandboxTools
             return Task.FromResult(ToolResult.Error("Filename cannot be empty."));
 
         var userId = context.UserId;
-        var url = $"{context.SeaweedFsBaseUrl.TrimEnd('/')}/buckets/users/{userId}/files/{Uri.EscapeDataString(cleaned)}";
+        var url = $"{context.SeaweedFsBaseUrl.TrimEnd('/')}/buckets/files/{userId}/{Uri.EscapeDataString(cleaned)}";
         return Task.FromResult(ToolResult.Success(url));
     }
 

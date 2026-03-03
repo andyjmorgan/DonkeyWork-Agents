@@ -182,17 +182,12 @@ public class ConversationService : IConversationService
             return false;
         }
 
-        // Mark associated images for deletion
-        var markedCount = await _storageService.MarkForDeletionByMetadataAsync(
-            "conversationId",
-            conversationId.ToString(),
+        // Delete associated images from S3
+        await _storageService.DeleteByPrefixAsync(
+            $"conversations/{conversationId}",
             cancellationToken);
 
-        if (markedCount > 0)
-        {
-            _logger.LogInformation("Marked {Count} images for deletion for conversation {ConversationId}",
-                markedCount, conversationId);
-        }
+        _logger.LogInformation("Deleted images for conversation {ConversationId}", conversationId);
 
         _dbContext.Conversations.Remove(conversation);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -298,30 +293,35 @@ public class ConversationService : IConversationService
             fileStream.Position = 0;
         }
 
-        // Upload to storage with conversation metadata
+        // Upload to storage under conversations/{convId}/ prefix
         var uploadRequest = new UploadFileRequest
         {
             FileName = fileName,
             ContentType = validationResult.DetectedMimeType ?? contentType,
             Content = fileStream,
-            Metadata = new Dictionary<string, string>
-            {
-                ["conversationId"] = conversationId.ToString()
-            }
+            KeyPrefix = $"conversations/{conversationId}"
         };
 
-        var storedFile = await _storageService.UploadAsync(uploadRequest, cancellationToken);
+        var result = await _storageService.UploadAsync(uploadRequest, cancellationToken);
+
+        // Return the relative key (strip the userId prefix)
+        var relativeKey = result.ObjectKey;
+        var userPrefix = $"{_identityContext.UserId}/";
+        if (relativeKey.StartsWith(userPrefix))
+        {
+            relativeKey = relativeKey[userPrefix.Length..];
+        }
 
         _logger.LogInformation(
-            "Uploaded image {FileId} for conversation {ConversationId}. Size: {Size} bytes, Type: {ContentType}",
-            storedFile.Id, conversationId, storedFile.SizeBytes, storedFile.ContentType);
+            "Uploaded image {ObjectKey} for conversation {ConversationId}. Size: {Size} bytes, Type: {ContentType}",
+            result.ObjectKey, conversationId, result.SizeBytes, result.ContentType);
 
         return new UploadImageResponseV1
         {
-            FileId = storedFile.Id,
-            FileName = storedFile.FileName,
-            ContentType = storedFile.ContentType,
-            SizeBytes = storedFile.SizeBytes
+            ObjectKey = relativeKey,
+            FileName = result.FileName,
+            ContentType = result.ContentType,
+            SizeBytes = result.SizeBytes
         };
     }
 

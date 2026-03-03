@@ -2,119 +2,99 @@
 
 ## Module Overview
 
-This is a blob storage module following the modular monolith architecture. It uses SeaweedFS (S3-compatible) for file storage and PostgreSQL for metadata.
+This is a blob storage module following the modular monolith architecture. It uses SeaweedFS (S3-compatible) as the sole storage backend — there is no PostgreSQL metadata layer. S3 is the single source of truth for all file data.
+
+## Object Key Scheme
+
+- **User files**: `{userId}/{filename}` (flat per-user namespace)
+- **Conversation images**: `{userId}/conversations/{convId}/{filename}`
+- File identifier is the filename, not a UUID
+- Uploading the same filename overwrites the existing file
+- Hard delete only — no soft delete or grace period
 
 ## Project Responsibilities
 
 ### Contracts (`DonkeyWork.Agents.Storage.Contracts`)
-- Entities: `StoredFile`, `FileShare` (live here so services can work with them directly)
-- Enums: `FileStatus`, `ShareStatus`
-- Models: `StoredFileModel`, `FileShareModel`, `UploadFileRequest`, `CreateShareRequest`, `PresignedUrlResult`
-- Repository interfaces: `IStoredFileRepository`, `IFileShareRepository`
-- Service interfaces: `IStorageService`, `IFileShareService`, `IStorageCleanupService`
+- Models: `UploadFileRequest`, `StorageUploadResult`, `FileItemV1`, `FileDownloadResult`, `PresignedUrlResult`, `S3ObjectInfo`, `S3ObjectMetadata`
+- Service interfaces: `IStorageService`, `IS3ClientWrapper`
 
 ### Core (`DonkeyWork.Agents.Storage.Core`)
-- `StorageConfiguration` options class
+- `StorageOptions` options class (ServiceUrl, PublicServiceUrl, AccessKey, SecretKey, DefaultBucket)
 - `IS3ClientWrapper` / `S3ClientWrapper` for testable S3 abstraction
-- `StorageService` - file upload, download, metadata operations
-- `FileShareService` - share link creation, validation, download
-- `StorageCleanupService` - cleanup expired shares and soft-deleted files
-- `StorageCleanupBackgroundService` - hourly cleanup hosted service
+- `StorageService` — file upload, download, list, delete, presigned URLs (all S3-native)
 
 ### Api (`DonkeyWork.Agents.Storage.Api`)
-- `FilesController` - file CRUD endpoints
-- `SharesController` - share link endpoints
+- `FilesController` — filename-based file endpoints
 - `DependencyInjection.cs` with `AddStorageApi()` extension method
-
-### Shared Persistence (`src/common/DonkeyWork.Agents.Persistence`)
-Storage-related persistence lives in the shared persistence project:
-- `Configurations/Storage/` - EF Fluent API configurations for `StoredFile`, `FileShare`
-- `Repositories/Storage/` - Repository implementations: `StoredFileRepository`, `FileShareRepository`
 
 ## Key Implementation Details
 
-### Entity Configuration
-Entities live in Contracts (no EF attributes). Use Fluent API in Persistence:
-```csharp
-// src/common/DonkeyWork.Agents.Persistence/Configurations/Storage/StoredFileConfiguration.cs
-public class StoredFileConfiguration : IEntityTypeConfiguration<StoredFile>
-{
-    public void Configure(EntityTypeBuilder<StoredFile> builder)
-    {
-        builder.ToTable("stored_files");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.ObjectKey).HasMaxLength(1024).IsRequired();
-        builder.HasIndex(x => x.ObjectKey).IsUnique();
-        // ...
-    }
-}
-```
-
 ### S3 Client Wrapper
-Wrap the AWS S3 client in an interface for testability:
+Wraps the AWS SDK S3 client for testability:
 ```csharp
 public interface IS3ClientWrapper
 {
-    Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken ct = default);
-    Task<GetObjectResponse> GetObjectAsync(GetObjectRequest request, CancellationToken ct = default);
-    Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken ct = default);
-    string GetPreSignedURL(GetPreSignedUrlRequest request);
+    Task<bool> BucketExistsAsync(string bucket, CancellationToken ct);
+    Task CreateBucketAsync(string bucket, CancellationToken ct);
+    Task UploadAsync(string bucket, string key, Stream content, string contentType, CancellationToken ct);
+    Task<Stream> DownloadAsync(string bucket, string key, CancellationToken ct);
+    Task DeleteAsync(string bucket, string key, CancellationToken ct);
+    Task<List<S3ObjectInfo>> ListObjectsAsync(string bucket, string prefix, string? delimiter, CancellationToken ct);
+    Task<S3ObjectMetadata?> GetObjectMetadataAsync(string bucket, string key, CancellationToken ct);
+    Task DeleteByPrefixAsync(string bucket, string prefix, CancellationToken ct);
+    string GetPreSignedUrl(string bucket, string key, TimeSpan expiry);
 }
 ```
 
-### Share Token Generation
-Use cryptographically secure random tokens:
-```csharp
-using var rng = RandomNumberGenerator.Create();
-var bytes = new byte[32];
-rng.GetBytes(bytes);
-return Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").TrimEnd('=');
+### StorageService
+All methods prepend `{userId}/` from `IIdentityContext` to keys, ensuring user isolation at the S3 key level:
+- `UploadAsync` — builds key as `{userId}/{keyPrefix}/{filename}` or `{userId}/{filename}`, auto-creates bucket if needed
+- `ListAsync` — uses S3 `ListObjectsV2` with delimiter `/` for top-level files only
+- `DownloadAsync` — uses HeadObject for metadata, then GetObject for content
+- `DeleteAsync` — checks existence via HeadObject, then deletes
+- `DeleteByPrefixAsync` — lists and batch-deletes all objects under a prefix (used for conversation cleanup)
+- `GetPublicUrlAsync` — generates presigned URL, optionally replaces internal URL with `PublicServiceUrl`
+- `GetPreviewUrlAsync` — generates presigned URL with resize query parameters
+
+### API Routes (filename-based)
 ```
-
-### Password Hashing
-Use BCrypt for optional share passwords:
-```csharp
-BCrypt.Net.BCrypt.HashPassword(password)
-BCrypt.Net.BCrypt.Verify(password, hash)
+GET    /api/v1/files                        → list all user files
+POST   /api/v1/files                        → upload file
+GET    /api/v1/files/{filename}/download     → download by filename
+GET    /api/v1/files/{filename}/url          → presigned URL by filename
+DELETE /api/v1/files/{filename}              → delete by filename
+GET    /api/v1/files/download/{**key}        → download by path key (conversation images)
+GET    /api/v1/files/url/{**key}             → presigned URL by path key
 ```
-
-### Soft Delete Pattern
-Files use a three-state deletion:
-1. `Active` - normal state
-2. `MarkedForDeletion` - soft deleted, can be restored within grace period
-3. `Deleted` - hard deleted, S3 object removed
-
-### Background Cleanup
-The `StorageCleanupBackgroundService` runs hourly to:
-1. Mark expired shares as `Expired`
-2. Hard delete files past the grace period (remove from S3, update status)
 
 ## Testing Guidelines
 
-- Use Moq for mocking dependencies
+- Use Moq for mocking `IS3ClientWrapper`
 - Use xUnit for test framework
 - Test method naming: `MethodName_StateUnderTest_ExpectedBehavior`
-- Mock the `IS3ClientWrapper` in service tests
-- Use in-memory database for repository tests if needed
+- No database dependencies — all tests mock the S3 client wrapper
 
 Example test structure:
 ```csharp
 public class StorageServiceTests
 {
+    private readonly Mock<IS3ClientWrapper> _s3ClientMock;
+    private readonly Mock<IIdentityContext> _identityContextMock;
+    private readonly IOptions<StorageOptions> _options;
+
     [Fact]
-    public async Task UploadFileAsync_ValidFile_ReturnsStoredFileModel()
+    public async Task UploadAsync_ValidFile_ReturnsUploadResult()
     {
         // Arrange
-        var mockS3Client = new Mock<IS3ClientWrapper>();
-        var mockRepository = new Mock<IStoredFileRepository>();
-        // ...
+        _s3ClientMock.Setup(x => x.BucketExistsAsync(...)).ReturnsAsync(true);
+        _s3ClientMock.Setup(x => x.UploadAsync(...)).Returns(Task.CompletedTask);
 
         // Act
-        var result = await service.UploadFileAsync(request);
+        var result = await service.UploadAsync(request);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(expectedFileName, result.FileName);
+        Assert.Equal("test.txt", result.FileName);
     }
 }
 ```
@@ -123,22 +103,15 @@ public class StorageServiceTests
 
 ### Controller Actions
 Return appropriate status codes:
-- `200 OK` for successful GET
-- `201 Created` for successful POST with Location header
+- `200 OK` for successful GET (list, download, URL generation)
+- `201 Created` for successful POST (upload)
 - `204 No Content` for successful DELETE
-- `404 Not Found` when resource doesn't exist
-- `400 Bad Request` for validation failures
-- `401 Unauthorized` for invalid share passwords
-
-### Repository Pattern
-Repositories should:
-- Return entities from Contracts
-- Services handle mapping to models at API boundary
-- Handle null cases gracefully
-- Use async/await throughout
-- Include cancellation token support
+- `404 Not Found` when file doesn't exist
 
 ### Configuration Binding
 ```csharp
-services.Configure<StorageConfiguration>(configuration.GetSection("Storage"));
+services.AddOptions<StorageOptions>()
+    .BindConfiguration("Storage")
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 ```

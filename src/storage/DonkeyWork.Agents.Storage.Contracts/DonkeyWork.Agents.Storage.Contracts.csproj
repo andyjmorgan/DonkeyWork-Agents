@@ -6,8 +6,5 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Common.Contracts\DonkeyWork.Agents.Common.Contracts.csproj" />
-    </ItemGroup>
 
 </Project>

@@ -3,16 +3,16 @@ using System.Text.Json.Serialization;
 namespace DonkeyWork.Agents.Conversations.Contracts.Models;
 
 /// <summary>
-/// Image content part. References a file stored in blob storage.
+/// Image content part. References a file stored in blob storage by object key.
 /// The image is fetched and converted to base64 during execution.
 /// </summary>
 public sealed class ImageContentPart : ContentPart
 {
     /// <summary>
-    /// The ID of the stored file in blob storage.
+    /// The object key of the file in blob storage (relative to user namespace).
     /// </summary>
-    [JsonPropertyName("fileId")]
-    public required Guid FileId { get; set; }
+    [JsonPropertyName("objectKey")]
+    public required string ObjectKey { get; set; }
 
     /// <summary>
     /// The media type (e.g., "image/png", "image/jpeg").

@@ -8,10 +8,10 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models;
 public sealed class UploadImageResponseV1
 {
     /// <summary>
-    /// The unique file ID to use in ImageContentPart.
+    /// The object key to use in ImageContentPart (relative to user namespace).
     /// </summary>
-    [JsonPropertyName("fileId")]
-    public required Guid FileId { get; init; }
+    [JsonPropertyName("objectKey")]
+    public required string ObjectKey { get; init; }
 
     /// <summary>
     /// The original file name.

@@ -15,14 +15,11 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Moq" Version="4.*" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.*" />
-        <PackageReference Include="BCrypt.Net-Next" Version="4.*" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\src\storage\DonkeyWork.Agents.Storage.Contracts\DonkeyWork.Agents.Storage.Contracts.csproj" />
         <ProjectReference Include="..\..\..\src\storage\DonkeyWork.Agents.Storage.Core\DonkeyWork.Agents.Storage.Core.csproj" />
-        <ProjectReference Include="..\..\..\src\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\..\..\src\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
     </ItemGroup>
 
