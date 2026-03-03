@@ -13,12 +13,18 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Kestrel for HTTP/1.1 (WebSocket, REST) + HTTP/2 (gRPC)
+// Configure Kestrel with dual ports:
+// - 8668: HTTP/2 for gRPC (used by API pods) + gRPC health checks (used by k8s probes)
+// - 8080: HTTP/1.1 for WebSocket terminals
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(8668, listenOptions =>
     {
-        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+        listenOptions.Protocols = HttpProtocols.Http2;
+    });
+    options.ListenAnyIP(8080, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http1;
     });
 });
 
@@ -83,6 +89,8 @@ builder.Services.AddHostedService<ContainerCleanupService>();
 
 // Add gRPC services
 builder.Services.AddGrpc();
+builder.Services.AddGrpcHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
 
 // Add health checks
 builder.Services.AddHealthChecks();
@@ -121,20 +129,16 @@ app.MapScalarApiReference("/scalar", (options, context) =>
 
 Log.Information("API documentation enabled at /scalar/v1");
 
-app.UseHttpsRedirection();
-
-// Enable WebSockets for terminal connections
+// Enable WebSockets for terminal connections (HTTP/1.1, port 8080)
 app.UseWebSockets(new WebSocketOptions
 {
     KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 
-// Map health checks
-app.MapHealthChecks("/healthz");
-
-// Map gRPC services
+// Map gRPC services + health check (HTTP/2, port 8668)
 app.MapGrpcService<SandboxManagerGrpcService>();
 app.MapGrpcService<McpManagerGrpcService>();
+app.MapGrpcHealthChecksService();
 
 // Map WebSocket terminal endpoint (HTTP/1.1 only — not available via gRPC)
 app.MapTerminalEndpoints();
