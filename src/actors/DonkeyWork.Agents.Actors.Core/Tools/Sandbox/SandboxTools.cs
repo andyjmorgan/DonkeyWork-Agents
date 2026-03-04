@@ -29,12 +29,23 @@ public sealed class SandboxTools
         if (string.IsNullOrEmpty(conversationId))
             return ToolResult.Error("No conversation context available.");
 
-        // Auto-provision sandbox on first call
-        var sandboxId = await _client.FindSandboxAsync(userId, conversationId, ct);
-        if (sandboxId is null)
+        string sandboxId;
+        if (context.SandboxHandle is { } handle)
         {
-            context.ReportProgress("Creating sandbox...");
-            sandboxId = await _client.CreateSandboxAsync(userId, conversationId, context.ReportProgress, ct);
+            try
+            {
+                sandboxId = await handle.Task.WaitAsync(ct);
+            }
+            catch
+            {
+                // Eager provisioning failed — fall back to inline provisioning
+                sandboxId = await FallbackProvisionAsync(userId, conversationId, context, ct);
+            }
+        }
+        else
+        {
+            // No handle (defensive backward-compat) — fall back to inline provisioning
+            sandboxId = await FallbackProvisionAsync(userId, conversationId, context, ct);
         }
 
         context.ReportProgress($"sandbox: {Truncate(command, 60)}");
@@ -82,6 +93,18 @@ public sealed class SandboxTools
         var userId = context.UserId;
         var url = $"{context.SeaweedFsBaseUrl.TrimEnd('/')}/buckets/files/{userId}/{Uri.EscapeDataString(cleaned)}";
         return Task.FromResult(ToolResult.Success(url));
+    }
+
+    private async Task<string> FallbackProvisionAsync(
+        string userId, string conversationId, GrainContext context, CancellationToken ct)
+    {
+        var sandboxId = await _client.FindSandboxAsync(userId, conversationId, ct);
+        if (sandboxId is null)
+        {
+            context.ReportProgress("Creating sandbox...");
+            sandboxId = await _client.CreateSandboxAsync(userId, conversationId, context.ReportProgress, ct);
+        }
+        return sandboxId;
     }
 
     private static string Truncate(string text, int maxLength)

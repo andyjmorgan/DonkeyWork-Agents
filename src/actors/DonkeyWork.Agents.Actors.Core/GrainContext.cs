@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Actors.Contracts.Grains;
+using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core;
@@ -13,6 +14,7 @@ public class GrainContext
     public ILogger Logger { get; set; } = null!;
     public Action<string>? ProgressCallback { get; set; }
     public string? SeaweedFsBaseUrl { get; set; }
+    public SandboxProvisioningHandle? SandboxHandle { get; set; }
 
     public void ReportProgress(string breadcrumb) => ProgressCallback?.Invoke(breadcrumb);
 }

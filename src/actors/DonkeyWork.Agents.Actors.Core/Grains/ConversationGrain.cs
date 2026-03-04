@@ -56,6 +56,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private List<InternalMessage>? _stateSnapshot;
     private AgentContract? _contract;
     private McpToolProvider? _mcpToolProvider;
+    private SandboxProvisioningHandle? _sandboxHandle;
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
         ["swarm_spawn"] = [typeof(SwarmSpawnTools)],
@@ -281,6 +282,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private async Task RunPipelineAsync(AgentContract contract, CancellationToken ct)
     {
         SetupGrainContext();
+        EnsureSandboxProvisioning(contract);
 
         var toolTypes = ResolveToolGroups(contract.ToolGroups);
         var localTools = toolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(toolTypes) : null;
@@ -531,6 +533,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     {
         var sw = Stopwatch.StartNew();
 
+        _sandboxHandle = null;
+
         if (_mcpToolProvider is not null)
         {
             await _mcpToolProvider.DisposeAsync();
@@ -633,6 +637,63 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             _grainContext.GrainKey,
             _pendingCount,
             _currentTurnCts is not null));
+    }
+
+    private void EnsureSandboxProvisioning(AgentContract contract)
+    {
+        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
+        if (!hasSandbox) return;
+
+        if (_sandboxHandle is null)
+        {
+            _sandboxHandle = new SandboxProvisioningHandle();
+            _grainContext.SandboxHandle = _sandboxHandle;
+            _ = ProvisionSandboxInternalAsync(_sandboxHandle);
+        }
+        else if (_sandboxHandle.Failed)
+        {
+            _sandboxHandle.PrepareRetry();
+            _grainContext.SandboxHandle = _sandboxHandle;
+            _ = ProvisionSandboxInternalAsync(_sandboxHandle);
+        }
+        else
+        {
+            _grainContext.SandboxHandle = _sandboxHandle;
+        }
+    }
+
+    private async Task ProvisionSandboxInternalAsync(SandboxProvisioningHandle handle)
+    {
+        var userId = _identityContext.UserId.ToString();
+        var conversationId = _grainContext.ConversationId;
+
+        try
+        {
+            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Looking for existing sandbox...", null));
+
+            using var scope = ServiceProvider.CreateScope();
+            var client = scope.ServiceProvider.GetRequiredService<SandboxManagerClient>();
+
+            var podName = await client.FindSandboxAsync(userId, conversationId, CancellationToken.None);
+
+            if (podName is null)
+            {
+                Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));
+                podName = await client.CreateSandboxAsync(userId, conversationId, progress =>
+                {
+                    Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", progress, null));
+                }, CancellationToken.None);
+            }
+
+            handle.SetResult(podName);
+            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "ready", "Sandbox ready", podName));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Eager sandbox provisioning failed for {Key}", _grainContext.GrainKey);
+            handle.SetFailed(ex);
+            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "failed", ex.Message, null));
+        }
     }
 
     private static Type[] ResolveToolGroups(string[] toolGroups)
