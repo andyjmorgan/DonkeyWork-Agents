@@ -40,7 +40,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private readonly AgentToolRegistry _toolRegistry;
     private readonly AgentContractRegistry _contractRegistry;
     private readonly AnthropicOptions _anthropicOptions;
-    private readonly SandboxOptions _sandboxOptions;
     private readonly IExternalApiKeyService _apiKeyService;
     private readonly IMcpServerConfigurationService _mcpServerConfigService;
     private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
@@ -79,7 +78,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         AgentToolRegistry toolRegistry,
         AgentContractRegistry contractRegistry,
         IOptions<AnthropicOptions> anthropicOptions,
-        IOptions<SandboxOptions> sandboxOptions,
         IExternalApiKeyService apiKeyService,
         IIdentityContext identityContext,
         IMcpServerConfigurationService mcpServerConfigService,
@@ -92,7 +90,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _toolRegistry = toolRegistry;
         _contractRegistry = contractRegistry;
         _anthropicOptions = anthropicOptions.Value;
-        _sandboxOptions = sandboxOptions.Value;
         _apiKeyService = apiKeyService;
         _identityContext = identityContext;
         _mcpServerConfigService = mcpServerConfigService;
@@ -560,7 +557,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _grainContext.GrainFactory = GrainFactory;
         _grainContext.Logger = _logger;
         _grainContext.UserId = _identityContext.UserId.ToString();
-        _grainContext.SeaweedFsBaseUrl = _sandboxOptions.SeaweedFsBaseUrl;
         _grainContext.ProgressCallback = breadcrumb =>
             Emit(new StreamProgressEvent(_grainContext.GrainKey, breadcrumb));
     }

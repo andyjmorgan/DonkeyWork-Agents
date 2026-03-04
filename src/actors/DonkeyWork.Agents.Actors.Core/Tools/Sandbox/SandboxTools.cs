@@ -70,31 +70,6 @@ public sealed class SandboxTools
         }
     }
 
-    [AgentTool("sandbox_share", DisplayName = "Share File")]
-    [Description("Generate a download link for a file in the user's files directory (/home/sandbox/files/). Use this after saving a file to give the user a clickable download link.")]
-    public Task<ToolResult> ShareAsync(
-        [Description("The filename to share (e.g. 'report.pdf'). Must be a file in /home/sandbox/files/.")]
-        string filename,
-        GrainContext context)
-    {
-        if (string.IsNullOrWhiteSpace(context.SeaweedFsBaseUrl))
-            return Task.FromResult(ToolResult.Error("File sharing is not configured for this agent."));
-
-        var cleaned = filename.TrimStart('/');
-
-        // Strip the sandbox files prefix if the caller passed a full path
-        const string prefix = "home/sandbox/files/";
-        if (cleaned.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            cleaned = cleaned[prefix.Length..];
-
-        if (string.IsNullOrWhiteSpace(cleaned))
-            return Task.FromResult(ToolResult.Error("Filename cannot be empty."));
-
-        var userId = context.UserId;
-        var url = $"{context.SeaweedFsBaseUrl.TrimEnd('/')}/buckets/files/{userId}/{Uri.EscapeDataString(cleaned)}";
-        return Task.FromResult(ToolResult.Success(url));
-    }
-
     private async Task<string> FallbackProvisionAsync(
         string userId, string conversationId, GrainContext context, CancellationToken ct)
     {
@@ -118,8 +93,7 @@ public sealed class SandboxTools
         You have access to a code execution sandbox. Use `sandbox_exec` to run shell commands.
 
         - Commands time out after the specified timeout (default 60s). Use longer timeouts for installs or long-running tasks.
-        - Only save files the user has explicitly requested to create to `/home/sandbox/files/` — it is only for artifacts. Files outside it are lost when the sandbox restarts.
-        - To give the user a download link for a file in `/home/sandbox/files/`, call `sandbox_share` with the filename. It returns a URL the user can click to download the file. Always share files you create for the user.
+        - Save files the user has requested to `/home/sandbox/files/` — they persist across sandbox restarts and appear on the user's Files page for download. Files outside this directory are lost when the sandbox restarts.
         - GitHub access is available via the `gh` CLI (pre-authenticated).
 
         ### Skills

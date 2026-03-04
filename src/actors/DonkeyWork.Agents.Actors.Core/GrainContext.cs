@@ -13,7 +13,6 @@ public class GrainContext
     public IGrainFactory GrainFactory { get; set; } = null!;
     public ILogger Logger { get; set; } = null!;
     public Action<string>? ProgressCallback { get; set; }
-    public string? SeaweedFsBaseUrl { get; set; }
     public SandboxProvisioningHandle? SandboxHandle { get; set; }
 
     public void ReportProgress(string breadcrumb) => ProgressCallback?.Invoke(breadcrumb);

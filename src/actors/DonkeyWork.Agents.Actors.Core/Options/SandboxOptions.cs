@@ -8,6 +8,4 @@ public sealed class SandboxOptions
 
     [Required]
     public required string ManagerBaseUrl { get; set; }
-
-    public string? SeaweedFsBaseUrl { get; set; }
 }
