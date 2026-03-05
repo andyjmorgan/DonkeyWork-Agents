@@ -139,9 +139,9 @@ public sealed class SandboxManagerClient
             {
                 case "output":
                     if (evt.HasStream && evt.Stream == "stderr")
-                        stderr.Append(evt.Data);
+                        stderr.AppendLine(evt.Data);
                     else
-                        stdout.Append(evt.Data);
+                        stdout.AppendLine(evt.Data);
                     if (evt.Pid > 0)
                         pid = evt.Pid;
                     break;
