@@ -37,7 +37,7 @@ export function ConversationsPage() {
   const loadConversations = async (offset = 0) => {
     setLoading(true)
     try {
-      const response = await conversations.list(offset, PAGE_SIZE)
+      const response = await conversations.listNavi(offset, PAGE_SIZE)
       setItems(response.items)
       setTotalCount(response.totalCount)
     } catch (error) {
