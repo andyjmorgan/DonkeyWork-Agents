@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, FlaskConical, Plus, ChevronDown, Wrench } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, FlaskConical, Plus, ChevronDown, Wrench, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -122,6 +122,21 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 >
                   <Plus className={cn('h-4 w-4', 'text-cyan-500')} />
                   New Chat
+                </NavLink>
+                <NavLink
+                  to="/conversations"
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    )
+                  }
+                >
+                  <MessageSquare className={cn('h-4 w-4', 'text-violet-500')} />
+                  All Conversations
                 </NavLink>
               </div>
               <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
