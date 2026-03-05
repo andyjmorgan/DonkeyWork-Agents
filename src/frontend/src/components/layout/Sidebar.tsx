@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, FlaskConical, Plus, ChevronDown, Wrench, MessageSquare } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, FlaskConical, Plus, ChevronDown, Wrench, MessageSquare, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -43,6 +43,7 @@ const navigationGroups: NavGroup[] = [
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
       { name: 'Research', href: '/research', icon: FlaskConical, iconColor: 'text-cyan-500' },
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
+      { name: 'Skills', href: '/skills', icon: Zap, iconColor: 'text-violet-500' },
     ],
   },
   {
@@ -123,29 +124,22 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   <Plus className={cn('h-4 w-4', 'text-cyan-500')} />
                   New Chat
                 </NavLink>
-                <NavLink
-                  to="/conversations"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                    )
-                  }
-                >
-                  <MessageSquare className={cn('h-4 w-4', 'text-violet-500')} />
-                  All Conversations
-                </NavLink>
               </div>
               <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
                 <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 pl-9 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground/80 transition-colors cursor-pointer">
                   <ChevronDown className={cn('h-3 w-3 transition-transform', historyOpen && 'rotate-180')} />
-                  Past conversations
+                  Conversations
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <NaviConversationList onNavigate={onClose} />
+                  <NavLink
+                    to="/conversations"
+                    onClick={onClose}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 pl-9 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground/80 transition-colors"
+                  >
+                    <MessageSquare className="h-3 w-3 text-violet-500/60" />
+                    Show all
+                  </NavLink>
                 </CollapsibleContent>
               </Collapsible>
             </div>
