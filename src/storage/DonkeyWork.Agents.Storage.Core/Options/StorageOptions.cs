@@ -30,4 +30,23 @@ public class StorageOptions
     /// Default expiry for presigned URLs.
     /// </summary>
     public TimeSpan DefaultPresignedUrlExpiry { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Base path for filesystem-backed user file storage (e.g., "/mnt/storage").
+    /// When set, user files (keys without '/') are stored on the filesystem instead of S3.
+    /// When null, all storage uses S3 (backwards compatible).
+    /// </summary>
+    public string? FileSystemBasePath { get; set; }
+
+    /// <summary>
+    /// Sub-path within <see cref="FileSystemBasePath"/> for user files.
+    /// Full path: {FileSystemBasePath}/{UserFilesSubPath}/{userId}/
+    /// </summary>
+    public string UserFilesSubPath { get; set; } = "files";
+
+    /// <summary>
+    /// Sub-path within <see cref="FileSystemBasePath"/> for per-user skills.
+    /// Full path: {FileSystemBasePath}/{SkillsSubPath}/{userId}/
+    /// </summary>
+    public string SkillsSubPath { get; set; } = "skills";
 }

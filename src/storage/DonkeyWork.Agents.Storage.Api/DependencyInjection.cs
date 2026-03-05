@@ -23,6 +23,7 @@ public static class DependencyInjection
 
         // Register services
         services.AddScoped<IStorageService, StorageService>();
+        services.AddScoped<ISkillsService, SkillsService>();
 
         return services;
     }

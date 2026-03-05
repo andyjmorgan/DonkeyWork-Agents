@@ -12,8 +12,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="AWSSDK.S3" Version="3.7.*" />
-        <PackageReference Include="Microsoft.Extensions.Options" Version="10.*" />
     </ItemGroup>
 
 </Project>

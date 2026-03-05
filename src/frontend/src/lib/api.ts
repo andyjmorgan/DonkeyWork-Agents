@@ -1235,6 +1235,48 @@ export const files = {
   },
 }
 
+// Skill Types
+export interface SkillItem {
+  name: string
+  createdAt: string
+}
+
+export interface SkillUploadResult {
+  name: string
+}
+
+// Skills API
+export const skills = {
+  // List skills
+  list: () =>
+    api.get<SkillItem[]>('/api/v1/skills'),
+
+  // Upload skill zip (multipart/form-data)
+  upload: async (file: File): Promise<SkillUploadResult> => {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await baseFetchWithAuth(
+      `${BASE_URL}/api/v1/skills`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }))
+      throw new Error(error.error || error.detail || 'Upload failed')
+    }
+
+    return response.json()
+  },
+
+  // Delete skill
+  delete: (name: string) =>
+    api.delete(`/api/v1/skills/${encodeURIComponent(name)}`),
+}
+
 /**
  * Fetch an image with auth headers and return a blob URL.
  * This is needed because img src doesn't include Authorization headers.

@@ -9,12 +9,13 @@ using Xunit;
 
 namespace DonkeyWork.Agents.Storage.Tests.Services;
 
-public class StorageServiceTests
+public class StorageServiceTests : IDisposable
 {
     private readonly Mock<IS3ClientWrapper> _s3ClientMock;
     private readonly Mock<IIdentityContext> _identityContextMock;
     private readonly IOptions<StorageOptions> _options;
     private readonly Guid _userId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private readonly string _tempDir;
 
     public StorageServiceTests()
     {
@@ -29,6 +30,15 @@ public class StorageServiceTests
             SecretKey = "admin",
             DefaultBucket = "test-bucket"
         });
+
+        _tempDir = Path.Combine(Path.GetTempPath(), "storage-tests-" + Guid.NewGuid());
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, true);
     }
 
     private StorageService CreateService(IOptions<StorageOptions>? options = null)
@@ -36,7 +46,25 @@ public class StorageServiceTests
         return new StorageService(_s3ClientMock.Object, _identityContextMock.Object, options ?? _options);
     }
 
-    #region UploadAsync Tests
+    private IOptions<StorageOptions> CreateFsOptions()
+    {
+        return Options.Create(new StorageOptions
+        {
+            ServiceUrl = "http://localhost:8333",
+            AccessKey = "admin",
+            SecretKey = "admin",
+            DefaultBucket = "test-bucket",
+            FileSystemBasePath = _tempDir,
+            UserFilesSubPath = "files"
+        });
+    }
+
+    private string GetUserDir()
+    {
+        return Path.Combine(_tempDir, "files", _userId.ToString());
+    }
+
+    #region UploadAsync Tests (S3)
 
     [Fact]
     public async Task UploadAsync_ValidFile_ReturnsUploadResult()
@@ -123,7 +151,7 @@ public class StorageServiceTests
 
     #endregion
 
-    #region ListAsync Tests
+    #region ListAsync Tests (S3)
 
     [Fact]
     public async Task ListAsync_ReturnsTopLevelFiles()
@@ -165,7 +193,7 @@ public class StorageServiceTests
 
     #endregion
 
-    #region DownloadAsync Tests
+    #region DownloadAsync Tests (S3)
 
     [Fact]
     public async Task DownloadAsync_ExistingFile_ReturnsFileContent()
@@ -208,7 +236,7 @@ public class StorageServiceTests
 
     #endregion
 
-    #region DeleteAsync Tests
+    #region DeleteAsync Tests (S3)
 
     [Fact]
     public async Task DeleteAsync_ExistingFile_DeletesAndReturnsTrue()
@@ -269,7 +297,7 @@ public class StorageServiceTests
 
     #endregion
 
-    #region GetPublicUrlAsync Tests
+    #region GetPublicUrlAsync Tests (S3)
 
     [Fact]
     public async Task GetPublicUrlAsync_ExistingFile_ReturnsPresignedUrl()
@@ -360,7 +388,7 @@ public class StorageServiceTests
 
     #endregion
 
-    #region GetPreviewUrlAsync Tests
+    #region GetPreviewUrlAsync Tests (S3)
 
     [Fact]
     public async Task GetPreviewUrlAsync_ExistingFile_ReturnsUrlWithResizeParams()
@@ -416,6 +444,310 @@ public class StorageServiceTests
 
         // Act
         var result = await service.GetPreviewUrlAsync("missing.png", width: 200);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region Filesystem UploadAsync Tests
+
+    [Fact]
+    public async Task UploadAsync_Filesystem_NoKeyPrefix_WritesToFilesystem()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+        var content = new MemoryStream("hello world"u8.ToArray());
+        var request = new UploadFileRequest
+        {
+            FileName = "test.txt",
+            ContentType = "text/plain",
+            Content = content
+        };
+
+        // Act
+        var result = await service.UploadAsync(request);
+
+        // Assert
+        Assert.Equal("test.txt", result.FileName);
+        Assert.Equal("text/plain", result.ContentType);
+        Assert.Equal(11, result.SizeBytes);
+        Assert.Equal($"{_userId}/test.txt", result.ObjectKey);
+
+        var filePath = Path.Combine(GetUserDir(), "test.txt");
+        Assert.True(File.Exists(filePath));
+        Assert.Equal("hello world", await File.ReadAllTextAsync(filePath));
+
+        _s3ClientMock.Verify(x => x.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_Filesystem_WithKeyPrefix_UsesS3()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+        _s3ClientMock.Setup(x => x.BucketExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _s3ClientMock.Setup(x => x.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var content = new MemoryStream("image data"u8.ToArray());
+        var request = new UploadFileRequest
+        {
+            FileName = "photo.png",
+            ContentType = "image/png",
+            Content = content,
+            KeyPrefix = "conversations/abc"
+        };
+
+        // Act
+        var result = await service.UploadAsync(request);
+
+        // Assert
+        Assert.Equal($"{_userId}/conversations/abc/photo.png", result.ObjectKey);
+        _s3ClientMock.Verify(x => x.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    #endregion
+
+    #region Filesystem ListAsync Tests
+
+    [Fact]
+    public async Task ListAsync_Filesystem_ReturnsFilesFromDirectory()
+    {
+        // Arrange
+        var userDir = GetUserDir();
+        Directory.CreateDirectory(userDir);
+        await File.WriteAllTextAsync(Path.Combine(userDir, "file1.txt"), "content1");
+        await File.WriteAllTextAsync(Path.Combine(userDir, "file2.png"), "content2");
+
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.ListAsync();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        var fileNames = result.Select(f => f.FileName).OrderBy(n => n).ToList();
+        Assert.Contains("file1.txt", fileNames);
+        Assert.Contains("file2.png", fileNames);
+
+        _s3ClientMock.Verify(x => x.ListObjectsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ListAsync_Filesystem_EmptyDirectory_ReturnsEmpty()
+    {
+        // Arrange
+        var userDir = GetUserDir();
+        Directory.CreateDirectory(userDir);
+
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.ListAsync();
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ListAsync_Filesystem_MissingDirectory_ReturnsEmpty()
+    {
+        // Arrange (don't create the user directory)
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.ListAsync();
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    #endregion
+
+    #region Filesystem DownloadAsync Tests
+
+    [Fact]
+    public async Task DownloadAsync_Filesystem_ExistingUserFile_ReturnsFileContent()
+    {
+        // Arrange
+        var userDir = GetUserDir();
+        Directory.CreateDirectory(userDir);
+        await File.WriteAllTextAsync(Path.Combine(userDir, "readme.txt"), "hello");
+
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.DownloadAsync("readme.txt");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("readme.txt", result.FileName);
+        Assert.Equal("text/plain", result.ContentType);
+        Assert.Equal(5, result.SizeBytes);
+
+        using var reader = new StreamReader(result.Content);
+        Assert.Equal("hello", await reader.ReadToEndAsync());
+    }
+
+    [Fact]
+    public async Task DownloadAsync_Filesystem_NonExistingUserFile_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.DownloadAsync("missing.txt");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_Filesystem_PathKeyedObject_UsesS3()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+        var fullKey = $"{_userId}/conversations/abc/image.png";
+
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "image/png", SizeBytes = 500, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.DownloadAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MemoryStream("img"u8.ToArray()));
+
+        // Act
+        var result = await service.DownloadAsync("conversations/abc/image.png");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("image.png", result.FileName);
+        _s3ClientMock.Verify(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_Filesystem_TraversalAttempt_ReturnsNull()
+    {
+        // Arrange
+        var userDir = GetUserDir();
+        Directory.CreateDirectory(userDir);
+
+        var service = CreateService(CreateFsOptions());
+
+        // Act — ".." contains path traversal, but IsUserFile("..") would be true (no /)
+        // The helper's validation catches it
+        var result = await service.DownloadAsync("..");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region Filesystem DeleteAsync Tests
+
+    [Fact]
+    public async Task DeleteAsync_Filesystem_ExistingUserFile_DeletesAndReturnsTrue()
+    {
+        // Arrange
+        var userDir = GetUserDir();
+        Directory.CreateDirectory(userDir);
+        var filePath = Path.Combine(userDir, "to-delete.txt");
+        await File.WriteAllTextAsync(filePath, "bye");
+
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.DeleteAsync("to-delete.txt");
+
+        // Assert
+        Assert.True(result);
+        Assert.False(File.Exists(filePath));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_Filesystem_NonExistingUserFile_ReturnsFalse()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.DeleteAsync("nope.txt");
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_Filesystem_PathKeyedObject_UsesS3()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+        var fullKey = $"{_userId}/conversations/abc/image.png";
+
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "image/png", SizeBytes = 500, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.DeleteAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await service.DeleteAsync("conversations/abc/image.png");
+
+        // Assert
+        Assert.True(result);
+        _s3ClientMock.Verify(x => x.DeleteAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    #endregion
+
+    #region Filesystem GetPublicUrlAsync Tests
+
+    [Fact]
+    public async Task GetPublicUrlAsync_Filesystem_UserFile_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.GetPublicUrlAsync("test.txt");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetPublicUrlAsync_Filesystem_PathKeyedObject_UsesS3()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+        var fullKey = $"{_userId}/conversations/abc/image.png";
+
+        _s3ClientMock.Setup(x => x.GetObjectMetadataAsync("test-bucket", fullKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new S3ObjectMetadata { ContentType = "image/png", SizeBytes = 500, LastModified = DateTimeOffset.UtcNow });
+        _s3ClientMock.Setup(x => x.GetPreSignedUrl("test-bucket", fullKey, It.IsAny<TimeSpan>()))
+            .Returns("http://localhost:8333/test-bucket/key?signature=abc");
+
+        // Act
+        var result = await service.GetPublicUrlAsync("conversations/abc/image.png");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("test-bucket", result.Url);
+    }
+
+    #endregion
+
+    #region Filesystem GetPreviewUrlAsync Tests
+
+    [Fact]
+    public async Task GetPreviewUrlAsync_Filesystem_UserFile_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateService(CreateFsOptions());
+
+        // Act
+        var result = await service.GetPreviewUrlAsync("image.png", width: 200);
 
         // Assert
         Assert.Null(result);

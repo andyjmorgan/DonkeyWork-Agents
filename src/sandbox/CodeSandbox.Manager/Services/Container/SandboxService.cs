@@ -522,14 +522,14 @@ public class SandboxService : ISandboxService
                 SubPath = userSubPath
             });
 
-            // Shared skills (read-only)
+            // Per-user skills (read-only)
             if (!string.IsNullOrEmpty(_config.SkillsSubPath))
             {
                 workloadMounts.Add(new V1VolumeMount
                 {
                     Name = "buckets",
                     MountPath = _config.SkillsMountPath,
-                    SubPath = _config.SkillsSubPath,
+                    SubPath = $"{_config.SkillsSubPath}/{request.UserId}",
                     ReadOnlyProperty = true
                 });
             }

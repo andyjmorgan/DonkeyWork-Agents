@@ -98,15 +98,11 @@ public sealed class SandboxTools
 
         ### Skills
 
-        The sandbox has pre-built skills at `/home/sandbox/skills/`. Before using a skill, read its full instructions: `sandbox_exec("cat /home/sandbox/skills/{name}/SKILL.md")`
+        The sandbox has skills at `/home/sandbox/skills/`. To discover available skills:
+        `sandbox_exec("ls /home/sandbox/skills/")`
 
-        | Skill | What It Does |
-        |-------|-------------|
-        | docx | Create/read/edit Word documents (.docx) |
-        | pdf | Read/create/merge/split/encrypt/OCR PDF files |
-        | pptx | Create/read/edit PowerPoint presentations |
-        | slack-gif-creator | Animated GIFs optimized for Slack |
-        | xlsx | Create/read/edit spreadsheets (.xlsx, .csv, .tsv) |
+        Before using a skill, read its instructions:
+        `sandbox_exec("cat /home/sandbox/skills/{name}/SKILL.md")`
 
         ### Pre-installed packages
 
