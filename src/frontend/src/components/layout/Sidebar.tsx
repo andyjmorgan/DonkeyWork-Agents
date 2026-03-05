@@ -43,7 +43,6 @@ const navigationGroups: NavGroup[] = [
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
       { name: 'Research', href: '/research', icon: FlaskConical, iconColor: 'text-cyan-500' },
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
-      { name: 'Skills', href: '/skills', icon: Zap, iconColor: 'text-violet-500' },
     ],
   },
   {
@@ -51,6 +50,7 @@ const navigationGroups: NavGroup[] = [
     icon: Wrench,
     items: [
       { name: 'MCP Servers', href: '/mcp-servers', icon: Server, iconColor: 'text-teal-500' },
+      { name: 'Skills', href: '/skills', icon: Zap, iconColor: 'text-violet-500' },
     ],
   },
   {
