@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { Trash2, Upload, Loader2, Zap, Plus, X } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Trash2, Upload, Loader2, Zap, Plus, X, ChevronRight, Folder, FolderOpen, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -9,7 +9,37 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { skills, type SkillItem } from '@/lib/api'
+import { skills, type SkillItem, type SkillFileNode } from '@/lib/api'
+import { cn } from '@/lib/utils'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+
+function FileTreeNode({ node, depth }: { node: SkillFileNode; depth: number }) {
+  const [open, setOpen] = useState(false)
+
+  if (!node.isDirectory) {
+    return (
+      <div style={{ paddingLeft: `${depth * 16 + 8}px` }} className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
+        <FileText className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{node.name}</span>
+      </div>
+    )
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger style={{ paddingLeft: `${depth * 16 + 8}px` }} className="flex w-full items-center gap-2 py-1 text-sm hover:bg-muted/50 rounded cursor-pointer">
+        <ChevronRight className={cn("h-3.5 w-3.5 shrink-0 transition-transform", open && "rotate-90")} />
+        {open ? <FolderOpen className="h-3.5 w-3.5 text-amber-500 shrink-0" /> : <Folder className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+        <span className="truncate">{node.name}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {node.children?.map((child) => (
+          <FileTreeNode key={child.name} node={child} depth={depth + 1} />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
 
 export function SkillsPage() {
   const [allSkills, setAllSkills] = useState<SkillItem[]>([])
@@ -17,6 +47,7 @@ export function SkillsPage() {
   const [deletingName, setDeletingName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expandedSkills, setExpandedSkills] = useState<Record<string, SkillFileNode[] | 'loading' | undefined>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadSkills = async () => {
@@ -69,6 +100,28 @@ export function SkillsPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+    }
+  }
+
+  const toggleSkillContents = async (name: string) => {
+    if (expandedSkills[name] !== undefined) {
+      setExpandedSkills(prev => {
+        const next = { ...prev }
+        delete next[name]
+        return next
+      })
+      return
+    }
+    setExpandedSkills(prev => ({ ...prev, [name]: 'loading' }))
+    try {
+      const contents = await skills.getContents(name)
+      setExpandedSkills(prev => ({ ...prev, [name]: contents }))
+    } catch {
+      setExpandedSkills(prev => {
+        const next = { ...prev }
+        delete next[name]
+        return next
+      })
     }
   }
 
@@ -153,6 +206,12 @@ export function SkillsPage() {
               {allSkills.map((skill) => (
                 <div key={skill.name} className="rounded-lg border border-border bg-card p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
+                    <button
+                      onClick={() => toggleSkillContents(skill.name)}
+                      className="mt-0.5 shrink-0 cursor-pointer"
+                    >
+                      <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", expandedSkills[skill.name] !== undefined && "rotate-90")} />
+                    </button>
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <Zap className="h-4 w-4 text-violet-500 shrink-0" />
@@ -178,6 +237,20 @@ export function SkillsPage() {
                       </Button>
                     </div>
                   </div>
+                  {expandedSkills[skill.name] !== undefined && (
+                    <div className="border-t border-border pt-2 mt-2">
+                      {expandedSkills[skill.name] === 'loading' ? (
+                        <div className="flex items-center gap-2 py-2 pl-2">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Loading contents...</span>
+                        </div>
+                      ) : (
+                        (expandedSkills[skill.name] as SkillFileNode[]).map((node) => (
+                          <FileTreeNode key={node.name} node={node} depth={0} />
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -194,32 +267,53 @@ export function SkillsPage() {
                 </TableHeader>
                 <TableBody>
                   {allSkills.map((skill) => (
-                    <TableRow key={skill.name}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Zap className="h-4 w-4 text-violet-500 shrink-0" />
-                          <span className="font-medium">{skill.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatDate(skill.createdAt)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(skill.name)}
-                            disabled={deletingName === skill.name}
-                            title="Delete"
-                          >
-                            {deletingName === skill.name ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            )}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <React.Fragment key={skill.name}>
+                      <TableRow className="cursor-pointer" onClick={() => toggleSkillContents(skill.name)}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", expandedSkills[skill.name] !== undefined && "rotate-90")} />
+                            <Zap className="h-4 w-4 text-violet-500 shrink-0" />
+                            <span className="font-medium">{skill.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatDate(skill.createdAt)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); handleDelete(skill.name); }}
+                              disabled={deletingName === skill.name}
+                              title="Delete"
+                            >
+                              {deletingName === skill.name ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {expandedSkills[skill.name] !== undefined && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="p-0">
+                            <div className="bg-muted/30 px-4 py-2 border-t border-border">
+                              {expandedSkills[skill.name] === 'loading' ? (
+                                <div className="flex items-center gap-2 py-2">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">Loading contents...</span>
+                                </div>
+                              ) : (
+                                (expandedSkills[skill.name] as SkillFileNode[]).map((node) => (
+                                  <FileTreeNode key={node.name} node={node} depth={0} />
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>

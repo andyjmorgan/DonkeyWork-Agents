@@ -327,4 +327,96 @@ public class SkillsServiceTests : IDisposable
     }
 
     #endregion
+
+    #region GetContentsAsync Tests
+
+    [Fact]
+    public async Task GetContentsAsync_ExistingSkill_ReturnsTree()
+    {
+        // Arrange
+        var skillDir = Path.Combine(GetUserSkillsDir(), "my-skill");
+        Directory.CreateDirectory(Path.Combine(skillDir, "subdir"));
+        File.WriteAllText(Path.Combine(skillDir, "SKILL.md"), "# Test");
+        File.WriteAllText(Path.Combine(skillDir, "subdir", "nested.txt"), "nested content");
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetContentsAsync("my-skill");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+
+        // Directory first
+        Assert.True(result[0].IsDirectory);
+        Assert.Equal("subdir", result[0].Name);
+        Assert.NotNull(result[0].Children);
+        Assert.Single(result[0].Children);
+        Assert.Equal("nested.txt", result[0].Children[0].Name);
+        Assert.False(result[0].Children[0].IsDirectory);
+
+        // File second
+        Assert.False(result[1].IsDirectory);
+        Assert.Equal("SKILL.md", result[1].Name);
+        Assert.Null(result[1].Children);
+    }
+
+    [Fact]
+    public async Task GetContentsAsync_NonExistentSkill_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetContentsAsync("nonexistent");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetContentsAsync_PathTraversal_ReturnsNull()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act & Assert
+        Assert.Null(await service.GetContentsAsync("../etc"));
+        Assert.Null(await service.GetContentsAsync("skill/../../etc"));
+        Assert.Null(await service.GetContentsAsync("skill\\..\\etc"));
+    }
+
+    [Fact]
+    public async Task GetContentsAsync_SortsDirectoriesBeforeFiles()
+    {
+        // Arrange
+        var skillDir = Path.Combine(GetUserSkillsDir(), "my-skill");
+        Directory.CreateDirectory(skillDir);
+        File.WriteAllText(Path.Combine(skillDir, "zebra.txt"), "z");
+        File.WriteAllText(Path.Combine(skillDir, "alpha.txt"), "a");
+        Directory.CreateDirectory(Path.Combine(skillDir, "zulu-dir"));
+        Directory.CreateDirectory(Path.Combine(skillDir, "alpha-dir"));
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetContentsAsync("my-skill");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(4, result.Count);
+
+        // Directories first, alphabetically
+        Assert.True(result[0].IsDirectory);
+        Assert.Equal("alpha-dir", result[0].Name);
+        Assert.True(result[1].IsDirectory);
+        Assert.Equal("zulu-dir", result[1].Name);
+
+        // Files second, alphabetically
+        Assert.False(result[2].IsDirectory);
+        Assert.Equal("alpha.txt", result[2].Name);
+        Assert.False(result[3].IsDirectory);
+        Assert.Equal("zebra.txt", result[3].Name);
+    }
+
+    #endregion
 }

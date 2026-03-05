@@ -1245,6 +1245,12 @@ export interface SkillUploadResult {
   name: string
 }
 
+export interface SkillFileNode {
+  name: string
+  isDirectory: boolean
+  children?: SkillFileNode[]
+}
+
 // Skills API
 export const skills = {
   // List skills
@@ -1275,6 +1281,10 @@ export const skills = {
   // Delete skill
   delete: (name: string) =>
     api.delete(`/api/v1/skills/${encodeURIComponent(name)}`),
+
+  // Get skill file tree contents
+  getContents: (name: string) =>
+    api.get<SkillFileNode[]>(`/api/v1/skills/${encodeURIComponent(name)}/contents`),
 }
 
 /**

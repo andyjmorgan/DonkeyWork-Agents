@@ -76,4 +76,18 @@ public class SkillsController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Get the file tree contents of a skill.
+    /// </summary>
+    [HttpGet("{name}/contents")]
+    [ProducesResponseType<List<SkillFileNodeV1>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetContents(string name)
+    {
+        var contents = await _skillsService.GetContentsAsync(name);
+        if (contents is null)
+            return NotFound();
+        return Ok(contents);
+    }
 }

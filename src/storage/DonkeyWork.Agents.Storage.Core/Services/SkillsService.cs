@@ -147,6 +147,54 @@ public sealed partial class SkillsService : ISkillsService
         return Task.FromResult(true);
     }
 
+    public Task<IReadOnlyList<SkillFileNodeV1>?> GetContentsAsync(string skillName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(skillName) ||
+            skillName.Contains('/') || skillName.Contains('\\') || skillName.Contains(".."))
+            return Task.FromResult<IReadOnlyList<SkillFileNodeV1>?>(null);
+
+        var userDir = GetUserSkillsDirectory();
+        var skillDir = Path.Combine(userDir, skillName);
+        var canonicalUserDir = Path.GetFullPath(userDir + Path.DirectorySeparatorChar);
+        var canonicalSkillDir = Path.GetFullPath(skillDir + Path.DirectorySeparatorChar);
+
+        if (!canonicalSkillDir.StartsWith(canonicalUserDir, StringComparison.Ordinal))
+            return Task.FromResult<IReadOnlyList<SkillFileNodeV1>?>(null);
+
+        if (!Directory.Exists(skillDir))
+            return Task.FromResult<IReadOnlyList<SkillFileNodeV1>?>(null);
+
+        var tree = BuildTree(new DirectoryInfo(skillDir));
+        return Task.FromResult<IReadOnlyList<SkillFileNodeV1>?>(tree);
+    }
+
+    private static IReadOnlyList<SkillFileNodeV1> BuildTree(DirectoryInfo dir)
+    {
+        var nodes = new List<SkillFileNodeV1>();
+
+        foreach (var subDir in dir.GetDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            nodes.Add(new SkillFileNodeV1
+            {
+                Name = subDir.Name,
+                IsDirectory = true,
+                Children = BuildTree(subDir)
+            });
+        }
+
+        foreach (var file in dir.GetFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            nodes.Add(new SkillFileNodeV1
+            {
+                Name = file.Name,
+                IsDirectory = false,
+                Children = null
+            });
+        }
+
+        return nodes;
+    }
+
     private static void CopyDirectory(string source, string destination)
     {
         Directory.CreateDirectory(destination);
