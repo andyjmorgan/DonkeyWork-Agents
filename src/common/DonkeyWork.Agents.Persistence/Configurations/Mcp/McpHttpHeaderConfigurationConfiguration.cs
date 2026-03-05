@@ -11,7 +11,12 @@ public class McpHttpHeaderConfigurationConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<McpHttpHeaderConfigurationEntity> builder)
     {
-        builder.ToTable("http_header_configurations", "mcp");
+        builder.ToTable("http_header_configurations", "mcp", table =>
+        {
+            table.HasCheckConstraint(
+                "ck_http_header_value_or_credential",
+                "(header_value_encrypted IS NOT NULL AND credential_id IS NULL AND credential_field_type IS NULL) OR (header_value_encrypted IS NULL AND credential_id IS NOT NULL AND credential_field_type IS NOT NULL)");
+        });
 
         builder.HasKey(e => e.Id);
 
@@ -28,11 +33,17 @@ public class McpHttpHeaderConfigurationConfiguration : IEntityTypeConfiguration<
             .IsRequired()
             .HasMaxLength(255);
 
-        // Encrypted using pgcrypto
+        // Encrypted header value (nullable when using credential reference)
         builder.Property(e => e.HeaderValueEncrypted)
             .HasColumnName("header_value_encrypted")
-            .IsRequired()
             .HasColumnType("bytea");
+
+        builder.Property(e => e.CredentialId)
+            .HasColumnName("credential_id");
+
+        builder.Property(e => e.CredentialFieldType)
+            .HasColumnName("credential_field_type")
+            .HasMaxLength(50);
 
         // Indexes
         builder.HasIndex(e => e.McpHttpConfigurationId)

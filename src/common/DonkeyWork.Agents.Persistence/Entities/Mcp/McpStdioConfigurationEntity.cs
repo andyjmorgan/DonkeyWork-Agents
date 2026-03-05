@@ -26,9 +26,9 @@ public class McpStdioConfigurationEntity
     public string Arguments { get; set; } = "[]";
 
     /// <summary>
-    /// Environment variables to set (JSON object).
+    /// Environment variable configurations (literal or credential references).
     /// </summary>
-    public string EnvironmentVariables { get; set; } = "{}";
+    public ICollection<McpStdioEnvironmentVariableEntity> EnvironmentVariableConfigurations { get; set; } = [];
 
     /// <summary>
     /// Pre-execution scripts to run before starting the MCP server (JSON array).

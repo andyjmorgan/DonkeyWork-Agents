@@ -2,6 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DonkeyWork.Agents.Common.Contracts.Enums;
+using DonkeyWork.Agents.Credentials.Contracts.Enums;
+using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Models;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
@@ -17,17 +19,20 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
 {
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
+    private readonly IExternalApiKeyService _externalApiKeyService;
     private readonly ILogger<McpServerConfigurationService> _logger;
     private readonly byte[] _encryptionKey;
 
     public McpServerConfigurationService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
+        IExternalApiKeyService externalApiKeyService,
         IOptions<PersistenceOptions> options,
         ILogger<McpServerConfigurationService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
+        _externalApiKeyService = externalApiKeyService;
         _logger = logger;
         _encryptionKey = DeriveKey(options.Value.EncryptionKey);
     }
@@ -57,17 +62,36 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         // Add transport-specific configuration
         if (request.TransportType == McpTransportType.Stdio && request.StdioConfiguration != null)
         {
+            var stdioConfigId = Guid.NewGuid();
             var stdioConfig = new McpStdioConfigurationEntity
             {
-                Id = Guid.NewGuid(),
+                Id = stdioConfigId,
                 McpServerConfigurationId = configId,
                 Command = request.StdioConfiguration.Command,
                 Arguments = JsonSerializer.Serialize(request.StdioConfiguration.Arguments ?? []),
-                EnvironmentVariables = JsonSerializer.Serialize(request.StdioConfiguration.EnvironmentVariables ?? new Dictionary<string, string>()),
                 PreExecScripts = JsonSerializer.Serialize(request.StdioConfiguration.PreExecScripts ?? []),
                 WorkingDirectory = request.StdioConfiguration.WorkingDirectory
             };
             _dbContext.McpStdioConfigurations.Add(stdioConfig);
+
+            // Add environment variable entities
+            if (request.StdioConfiguration.EnvironmentVariables != null)
+            {
+                foreach (var envVar in request.StdioConfiguration.EnvironmentVariables)
+                {
+                    await ValidateCredentialReferenceAsync(envVar.CredentialId, envVar.CredentialFieldType, $"environment variable '{envVar.Name}'", cancellationToken);
+
+                    _dbContext.McpStdioEnvironmentVariables.Add(new McpStdioEnvironmentVariableEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        McpStdioConfigurationId = stdioConfigId,
+                        Name = envVar.Name,
+                        Value = envVar.CredentialId.HasValue ? null : envVar.Value,
+                        CredentialId = envVar.CredentialId,
+                        CredentialFieldType = envVar.CredentialFieldType
+                    });
+                }
+            }
         }
         else if (request.TransportType == McpTransportType.Http && request.HttpConfiguration != null)
         {
@@ -104,12 +128,16 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             {
                 foreach (var headerConfig in request.HttpConfiguration.HeaderConfigurations)
                 {
+                    await ValidateCredentialReferenceAsync(headerConfig.CredentialId, headerConfig.CredentialFieldType, $"header '{headerConfig.HeaderName}'", cancellationToken);
+
                     var headerEntity = new McpHttpHeaderConfigurationEntity
                     {
                         Id = Guid.NewGuid(),
                         McpHttpConfigurationId = httpConfigId,
                         HeaderName = headerConfig.HeaderName,
-                        HeaderValueEncrypted = Convert.ToBase64String(Encrypt(headerConfig.HeaderValue))
+                        HeaderValueEncrypted = headerConfig.CredentialId.HasValue ? null : Convert.ToBase64String(Encrypt(headerConfig.HeaderValue!)),
+                        CredentialId = headerConfig.CredentialId,
+                        CredentialFieldType = headerConfig.CredentialFieldType
                     };
                     _dbContext.McpHttpHeaderConfigurations.Add(headerEntity);
                 }
@@ -127,6 +155,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         var entity = await _dbContext.McpServerConfigurations
             .AsNoTracking()
             .Include(c => c.StdioConfiguration)
+                .ThenInclude(s => s!.EnvironmentVariableConfigurations)
             .Include(c => c.HttpConfiguration)
                 .ThenInclude(h => h!.OAuthConfiguration)
             .Include(c => c.HttpConfiguration)
@@ -150,6 +179,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
     {
         var entity = await _dbContext.McpServerConfigurations
             .Include(c => c.StdioConfiguration)
+                .ThenInclude(s => s!.EnvironmentVariableConfigurations)
             .Include(c => c.HttpConfiguration)
                 .ThenInclude(h => h!.OAuthConfiguration)
             .Include(c => c.HttpConfiguration)
@@ -169,14 +199,18 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         entity.IsEnabled = request.IsEnabled;
         entity.UpdatedAt = now;
 
-        // Capture existing encrypted header values so we can preserve them if the update doesn't provide new values
-        var existingHeaderValues = entity.HttpConfiguration?.HeaderConfigurations
-            .ToDictionary(h => h.HeaderName, h => h.HeaderValueEncrypted, StringComparer.OrdinalIgnoreCase)
-            ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // Capture existing header values (encrypted or credential refs) so we can preserve them if the update doesn't provide new values
+        var existingHeaders = entity.HttpConfiguration?.HeaderConfigurations
+            .ToDictionary(h => h.HeaderName, h => (h.HeaderValueEncrypted, h.CredentialId, h.CredentialFieldType), StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, (string? HeaderValueEncrypted, Guid? CredentialId, string? CredentialFieldType)>(StringComparer.OrdinalIgnoreCase);
 
         // Remove old transport configurations
         if (entity.StdioConfiguration != null)
         {
+            if (entity.StdioConfiguration.EnvironmentVariableConfigurations.Any())
+            {
+                _dbContext.McpStdioEnvironmentVariables.RemoveRange(entity.StdioConfiguration.EnvironmentVariableConfigurations);
+            }
             _dbContext.McpStdioConfigurations.Remove(entity.StdioConfiguration);
         }
 
@@ -196,17 +230,35 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         // Add new transport configuration
         if (request.TransportType == McpTransportType.Stdio && request.StdioConfiguration != null)
         {
+            var stdioConfigId = Guid.NewGuid();
             var stdioConfig = new McpStdioConfigurationEntity
             {
-                Id = Guid.NewGuid(),
+                Id = stdioConfigId,
                 McpServerConfigurationId = id,
                 Command = request.StdioConfiguration.Command,
                 Arguments = JsonSerializer.Serialize(request.StdioConfiguration.Arguments ?? []),
-                EnvironmentVariables = JsonSerializer.Serialize(request.StdioConfiguration.EnvironmentVariables ?? new Dictionary<string, string>()),
                 PreExecScripts = JsonSerializer.Serialize(request.StdioConfiguration.PreExecScripts ?? []),
                 WorkingDirectory = request.StdioConfiguration.WorkingDirectory
             };
             _dbContext.McpStdioConfigurations.Add(stdioConfig);
+
+            if (request.StdioConfiguration.EnvironmentVariables != null)
+            {
+                foreach (var envVar in request.StdioConfiguration.EnvironmentVariables)
+                {
+                    await ValidateCredentialReferenceAsync(envVar.CredentialId, envVar.CredentialFieldType, $"environment variable '{envVar.Name}'", cancellationToken);
+
+                    _dbContext.McpStdioEnvironmentVariables.Add(new McpStdioEnvironmentVariableEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        McpStdioConfigurationId = stdioConfigId,
+                        Name = envVar.Name,
+                        Value = envVar.CredentialId.HasValue ? null : envVar.Value,
+                        CredentialId = envVar.CredentialId,
+                        CredentialFieldType = envVar.CredentialFieldType
+                    });
+                }
+            }
         }
         else if (request.TransportType == McpTransportType.Http && request.HttpConfiguration != null)
         {
@@ -241,16 +293,28 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             {
                 foreach (var headerConfig in request.HttpConfiguration.HeaderConfigurations)
                 {
-                    // Preserve existing encrypted value when the update doesn't provide a new one
-                    string encryptedValue;
-                    if (string.IsNullOrEmpty(headerConfig.HeaderValue)
-                        && existingHeaderValues.TryGetValue(headerConfig.HeaderName, out var existing))
+                    await ValidateCredentialReferenceAsync(headerConfig.CredentialId, headerConfig.CredentialFieldType, $"header '{headerConfig.HeaderName}'", cancellationToken);
+
+                    string? encryptedValue = null;
+                    Guid? credentialId = headerConfig.CredentialId;
+                    string? credentialFieldType = headerConfig.CredentialFieldType;
+
+                    if (credentialId.HasValue)
                     {
-                        encryptedValue = existing;
+                        // Credential reference — no encrypted value
+                        encryptedValue = null;
                     }
-                    else
+                    else if (!string.IsNullOrEmpty(headerConfig.HeaderValue))
                     {
+                        // New literal value provided
                         encryptedValue = Convert.ToBase64String(Encrypt(headerConfig.HeaderValue));
+                    }
+                    else if (existingHeaders.TryGetValue(headerConfig.HeaderName, out var existing))
+                    {
+                        // Preserve existing value (encrypted or credential ref)
+                        encryptedValue = existing.HeaderValueEncrypted;
+                        credentialId = existing.CredentialId;
+                        credentialFieldType = existing.CredentialFieldType;
                     }
 
                     var headerEntity = new McpHttpHeaderConfigurationEntity
@@ -258,7 +322,9 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
                         Id = Guid.NewGuid(),
                         McpHttpConfigurationId = httpConfigId,
                         HeaderName = headerConfig.HeaderName,
-                        HeaderValueEncrypted = encryptedValue
+                        HeaderValueEncrypted = encryptedValue,
+                        CredentialId = credentialId,
+                        CredentialFieldType = credentialFieldType
                     };
                     _dbContext.McpHttpHeaderConfigurations.Add(headerEntity);
                 }
@@ -287,6 +353,112 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
 
         return true;
     }
+
+    public async Task<IReadOnlyList<McpConnectionConfigV1>> GetEnabledConnectionConfigsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.McpServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.IsEnabled && c.TransportType == McpTransportType.Http)
+            .Include(c => c.HttpConfiguration)
+                .ThenInclude(h => h!.HeaderConfigurations)
+            .ToListAsync(cancellationToken);
+
+        var configs = new List<McpConnectionConfigV1>();
+
+        foreach (var entity in entities)
+        {
+            if (entity.HttpConfiguration is null)
+            {
+                _logger.LogWarning("Enabled HTTP MCP server {Id} ({Name}) has no HTTP configuration, skipping", entity.Id, entity.Name);
+                continue;
+            }
+
+            var headers = new Dictionary<string, string>();
+
+            if (entity.HttpConfiguration.AuthType == McpHttpAuthType.Header)
+            {
+                foreach (var header in entity.HttpConfiguration.HeaderConfigurations)
+                {
+                    try
+                    {
+                        var resolvedValue = await ResolveHeaderValueAsync(header, entity.Id, entity.Name, cancellationToken);
+                        if (resolvedValue != null)
+                        {
+                            headers[header.HeaderName] = resolvedValue;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to resolve header {HeaderName} for MCP server {Id} ({Name})", header.HeaderName, entity.Id, entity.Name);
+                    }
+                }
+            }
+
+            configs.Add(new McpConnectionConfigV1
+            {
+                Id = entity.Id,
+                Name = entity.Name,
+                Endpoint = entity.HttpConfiguration.Endpoint,
+                TransportMode = entity.HttpConfiguration.TransportMode,
+                Headers = headers,
+            });
+        }
+
+        return configs;
+    }
+
+    public async Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetEnabledStdioConfigsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.McpServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.IsEnabled && c.TransportType == McpTransportType.Stdio)
+            .Include(c => c.StdioConfiguration)
+                .ThenInclude(s => s!.EnvironmentVariableConfigurations)
+            .ToListAsync(cancellationToken);
+
+        var configs = new List<McpStdioConnectionConfigV1>();
+
+        foreach (var entity in entities)
+        {
+            if (entity.StdioConfiguration is null)
+            {
+                _logger.LogWarning("Enabled stdio MCP server {Id} ({Name}) has no stdio configuration, skipping", entity.Id, entity.Name);
+                continue;
+            }
+
+            var envVars = new Dictionary<string, string>();
+            foreach (var envVar in entity.StdioConfiguration.EnvironmentVariableConfigurations)
+            {
+                try
+                {
+                    var resolvedValue = await ResolveEnvVarValueAsync(envVar, entity.Id, entity.Name, cancellationToken);
+                    if (resolvedValue != null)
+                    {
+                        envVars[envVar.Name] = resolvedValue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve environment variable {EnvVarName} for MCP server {Id} ({Name})", envVar.Name, entity.Id, entity.Name);
+                }
+            }
+
+            configs.Add(new McpStdioConnectionConfigV1
+            {
+                Id = entity.Id,
+                Name = entity.Name,
+                Command = entity.StdioConfiguration.Command,
+                Arguments = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.Arguments) ?? [],
+                EnvironmentVariables = envVars,
+                PreExecScripts = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.PreExecScripts) ?? [],
+                WorkingDirectory = entity.StdioConfiguration.WorkingDirectory,
+            });
+        }
+
+        return configs;
+    }
+
+    #region Mapping
 
     private McpServerSummaryV1 MapToSummary(McpServerConfigurationEntity entity)
     {
@@ -324,7 +496,14 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         {
             Command = entity.Command,
             Arguments = JsonSerializer.Deserialize<List<string>>(entity.Arguments) ?? [],
-            EnvironmentVariables = JsonSerializer.Deserialize<Dictionary<string, string>>(entity.EnvironmentVariables) ?? new(),
+            EnvironmentVariables = entity.EnvironmentVariableConfigurations.Select(ev => new McpEnvironmentVariableV1
+            {
+                Name = ev.Name,
+                IsCredentialReference = ev.CredentialId.HasValue,
+                Value = ev.CredentialId.HasValue ? null : ev.Value,
+                CredentialId = ev.CredentialId,
+                CredentialFieldType = ev.CredentialFieldType
+            }).ToList(),
             PreExecScripts = JsonSerializer.Deserialize<List<string>>(entity.PreExecScripts) ?? [],
             WorkingDirectory = entity.WorkingDirectory
         };
@@ -341,7 +520,10 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             HeaderConfigurations = entity.HeaderConfigurations.Select(h => new McpHttpHeaderConfigurationV1
             {
                 HeaderName = h.HeaderName,
-                HeaderValue = Decrypt(Convert.FromBase64String(h.HeaderValueEncrypted))
+                HeaderValue = h.CredentialId.HasValue ? null : (h.HeaderValueEncrypted != null ? Decrypt(Convert.FromBase64String(h.HeaderValueEncrypted)) : null),
+                IsCredentialReference = h.CredentialId.HasValue,
+                CredentialId = h.CredentialId,
+                CredentialFieldType = h.CredentialFieldType
             }).ToList()
         };
     }
@@ -358,88 +540,79 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         };
     }
 
-    public async Task<IReadOnlyList<McpConnectionConfigV1>> GetEnabledConnectionConfigsAsync(CancellationToken cancellationToken = default)
+    #endregion
+
+    #region Credential Resolution
+
+    private async Task ValidateCredentialReferenceAsync(Guid? credentialId, string? credentialFieldType, string context, CancellationToken cancellationToken)
     {
-        var entities = await _dbContext.McpServerConfigurations
-            .AsNoTracking()
-            .Where(c => c.IsEnabled && c.TransportType == McpTransportType.Http)
-            .Include(c => c.HttpConfiguration)
-                .ThenInclude(h => h!.HeaderConfigurations)
-            .ToListAsync(cancellationToken);
-
-        var configs = new List<McpConnectionConfigV1>();
-
-        foreach (var entity in entities)
+        if (!credentialId.HasValue)
         {
-            if (entity.HttpConfiguration is null)
-            {
-                _logger.LogWarning("Enabled HTTP MCP server {Id} ({Name}) has no HTTP configuration, skipping", entity.Id, entity.Name);
-                continue;
-            }
-
-            var headers = new Dictionary<string, string>();
-
-            if (entity.HttpConfiguration.AuthType == McpHttpAuthType.Header)
-            {
-                foreach (var header in entity.HttpConfiguration.HeaderConfigurations)
-                {
-                    try
-                    {
-                        var decryptedValue = Decrypt(Convert.FromBase64String(header.HeaderValueEncrypted));
-                        headers[header.HeaderName] = decryptedValue;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to decrypt header {HeaderName} for MCP server {Id} ({Name})", header.HeaderName, entity.Id, entity.Name);
-                    }
-                }
-            }
-
-            configs.Add(new McpConnectionConfigV1
-            {
-                Id = entity.Id,
-                Name = entity.Name,
-                Endpoint = entity.HttpConfiguration.Endpoint,
-                TransportMode = entity.HttpConfiguration.TransportMode,
-                Headers = headers,
-            });
+            return;
         }
 
-        return configs;
-    }
-
-    public async Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetEnabledStdioConfigsAsync(CancellationToken cancellationToken = default)
-    {
-        var entities = await _dbContext.McpServerConfigurations
-            .AsNoTracking()
-            .Where(c => c.IsEnabled && c.TransportType == McpTransportType.Stdio)
-            .Include(c => c.StdioConfiguration)
-            .ToListAsync(cancellationToken);
-
-        var configs = new List<McpStdioConnectionConfigV1>();
-
-        foreach (var entity in entities)
+        if (string.IsNullOrEmpty(credentialFieldType))
         {
-            if (entity.StdioConfiguration is null)
-            {
-                _logger.LogWarning("Enabled stdio MCP server {Id} ({Name}) has no stdio configuration, skipping", entity.Id, entity.Name);
-                continue;
-            }
-
-            configs.Add(new McpStdioConnectionConfigV1
-            {
-                Id = entity.Id,
-                Name = entity.Name,
-                Command = entity.StdioConfiguration.Command,
-                Arguments = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.Arguments) ?? [],
-                EnvironmentVariables = JsonSerializer.Deserialize<Dictionary<string, string>>(entity.StdioConfiguration.EnvironmentVariables) ?? new(),
-                PreExecScripts = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.PreExecScripts) ?? [],
-                WorkingDirectory = entity.StdioConfiguration.WorkingDirectory,
-            });
+            throw new ArgumentException($"Credential field type is required when referencing a credential for {context}.");
         }
 
-        return configs;
+        if (!Enum.TryParse<CredentialFieldType>(credentialFieldType, ignoreCase: true, out _))
+        {
+            throw new ArgumentException($"Invalid credential field type '{credentialFieldType}' for {context}. Valid types: {string.Join(", ", Enum.GetNames<CredentialFieldType>())}");
+        }
+
+        var credential = await _externalApiKeyService.GetByIdAsync(_identityContext.UserId, credentialId.Value, cancellationToken);
+        if (credential == null)
+        {
+            throw new ArgumentException($"Credential '{credentialId.Value}' not found for {context}.");
+        }
     }
+
+    private async Task<string?> ResolveCredentialValueAsync(Guid credentialId, string credentialFieldType, CancellationToken cancellationToken)
+    {
+        var credential = await _externalApiKeyService.GetByIdAsync(_identityContext.UserId, credentialId, cancellationToken);
+        if (credential == null)
+        {
+            _logger.LogWarning("Credential {CredentialId} not found during resolution", credentialId);
+            return null;
+        }
+
+        if (Enum.TryParse<CredentialFieldType>(credentialFieldType, ignoreCase: true, out var fieldType)
+            && credential.Fields.TryGetValue(fieldType, out var value))
+        {
+            return value;
+        }
+
+        _logger.LogWarning("Credential {CredentialId} does not have field {FieldType}", credentialId, credentialFieldType);
+        return null;
+    }
+
+    private async Task<string?> ResolveEnvVarValueAsync(McpStdioEnvironmentVariableEntity envVar, Guid serverId, string serverName, CancellationToken cancellationToken)
+    {
+        if (envVar.CredentialId.HasValue && envVar.CredentialFieldType != null)
+        {
+            return await ResolveCredentialValueAsync(envVar.CredentialId.Value, envVar.CredentialFieldType, cancellationToken);
+        }
+
+        return envVar.Value;
+    }
+
+    private async Task<string?> ResolveHeaderValueAsync(McpHttpHeaderConfigurationEntity header, Guid serverId, string serverName, CancellationToken cancellationToken)
+    {
+        if (header.CredentialId.HasValue && header.CredentialFieldType != null)
+        {
+            return await ResolveCredentialValueAsync(header.CredentialId.Value, header.CredentialFieldType, cancellationToken);
+        }
+
+        if (header.HeaderValueEncrypted != null)
+        {
+            return Decrypt(Convert.FromBase64String(header.HeaderValueEncrypted));
+        }
+
+        return null;
+    }
+
+    #endregion
 
     #region Encryption
 

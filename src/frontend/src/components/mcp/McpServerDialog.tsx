@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, Terminal, Globe, Eye, EyeOff } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Trash2, Terminal, Globe, Eye, EyeOff, KeyRound } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -23,13 +23,29 @@ import {
 import { Separator } from '@/components/ui/separator'
 import {
   mcpServers,
+  credentials,
   type McpServerDetails,
   type McpTransportType,
   type McpHttpTransportMode,
   type McpHttpAuthType,
   type CreateMcpServerRequest,
   type UpdateMcpServerRequest,
+  type CredentialSummary,
+  type CreateMcpEnvironmentVariableRequest,
+  type CreateMcpHttpHeaderConfigurationRequest,
 } from '@/lib/api'
+
+const CREDENTIAL_FIELD_TYPES = [
+  'ApiKey',
+  'Username',
+  'Password',
+  'ClientId',
+  'ClientSecret',
+  'AccessToken',
+  'RefreshToken',
+  'WebhookSecret',
+  'Custom',
+] as const
 
 interface McpServerDialogProps {
   open: boolean
@@ -38,14 +54,20 @@ interface McpServerDialogProps {
   editingServer?: McpServerDetails | null
 }
 
-interface KeyValuePair {
+interface EnvVarEntry {
   key: string
   value: string
+  isCredentialRef: boolean
+  credentialId: string
+  credentialFieldType: string
 }
 
-interface HeaderConfig {
+interface HeaderEntry {
   headerName: string
   headerValue: string
+  isCredentialRef: boolean
+  credentialId: string
+  credentialFieldType: string
 }
 
 export function McpServerDialog({
@@ -63,7 +85,7 @@ export function McpServerDialog({
   // Stdio fields
   const [command, setCommand] = useState('')
   const [args, setArgs] = useState('')
-  const [envVars, setEnvVars] = useState<KeyValuePair[]>([])
+  const [envVars, setEnvVars] = useState<EnvVarEntry[]>([])
   const [preExecScripts, setPreExecScripts] = useState('')
   const [workingDirectory, setWorkingDirectory] = useState('')
 
@@ -81,16 +103,26 @@ export function McpServerDialog({
   const [tokenEndpoint, setTokenEndpoint] = useState('')
 
   // Header auth fields
-  const [headers, setHeaders] = useState<HeaderConfig[]>([])
+  const [headers, setHeaders] = useState<HeaderEntry[]>([])
 
   // Visibility toggles
   const [revealedHeaders, setRevealedHeaders] = useState<Set<number>>(new Set())
+
+  // Credentials list for picker
+  const [availableCredentials, setAvailableCredentials] = useState<CredentialSummary[]>([])
 
   // Form state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isEditing = !!editingServer
+
+  // Load credentials when dialog opens
+  useEffect(() => {
+    if (open) {
+      credentials.list().then(setAvailableCredentials).catch(() => {})
+    }
+  }, [open])
 
   // Reset form when dialog opens/closes or editing server changes
   useEffect(() => {
@@ -107,9 +139,12 @@ export function McpServerDialog({
           setCommand(stdio.command)
           setArgs(stdio.arguments?.join(' ') || '')
           setEnvVars(
-            Object.entries(stdio.environmentVariables || {}).map(([key, value]) => ({
-              key,
-              value,
+            (stdio.environmentVariables || []).map((ev) => ({
+              key: ev.name,
+              value: ev.value || '',
+              isCredentialRef: ev.isCredentialReference,
+              credentialId: ev.credentialId || '',
+              credentialFieldType: ev.credentialFieldType || '',
             }))
           )
           setPreExecScripts(stdio.preExecScripts?.join('\n') || '')
@@ -137,6 +172,9 @@ export function McpServerDialog({
               http.headerConfigurations.map((h) => ({
                 headerName: h.headerName,
                 headerValue: h.headerValue || '',
+                isCredentialRef: h.isCredentialReference,
+                credentialId: h.credentialId || '',
+                credentialFieldType: h.credentialFieldType || '',
               }))
             )
           }
@@ -172,60 +210,71 @@ export function McpServerDialog({
     setError(null)
   }
 
+  const buildEnvVarsPayload = useCallback((): CreateMcpEnvironmentVariableRequest[] | undefined => {
+    if (envVars.length === 0) return undefined
+    return envVars.map((ev) =>
+      ev.isCredentialRef
+        ? { name: ev.key, credentialId: ev.credentialId, credentialFieldType: ev.credentialFieldType }
+        : { name: ev.key, value: ev.value }
+    )
+  }, [envVars])
+
+  const buildHeadersPayload = useCallback((): CreateMcpHttpHeaderConfigurationRequest[] | undefined => {
+    if (headers.length === 0) return undefined
+    return headers.map((h) =>
+      h.isCredentialRef
+        ? { headerName: h.headerName, credentialId: h.credentialId, credentialFieldType: h.credentialFieldType }
+        : { headerName: h.headerName, headerValue: h.headerValue }
+    )
+  }, [headers])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setIsSubmitting(true)
 
     try {
+      const stdioConfig = transportType === 'Stdio' ? {
+        stdioConfiguration: {
+          command,
+          arguments: args ? args.split(/\s+/).filter(Boolean) : undefined,
+          environmentVariables: buildEnvVarsPayload(),
+          preExecScripts: preExecScripts ? preExecScripts.split('\n').filter(Boolean) : undefined,
+          workingDirectory: workingDirectory || undefined,
+        },
+      } : {}
+
+      const httpConfig = transportType === 'Http' ? {
+        httpConfiguration: {
+          endpoint,
+          transportMode: httpTransportMode,
+          authType,
+          ...(authType === 'OAuth'
+            ? {
+                oauthConfiguration: {
+                  clientId,
+                  clientSecret: clientSecret || undefined,
+                  redirectUri,
+                  scopes: scopes ? scopes.split(/\s+/).filter(Boolean) : undefined,
+                  authorizationEndpoint,
+                  tokenEndpoint,
+                },
+              }
+            : {}),
+          ...(authType === 'Header'
+            ? { headerConfigurations: buildHeadersPayload() }
+            : {}),
+        },
+      } : {}
+
       if (isEditing) {
         const updateRequest: UpdateMcpServerRequest = {
           name,
           description: description || undefined,
           transportType,
           isEnabled,
-          ...(transportType === 'Stdio'
-            ? {
-                stdioConfiguration: {
-                  command,
-                  arguments: args ? args.split(/\s+/).filter(Boolean) : undefined,
-                  environmentVariables:
-                    envVars.length > 0
-                      ? Object.fromEntries(envVars.map((ev) => [ev.key, ev.value]))
-                      : undefined,
-                  preExecScripts: preExecScripts
-                    ? preExecScripts.split('\n').filter(Boolean)
-                    : undefined,
-                  workingDirectory: workingDirectory || undefined,
-                },
-              }
-            : {
-                httpConfiguration: {
-                  endpoint,
-                  transportMode: httpTransportMode,
-                  authType,
-                  ...(authType === 'OAuth'
-                    ? {
-                        oauthConfiguration: {
-                          clientId,
-                          clientSecret: clientSecret || undefined,
-                          redirectUri,
-                          scopes: scopes ? scopes.split(/\s+/).filter(Boolean) : undefined,
-                          authorizationEndpoint,
-                          tokenEndpoint,
-                        },
-                      }
-                    : {}),
-                  ...(authType === 'Header' && headers.length > 0
-                    ? {
-                        headerConfigurations: headers.map((h) => ({
-                          headerName: h.headerName,
-                          headerValue: h.headerValue,
-                        })),
-                      }
-                    : {}),
-                },
-              }),
+          ...stdioConfig,
+          ...httpConfig,
         }
         await mcpServers.update(editingServer!.id, updateRequest)
       } else {
@@ -234,48 +283,8 @@ export function McpServerDialog({
           description: description || undefined,
           transportType,
           isEnabled,
-          ...(transportType === 'Stdio'
-            ? {
-                stdioConfiguration: {
-                  command,
-                  arguments: args ? args.split(/\s+/).filter(Boolean) : undefined,
-                  environmentVariables:
-                    envVars.length > 0
-                      ? Object.fromEntries(envVars.map((ev) => [ev.key, ev.value]))
-                      : undefined,
-                  preExecScripts: preExecScripts
-                    ? preExecScripts.split('\n').filter(Boolean)
-                    : undefined,
-                  workingDirectory: workingDirectory || undefined,
-                },
-              }
-            : {
-                httpConfiguration: {
-                  endpoint,
-                  transportMode: httpTransportMode,
-                  authType,
-                  ...(authType === 'OAuth'
-                    ? {
-                        oauthConfiguration: {
-                          clientId,
-                          clientSecret: clientSecret || undefined,
-                          redirectUri,
-                          scopes: scopes ? scopes.split(/\s+/).filter(Boolean) : undefined,
-                          authorizationEndpoint,
-                          tokenEndpoint,
-                        },
-                      }
-                    : {}),
-                  ...(authType === 'Header' && headers.length > 0
-                    ? {
-                        headerConfigurations: headers.map((h) => ({
-                          headerName: h.headerName,
-                          headerValue: h.headerValue,
-                        })),
-                      }
-                    : {}),
-                },
-              }),
+          ...stdioConfig,
+          ...httpConfig,
         }
         await mcpServers.create(createRequest)
       }
@@ -296,12 +305,16 @@ export function McpServerDialog({
   }
 
   const addEnvVar = () => {
-    setEnvVars([...envVars, { key: '', value: '' }])
+    setEnvVars([...envVars, { key: '', value: '', isCredentialRef: false, credentialId: '', credentialFieldType: '' }])
   }
 
-  const updateEnvVar = (index: number, field: 'key' | 'value', value: string) => {
+  const updateEnvVar = (index: number, field: keyof EnvVarEntry, value: string | boolean) => {
     const updated = [...envVars]
-    updated[index][field] = value
+    if (field === 'isCredentialRef') {
+      updated[index] = { ...updated[index], isCredentialRef: value as boolean, value: '', credentialId: '', credentialFieldType: '' }
+    } else {
+      updated[index] = { ...updated[index], [field]: value }
+    }
     setEnvVars(updated)
   }
 
@@ -310,12 +323,16 @@ export function McpServerDialog({
   }
 
   const addHeader = () => {
-    setHeaders([...headers, { headerName: '', headerValue: '' }])
+    setHeaders([...headers, { headerName: '', headerValue: '', isCredentialRef: false, credentialId: '', credentialFieldType: '' }])
   }
 
-  const updateHeader = (index: number, field: 'headerName' | 'headerValue', value: string) => {
+  const updateHeader = (index: number, field: keyof HeaderEntry, value: string | boolean) => {
     const updated = [...headers]
-    updated[index][field] = value
+    if (field === 'isCredentialRef') {
+      updated[index] = { ...updated[index], isCredentialRef: value as boolean, headerValue: '', credentialId: '', credentialFieldType: '' }
+    } else {
+      updated[index] = { ...updated[index], [field]: value }
+    }
     setHeaders(updated)
   }
 
@@ -339,6 +356,40 @@ export function McpServerDialog({
       return next
     })
   }
+
+  const renderCredentialPicker = (
+    credentialId: string,
+    credentialFieldType: string,
+    onCredentialChange: (credentialId: string) => void,
+    onFieldTypeChange: (fieldType: string) => void,
+  ) => (
+    <div className="flex items-center gap-2 flex-1">
+      <Select value={credentialId} onValueChange={onCredentialChange}>
+        <SelectTrigger className="flex-1">
+          <SelectValue placeholder="Select credential..." />
+        </SelectTrigger>
+        <SelectContent>
+          {availableCredentials.map((cred) => (
+            <SelectItem key={cred.id} value={cred.id}>
+              {cred.name} ({cred.provider})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={credentialFieldType} onValueChange={onFieldTypeChange}>
+        <SelectTrigger className="w-[140px]">
+          <SelectValue placeholder="Field..." />
+        </SelectTrigger>
+        <SelectContent>
+          {CREDENTIAL_FIELD_TYPES.map((ft) => (
+            <SelectItem key={ft} value={ft}>
+              {ft}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -486,28 +537,49 @@ export function McpServerDialog({
                   {envVars.length > 0 && (
                     <div className="space-y-2">
                       {envVars.map((ev, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Input
-                            placeholder="KEY"
-                            value={ev.key}
-                            onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
-                            className="flex-1"
-                          />
-                          <Input
-                            placeholder="value"
-                            value={ev.value}
-                            onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
-                            className="flex-1"
-                            type="password"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeEnvVar(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
+                        <div key={index} className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="KEY"
+                              value={ev.key}
+                              onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
+                              className="w-[160px]"
+                            />
+                            {ev.isCredentialRef ? (
+                              renderCredentialPicker(
+                                ev.credentialId,
+                                ev.credentialFieldType,
+                                (id) => updateEnvVar(index, 'credentialId', id),
+                                (ft) => updateEnvVar(index, 'credentialFieldType', ft),
+                              )
+                            ) : (
+                              <Input
+                                placeholder="value"
+                                value={ev.value}
+                                onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
+                                className="flex-1"
+                                type="password"
+                              />
+                            )}
+                            <Button
+                              type="button"
+                              variant={ev.isCredentialRef ? 'default' : 'ghost'}
+                              size="sm"
+                              onClick={() => updateEnvVar(index, 'isCredentialRef', !ev.isCredentialRef)}
+                              title={ev.isCredentialRef ? 'Switch to literal value' : 'Use credential reference'}
+                              tabIndex={-1}
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeEnvVar(index)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -676,27 +748,48 @@ export function McpServerDialog({
                               placeholder="Header-Name"
                               value={header.headerName}
                               onChange={(e) => updateHeader(index, 'headerName', e.target.value)}
-                              className="flex-1"
+                              className="w-[160px]"
                             />
-                            <Input
-                              placeholder="Header value"
-                              value={header.headerValue}
-                              onChange={(e) => updateHeader(index, 'headerValue', e.target.value)}
-                              className="flex-1"
-                              type={revealedHeaders.has(index) ? 'text' : 'password'}
-                            />
+                            {header.isCredentialRef ? (
+                              renderCredentialPicker(
+                                header.credentialId,
+                                header.credentialFieldType,
+                                (id) => updateHeader(index, 'credentialId', id),
+                                (ft) => updateHeader(index, 'credentialFieldType', ft),
+                              )
+                            ) : (
+                              <Input
+                                placeholder="Header value"
+                                value={header.headerValue}
+                                onChange={(e) => updateHeader(index, 'headerValue', e.target.value)}
+                                className="flex-1"
+                                type={revealedHeaders.has(index) ? 'text' : 'password'}
+                              />
+                            )}
+                            {!header.isCredentialRef && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleHeaderReveal(index)}
+                                tabIndex={-1}
+                              >
+                                {revealedHeaders.has(index) ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
                             <Button
                               type="button"
-                              variant="ghost"
+                              variant={header.isCredentialRef ? 'default' : 'ghost'}
                               size="sm"
-                              onClick={() => toggleHeaderReveal(index)}
+                              onClick={() => updateHeader(index, 'isCredentialRef', !header.isCredentialRef)}
+                              title={header.isCredentialRef ? 'Switch to literal value' : 'Use credential reference'}
                               tabIndex={-1}
                             >
-                              {revealedHeaders.has(index) ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
+                              <KeyRound className="h-4 w-4" />
                             </Button>
                             <Button
                               type="button"

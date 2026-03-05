@@ -34,12 +34,6 @@ public class McpStdioConfigurationConfiguration : IEntityTypeConfiguration<McpSt
             .HasColumnType("jsonb")
             .HasDefaultValue("[]");
 
-        builder.Property(e => e.EnvironmentVariables)
-            .HasColumnName("environment_variables")
-            .IsRequired()
-            .HasColumnType("jsonb")
-            .HasDefaultValue("{}");
-
         builder.Property(e => e.PreExecScripts)
             .HasColumnName("pre_exec_scripts")
             .IsRequired()
@@ -54,5 +48,11 @@ public class McpStdioConfigurationConfiguration : IEntityTypeConfiguration<McpSt
         builder.HasIndex(e => e.McpServerConfigurationId)
             .IsUnique()
             .HasDatabaseName("ix_mcp_stdio_configurations_mcp_server_configuration_id");
+
+        // Environment variable configurations (cascade delete)
+        builder.HasMany(e => e.EnvironmentVariableConfigurations)
+            .WithOne(e => e.McpStdioConfiguration)
+            .HasForeignKey(e => e.McpStdioConfigurationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -70,6 +70,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<McpHttpConfigurationEntity> McpHttpConfigurations => Set<McpHttpConfigurationEntity>();
     public DbSet<McpHttpOAuthConfigurationEntity> McpHttpOAuthConfigurations => Set<McpHttpOAuthConfigurationEntity>();
     public DbSet<McpHttpHeaderConfigurationEntity> McpHttpHeaderConfigurations => Set<McpHttpHeaderConfigurationEntity>();
+    public DbSet<McpStdioEnvironmentVariableEntity> McpStdioEnvironmentVariables => Set<McpStdioEnvironmentVariableEntity>();
 
     // Data Protection keys (system-level, no user scoping)
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();

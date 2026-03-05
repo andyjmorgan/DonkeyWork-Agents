@@ -17,7 +17,7 @@ public sealed class CreateMcpStdioConfigurationRequestV1
     public List<string>? Arguments { get; init; }
 
     [JsonPropertyName("environmentVariables")]
-    public Dictionary<string, string>? EnvironmentVariables { get; init; }
+    public List<CreateMcpEnvironmentVariableRequestV1>? EnvironmentVariables { get; init; }
 
     [JsonPropertyName("preExecScripts")]
     public List<string>? PreExecScripts { get; init; }

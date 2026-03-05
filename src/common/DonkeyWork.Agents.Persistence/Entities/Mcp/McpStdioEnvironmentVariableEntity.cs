@@ -1,9 +1,10 @@
 namespace DonkeyWork.Agents.Persistence.Entities.Mcp;
 
 /// <summary>
-/// Header configuration entity for HTTP-based MCP server connections.
+/// Environment variable configuration for stdio-based MCP server connections.
+/// Supports both literal values and credential store references.
 /// </summary>
-public class McpHttpHeaderConfigurationEntity
+public class McpStdioEnvironmentVariableEntity
 {
     /// <summary>
     /// Unique identifier.
@@ -11,19 +12,19 @@ public class McpHttpHeaderConfigurationEntity
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Foreign key to the parent HTTP configuration.
+    /// Foreign key to the parent stdio configuration.
     /// </summary>
-    public Guid McpHttpConfigurationId { get; set; }
+    public Guid McpStdioConfigurationId { get; set; }
 
     /// <summary>
-    /// HTTP header name.
+    /// Environment variable name.
     /// </summary>
-    public string HeaderName { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// HTTP header value (encrypted). Null when using a credential reference.
+    /// Literal value (null when using a credential reference).
     /// </summary>
-    public string? HeaderValueEncrypted { get; set; }
+    public string? Value { get; set; }
 
     /// <summary>
     /// Reference to an external API key credential (null when using a literal value).
@@ -37,7 +38,7 @@ public class McpHttpHeaderConfigurationEntity
     public string? CredentialFieldType { get; set; }
 
     /// <summary>
-    /// Navigation property to the parent HTTP configuration.
+    /// Navigation property to the parent stdio configuration.
     /// </summary>
-    public McpHttpConfigurationEntity McpHttpConfiguration { get; set; } = null!;
+    public McpStdioConfigurationEntity McpStdioConfiguration { get; set; } = null!;
 }

@@ -14,7 +14,7 @@ public sealed class McpStdioConfigurationV1
     public List<string> Arguments { get; init; } = [];
 
     [JsonPropertyName("environmentVariables")]
-    public Dictionary<string, string> EnvironmentVariables { get; init; } = new();
+    public List<McpEnvironmentVariableV1> EnvironmentVariables { get; init; } = [];
 
     [JsonPropertyName("preExecScripts")]
     public List<string> PreExecScripts { get; init; } = [];

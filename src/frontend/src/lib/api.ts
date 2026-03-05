@@ -1256,17 +1256,28 @@ export type McpTransportType = 'Stdio' | 'Http'
 export type McpHttpTransportMode = 'AutoDetect' | 'Sse' | 'StreamableHttp'
 export type McpHttpAuthType = 'None' | 'OAuth' | 'Header'
 
+export interface McpEnvironmentVariableV1 {
+  name: string
+  isCredentialReference: boolean
+  value?: string
+  credentialId?: string
+  credentialFieldType?: string
+}
+
 export interface McpStdioConfigurationV1 {
   command: string
   arguments?: string[]
-  environmentVariables?: Record<string, string>
+  environmentVariables?: McpEnvironmentVariableV1[]
   preExecScripts?: string[]
   workingDirectory?: string
 }
 
 export interface McpHttpHeaderConfigurationV1 {
   headerName: string
-  headerValue: string
+  headerValue?: string
+  isCredentialReference: boolean
+  credentialId?: string
+  credentialFieldType?: string
 }
 
 export interface McpHttpOAuthConfigurationV1 {
@@ -1309,17 +1320,26 @@ export interface McpServerDetails {
 }
 
 // Create request types
+export interface CreateMcpEnvironmentVariableRequest {
+  name: string
+  value?: string
+  credentialId?: string
+  credentialFieldType?: string
+}
+
 export interface CreateMcpStdioConfigurationRequest {
   command: string
   arguments?: string[]
-  environmentVariables?: Record<string, string>
+  environmentVariables?: CreateMcpEnvironmentVariableRequest[]
   preExecScripts?: string[]
   workingDirectory?: string
 }
 
 export interface CreateMcpHttpHeaderConfigurationRequest {
   headerName: string
-  headerValue: string
+  headerValue?: string
+  credentialId?: string
+  credentialFieldType?: string
 }
 
 export interface CreateMcpHttpOAuthConfigurationRequest {
