@@ -41,7 +41,7 @@ import {
   type ResearchDetails,
   type ResearchStatus,
   type TagRequest,
-} from '@/lib/api'
+} from '@donkeywork/api-client'
 
 export function ResearchEditorPage() {
   const { researchId } = useParams<{ researchId: string }>()

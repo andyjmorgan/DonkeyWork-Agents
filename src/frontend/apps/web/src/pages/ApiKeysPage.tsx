@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@donkeywork/ui'
-import { apiKeys, type ApiKeyItem } from '@/lib/api'
+import { apiKeys, type ApiKeyItem } from '@donkeywork/api-client'
 
 const PAGE_SIZE = 20
 

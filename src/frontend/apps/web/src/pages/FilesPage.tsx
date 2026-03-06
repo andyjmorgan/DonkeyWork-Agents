@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@donkeywork/ui'
-import { files, type FileItem } from '@/lib/api'
+import { files, type FileItem } from '@donkeywork/api-client'
 
 export function FilesPage() {
   const [allFiles, setAllFiles] = useState<FileItem[]>([])

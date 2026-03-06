@@ -33,7 +33,7 @@ import {
   type OAuthToken,
   type CreateMcpEnvironmentVariableRequest,
   type CreateMcpHttpHeaderConfigurationRequest,
-} from '@/lib/api'
+} from '@donkeywork/api-client'
 
 const CREDENTIAL_FIELD_TYPES = [
   'ApiKey',

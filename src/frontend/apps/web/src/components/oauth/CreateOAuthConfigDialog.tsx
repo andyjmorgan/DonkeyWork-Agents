@@ -18,7 +18,7 @@ import {
   type OAuthProvider,
   type OAuthProviderMetadata,
   type CreateOAuthProviderConfigRequest,
-} from '@/lib/api'
+} from '@donkeywork/api-client'
 import { Loader2, ExternalLink, Globe, ChevronLeft, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

@@ -18,7 +18,7 @@ import { ExportJsonDialog } from '@/components/editor/ExportJsonDialog'
 import { InterfacesPanel } from '@/components/editor/InterfacesPanel'
 import { TestPanel } from '@/components/execution/TestPanel'
 import { useEditorStore } from '@/store/editor'
-import type { OrchestrationVersion, JSONSchema } from '@/lib/api'
+import type { OrchestrationVersion, JSONSchema } from '@donkeywork/api-client'
 import { toast } from 'sonner'
 
 // Type for nodes in ReactFlowData from API response
@@ -66,7 +66,7 @@ export function OrchestrationEditorPage() {
 
         if (id) {
           // Load existing orchestration
-          const { orchestrations } = await import('@/lib/api')
+          const { orchestrations } = await import('@donkeywork/api-client')
           const orchestration = await orchestrations.get(id)
           const versions = await orchestrations.listVersions(id)
 
@@ -175,7 +175,7 @@ export function OrchestrationEditorPage() {
     if (!orchestrationId) return
 
     try {
-      const { orchestrations } = await import('@/lib/api')
+      const { orchestrations } = await import('@donkeywork/api-client')
       await orchestrations.update(orchestrationId, { name, description })
       setOrchestrationMetadata(name, description)
     } catch (error) {
@@ -198,7 +198,7 @@ export function OrchestrationEditorPage() {
       // First save current state as draft to ensure latest changes are captured
       await save()
 
-      const { orchestrations } = await import('@/lib/api')
+      const { orchestrations } = await import('@donkeywork/api-client')
       const publishedVersion = await orchestrations.publish(orchestrationId)
 
       // Merge top-level inputSchema into start node configuration

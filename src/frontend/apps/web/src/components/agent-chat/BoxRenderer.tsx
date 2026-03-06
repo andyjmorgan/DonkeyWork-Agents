@@ -1,7 +1,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { ContentBox, CitationBox } from "@/types/agent-chat";
+import type { ContentBox, CitationBox } from "@donkeywork/api-client";
 import { CitationChipRow } from "@/components/agent-chat/CitationChip";
 import { PulseDots } from "@/components/agent-chat/PulseDots";
 import { JsonViewer } from "@/components/ui/json-viewer";

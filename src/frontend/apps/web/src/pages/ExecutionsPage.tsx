@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@donkeywork/ui'
-import { executions, orchestrations, type OrchestrationExecution, type Orchestration } from '@/lib/api'
+import { executions, orchestrations, type OrchestrationExecution, type Orchestration } from '@donkeywork/api-client'
 
 const PAGE_SIZE = 20
 

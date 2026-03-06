@@ -1,4 +1,4 @@
-import type { ChatMessage, ContentBox, AgentCompleteReason } from "@/types/agent-chat";
+import type { ChatMessage, ContentBox, AgentCompleteReason } from "@donkeywork/api-client";
 
 export type SidePanelAgent = {
   agentKey: string;

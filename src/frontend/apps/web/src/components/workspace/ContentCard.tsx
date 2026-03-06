@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Trash2, Loader2, Calendar, CheckSquare, Circle, Clock, CheckCircle2, AlertCircle, Target } from 'lucide-react'
 import { Button, Badge } from '@donkeywork/ui'
-import type { TaskStatus, TaskPriority } from '@/lib/api'
+import type { TaskStatus, TaskPriority } from '@donkeywork/api-client'
 
 const statusIcons: Record<TaskStatus, ReactNode> = {
   Pending: <Circle className="h-4 w-4 text-gray-400" />,

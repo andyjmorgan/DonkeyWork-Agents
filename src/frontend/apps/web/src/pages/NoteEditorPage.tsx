@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, FileText, StickyNote } from 'lucide-react'
 import { Button, Input } from '@donkeywork/ui'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
-import { notes, projects, type Note, type ProjectDetails } from '@/lib/api'
+import { notes, projects, type Note, type ProjectDetails } from '@donkeywork/api-client'
 
 export function NoteEditorPage() {
   const { noteId } = useParams<{ noteId: string }>()

@@ -11,7 +11,7 @@ import {
 } from '@donkeywork/ui'
 import { CreateSandboxCredentialMappingDialog } from '@/components/sandbox-credentials/CreateSandboxCredentialMappingDialog'
 import { EditSandboxCredentialMappingDialog } from '@/components/sandbox-credentials/EditSandboxCredentialMappingDialog'
-import { sandboxCredentialMappings, type SandboxCredentialMapping } from '@/lib/api'
+import { sandboxCredentialMappings, type SandboxCredentialMapping } from '@donkeywork/api-client'
 
 const fieldTypeLabels: Record<string, string> = {
   ApiKey: 'API Key',

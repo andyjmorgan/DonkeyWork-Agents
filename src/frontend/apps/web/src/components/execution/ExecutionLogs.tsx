@@ -1,7 +1,7 @@
 import { useEffect, useState, useLayoutEffect, useRef } from 'react'
 import { AlertCircle, Info, AlertTriangle, Bug } from 'lucide-react'
 import { Badge } from '@donkeywork/ui'
-import { executions, type ExecutionLog } from '@/lib/api'
+import { executions, type ExecutionLog } from '@donkeywork/api-client'
 
 interface ExecutionLogsProps {
   executionId: string | null

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { conversations } from '@/lib/api'
-import type { ConversationSummary } from '@/lib/api'
+import { conversations } from '@donkeywork/api-client'
+import type { ConversationSummary } from '@donkeywork/api-client'
 import { MessageSquare, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

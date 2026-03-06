@@ -7,7 +7,7 @@ import {
   DialogDescription,
 } from "@donkeywork/ui";
 import { ExternalLink } from "lucide-react";
-import type { CitationBox } from "@/types/agent-chat";
+import type { CitationBox } from "@donkeywork/api-client";
 
 function getDomain(url: string): string {
   try {

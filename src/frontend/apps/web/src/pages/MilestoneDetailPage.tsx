@@ -50,7 +50,7 @@ import {
   type MilestoneDetails,
   type Task,
   type MilestoneStatus,
-} from '@/lib/api'
+} from '@donkeywork/api-client'
 
 type TabType = 'overview' | 'notes' | 'tasks'
 

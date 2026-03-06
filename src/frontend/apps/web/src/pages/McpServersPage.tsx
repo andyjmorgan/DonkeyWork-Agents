@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@donkeywork/ui'
 import { McpServerDialog } from '@/components/mcp/McpServerDialog'
-import { mcpServers, type McpServerSummary, type McpServerDetails } from '@/lib/api'
+import { mcpServers, type McpServerSummary, type McpServerDetails } from '@donkeywork/api-client'
 
 export function McpServersPage() {
   const [servers, setServers] = useState<McpServerSummary[]>([])

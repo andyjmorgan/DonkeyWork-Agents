@@ -3,7 +3,7 @@ import { Play, Flag, Globe, Mail, Database, File, Zap, FileText, Clock, Brain } 
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/store/editor'
-import { models, nodeTypes, type ModelDefinition, type NodeTypeInfo } from '@/lib/api'
+import { models, nodeTypes, type ModelDefinition, type NodeTypeInfo } from '@donkeywork/api-client'
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon'
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'

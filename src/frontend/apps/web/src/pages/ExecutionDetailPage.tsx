@@ -26,7 +26,7 @@ import {
   AccordionTrigger,
 } from '@donkeywork/ui'
 import { JsonViewer } from '@/components/ui/json-viewer'
-import { executions, orchestrations, type OrchestrationExecution, type NodeExecution, type Orchestration } from '@/lib/api'
+import { executions, orchestrations, type OrchestrationExecution, type NodeExecution, type Orchestration } from '@donkeywork/api-client'
 
 export function ExecutionDetailPage() {
   const { executionId } = useParams<{ executionId: string }>()

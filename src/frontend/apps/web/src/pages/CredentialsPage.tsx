@@ -11,7 +11,7 @@ import {
 } from '@donkeywork/ui'
 import { CreateCredentialDialog } from '@/components/credentials/CreateCredentialDialog'
 import { ViewCredentialDialog } from '@/components/credentials/ViewCredentialDialog'
-import { credentials, type CredentialSummary, type CredentialDetail } from '@/lib/api'
+import { credentials, type CredentialSummary, type CredentialDetail } from '@donkeywork/api-client'
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon'
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'

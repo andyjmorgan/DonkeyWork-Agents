@@ -1,5 +1,5 @@
 import ReactJson from '@microlink/react-json-view'
-import { useThemeStore } from '@/store/theme'
+import { useThemeStore } from '@donkeywork/stores'
 
 interface JsonViewerProps {
   data: unknown

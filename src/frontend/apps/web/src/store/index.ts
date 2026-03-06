@@ -1,3 +1,3 @@
-export { useAuthStore, type User } from './auth'
-export { useThemeStore } from './theme'
+export { useAuthStore, type User } from '@donkeywork/stores'
+export { useThemeStore } from '@donkeywork/stores'
 export { useEditorStore } from './editor'

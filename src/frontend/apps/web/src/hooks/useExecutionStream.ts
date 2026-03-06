@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
-import { fetchWithAuth } from '@/lib/fetchWithAuth'
-import type { ExecutionEvent } from '@/lib/api'
+import { fetchWithAuth } from '@donkeywork/api-client'
+import type { ExecutionEvent } from '@donkeywork/api-client'
 
 interface UseExecutionStreamOptions {
   onEvent?: (event: ExecutionEvent) => void

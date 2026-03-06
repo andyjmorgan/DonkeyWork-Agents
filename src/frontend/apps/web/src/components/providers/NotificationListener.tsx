@@ -1,6 +1,6 @@
 import { useNotifications } from '@/hooks/useNotifications'
 import { toast } from 'sonner'
-import type { WorkspaceNotification, NotificationType } from '@/types/notifications'
+import type { WorkspaceNotification, NotificationType } from '@donkeywork/api-client'
 
 /**
  * Get the appropriate toast variant based on notification type.

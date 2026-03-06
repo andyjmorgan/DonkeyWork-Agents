@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@donkeywork/ui'
-import type { ExecutionEvent } from '@/lib/api'
+import type { ExecutionEvent } from '@donkeywork/api-client'
 
 interface NodeEventData {
   nodeType?: string

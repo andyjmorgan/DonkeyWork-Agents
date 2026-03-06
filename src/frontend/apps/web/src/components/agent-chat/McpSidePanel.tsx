@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ScrollArea } from "@donkeywork/ui";
-import type { McpServerStatus } from "@/types/agent-chat";
+import type { McpServerStatus } from "@donkeywork/api-client";
 import { Check, X, PanelRightClose, ChevronDown, ChevronRight } from "lucide-react";
 
 function ServerEntry({ server }: { server: McpServerStatus }) {

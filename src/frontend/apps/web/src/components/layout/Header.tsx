@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@donkeywork/ui'
 import { ThemeToggle } from './ThemeToggle'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@donkeywork/stores'
 
 interface HeaderProps {
   onMenuClick: () => void

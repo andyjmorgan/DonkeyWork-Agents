@@ -1,5 +1,5 @@
 import { PulseDots } from "@/components/agent-chat/PulseDots";
-import type { ContentBox, AgentCompleteReason } from "@/types/agent-chat";
+import type { ContentBox, AgentCompleteReason } from "@donkeywork/api-client";
 import { Check, X, Ban, AlertTriangle } from "lucide-react";
 
 const AGENT_COLORS: Record<string, { bg: string; border: string; text: string; dotBg: string; glow: string }> = {

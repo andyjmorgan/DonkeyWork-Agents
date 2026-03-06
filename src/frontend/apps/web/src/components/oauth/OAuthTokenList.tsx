@@ -1,4 +1,4 @@
-import { type OAuthToken } from '@/lib/api'
+import { type OAuthToken } from '@donkeywork/api-client'
 import { Badge, Button } from '@donkeywork/ui'
 import { ProviderIcon } from './ProviderIcon'
 import { RefreshCw, Unplug } from 'lucide-react'

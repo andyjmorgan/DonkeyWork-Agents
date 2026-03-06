@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Loader2, Search, FlaskConical, Trash2, X, CheckSquare } from 'lucide-react'
 import { Button, Badge } from '@donkeywork/ui'
-import { research, type ResearchSummary, type ResearchStatus } from '@/lib/api'
+import { research, type ResearchSummary, type ResearchStatus } from '@donkeywork/api-client'
 
 const statusVariants: Record<ResearchStatus, 'pending' | 'inProgress' | 'success' | 'destructive' | 'warning'> = {
   NotStarted: 'pending',

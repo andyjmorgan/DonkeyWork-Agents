@@ -3,7 +3,7 @@ import { Play, Loader2, RefreshCw, Send, Trash2, CheckCircle2, XCircle } from 'l
 import { Button, Label, Textarea } from '@donkeywork/ui'
 import { useExecutionStream } from '@/hooks/useExecutionStream'
 import { parseMarkdown } from '@/lib/markdown'
-import { executions, type JSONSchema, type InterfaceConfig } from '@/lib/api'
+import { executions, type JSONSchema, type InterfaceConfig } from '@donkeywork/api-client'
 
 interface TestPanelProps {
   orchestrationId: string

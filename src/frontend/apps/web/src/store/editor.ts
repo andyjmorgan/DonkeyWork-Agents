@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
-import type { InterfaceConfig } from '@/lib/api'
+import type { InterfaceConfig } from '@donkeywork/api-client'
 
 /**
  * Schema lookup for node display properties.
@@ -704,7 +704,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const reactFlowData = { nodes, edges, viewport }
     const credentialMappings = get().extractCredentialMappings()
 
-    const { orchestrations } = await import('@/lib/api')
+    const { orchestrations } = await import('@donkeywork/api-client')
 
     await orchestrations.saveVersion(orchestrationId, {
       reactFlowData,
@@ -717,7 +717,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   load: async (orchestrationId: string, versionId: string) => {
-    const { orchestrations } = await import('@/lib/api')
+    const { orchestrations } = await import('@donkeywork/api-client')
 
     const version = await orchestrations.getVersion(orchestrationId, versionId)
 

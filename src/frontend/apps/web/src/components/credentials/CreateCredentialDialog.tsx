@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@donkeywork/ui'
-import { credentials } from '@/lib/api'
+import { credentials } from '@donkeywork/api-client'
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon'
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'

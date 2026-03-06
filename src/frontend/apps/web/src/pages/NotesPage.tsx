@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Loader2, FileText, StickyNote, Trash2, X } from 'lucide-react'
 import { Button } from '@donkeywork/ui'
 import { ContentCard } from '@/components/workspace/ContentCard'
-import { notes, type Note } from '@/lib/api'
+import { notes, type Note } from '@donkeywork/api-client'
 
 export function NotesPage() {
   const navigate = useNavigate()

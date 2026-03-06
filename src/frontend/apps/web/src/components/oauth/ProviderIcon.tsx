@@ -1,4 +1,4 @@
-import { type OAuthProvider } from '@/lib/api'
+import { type OAuthProvider } from '@donkeywork/api-client'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { Github, Globe } from 'lucide-react'
 

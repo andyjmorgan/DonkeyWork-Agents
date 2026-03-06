@@ -9,7 +9,7 @@ import {
   Button,
   Badge,
 } from '@donkeywork/ui'
-import { orchestrations, type OrchestrationVersion } from '@/lib/api'
+import { orchestrations, type OrchestrationVersion } from '@donkeywork/api-client'
 
 interface VersionHistorySheetProps {
   open: boolean

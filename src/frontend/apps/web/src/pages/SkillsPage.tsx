@@ -12,7 +12,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@donkeywork/ui'
-import { skills, type SkillItem, type SkillFileNode } from '@/lib/api'
+import { skills, type SkillItem, type SkillFileNode } from '@donkeywork/api-client'
 import { cn } from '@/lib/utils'
 
 function FileTreeNode({ node, depth }: { node: SkillFileNode; depth: number }) {

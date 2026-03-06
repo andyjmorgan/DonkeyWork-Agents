@@ -23,7 +23,7 @@ import {
   type CredentialFieldType,
   type CredentialSummary,
   type OAuthToken,
-} from '@/lib/api'
+} from '@donkeywork/api-client'
 
 interface EditSandboxCredentialMappingDialogProps {
   open: boolean

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react'
 import { useEditorStore } from '@/store/editor'
-import { nodeTypes, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@/lib/api'
+import { nodeTypes, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@donkeywork/api-client'
 import { FieldRenderer } from './FieldRenderer'
 import {
   Input,

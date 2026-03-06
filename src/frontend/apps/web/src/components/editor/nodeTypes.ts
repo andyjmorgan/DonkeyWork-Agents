@@ -23,7 +23,7 @@ import {
   Globe,
   Cloud,
 } from 'lucide-react'
-import type { ConfigFieldSchema, TabSchema } from '@/lib/api'
+import type { ConfigFieldSchema, TabSchema } from '@donkeywork/api-client'
 
 /** Node categories for palette organization */
 export type NodeCategory = 'flow' | 'ai' | 'utility' | 'action'

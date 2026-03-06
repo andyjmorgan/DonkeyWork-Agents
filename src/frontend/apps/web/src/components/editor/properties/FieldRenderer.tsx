@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { NodeFieldSchema } from '@/lib/api'
-import { credentials, type CredentialSummary } from '@/lib/api'
+import type { NodeFieldSchema } from '@donkeywork/api-client'
+import { credentials, type CredentialSummary } from '@donkeywork/api-client'
 import {
   Input,
   Textarea,

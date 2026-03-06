@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@donkeywork/ui'
-import { projects, type ProjectSummary, type ProjectStatus, type CreateProjectRequest } from '@/lib/api'
+import { projects, type ProjectSummary, type ProjectStatus, type CreateProjectRequest } from '@donkeywork/api-client'
 
 const statusColors: Record<ProjectStatus, string> = {
   NotStarted: 'bg-gray-500',

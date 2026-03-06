@@ -2,8 +2,8 @@ import { useRef, useEffect, useState, useMemo, useCallback, type FormEvent } fro
 import { Button, ScrollArea } from '@donkeywork/ui'
 import { useAgentConversation } from "@/hooks/useAgentConversation";
 import { internalToChat } from "@/components/agent-chat/MessageRenderer";
-import type { ChatMessage, ContentBox } from "@/types/agent-chat";
-import type { InternalMessage, GetStateResponse } from "@/types/internal-messages";
+import type { ChatMessage, ContentBox } from "@donkeywork/api-client";
+import type { InternalMessage, GetStateResponse } from "@donkeywork/api-client";
 import { BoxList } from "@/components/agent-chat/BoxRenderer";
 import { PulseDots } from "@/components/agent-chat/PulseDots";
 import { AgentCardGrid, type AgentEntry } from "@/components/agent-chat/AgentCardGrid";

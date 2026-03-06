@@ -13,7 +13,7 @@ import {
   RadioGroupItem,
 } from '@donkeywork/ui'
 import { useEditorStore } from '@/store/editor'
-import type { InterfaceConfig, InterfaceType } from '@/lib/api'
+import type { InterfaceConfig, InterfaceType } from '@donkeywork/api-client'
 
 interface InterfacesPanelProps {
   open: boolean

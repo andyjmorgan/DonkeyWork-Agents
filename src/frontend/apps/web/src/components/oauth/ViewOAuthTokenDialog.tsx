@@ -12,7 +12,7 @@ import {
 } from '@donkeywork/ui'
 import { Copy, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { ProviderIcon } from '@/components/oauth/ProviderIcon'
-import { oauth, type GetOAuthAccessTokenResponse, type OAuthTokenStatus } from '@/lib/api'
+import { oauth, type GetOAuthAccessTokenResponse, type OAuthTokenStatus } from '@donkeywork/api-client'
 
 interface ViewOAuthTokenDialogProps {
   open: boolean

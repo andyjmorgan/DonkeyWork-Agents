@@ -6,8 +6,8 @@ import {
   HttpTransportType,
   LogLevel,
 } from '@microsoft/signalr'
-import { useAuthStore } from '@/store/auth'
-import type { WorkspaceNotification, ConnectionState } from '@/types/notifications'
+import { useAuthStore } from '@donkeywork/stores'
+import type { WorkspaceNotification, ConnectionState } from '@donkeywork/api-client'
 
 const HUB_URL = '/hubs/notifications'
 

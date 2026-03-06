@@ -1,4 +1,4 @@
-import { fetchWithAuth as baseFetchWithAuth } from '@/lib/fetchWithAuth'
+import { fetchWithAuth as baseFetchWithAuth } from './fetchWithAuth'
 
 const BASE_URL = ''
 

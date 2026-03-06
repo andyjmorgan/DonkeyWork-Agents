@@ -1,5 +1,5 @@
 import { Toaster as SonnerToaster } from 'sonner'
-import { useThemeStore } from '@/store/theme'
+import { useThemeStore } from '@donkeywork/stores'
 
 export function Toaster() {
   const { theme } = useThemeStore()

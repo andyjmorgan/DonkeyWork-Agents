@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/store/auth";
-import { conversations } from "@/lib/api";
+import { useAuthStore } from "@donkeywork/stores";
+import { conversations } from "@donkeywork/api-client";
 import { internalToChat } from "@/components/agent-chat/MessageRenderer";
 import type {
   ContentBox,
@@ -11,8 +11,8 @@ import type {
   ChatMessage,
   WebSearchResult,
   McpServerStatus,
-} from "@/types/agent-chat";
-import type { InternalMessage, GetStateResponse, TrackedAgent } from "@/types/internal-messages";
+} from "@donkeywork/api-client";
+import type { InternalMessage, GetStateResponse, TrackedAgent } from "@donkeywork/api-client";
 
 type AgentGroupEntry = { messageId: string; boxIndex: number };
 

@@ -17,7 +17,7 @@ import {
   type OAuthProviderConfig,
   type OAuthProviderMetadata,
   type OAuthScopeMetadata,
-} from '@/lib/api'
+} from '@donkeywork/api-client'
 import { Loader2, Lock, LinkIcon } from 'lucide-react'
 
 interface ConnectAccountDialogProps {

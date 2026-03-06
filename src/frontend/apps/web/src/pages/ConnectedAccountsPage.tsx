@@ -3,7 +3,7 @@ import { Eye, RefreshCw, Unplug } from 'lucide-react'
 import { Button, Badge } from '@donkeywork/ui'
 import { ProviderIcon } from '@/components/oauth/ProviderIcon'
 import { ViewOAuthTokenDialog } from '@/components/oauth/ViewOAuthTokenDialog'
-import { oauth, type OAuthToken } from '@/lib/api'
+import { oauth, type OAuthToken } from '@donkeywork/api-client'
 import { useOAuthFlow } from '@/hooks/useOAuthFlow'
 import { formatDistanceToNow } from 'date-fns'
 

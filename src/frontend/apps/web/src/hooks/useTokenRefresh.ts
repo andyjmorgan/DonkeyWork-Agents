@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@donkeywork/stores'
 
 const TOKEN_REFRESH_INTERVAL = 60000 // Check every minute
 

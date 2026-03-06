@@ -10,7 +10,7 @@ import {
 import { BoxList } from "@/components/agent-chat/BoxRenderer";
 import { PulseDots, ActivityIndicator } from "@/components/agent-chat/PulseDots";
 import { AgentCard } from "@/components/agent-chat/AgentCard";
-import type { ContentBox } from "@/types/agent-chat";
+import type { ContentBox } from "@donkeywork/api-client";
 import { Check, Square, Loader2 } from "lucide-react";
 
 type NestedAgent = {

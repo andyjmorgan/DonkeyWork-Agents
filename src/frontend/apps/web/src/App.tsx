@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
 import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SandboxCredentialsPage } from '@/pages'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
 import { TooltipProvider } from '@donkeywork/ui'

@@ -1,4 +1,4 @@
-import { oauth, type OAuthProvider } from '@/lib/api'
+import { oauth, type OAuthProvider } from '@donkeywork/api-client'
 
 export function useOAuthFlow() {
   const initiateFlow = async (provider: OAuthProvider, scopes?: string[]) => {

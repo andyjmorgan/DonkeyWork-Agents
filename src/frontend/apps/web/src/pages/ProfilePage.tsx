@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@donkeywork/stores'
 
 export function ProfilePage() {
   const { user } = useAuthStore()

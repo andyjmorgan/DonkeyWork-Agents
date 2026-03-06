@@ -17,7 +17,7 @@ import {
 } from '@donkeywork/ui'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
-import { tasks, projects, milestones, type Task, type ProjectDetails, type MilestoneDetails, type TaskPriority, type TaskStatus } from '@/lib/api'
+import { tasks, projects, milestones, type Task, type ProjectDetails, type MilestoneDetails, type TaskPriority, type TaskStatus } from '@donkeywork/api-client'
 
 export function TaskEditorPage() {
   const { taskId } = useParams<{ taskId: string }>()

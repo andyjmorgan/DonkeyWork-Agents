@@ -6,8 +6,8 @@ import type {
   InternalToolResultMessage,
   InternalContentBlock,
   TrackedAgent,
-} from "@/types/internal-messages";
-import type { ChatMessage, ContentBox, AgentGroupBox } from "@/types/agent-chat";
+} from "@donkeywork/api-client";
+import type { ChatMessage, ContentBox, AgentGroupBox } from "@donkeywork/api-client";
 
 const SPAWN_TOOL_NAMES = new Set([
   "spawn_researcher",

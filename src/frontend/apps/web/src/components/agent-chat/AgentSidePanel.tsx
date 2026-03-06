@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { PulseDots } from "@/components/agent-chat/PulseDots";
 import { ScrollArea } from "@donkeywork/ui";
-import type { ChatMessage } from "@/types/agent-chat";
+import type { ChatMessage } from "@donkeywork/api-client";
 import type { SidePanelAgent } from "@/components/agent-chat/agentTreeUtils";
 import { extractAgentTree, countAll, countActive } from "@/components/agent-chat/agentTreeUtils";
 import { Check, ChevronRight, PanelRightClose, Ban, AlertTriangle } from "lucide-react";

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useEditorStore, type NodeConfig } from '@/store/editor'
-import { multimodalChat, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@/lib/api'
+import { multimodalChat, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@donkeywork/api-client'
 import { FieldRenderer } from './FieldRenderer'
 import {
   Tabs,

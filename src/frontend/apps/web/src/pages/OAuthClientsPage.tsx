@@ -12,7 +12,7 @@ import {
 import { CreateOAuthConfigDialog } from '@/components/oauth/CreateOAuthConfigDialog'
 import { ConnectAccountDialog } from '@/components/oauth/ConnectAccountDialog'
 import { ProviderIcon } from '@/components/oauth/ProviderIcon'
-import { oauth, type OAuthProvider, type OAuthProviderConfig } from '@/lib/api'
+import { oauth, type OAuthProvider, type OAuthProviderConfig } from '@donkeywork/api-client'
 import { useOAuthFlow } from '@/hooks/useOAuthFlow'
 
 export function OAuthClientsPage() {

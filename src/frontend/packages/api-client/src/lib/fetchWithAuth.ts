@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@donkeywork/stores'
 
 /**
  * Performs a fetch request with automatic token refresh handling.

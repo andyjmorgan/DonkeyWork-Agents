@@ -52,7 +52,7 @@ import {
   type CreateMilestoneRequest,
   type ProjectStatus,
   type MilestoneStatus,
-} from '@/lib/api'
+} from '@donkeywork/api-client'
 
 type DialogType = 'milestone' | 'completionNotes' | null
 type TabType = 'overview' | 'milestones' | 'notes' | 'tasks'

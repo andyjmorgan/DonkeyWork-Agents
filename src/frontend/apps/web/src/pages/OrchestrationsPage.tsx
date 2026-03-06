@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@donkeywork/ui'
-import { orchestrations, type Orchestration } from '@/lib/api'
+import { orchestrations, type Orchestration } from '@donkeywork/api-client'
 
 interface OrchestrationWithVersion extends Orchestration {
   versionNumber?: number

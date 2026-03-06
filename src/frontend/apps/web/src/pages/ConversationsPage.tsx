@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@donkeywork/ui'
-import { conversations, type ConversationSummary } from '@/lib/api'
+import { conversations, type ConversationSummary } from '@donkeywork/api-client'
 
 const PAGE_SIZE = 20
 
