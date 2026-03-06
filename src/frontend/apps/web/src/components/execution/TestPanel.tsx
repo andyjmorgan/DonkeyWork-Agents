@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useLayoutEffect, useEffect } fr
 import { Play, Loader2, RefreshCw, Send, Trash2, CheckCircle2, XCircle } from 'lucide-react'
 import { Button, Label, Textarea } from '@donkeywork/ui'
 import { useExecutionStream } from '@/hooks/useExecutionStream'
-import { parseMarkdown } from '@/lib/markdown'
+import { parseMarkdown } from '@donkeywork/editor'
 import { executions, type JSONSchema, type InterfaceConfig } from '@donkeywork/api-client'
 
 interface TestPanelProps {

@@ -16,6 +16,7 @@
     "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/view": "^6.39.16",
     "@donkeywork/api-client": "workspace:*",
+    "@donkeywork/editor": "workspace:*",
     "@donkeywork/stores": "workspace:*",
     "@donkeywork/ui": "workspace:*",
     "@microlink/react-json-view": "^1.27.1",

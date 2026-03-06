@@ -38,8 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@donkeywork/ui'
-import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
-import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
+import { MarkdownEditor, MarkdownViewer } from '@donkeywork/editor'
 import { ContentCard } from '@/components/workspace/ContentCard'
 import {
   projects,

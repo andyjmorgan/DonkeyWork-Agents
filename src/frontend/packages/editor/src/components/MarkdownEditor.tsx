@@ -13,13 +13,13 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { common, createLowlight } from 'lowlight'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { parseMarkdown, serializeMarkdown } from '@/lib/markdown'
+import { parseMarkdown, serializeMarkdown } from '../lib/markdown'
 import { MarkdownToolbar } from './MarkdownToolbar'
 import { RawMarkdownEditor } from './RawMarkdownEditor'
 import { CodeBlockWithCopy } from './CodeBlockWithCopy'
 import { TableWithControls } from './TableWithControls'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
-import './markdown-editor.css'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import '../styles/markdown-editor.css'
 
 // Create lowlight instance with common languages
 const lowlight = createLowlight(common)

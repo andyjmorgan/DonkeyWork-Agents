@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { parseMarkdown } from '@/lib/markdown'
-import './markdown-editor.css'
+import { parseMarkdown } from '../lib/markdown'
+import '../styles/markdown-editor.css'
 
 interface MarkdownViewerProps {
   content: string

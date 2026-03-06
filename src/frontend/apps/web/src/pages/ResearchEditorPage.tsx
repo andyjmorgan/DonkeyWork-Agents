@@ -35,7 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@donkeywork/ui'
-import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
+import { MarkdownEditor } from '@donkeywork/editor'
 import {
   research,
   type ResearchDetails,
