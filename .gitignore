@@ -113,5 +113,8 @@ secrets.json
 *.swp
 *~
 
+# Rust / Cargo
+target/
+
 # Local data (docker volumes)
 /data/

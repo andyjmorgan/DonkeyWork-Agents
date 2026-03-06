@@ -7,6 +7,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Copy workspace config and package files for dependency caching
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json ./apps/web/
+COPY apps/desktop/package.json ./apps/desktop/
 COPY packages/api-client/package.json ./packages/api-client/
 COPY packages/chat/package.json ./packages/chat/
 COPY packages/editor/package.json ./packages/editor/
