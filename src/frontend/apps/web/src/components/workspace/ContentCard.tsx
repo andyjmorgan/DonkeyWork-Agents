@@ -163,7 +163,7 @@ export function ContentCard({
       {content && (
         <div className="mt-3 flex-1 overflow-hidden">
           <p className="text-sm text-muted-foreground line-clamp-5">
-            {content.replace(/[#*_`~\[\]()>|\\-]/g, '').replace(/\n+/g, ' ').trim()}
+            {content.replace(/[#*_`~[\]()>|\\-]/g, '').replace(/\n+/g, ' ').trim()}
           </p>
         </div>
       )}
