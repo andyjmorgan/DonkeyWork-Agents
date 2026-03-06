@@ -1,16 +1,16 @@
 import { useRef, useEffect, useState, useMemo, useCallback, type FormEvent } from "react";
 import { Button, ScrollArea } from '@donkeywork/ui'
-import { useAgentConversation } from "@/hooks/useAgentConversation";
-import { internalToChat } from "@/components/agent-chat/MessageRenderer";
+import { useAgentConversation } from "../hooks/useAgentConversation";
+import { internalToChat } from "./MessageRenderer";
 import type { ChatMessage, ContentBox } from "@donkeywork/api-client";
 import type { InternalMessage, GetStateResponse } from "@donkeywork/api-client";
-import { BoxList } from "@/components/agent-chat/BoxRenderer";
-import { PulseDots } from "@/components/agent-chat/PulseDots";
-import { AgentCardGrid, type AgentEntry } from "@/components/agent-chat/AgentCardGrid";
-import { AgentDetailModal } from "@/components/agent-chat/AgentDetailModal";
-import { AgentSidePanel } from "@/components/agent-chat/AgentSidePanel";
-import { McpSidePanel } from "@/components/agent-chat/McpSidePanel";
-import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "@/components/agent-chat/agentTreeUtils";
+import { BoxList } from "./BoxRenderer";
+import { PulseDots } from "./PulseDots";
+import { AgentCardGrid, type AgentEntry } from "./AgentCardGrid";
+import { AgentDetailModal } from "./AgentDetailModal";
+import { AgentSidePanel } from "./AgentSidePanel";
+import { McpSidePanel } from "./McpSidePanel";
+import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "./agentTreeUtils";
 import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2 } from "lucide-react";
 
 function MessageBubble({
@@ -123,7 +123,13 @@ function findAgentInBoxes(
   return null;
 }
 
-export function AgentChatPanel({ conversationId: initialConversationId }: { conversationId?: string }) {
+interface AgentChatPanelProps {
+  conversationId?: string
+  onConversationCreated?: (conversationId: string) => void
+  onReset?: () => void
+}
+
+export function AgentChatPanel({ conversationId: initialConversationId, onConversationCreated, onReset }: AgentChatPanelProps) {
   const {
     messages,
     isProcessing,
@@ -136,7 +142,7 @@ export function AgentChatPanel({ conversationId: initialConversationId }: { conv
     isConnected,
     isReconnecting,
     mcpServerStatuses,
-  } = useAgentConversation(initialConversationId);
+  } = useAgentConversation(initialConversationId, { onConversationCreated, onReset });
 
   const swarmKey = conversationId ? `swarm:${conversationId}` : null;
 

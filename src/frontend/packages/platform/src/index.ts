@@ -1,0 +1,5 @@
+export type { PlatformConfig, StorageAdapter } from './types'
+export { configurePlatform, getPlatformConfig } from './config'
+export { PlatformProvider, usePlatform } from './context'
+export { localStorageAdapter } from './adapters'
+export { createPlatformStorage } from './storage'

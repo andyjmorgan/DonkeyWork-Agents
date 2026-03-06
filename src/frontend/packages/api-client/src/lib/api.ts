@@ -1,10 +1,10 @@
 import { fetchWithAuth as baseFetchWithAuth } from './fetchWithAuth'
-
-const BASE_URL = ''
+import { getPlatformConfig } from '@donkeywork/platform'
 
 async function fetchWithAuth(url: string, options: RequestInit = {}, retryOnUnauthorized = true): Promise<Response> {
+  const { apiBaseUrl } = getPlatformConfig()
   return baseFetchWithAuth(
-    `${BASE_URL}${url}`,
+    `${apiBaseUrl}${url}`,
     {
       ...options,
       headers: {
@@ -1134,7 +1134,7 @@ export const conversations = {
 
     // Use baseFetchWithAuth directly - don't set Content-Type, let FormData set its own boundary
     const response = await baseFetchWithAuth(
-      `${BASE_URL}/api/v1/conversations/${conversationId}/upload`,
+      `${getPlatformConfig().apiBaseUrl}/api/v1/conversations/${conversationId}/upload`,
       {
         method: 'POST',
         body: formData
@@ -1152,7 +1152,7 @@ export const conversations = {
 
 // Helper to get image download URL
 export const getImageDownloadUrl = (objectKey: string): string => {
-  return `${BASE_URL}/api/v1/files/download/${objectKey}`
+  return `${getPlatformConfig().apiBaseUrl}/api/v1/files/download/${objectKey}`
 }
 
 // Storage File Types
@@ -1186,7 +1186,7 @@ export const files = {
     formData.append('file', file)
 
     const response = await baseFetchWithAuth(
-      `${BASE_URL}/api/v1/files`,
+      `${getPlatformConfig().apiBaseUrl}/api/v1/files`,
       {
         method: 'POST',
         body: formData
@@ -1213,7 +1213,7 @@ export const files = {
 
   // Download file (returns raw response for streaming)
   download: async (fileName: string): Promise<{ blob: Blob; fileName: string; contentType: string }> => {
-    const response = await baseFetchWithAuth(`${BASE_URL}/api/v1/files/${encodeURIComponent(fileName)}/download`)
+    const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/${encodeURIComponent(fileName)}/download`)
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`)
     }
@@ -1263,7 +1263,7 @@ export const skills = {
     formData.append('file', file)
 
     const response = await baseFetchWithAuth(
-      `${BASE_URL}/api/v1/skills`,
+      `${getPlatformConfig().apiBaseUrl}/api/v1/skills`,
       {
         method: 'POST',
         body: formData
@@ -1292,7 +1292,7 @@ export const skills = {
  * This is needed because img src doesn't include Authorization headers.
  */
 export const fetchImageAsBlob = async (objectKey: string): Promise<string> => {
-  const response = await baseFetchWithAuth(`${BASE_URL}/api/v1/files/download/${objectKey}`)
+  const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/download/${objectKey}`)
   if (!response.ok) {
     throw new Error(`Failed to fetch image: ${response.status}`)
   }

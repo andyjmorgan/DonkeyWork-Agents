@@ -19,9 +19,15 @@ importers:
       '@donkeywork/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@donkeywork/chat':
+        specifier: workspace:*
+        version: link:../../packages/chat
       '@donkeywork/editor':
         specifier: workspace:*
         version: link:../../packages/editor
+      '@donkeywork/platform':
+        specifier: workspace:*
+        version: link:../../packages/platform
       '@donkeywork/stores':
         specifier: workspace:*
         version: link:../../packages/stores
@@ -257,6 +263,9 @@ importers:
 
   packages/api-client:
     dependencies:
+      '@donkeywork/platform':
+        specifier: workspace:*
+        version: link:../platform
       '@donkeywork/stores':
         specifier: workspace:*
         version: link:../stores
@@ -266,6 +275,46 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.5
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+
+  packages/chat:
+    dependencies:
+      '@donkeywork/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@donkeywork/platform':
+        specifier: workspace:*
+        version: link:../platform
+      '@donkeywork/stores':
+        specifier: workspace:*
+        version: link:../stores
+      '@donkeywork/ui':
+        specifier: workspace:*
+        version: link:../ui
+      lucide-react:
+        specifier: ^0.562.0
+        version: 0.562.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.14)(react@19.2.4)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
     devDependencies:
       '@types/react':
         specifier: ^19.2.5
@@ -371,8 +420,30 @@ importers:
         specifier: ~5.9.3
         version: 5.9.3
 
+  packages/platform:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.5
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+
   packages/stores:
     dependencies:
+      '@donkeywork/platform':
+        specifier: workspace:*
+        version: link:../platform
       react:
         specifier: ^19.0.0
         version: 19.2.4

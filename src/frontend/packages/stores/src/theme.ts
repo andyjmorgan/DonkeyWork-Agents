@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { createPlatformStorage, getPlatformConfig } from '@donkeywork/platform'
 
 type Theme = 'light' | 'dark'
 
@@ -15,42 +16,22 @@ export const useThemeStore = create<ThemeState>()(
       theme: 'dark',
       setTheme: (theme) => {
         set({ theme })
-        updateDocumentTheme(theme)
+        getPlatformConfig().applyTheme(theme)
       },
       toggleTheme: () => {
         const newTheme = get().theme === 'light' ? 'dark' : 'light'
         set({ theme: newTheme })
-        updateDocumentTheme(newTheme)
+        getPlatformConfig().applyTheme(newTheme)
       },
     }),
     {
       name: 'donkeywork-theme',
+      storage: createJSONStorage(() => createPlatformStorage()),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          updateDocumentTheme(state.theme)
+          getPlatformConfig().applyTheme(state.theme)
         }
       },
     }
   )
 )
-
-function updateDocumentTheme(theme: Theme) {
-  if (theme === 'dark') {
-    document.documentElement.classList.add('dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-  }
-}
-
-// Initialize theme on load
-const savedTheme = localStorage.getItem('donkeywork-theme')
-if (savedTheme) {
-  try {
-    const parsed = JSON.parse(savedTheme)
-    updateDocumentTheme(parsed.state?.theme || 'dark')
-  } catch {
-    updateDocumentTheme('dark')
-  }
-} else {
-  updateDocumentTheme('dark')
-}

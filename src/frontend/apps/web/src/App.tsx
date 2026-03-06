@@ -6,6 +6,17 @@ import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
 import { TooltipProvider } from '@donkeywork/ui'
 import { NotificationListener } from '@/components/providers/NotificationListener'
+import { PlatformProvider } from '@donkeywork/platform'
+import { ChatConfigProvider, type ChatConfig } from '@donkeywork/chat'
+import { JsonViewer } from '@/components/ui/json-viewer'
+import { webPlatformConfig } from './platform/web-platform'
+import { NavigateBridge } from './platform/NavigateBridge'
+
+const chatConfig: ChatConfig = {
+  renderJson: (data, opts) => (
+    <JsonViewer data={data} collapsed={opts.collapsed} className={opts.className} />
+  ),
+}
 
 function TokenRefreshManager({ children }: { children: React.ReactNode }) {
   useTokenRefresh()
@@ -16,7 +27,10 @@ export default function App() {
   const { isAuthenticated } = useAuthStore()
 
   return (
+    <PlatformProvider config={webPlatformConfig}>
+    <ChatConfigProvider config={chatConfig}>
     <BrowserRouter>
+      <NavigateBridge>
       <TooltipProvider>
         <TokenRefreshManager>
           <Toaster />
@@ -71,6 +85,9 @@ export default function App() {
         </Routes>
         </TokenRefreshManager>
       </TooltipProvider>
+      </NavigateBridge>
     </BrowserRouter>
+    </ChatConfigProvider>
+    </PlatformProvider>
   )
 }

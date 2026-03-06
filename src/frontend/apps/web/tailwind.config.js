@@ -5,6 +5,7 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
     "../../packages/ui/src/**/*.{js,ts,jsx,tsx}",
     "../../packages/editor/src/**/*.{js,ts,jsx,tsx}",
+    "../../packages/chat/src/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: ['class', "class"],
   theme: {

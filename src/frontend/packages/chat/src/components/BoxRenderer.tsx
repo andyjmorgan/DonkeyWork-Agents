@@ -2,9 +2,9 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ContentBox, CitationBox } from "@donkeywork/api-client";
-import { CitationChipRow } from "@/components/agent-chat/CitationChip";
-import { PulseDots } from "@/components/agent-chat/PulseDots";
-import { JsonViewer } from "@/components/ui/json-viewer";
+import { CitationChipRow } from "./CitationChip";
+import { PulseDots } from "./PulseDots";
+import { useChatConfig } from "../context";
 import { BrainCircuit, Wrench, Globe, Check, CircleX, Clock, ExternalLink } from "lucide-react";
 
 const BLOCK_TAGS_RE = /<(?:system_warning|function_results|result|output)\b[^>]*>[\s\S]*?<\/(?:system_warning|function_results|result|output)>/g;
@@ -20,6 +20,7 @@ function sanitizeText(text: string): string {
 }
 
 export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isStreaming?: boolean }) {
+  const { renderJson } = useChatConfig();
   switch (box.type) {
     case "text": {
       const clean = sanitizeText(box.text);
@@ -126,7 +127,7 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
                 <div className="px-3 py-2">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Request</span>
                   {parsed ? (
-                    <JsonViewer data={parsed} collapsed={1} className="mt-1 max-h-36 overflow-y-auto" />
+                    renderJson(parsed, { collapsed: 1, className: "mt-1 max-h-36 overflow-y-auto" })
                   ) : (
                     <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed max-h-36 overflow-y-auto">{box.arguments}</pre>
                   )}
@@ -139,7 +140,7 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
                 <div className="px-3 py-2">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Response</span>
                   {parsed ? (
-                    <JsonViewer data={parsed} collapsed={1} className="mt-1 max-h-48 overflow-y-auto" />
+                    renderJson(parsed, { collapsed: 1, className: "mt-1 max-h-48 overflow-y-auto" })
                   ) : (
                     <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed max-h-48 overflow-y-auto">{box.result}</pre>
                   )}

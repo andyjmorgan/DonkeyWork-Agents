@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@donkeywork/stores";
+import { getPlatformConfig } from "@donkeywork/platform";
 import { conversations } from "@donkeywork/api-client";
-import { internalToChat } from "@/components/agent-chat/MessageRenderer";
+import { internalToChat } from "../components/MessageRenderer";
 import type {
   ContentBox,
   TextBox,
@@ -16,7 +16,12 @@ import type { InternalMessage, GetStateResponse, TrackedAgent } from "@donkeywor
 
 type AgentGroupEntry = { messageId: string; boxIndex: number };
 
-export function useAgentConversation(initialConversationId?: string) {
+export interface UseAgentConversationOptions {
+  onConversationCreated?: (conversationId: string) => void
+  onReset?: () => void
+}
+
+export function useAgentConversation(initialConversationId?: string, options?: UseAgentConversationOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -25,7 +30,6 @@ export function useAgentConversation(initialConversationId?: string) {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [mcpServerStatuses, setMcpServerStatuses] = useState<McpServerStatus[]>([]);
 
-  const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null);
   const nextIdRef = useRef(1);
   const agentGroupIndexRef = useRef<Map<string, AgentGroupEntry>>(new Map());
@@ -545,8 +549,8 @@ export function useAgentConversation(initialConversationId?: string) {
 
   const connect = useCallback(async (convId: string) => {
     const token = useAuthStore.getState().accessToken;
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/api/v1/conversations/${convId}/ws?token=${encodeURIComponent(token ?? "")}`;
+    const { wsBaseUrl } = getPlatformConfig();
+    const wsUrl = `${wsBaseUrl}/api/v1/conversations/${convId}/ws?token=${encodeURIComponent(token ?? "")}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -749,8 +753,8 @@ export function useAgentConversation(initialConversationId?: string) {
       activeConvId = result.id;
       setConversationId(activeConvId);
 
-      // Update URL without triggering React Router remount
-      window.history.replaceState(null, "", `/agent-chat/${activeConvId}`);
+      // Notify the app about the new conversation
+      options?.onConversationCreated?.(activeConvId);
 
       await connect(activeConvId);
       await new Promise<void>((resolve) => {
@@ -803,8 +807,8 @@ export function useAgentConversation(initialConversationId?: string) {
     pendingRpcRef.current.clear();
     eventBufferRef.current = [];
     isBufferingRef.current = false;
-    navigate("/agent-chat", { replace: true });
-  }, [navigate]);
+    options?.onReset?.();
+  }, [options]);
 
   return {
     messages,

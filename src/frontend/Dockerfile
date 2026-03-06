@@ -8,7 +8,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/chat/package.json ./packages/chat/
 COPY packages/editor/package.json ./packages/editor/
+COPY packages/platform/package.json ./packages/platform/
 COPY packages/stores/package.json ./packages/stores/
 COPY packages/ui/package.json ./packages/ui/
 

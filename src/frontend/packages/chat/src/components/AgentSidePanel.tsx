@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { PulseDots } from "@/components/agent-chat/PulseDots";
+import { PulseDots } from "./PulseDots";
 import { ScrollArea } from "@donkeywork/ui";
 import type { ChatMessage } from "@donkeywork/api-client";
-import type { SidePanelAgent } from "@/components/agent-chat/agentTreeUtils";
-import { extractAgentTree, countAll, countActive } from "@/components/agent-chat/agentTreeUtils";
+import type { SidePanelAgent } from "./agentTreeUtils";
+import { extractAgentTree, countAll, countActive } from "./agentTreeUtils";
 import { Check, ChevronRight, PanelRightClose, Ban, AlertTriangle } from "lucide-react";
 
 const AGENT_COLORS: Record<string, { bg: string; border: string; text: string; dotBg: string }> = {

@@ -7,9 +7,9 @@ import {
   DialogDescription,
   ScrollArea,
 } from '@donkeywork/ui'
-import { BoxList } from "@/components/agent-chat/BoxRenderer";
-import { PulseDots, ActivityIndicator } from "@/components/agent-chat/PulseDots";
-import { AgentCard } from "@/components/agent-chat/AgentCard";
+import { BoxList } from "./BoxRenderer";
+import { PulseDots, ActivityIndicator } from "./PulseDots";
+import { AgentCard } from "./AgentCard";
 import type { ContentBox } from "@donkeywork/api-client";
 import { Check, Square, Loader2 } from "lucide-react";
 

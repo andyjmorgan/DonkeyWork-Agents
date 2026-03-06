@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { createPlatformStorage, getPlatformConfig } from '@donkeywork/platform'
 
 export interface User {
   id: string
@@ -123,7 +124,8 @@ export const useAuthStore = create<AuthState>()(
           set({ isRefreshing: true })
 
           try {
-            const response = await fetch('/api/v1/auth/refresh', {
+            const { apiBaseUrl } = getPlatformConfig()
+            const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -181,6 +183,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'donkeywork-auth',
+      storage: createJSONStorage(() => createPlatformStorage()),
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,

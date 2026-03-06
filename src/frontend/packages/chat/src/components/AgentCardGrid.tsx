@@ -1,4 +1,4 @@
-import { AgentCard } from "@/components/agent-chat/AgentCard";
+import { AgentCard } from "./AgentCard";
 import type { ContentBox, ToolUseBox, AgentGroupBox, AgentCompleteReason } from "@donkeywork/api-client";
 
 export type AgentEntry = {

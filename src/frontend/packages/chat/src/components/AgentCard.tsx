@@ -1,4 +1,4 @@
-import { PulseDots } from "@/components/agent-chat/PulseDots";
+import { PulseDots } from "./PulseDots";
 import type { ContentBox, AgentCompleteReason } from "@donkeywork/api-client";
 import { Check, X, Ban, AlertTriangle } from "lucide-react";
 
