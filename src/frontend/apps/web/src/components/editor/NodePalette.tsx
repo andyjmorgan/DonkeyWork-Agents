@@ -12,7 +12,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion'
+} from '@donkeywork/ui'
 
 // Icon mapping for node types
 const iconMap: Record<string, LucideIcon> = {

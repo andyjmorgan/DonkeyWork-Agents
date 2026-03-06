@@ -5,8 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  ScrollArea,
+} from '@donkeywork/ui'
 import { BoxList } from "@/components/agent-chat/BoxRenderer";
 import { PulseDots, ActivityIndicator } from "@/components/agent-chat/PulseDots";
 import { AgentCard } from "@/components/agent-chat/AgentCard";

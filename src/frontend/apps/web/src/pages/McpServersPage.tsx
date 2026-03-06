@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Pencil, Server, Terminal, Globe } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
+  Button,
+  Badge,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@donkeywork/ui'
 import { McpServerDialog } from '@/components/mcp/McpServerDialog'
 import { mcpServers, type McpServerSummary, type McpServerDetails } from '@/lib/api'
 

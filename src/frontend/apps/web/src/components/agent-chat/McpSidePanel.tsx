@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@donkeywork/ui";
 import type { McpServerStatus } from "@/types/agent-chat";
 import { Check, X, PanelRightClose, ChevronDown, ChevronRight } from "lucide-react";
 

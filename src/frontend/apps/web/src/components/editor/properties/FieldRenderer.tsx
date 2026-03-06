@@ -1,30 +1,28 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { NodeFieldSchema } from '@/lib/api'
 import { credentials, type CredentialSummary } from '@/lib/api'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Slider } from '@/components/ui/slider'
-import { Switch } from '@/components/ui/switch'
 import {
+  Input,
+  Textarea,
+  Slider,
+  Switch,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Variable } from 'lucide-react'
-import { KeyValueEditor, type KeyValueCollection } from './KeyValueEditor'
-import { ScribanEditor } from './ScribanEditor'
-import Editor from '@monaco-editor/react'
-import { Label } from '@/components/ui/label'
-import { CreateCredentialDialog } from '@/components/credentials/CreateCredentialDialog'
-import {
+  Button,
+  Label,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
+} from '@donkeywork/ui'
+import { Plus, Trash2, Variable } from 'lucide-react'
+import { KeyValueEditor, type KeyValueCollection } from './KeyValueEditor'
+import { ScribanEditor } from './ScribanEditor'
+import Editor from '@monaco-editor/react'
+import { CreateCredentialDialog } from '@/components/credentials/CreateCredentialDialog'
 
 // Variable mode toggle button - allows switching between native control and ScribanEditor
 function VariableModeButton({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {

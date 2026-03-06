@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Trash2, Download, Link as LinkIcon, File, Upload, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
+  Button,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@donkeywork/ui'
 import { files, type FileItem } from '@/lib/api'
 
 export function FilesPage() {

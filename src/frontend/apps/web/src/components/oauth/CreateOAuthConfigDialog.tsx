@@ -6,12 +6,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
+  Button,
+  Input,
+  Label,
+  Badge,
+  Switch,
+} from '@donkeywork/ui'
 import { ProviderIcon } from './ProviderIcon'
 import {
   oauth,

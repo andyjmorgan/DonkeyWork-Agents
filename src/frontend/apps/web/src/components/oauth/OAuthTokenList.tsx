@@ -1,6 +1,5 @@
 import { type OAuthToken } from '@/lib/api'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Badge, Button } from '@donkeywork/ui'
 import { ProviderIcon } from './ProviderIcon'
 import { RefreshCw, Unplug } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'

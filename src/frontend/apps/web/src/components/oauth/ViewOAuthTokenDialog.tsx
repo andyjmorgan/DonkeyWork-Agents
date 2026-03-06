@@ -5,11 +5,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+  Button,
+  Label,
+  Input,
+  Badge,
+} from '@donkeywork/ui'
 import { Copy, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { ProviderIcon } from '@/components/oauth/ProviderIcon'
 import { oauth, type GetOAuthAccessTokenResponse, type OAuthTokenStatus } from '@/lib/api'

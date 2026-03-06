@@ -1,15 +1,16 @@
 import { useNavigate } from 'react-router-dom'
 import { Menu, User, LogOut } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
+  Button,
+  Avatar,
+  AvatarFallback,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@donkeywork/ui'
 import { ThemeToggle } from './ThemeToggle'
 import { useAuthStore } from '@/store/auth'
 

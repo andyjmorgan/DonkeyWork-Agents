@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MessageSquare, Trash2, ExternalLink, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
+  Button,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@donkeywork/ui'
 import { conversations, type ConversationSummary } from '@/lib/api'
 
 const PAGE_SIZE = 20

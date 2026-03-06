@@ -6,10 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+  Button,
+  Input,
+  Label,
+} from '@donkeywork/ui'
 import { Minus, Plus } from 'lucide-react'
 
 interface TableDialogProps {

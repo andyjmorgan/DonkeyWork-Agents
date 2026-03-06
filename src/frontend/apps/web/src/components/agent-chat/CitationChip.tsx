@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
+} from "@donkeywork/ui";
 import { ExternalLink } from "lucide-react";
 import type { CitationBox } from "@/types/agent-chat";
 

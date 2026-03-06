@@ -2,8 +2,12 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, FlaskConical, Plus, ChevronDown, Wrench, MessageSquare, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import {
+  Button,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@donkeywork/ui'
 import { Logo } from '@/components/branding/Logo'
 import { NaviConversationList } from '@/components/layout/NaviConversationList'
 

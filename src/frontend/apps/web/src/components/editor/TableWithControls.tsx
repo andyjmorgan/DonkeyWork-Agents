@@ -2,13 +2,13 @@ import { NodeViewContent, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
 import { useEffect, useRef, useState } from 'react'
 import { GripVertical, GripHorizontal, Plus, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@donkeywork/ui'
 
 export function TableWithControls({ editor, getPos, node }: NodeViewProps) {
   const [hoveredRow, setHoveredRow] = useState<number | null>(null)

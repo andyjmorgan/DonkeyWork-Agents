@@ -5,10 +5,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+  Button,
+  Label,
+  Input,
+} from '@donkeywork/ui'
 import { Copy, Eye, EyeOff } from 'lucide-react'
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon'
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon'

@@ -17,34 +17,30 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
-import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
-import { ContentCard } from '@/components/workspace/ContentCard'
 import {
+  Button,
+  Input,
+  Label,
+  Textarea,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from '@donkeywork/ui'
+import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
+import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
+import { ContentCard } from '@/components/workspace/ContentCard'
 import {
   projects,
   milestones,

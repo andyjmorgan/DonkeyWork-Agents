@@ -12,15 +12,19 @@ import {
   Zap,
   Timer,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
+  Button,
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion'
+} from '@donkeywork/ui'
 import { JsonViewer } from '@/components/ui/json-viewer'
 import { executions, orchestrations, type OrchestrationExecution, type NodeExecution, type Orchestration } from '@/lib/api'
 

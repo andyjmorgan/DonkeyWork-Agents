@@ -7,7 +7,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet'
+} from '@donkeywork/ui'
 import { GripVertical } from 'lucide-react'
 
 const MIN_WIDTH = 400

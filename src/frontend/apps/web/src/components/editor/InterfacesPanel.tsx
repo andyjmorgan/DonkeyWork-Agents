@@ -6,11 +6,12 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from '@/components/ui/sheet'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+  Input,
+  Label,
+  Textarea,
+  RadioGroup,
+  RadioGroupItem,
+} from '@donkeywork/ui'
 import { useEditorStore } from '@/store/editor'
 import type { InterfaceConfig, InterfaceType } from '@/lib/api'
 

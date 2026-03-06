@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Loader2, Search, FlaskConical, Trash2, X, CheckSquare } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Button, Badge } from '@donkeywork/ui'
 import { research, type ResearchSummary, type ResearchStatus } from '@/lib/api'
 
 const statusVariants: Record<ResearchStatus, 'pending' | 'inProgress' | 'success' | 'destructive' | 'warning'> = {

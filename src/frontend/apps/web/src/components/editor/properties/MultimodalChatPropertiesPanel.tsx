@@ -2,10 +2,15 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useEditorStore, type NodeConfig } from '@/store/editor'
 import { multimodalChat, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@/lib/api'
 import { FieldRenderer } from './FieldRenderer'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FormField } from '@/components/ui/form-field'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  FormField,
+  Label,
+  Switch,
+} from '@donkeywork/ui'
 import { Loader2, Settings, Sliders, Brain, Pencil, Check } from 'lucide-react'
 
 interface MultimodalChatPropertiesPanelProps {

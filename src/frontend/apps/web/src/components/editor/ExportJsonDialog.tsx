@@ -6,8 +6,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+  Button,
+} from '@donkeywork/ui'
 import { JsonViewer } from '@/components/ui/json-viewer'
 
 interface ExportJsonDialogProps {

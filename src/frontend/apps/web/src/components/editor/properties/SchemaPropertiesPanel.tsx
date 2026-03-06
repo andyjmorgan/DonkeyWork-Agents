@@ -2,9 +2,14 @@ import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react'
 import { useEditorStore } from '@/store/editor'
 import { nodeTypes, models, type NodeConfigSchema, type NodeFieldSchema, type ModelDefinition } from '@/lib/api'
 import { FieldRenderer } from './FieldRenderer'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Input,
+  Label,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@donkeywork/ui'
 import { Loader2 } from 'lucide-react'
 
 interface SchemaPropertiesPanelProps {

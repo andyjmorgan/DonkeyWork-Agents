@@ -24,24 +24,22 @@ import {
   GitBranch,
   Table,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import {
+  Button,
+  Separator,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+  Input,
+  Label,
+  Textarea,
+} from '@donkeywork/ui'
 import { useCallback, useState } from 'react'
 import type { ViewMode } from './MarkdownEditor'
 import { TableDialog } from './TableDialog'

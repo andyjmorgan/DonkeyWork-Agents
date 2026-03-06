@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, FileText, StickyNote } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button, Input } from '@donkeywork/ui'
 import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import { notes, projects, type Note, type ProjectDetails } from '@/lib/api'
 

@@ -1,23 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Plus, Key, Trash2, Copy, Check, Loader2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
+  Button,
+  Input,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@donkeywork/ui'
 import { apiKeys, type ApiKeyItem } from '@/lib/api'
 
 const PAGE_SIZE = 20

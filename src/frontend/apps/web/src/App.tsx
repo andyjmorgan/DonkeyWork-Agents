@@ -4,7 +4,7 @@ import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPa
 import { useAuthStore } from '@/store/auth'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { TooltipProvider } from '@donkeywork/ui'
 import { NotificationListener } from '@/components/providers/NotificationListener'
 
 function TokenRefreshManager({ children }: { children: React.ReactNode }) {

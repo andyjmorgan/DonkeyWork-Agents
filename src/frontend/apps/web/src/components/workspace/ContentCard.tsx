@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { Trash2, Loader2, Calendar, CheckSquare, Circle, Clock, CheckCircle2, AlertCircle, Target } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Button, Badge } from '@donkeywork/ui'
 import type { TaskStatus, TaskPriority } from '@/lib/api'
 
 const statusIcons: Record<TaskStatus, ReactNode> = {

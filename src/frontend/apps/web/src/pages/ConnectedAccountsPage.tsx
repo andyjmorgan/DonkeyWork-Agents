@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Eye, RefreshCw, Unplug } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Button, Badge } from '@donkeywork/ui'
 import { ProviderIcon } from '@/components/oauth/ProviderIcon'
 import { ViewOAuthTokenDialog } from '@/components/oauth/ViewOAuthTokenDialog'
 import { oauth, type OAuthToken } from '@/lib/api'

@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@donkeywork/ui'
 import { Logo } from '@/components/branding/Logo'
 import { Github } from 'lucide-react'
 

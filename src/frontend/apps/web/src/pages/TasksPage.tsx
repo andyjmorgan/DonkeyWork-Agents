@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Loader2, CheckSquare } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@donkeywork/ui'
 import { ContentCard } from '@/components/workspace/ContentCard'
 import { tasks, type Task, type TaskStatus } from '@/lib/api'
 

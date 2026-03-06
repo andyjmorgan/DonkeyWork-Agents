@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { Plus, Loader2, Edit, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
+  Button,
+  Badge,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@donkeywork/ui'
 import { orchestrations, type Orchestration } from '@/lib/api'
 
 interface OrchestrationWithVersion extends Orchestration {

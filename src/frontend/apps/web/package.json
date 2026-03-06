@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
-    "@codemirror/view": "^6.36.5",
+    "@codemirror/view": "^6.39.16",
+    "@donkeywork/ui": "workspace:*",
     "@microlink/react-json-view": "^1.27.1",
     "@microsoft/signalr": "^10.0.0",
     "@monaco-editor/react": "^4.7.0",

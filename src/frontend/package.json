@@ -1,16 +1,18 @@
 {
-  "name": "donkeywork-frontend",
+  "name": "frontend",
   "private": true,
-  "version": "0.0.0",
   "scripts": {
     "dev": "pnpm --filter @donkeywork/web dev",
     "build": "pnpm --filter @donkeywork/web build",
     "lint": "pnpm --filter @donkeywork/web lint",
+    "preview": "pnpm --filter @donkeywork/web preview",
     "test": "pnpm --filter @donkeywork/web test",
-    "test:run": "pnpm --filter @donkeywork/web test:run",
-    "test:ui": "pnpm --filter @donkeywork/web test:ui"
+    "test:ui": "pnpm --filter @donkeywork/web test:ui",
+    "test:run": "pnpm --filter @donkeywork/web test:run"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

@@ -6,9 +6,9 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+  Button,
+  Badge,
+} from '@donkeywork/ui'
 import { orchestrations, type OrchestrationVersion } from '@/lib/api'
 
 interface VersionHistorySheetProps {

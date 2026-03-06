@@ -1,8 +1,6 @@
 import { useCallback } from 'react'
 import { Plus, Trash2, Variable, List } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button, Input, Label } from '@donkeywork/ui'
 
 export interface KeyValueItem {
   key: string

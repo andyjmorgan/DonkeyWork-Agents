@@ -1,24 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, CheckSquare, Calendar, Target } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
-import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
 import {
+  Button,
+  Input,
+  Label,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/components/ui/tabs'
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@donkeywork/ui'
+import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
+import { MarkdownViewer } from '@/components/editor/MarkdownViewer'
 import { tasks, projects, milestones, type Task, type ProjectDetails, type MilestoneDetails, type TaskPriority, type TaskStatus } from '@/lib/api'
 
 export function TaskEditorPage() {

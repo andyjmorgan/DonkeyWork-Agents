@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@donkeywork/ui'
 import { MermaidBlock } from './MermaidBlock'
 
 const COPY_SUCCESS_DURATION = 2000

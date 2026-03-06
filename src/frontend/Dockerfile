@@ -1,21 +1,26 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copy package files for dependency caching
-COPY package.json package-lock.json ./
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy workspace config and package files for dependency caching
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/ui/package.json ./packages/ui/
 
 # Install dependencies
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build
-RUN npm run build
+RUN pnpm run build
 
 # Runtime - serve with nginx
 FROM nginx:alpine AS runtime
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 COPY <<'EOF' /etc/nginx/conf.d/default.conf
 server {
     listen 80;

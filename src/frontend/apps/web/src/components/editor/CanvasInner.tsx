@@ -14,7 +14,7 @@ import { AlignVerticalSpaceAround } from 'lucide-react'
 
 import { SchemaNode } from './nodes'
 import { useEditorStore } from '@/store/editor'
-import { Button } from '@/components/ui/button'
+import { Button } from '@donkeywork/ui'
 
 export function CanvasInner() {
   const { screenToFlowPosition, fitView } = useReactFlow()

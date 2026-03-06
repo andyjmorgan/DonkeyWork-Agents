@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Clock, CheckCircle2, XCircle, Loader2, ChevronLeft, ChevronRight, Eye, PlayCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
+  Button,
+  Badge,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@donkeywork/ui'
 import { executions, orchestrations, type OrchestrationExecution, type Orchestration } from '@/lib/api'
 
 const PAGE_SIZE = 20

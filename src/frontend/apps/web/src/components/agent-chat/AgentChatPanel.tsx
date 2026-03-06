@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState, useMemo, useCallback, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button, ScrollArea } from '@donkeywork/ui'
 import { useAgentConversation } from "@/hooks/useAgentConversation";
 import { internalToChat } from "@/components/agent-chat/MessageRenderer";
 import type { ChatMessage, ContentBox } from "@/types/agent-chat";

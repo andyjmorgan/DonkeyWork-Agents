@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@donkeywork/ui'
 import { executions, type OrchestrationExecution } from '@/lib/api'
 
 interface ExecutionHistoryProps {

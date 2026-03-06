@@ -13,33 +13,29 @@ import {
   X,
   Plus,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import {
+  Button,
+  Input,
+  Label,
+  Badge,
+  Textarea,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/components/ui/tabs'
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@donkeywork/ui'
+import { MarkdownEditor } from '@/components/editor/MarkdownEditor'
 import {
   research,
   type ResearchDetails,

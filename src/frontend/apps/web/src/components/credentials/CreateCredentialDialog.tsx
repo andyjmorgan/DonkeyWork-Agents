@@ -6,17 +6,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
+  Button,
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@donkeywork/ui'
 import { credentials } from '@/lib/api'
 import { OpenAIIcon } from '@/components/icons/OpenAIIcon'
 import { AnthropicIcon } from '@/components/icons/AnthropicIcon'

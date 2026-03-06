@@ -1,6 +1,6 @@
 import { useEffect, useState, useLayoutEffect, useRef } from 'react'
 import { AlertCircle, Info, AlertTriangle, Bug } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@donkeywork/ui'
 import { executions, type ExecutionLog } from '@/lib/api'
 
 interface ExecutionLogsProps {

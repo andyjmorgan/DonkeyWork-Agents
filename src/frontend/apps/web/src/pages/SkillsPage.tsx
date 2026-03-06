@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Trash2, Upload, Loader2, Zap, Plus, X, ChevronRight, Folder, FolderOpen, FileText } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import {
+  Button,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@donkeywork/ui'
 import { skills, type SkillItem, type SkillFileNode } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 function FileTreeNode({ node, depth }: { node: SkillFileNode; depth: number }) {
   const [open, setOpen] = useState(false)

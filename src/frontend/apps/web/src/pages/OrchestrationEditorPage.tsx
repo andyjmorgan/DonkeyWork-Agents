@@ -1,9 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Download, Save, Loader2, History, Play, Settings2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  Button,
+  Badge,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@donkeywork/ui'
 import { Canvas } from '@/components/editor/Canvas'
 import { NodePalette } from '@/components/editor/NodePalette'
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel'
