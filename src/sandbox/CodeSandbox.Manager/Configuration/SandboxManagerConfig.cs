@@ -57,6 +57,13 @@ public class SandboxManagerConfig
 
     public string AuthProxyCaSecretName { get; set; } = "sandbox-proxy-ca";
 
+    // Internal gRPC credential store settings
+    public string? CredentialStoreGrpcUrl { get; set; }
+
+    public string GrpcClientSecretName { get; set; } = "internal-grpc-client";
+
+    public string GrpcCaSecretName { get; set; } = "internal-grpc-ca";
+
     // Persistent storage settings (single PVC with subPath mounts)
     public bool EnablePersistentStorage { get; set; } = true;
 

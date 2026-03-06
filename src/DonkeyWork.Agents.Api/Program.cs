@@ -1,7 +1,11 @@
+using System.Security.Cryptography.X509Certificates;
 using Asp.Versioning;
 using DonkeyWork.Agents.Conversations.Api;
 using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
+using DonkeyWork.Agents.Credentials.Api.Interceptors;
+using DonkeyWork.Agents.Credentials.Api.Options;
+using DonkeyWork.Agents.Credentials.Api.Services;
 using DonkeyWork.Agents.Identity.Api;
 using DonkeyWork.Agents.Identity.Api.Options;
 using DonkeyWork.Agents.Mcp.Api;
@@ -19,6 +23,7 @@ using DonkeyWork.Agents.Actors.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.AspNetCore.Authentication;
 using Scalar.AspNetCore;
@@ -101,6 +106,52 @@ builder.Services.AddActorsServices(builder.Configuration);
 
 // Add Notifications module (includes SignalR)
 builder.Services.AddNotificationsCore();
+
+// Add gRPC for internal credential store service
+var grpcOptions = builder.Configuration.GetSection(InternalGrpcOptions.SectionName).Get<InternalGrpcOptions>();
+if (grpcOptions?.Enabled == true)
+{
+    builder.Services.AddGrpc(options =>
+    {
+        options.Interceptors.Add<InternalGrpcInterceptor>();
+    });
+    builder.Services.AddSingleton<InternalGrpcInterceptor>();
+
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        // Main HTTP port
+        options.ListenAnyIP(8080, o => o.Protocols = HttpProtocols.Http1AndHttp2);
+
+        // Internal gRPC port with mTLS
+        options.ListenAnyIP(grpcOptions.Port, listenOptions =>
+        {
+            listenOptions.Protocols = HttpProtocols.Http2;
+
+            if (File.Exists(grpcOptions.ServerCertPath) && File.Exists(grpcOptions.ServerKeyPath))
+            {
+                listenOptions.UseHttps(httpsOptions =>
+                {
+                    httpsOptions.ServerCertificate = X509Certificate2.CreateFromPemFile(
+                        grpcOptions.ServerCertPath, grpcOptions.ServerKeyPath);
+
+                    if (File.Exists(grpcOptions.CaCertPath))
+                    {
+                        httpsOptions.ClientCertificateMode = Microsoft.AspNetCore.Server.Kestrel.Https.ClientCertificateMode.RequireCertificate;
+                        httpsOptions.ClientCertificateValidation = (cert, chain, errors) =>
+                        {
+                            var caCert = X509CertificateLoader.LoadCertificateFromFile(grpcOptions.CaCertPath);
+                            using var customChain = new X509Chain();
+                            customChain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                            customChain.ChainPolicy.CustomTrustStore.Add(caCert);
+                            customChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                            return customChain.Build(cert);
+                        };
+                    }
+                });
+            }
+        });
+    });
+}
 
 // Configure Data Protection with PostgreSQL storage
 builder.Services.AddDataProtection()
@@ -191,6 +242,12 @@ app.MapGet("/.well-known/oauth-authorization-server",
     () => Results.Redirect($"{keycloakAuthority}/.well-known/openid-configuration", permanent: true));
 
 app.MapHealthChecks("/healthz");
+
+// Map gRPC credential store service (internal only, port 8090)
+if (grpcOptions?.Enabled == true)
+{
+    app.MapGrpcService<CredentialStoreGrpcService>();
+}
 
 using(var scope = app.Services.CreateScope())
 {

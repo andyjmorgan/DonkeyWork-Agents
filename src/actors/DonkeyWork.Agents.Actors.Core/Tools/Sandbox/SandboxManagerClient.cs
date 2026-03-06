@@ -54,7 +54,8 @@ public sealed class SandboxManagerClient
         string userId,
         string conversationId,
         Action<string>? onProgress,
-        CancellationToken ct)
+        CancellationToken ct,
+        IReadOnlyList<string>? dynamicCredentialDomains = null)
     {
         _logger.LogInformation("Creating sandbox for UserId={UserId}, ConversationId={ConversationId}", userId, conversationId);
 
@@ -63,6 +64,11 @@ public sealed class SandboxManagerClient
             UserId = userId,
             ConversationId = conversationId,
         };
+
+        if (dynamicCredentialDomains is { Count: > 0 })
+        {
+            request.DynamicCredentialDomains.AddRange(dynamicCredentialDomains);
+        }
 
         using var call = _client.CreateSandbox(request, cancellationToken: ct);
 

@@ -71,6 +71,7 @@ message CreateSandboxRequest {
   string conversation_id = 2;
   map<string, string> environment_variables = 3;
   optional ResourceRequirements resources = 4;
+  repeated string dynamic_credential_domains = 5;
 }
 
 message FindSandboxRequest {

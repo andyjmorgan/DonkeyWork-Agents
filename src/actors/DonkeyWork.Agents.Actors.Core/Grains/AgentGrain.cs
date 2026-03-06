@@ -514,11 +514,19 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
             if (podName is null)
             {
+                // Resolve dynamic credential domains for the user
+                IReadOnlyList<string>? credentialDomains = null;
+                var credentialMappingService = scope.ServiceProvider.GetService<ISandboxCredentialMappingService>();
+                if (credentialMappingService is not null)
+                {
+                    credentialDomains = await credentialMappingService.GetConfiguredDomainsAsync(CancellationToken.None);
+                }
+
                 Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));
                 podName = await client.CreateSandboxAsync(userId, conversationId, progress =>
                 {
                     Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", progress, null));
-                }, CancellationToken.None);
+                }, CancellationToken.None, credentialDomains);
             }
 
             handle.SetResult(podName);

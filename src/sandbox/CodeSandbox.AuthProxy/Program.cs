@@ -1,4 +1,5 @@
 using CodeSandbox.AuthProxy.Configuration;
+using CodeSandbox.AuthProxy.Credentials;
 using CodeSandbox.AuthProxy.Health;
 using CodeSandbox.AuthProxy.Proxy;
 using Serilog;
@@ -35,6 +36,18 @@ builder.Services.AddSingleton(sp => new CertificateGenerator(
     sp.GetRequiredService<ILogger<CertificateGenerator>>()));
 
 builder.Services.AddSingleton<TlsMitmHandler>();
+
+// Register credential provider based on configuration
+if (!string.IsNullOrEmpty(proxyConfig.CredentialStoreUrl))
+{
+    builder.Services.AddSingleton<ICredentialProvider>(sp =>
+        new GrpcCredentialProvider(proxyConfig, sp.GetRequiredService<ILogger<GrpcCredentialProvider>>()));
+}
+else
+{
+    builder.Services.AddSingleton<ICredentialProvider>(new StaticCredentialProvider(proxyConfig));
+}
+
 builder.Services.AddHostedService<ProxyServer>();
 builder.Services.AddHealthChecks();
 

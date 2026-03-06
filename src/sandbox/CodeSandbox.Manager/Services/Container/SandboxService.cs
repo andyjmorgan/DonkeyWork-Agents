@@ -546,7 +546,9 @@ public class SandboxService : ISandboxService
             });
 
             // Add sidecar container
-            containers.Add(BuildAuthProxySidecar());
+            var (authProxyContainer, authProxyVolumes) = BuildAuthProxySidecar(request);
+            containers.Add(authProxyContainer);
+            volumes.AddRange(authProxyVolumes);
 
             // Add volumes for CA cert
             volumes.Add(new V1Volume
@@ -603,7 +605,7 @@ public class SandboxService : ISandboxService
         return pod;
     }
 
-    private V1Container BuildAuthProxySidecar()
+    private (V1Container Container, List<V1Volume> Volumes) BuildAuthProxySidecar(CreateSandboxRequest request)
     {
         var envVars = new List<V1EnvVar>
         {
@@ -643,7 +645,100 @@ public class SandboxService : ISandboxService
             }
         }
 
-        return new V1Container
+        var volumeMounts = new List<V1VolumeMount>
+        {
+            new()
+            {
+                Name = "proxy-ca-full",
+                MountPath = "/certs",
+                ReadOnlyProperty = true
+            }
+        };
+
+        var extraVolumes = new List<V1Volume>();
+
+        // Add gRPC credential store configuration if configured
+        if (!string.IsNullOrEmpty(_config.CredentialStoreGrpcUrl) && request.DynamicCredentialDomains.Count > 0)
+        {
+            envVars.Add(new V1EnvVar
+            {
+                Name = "ProxyConfiguration__CredentialStoreUrl",
+                Value = _config.CredentialStoreGrpcUrl
+            });
+            envVars.Add(new V1EnvVar
+            {
+                Name = "ProxyConfiguration__CredentialStoreUserId",
+                Value = request.UserId
+            });
+            envVars.Add(new V1EnvVar
+            {
+                Name = "ProxyConfiguration__GrpcClientCertPath",
+                Value = "/certs/grpc/tls.crt"
+            });
+            envVars.Add(new V1EnvVar
+            {
+                Name = "ProxyConfiguration__GrpcClientKeyPath",
+                Value = "/certs/grpc/tls.key"
+            });
+            envVars.Add(new V1EnvVar
+            {
+                Name = "ProxyConfiguration__GrpcCaCertPath",
+                Value = "/certs/grpc/ca.crt"
+            });
+
+            for (int i = 0; i < request.DynamicCredentialDomains.Count; i++)
+            {
+                envVars.Add(new V1EnvVar
+                {
+                    Name = $"ProxyConfiguration__DynamicCredentialDomains__{i}",
+                    Value = request.DynamicCredentialDomains[i]
+                });
+            }
+
+            // Mount gRPC client cert
+            volumeMounts.Add(new V1VolumeMount
+            {
+                Name = "grpc-client-cert",
+                MountPath = "/certs/grpc",
+                ReadOnlyProperty = true
+            });
+
+            extraVolumes.Add(new V1Volume
+            {
+                Name = "grpc-client-cert",
+                Projected = new V1ProjectedVolumeSource
+                {
+                    Sources = new List<V1VolumeProjection>
+                    {
+                        new()
+                        {
+                            Secret = new V1SecretProjection
+                            {
+                                Name = _config.GrpcClientSecretName,
+                                Items = new List<V1KeyToPath>
+                                {
+                                    new() { Key = "tls.crt", Path = "tls.crt" },
+                                    new() { Key = "tls.key", Path = "tls.key" }
+                                }
+                            }
+                        },
+                        new()
+                        {
+                            Secret = new V1SecretProjection
+                            {
+                                Name = _config.GrpcCaSecretName,
+                                Items = new List<V1KeyToPath>
+                                {
+                                    new() { Key = "ca.crt", Path = "ca.crt" }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        var container = new V1Container
         {
             Name = "auth-proxy",
             Image = _config.AuthProxyImage,
@@ -654,15 +749,7 @@ public class SandboxService : ISandboxService
                 new() { ContainerPort = _config.AuthProxyHealthPort }
             },
             Env = envVars,
-            VolumeMounts = new List<V1VolumeMount>
-            {
-                new()
-                {
-                    Name = "proxy-ca-full",
-                    MountPath = "/certs",
-                    ReadOnlyProperty = true
-                }
-            },
+            VolumeMounts = volumeMounts,
             Resources = new V1ResourceRequirements
             {
                 Requests = new Dictionary<string, ResourceQuantity>
@@ -687,6 +774,8 @@ public class SandboxService : ISandboxService
                 PeriodSeconds = 5
             }
         };
+
+        return (container, extraVolumes);
     }
 
     private V1ResourceRequirements BuildResourceRequirements(ResourceRequirements? resources)

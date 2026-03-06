@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using CodeSandbox.AuthProxy.Configuration;
+using CodeSandbox.AuthProxy.Credentials;
 
 namespace CodeSandbox.AuthProxy.Proxy;
 
@@ -9,23 +10,20 @@ public class ProxyServer : BackgroundService
 {
     private readonly ProxyConfiguration _config;
     private readonly TlsMitmHandler _mitmHandler;
+    private readonly ICredentialProvider _credentialProvider;
     private readonly ILogger<ProxyServer> _logger;
     private readonly HashSet<string> _blockedDomains;
-    private readonly Dictionary<string, Dictionary<string, string>> _domainHeaders;
 
     public ProxyServer(
         ProxyConfiguration config,
         TlsMitmHandler mitmHandler,
+        ICredentialProvider credentialProvider,
         ILogger<ProxyServer> logger)
     {
         _config = config;
         _mitmHandler = mitmHandler;
+        _credentialProvider = credentialProvider;
         _logger = logger;
-
-        // Build domain -> headers lookup from credential configs
-        _domainHeaders = config.DomainCredentials
-            .Where(dc => !string.IsNullOrEmpty(dc.BaseDomain) && dc.Headers.Count > 0)
-            .ToDictionary(dc => dc.BaseDomain, dc => dc.Headers, StringComparer.OrdinalIgnoreCase);
 
         _blockedDomains = new HashSet<string>(config.BlockedDomains, StringComparer.OrdinalIgnoreCase);
     }
@@ -38,8 +36,7 @@ public class ProxyServer : BackgroundService
         _logger.LogInformation("Proxy server listening on port {Port}", _config.ProxyPort);
         _logger.LogInformation("Blocked domains: {Domains}",
             _blockedDomains.Count > 0 ? string.Join(", ", _blockedDomains) : "(none)");
-        _logger.LogInformation("Credential injection domains: {Domains}",
-            _domainHeaders.Count > 0 ? string.Join(", ", _domainHeaders.Keys) : "(none)");
+        _logger.LogInformation("Credential provider: {Provider}", _credentialProvider.GetType().Name);
 
         try
         {
@@ -96,7 +93,8 @@ public class ProxyServer : BackgroundService
 
                 await SendResponseAsync(stream, "HTTP/1.1 200 Connection Established\r\n\r\n", cancellationToken);
 
-                if (_domainHeaders.TryGetValue(host, out var headersToInject))
+                var headersToInject = await _credentialProvider.GetHeadersForDomainAsync(host, cancellationToken);
+                if (headersToInject is not null && headersToInject.Count > 0)
                 {
                     // MITM + header injection for credential domains
                     _logger.LogInformation("CONNECT {Host}:{Port} - MITM | injecting {Count} header(s)",

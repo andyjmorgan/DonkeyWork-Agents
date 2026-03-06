@@ -13,6 +13,8 @@ public class CreateSandboxRequest
     public Dictionary<string, string>? EnvironmentVariables { get; set; }
 
     public ResourceRequirements? Resources { get; set; }
+
+    public List<string> DynamicCredentialDomains { get; set; } = new();
 }
 
 public class ResourceRequirements

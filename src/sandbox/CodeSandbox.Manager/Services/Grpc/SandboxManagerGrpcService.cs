@@ -32,6 +32,9 @@ public class SandboxManagerGrpcService : SandboxManagerService.SandboxManagerSer
             EnvironmentVariables = request.EnvironmentVariables.Count > 0
                 ? new Dictionary<string, string>(request.EnvironmentVariables)
                 : null,
+            DynamicCredentialDomains = request.DynamicCredentialDomains.Count > 0
+                ? new List<string>(request.DynamicCredentialDomains)
+                : new List<string>(),
         };
 
         if (request.Resources != null)

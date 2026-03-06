@@ -8,6 +8,11 @@
 
     <ItemGroup>
         <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="Grpc.Net.Client" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CodeSandbox.Contracts\CodeSandbox.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

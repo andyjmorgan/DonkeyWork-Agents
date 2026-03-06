@@ -32,6 +32,9 @@ public static class DependencyInjection
         services.AddScoped<GoogleOAuthProvider>();
         services.AddScoped<GitHubOAuthProvider>();
 
+        // Sandbox credential mappings
+        services.AddScoped<ISandboxCredentialMappingService, SandboxCredentialMappingService>();
+
         // Background services
         services.AddHostedService<OAuthTokenRefreshWorker>();
 
