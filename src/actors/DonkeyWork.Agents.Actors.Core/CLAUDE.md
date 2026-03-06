@@ -37,6 +37,6 @@ Exception -> Tool -> Guardrails -> Accumulator -> Provider
 
 ## Key Types
 
-- `ModelMiddlewareContext` — carries messages, system prompt, tools, provider options, and cancellation through the pipeline
+- `ModelMiddlewareContext` — carries messages, system prompt, tools, provider options, TurnId, PersistMessage callback, and cancellation through the pipeline
 - `ResponsePartsBuilder` — accumulates text/thinking content during streaming
 - `GrainContext` — scoped service populated by `GrainContextInterceptor` with grain key, userId, and conversationId

@@ -28,7 +28,6 @@
         <ProjectReference Include="..\..\..\src\actors\DonkeyWork.Agents.Actors.Api\DonkeyWork.Agents.Actors.Api.csproj" />
         <ProjectReference Include="..\..\..\src\actors\DonkeyWork.Agents.Actors.Contracts\DonkeyWork.Agents.Actors.Contracts.csproj" />
         <ProjectReference Include="..\..\..\src\actors\DonkeyWork.Agents.Actors.Core\DonkeyWork.Agents.Actors.Core.csproj" />
-        <ProjectReference Include="..\..\..\src\lib\Orleans.Persistence.SeaweedFs\Orleans.Persistence.SeaweedFs.csproj" />
         <ProjectReference Include="..\..\..\src\projects\DonkeyWork.Agents.Projects.Contracts\DonkeyWork.Agents.Projects.Contracts.csproj" />
     </ItemGroup>
 

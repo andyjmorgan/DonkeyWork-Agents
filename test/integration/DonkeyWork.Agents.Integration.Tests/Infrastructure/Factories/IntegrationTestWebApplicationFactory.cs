@@ -68,9 +68,6 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 ["OAuth:MaxRefreshRetries"] = "3",
                 ["OAuth:RefreshRetryDelay"] = "00:01:00",
 
-                // Actors options
-                ["Actors:SeaweedFsBaseUrl"] = "http://localhost:8888",
-
                 // Anthropic options (actors module - not used in tests but validation runs)
                 ["Anthropic:ApiKey"] = "test-api-key"
             };

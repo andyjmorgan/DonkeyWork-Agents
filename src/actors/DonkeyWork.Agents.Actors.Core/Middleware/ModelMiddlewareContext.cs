@@ -13,4 +13,7 @@ internal class ModelMiddlewareContext
     public CancellationToken CancellationToken { get; set; }
     public Dictionary<string, object> Metadata { get; set; } = new();
     public ResponsePartsBuilder PartsBuilder { get; } = new();
+    public Guid TurnId { get; set; }
+    public Guid? ParentTurnId { get; set; }
+    public Func<InternalMessage, Task>? PersistMessage { get; set; }
 }

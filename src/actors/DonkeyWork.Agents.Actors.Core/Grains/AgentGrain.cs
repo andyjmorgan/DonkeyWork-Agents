@@ -6,6 +6,7 @@ using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Messages;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Middleware.Messages;
 using DonkeyWork.Agents.Actors.Core.Options;
@@ -38,8 +39,10 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private readonly IExternalApiKeyService _apiKeyService;
     private readonly IMcpServerConfigurationService _mcpServerConfigService;
     private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
-    private readonly IPersistentState<AgentState> _state;
+    private readonly IGrainMessageStore _messageStore;
 
+    private List<InternalMessage> _messages = [];
+    private int _nextSequenceNumber;
     private AgentContract? _contract;
     private CancellationTokenSource? _cts;
     private bool _explicitCancel;
@@ -72,7 +75,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         IExternalApiKeyService apiKeyService,
         IMcpServerConfigurationService mcpServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
-        [PersistentState("agent", Actors.Contracts.StorageProviders.SeaweedFs)] IPersistentState<AgentState> state)
+        IGrainMessageStore messageStore)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -83,7 +86,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _apiKeyService = apiKeyService;
         _mcpServerConfigService = mcpServerConfigService;
         _mcpSandboxManagerClient = mcpSandboxManagerClient;
-        _state = state;
+        _messageStore = messageStore;
     }
 
     #region IAgentGrain
@@ -100,11 +103,15 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
         if (contract.PersistMessages)
         {
-            _state.State.Messages.Add(new InternalContentMessage
+            var userMsg = new InternalContentMessage
             {
                 Role = InternalMessageRole.User,
                 Content = input,
-            });
+                Origin = MessageOrigin.User,
+            };
+            _messages.Add(userMsg);
+            await _messageStore.AppendMessageAsync(
+                _grainContext.GrainKey, _identityContext.UserId, userMsg, _nextSequenceNumber++);
         }
 
         var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
@@ -147,7 +154,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
     {
-        return Task.FromResult<IReadOnlyList<InternalMessage>>(_state.State.Messages);
+        return Task.FromResult<IReadOnlyList<InternalMessage>>(_messages);
     }
 
     #endregion
@@ -205,6 +212,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             ? contract.SystemPrompt + SandboxTools.SystemPromptFragment
             : contract.SystemPrompt;
 
+        var turnId = Guid.NewGuid();
+
         var context = new ModelMiddlewareContext
         {
             Messages = messages,
@@ -230,6 +239,16 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             },
             ToolExecutor = this,
             CancellationToken = ct,
+            TurnId = turnId,
+            PersistMessage = contract.PersistMessages
+                ? async msg =>
+                {
+                    msg.TurnId = turnId;
+                    _messages.Add(msg);
+                    await _messageStore.AppendMessageAsync(
+                        _grainContext.GrainKey, _identityContext.UserId, msg, _nextSequenceNumber++, ct);
+                }
+                : null,
         };
 
         await foreach (var msg in _pipeline.ExecuteAsync(context))
@@ -239,16 +258,6 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         }
 
         var assistantMsg = context.Messages.OfType<InternalAssistantMessage>().LastOrDefault();
-
-        if (_contract?.PersistMessages == true && assistantMsg is not null)
-        {
-            _state.State.Messages.Add(assistantMsg);
-            foreach (var toolResult in context.Messages.OfType<InternalToolResultMessage>())
-            {
-                _state.State.Messages.Add(toolResult);
-            }
-            await _state.WriteStateAsync();
-        }
 
         return BuildAgentResult(assistantMsg);
     }
@@ -369,13 +378,19 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     #region Lifecycle
 
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        var (messages, nextSeq) = await _messageStore.LoadMessagesAsync(
+            this.GetPrimaryKeyString(), _identityContext.UserId, cancellationToken);
+
+        _messages = messages;
+        _nextSequenceNumber = nextSeq;
+
         _logger.LogInformation(
-            "Grain activated {GrainType} {GrainKey} (messages: {MessageCount}, recordExists: {RecordExists})",
-            nameof(AgentGrain), this.GetPrimaryKeyString(),
-            _state.State.Messages.Count, _state.RecordExists);
-        return base.OnActivateAsync(cancellationToken);
+            "Grain activated {GrainType} {GrainKey} (messages: {MessageCount})",
+            nameof(AgentGrain), this.GetPrimaryKeyString(), _messages.Count);
+
+        await base.OnActivateAsync(cancellationToken);
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
@@ -417,15 +432,16 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     {
         var messages = new List<InternalMessage>();
 
-        if (contract.PersistMessages && _state.State.Messages.Count > 0)
+        if (contract.PersistMessages && _messages.Count > 0)
         {
-            messages.AddRange(_state.State.Messages);
+            messages.AddRange(_messages);
         }
 
         messages.Add(new InternalContentMessage
         {
             Role = InternalMessageRole.User,
             Content = input,
+            Origin = MessageOrigin.User,
         });
 
         return messages;

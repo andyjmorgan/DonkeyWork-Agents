@@ -59,8 +59,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: Actors__SeaweedFsBaseUrl
-              value: "http://seaweedfs:8888"
             - name: ASPNETCORE_ENVIRONMENT
               value: "Production"
             - name: ASPNETCORE_URLS

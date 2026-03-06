@@ -7,6 +7,7 @@ using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Messages;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Middleware.Messages;
 using DonkeyWork.Agents.Actors.Core.Options;
@@ -43,7 +44,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private readonly IExternalApiKeyService _apiKeyService;
     private readonly IMcpServerConfigurationService _mcpServerConfigService;
     private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
-    private readonly IPersistentState<AgentState> _state;
+    private readonly IGrainMessageStore _messageStore;
 
     private readonly Channel<ConversationMessage> _queue =
         Channel.CreateUnbounded<ConversationMessage>(new UnboundedChannelOptions { SingleReader = true });
@@ -52,7 +53,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private Task? _processingLoop;
     private int _pendingCount;
     private CancellationTokenSource? _currentTurnCts;
-    private List<InternalMessage>? _stateSnapshot;
+    private List<InternalMessage> _messages = [];
+    private int _nextSequenceNumber;
+    private bool _sqlRecordCreated;
+    private bool _titleGenerated;
     private AgentContract? _contract;
     private McpToolProvider? _mcpToolProvider;
     private SandboxProvisioningHandle? _sandboxHandle;
@@ -82,7 +86,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         IIdentityContext identityContext,
         IMcpServerConfigurationService mcpServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
-        [PersistentState("conversation", Actors.Contracts.StorageProviders.SeaweedFs)] IPersistentState<AgentState> state)
+        IGrainMessageStore messageStore)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -94,7 +98,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _identityContext = identityContext;
         _mcpServerConfigService = mcpServerConfigService;
         _mcpSandboxManagerClient = mcpSandboxManagerClient;
-        _state = state;
+        _messageStore = messageStore;
     }
 
     #region IConversationGrain
@@ -170,7 +174,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
     public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
     {
-        return Task.FromResult<IReadOnlyList<InternalMessage>>(_state.State.Messages.AsReadOnly());
+        return Task.FromResult<IReadOnlyList<InternalMessage>>(_messages.AsReadOnly());
     }
 
     public async Task<IReadOnlyList<InternalMessage>> GetAgentMessagesAsync(string agentKey)
@@ -217,12 +221,16 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                 var ct = _currentTurnCts.Token;
 
-                // Snapshot state for rollback
-                _stateSnapshot = new List<InternalMessage>(_state.State.Messages);
+                // Snapshot sequence number for rollback
+                var snapshotSequenceNumber = _nextSequenceNumber;
 
                 // Add message to history
+                var turnId = Guid.NewGuid();
                 var internalMsg = FormatMessage(message);
-                _state.State.Messages.Add(internalMsg);
+                internalMsg.TurnId = turnId;
+                _messages.Add(internalMsg);
+                await _messageStore.AppendMessageAsync(
+                    _grainContext.GrainKey, _identityContext.UserId, internalMsg, _nextSequenceNumber++, ct);
 
                 var preview = internalMsg is InternalContentMessage content
                     ? content.Content[..Math.Min(content.Content.Length, 100)]
@@ -239,8 +247,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
                 try
                 {
-                    await RunPipelineAsync(contract, ct);
-                    await _state.WriteStateAsync();
+                    await RunPipelineAsync(contract, turnId, ct);
 
                     if (message is UserConversationMessage userMsg)
                     {
@@ -251,19 +258,18 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 catch (OperationCanceledException)
                 {
                     _logger.LogWarning("Turn cancelled for {Key}", _grainContext.GrainKey);
-                    RollbackState();
+                    await RollbackStateAsync(snapshotSequenceNumber);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Turn failed for {Key}", _grainContext.GrainKey);
-                    RollbackState();
+                    await RollbackStateAsync(snapshotSequenceNumber);
                     Emit(new StreamErrorEvent(_grainContext.GrainKey, ex.Message));
                 }
                 finally
                 {
                     _currentTurnCts.Dispose();
                     _currentTurnCts = null;
-                    _stateSnapshot = null;
                 }
 
                 Emit(new StreamTurnEndEvent(_grainContext.GrainKey));
@@ -276,7 +282,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
     #region Pipeline Execution
 
-    private async Task RunPipelineAsync(AgentContract contract, CancellationToken ct)
+    private async Task RunPipelineAsync(AgentContract contract, Guid turnId, CancellationToken ct)
     {
         SetupGrainContext();
         EnsureSandboxProvisioning(contract);
@@ -327,7 +333,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
         var context = new ModelMiddlewareContext
         {
-            Messages = _state.State.Messages,
+            Messages = _messages,
             SystemPrompt = systemPrompt,
             Tools = tools,
             ProviderOptions = new ProviderOptions
@@ -350,6 +356,13 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             },
             ToolExecutor = this,
             CancellationToken = ct,
+            TurnId = turnId,
+            PersistMessage = async msg =>
+            {
+                msg.TurnId = turnId;
+                await _messageStore.AppendMessageAsync(
+                    _grainContext.GrainKey, _identityContext.UserId, msg, _nextSequenceNumber++, ct);
+            },
         };
 
         await foreach (var msg in _pipeline.ExecuteAsync(context))
@@ -358,8 +371,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             EmitStreamEvent(msg);
         }
 
-        // Copy accumulated messages back to state (the pipeline may have added assistant/tool-result messages)
-        _state.State.Messages = context.Messages;
+        // Sync local list reference (pipeline may have grown it via middleware appends)
+        _messages = context.Messages;
 
         // Emit completion with final text
         var assistantMsg = context.Messages.OfType<InternalAssistantMessage>().LastOrDefault();
@@ -517,13 +530,21 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
     #region Lifecycle
 
-    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        var (messages, nextSeq) = await _messageStore.LoadMessagesAsync(
+            this.GetPrimaryKeyString(), _identityContext.UserId, cancellationToken);
+
+        _messages = messages;
+        _nextSequenceNumber = nextSeq;
+        _sqlRecordCreated = _messages.Count > 0;
+        _titleGenerated = _messages.Count > 0;
+
         _logger.LogInformation(
-            "Grain activated {GrainType} {GrainKey} (messages: {MessageCount}, recordExists: {RecordExists})",
-            nameof(ConversationGrain), this.GetPrimaryKeyString(),
-            _state.State.Messages.Count, _state.RecordExists);
-        return base.OnActivateAsync(cancellationToken);
+            "Grain activated {GrainType} {GrainKey} (messages: {MessageCount})",
+            nameof(ConversationGrain), this.GetPrimaryKeyString(), _messages.Count);
+
+        await base.OnActivateAsync(cancellationToken);
     }
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
@@ -575,11 +596,14 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             {
                 Role = InternalMessageRole.User,
                 Content = user.Text,
+                Origin = MessageOrigin.User,
             },
             AgentResultConversationMessage agentResult => new InternalContentMessage
             {
                 Role = InternalMessageRole.User,
                 Content = FormatAgentResult(agentResult),
+                Origin = MessageOrigin.Agent,
+                AgentName = agentResult.Label,
             },
             _ => new InternalContentMessage
             {
@@ -611,11 +635,25 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                $"Use the wait_for_agent tool with agent_key=\"{msg.AgentKey}\" to retrieve the full results.";
     }
 
-    private void RollbackState()
+    private async Task RollbackStateAsync(int fromSequenceNumber)
     {
-        if (_stateSnapshot is not null)
+        // Trim in-memory messages
+        var messagesToKeep = fromSequenceNumber;
+        if (_messages.Count > messagesToKeep)
         {
-            _state.State.Messages = _stateSnapshot;
+            _messages.RemoveRange(messagesToKeep, _messages.Count - messagesToKeep);
+        }
+        _nextSequenceNumber = fromSequenceNumber;
+
+        // Trim persisted messages
+        try
+        {
+            await _messageStore.RollbackFromAsync(
+                _grainContext.GrainKey, _identityContext.UserId, fromSequenceNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to rollback persisted messages for {Key}", _grainContext.GrainKey);
         }
     }
 
@@ -725,7 +763,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
     private async Task EnsureSqlRecordAsync()
     {
-        if (_state.State.SqlRecordCreated) return;
+        if (_sqlRecordCreated) return;
 
         using var scope = ServiceProvider.CreateScope();
         var metadataService = scope.ServiceProvider.GetRequiredService<IConversationMetadataService>();
@@ -734,12 +772,12 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             _identityContext.UserId,
             "New conversation");
 
-        _state.State.SqlRecordCreated = true;
+        _sqlRecordCreated = true;
     }
 
     private async Task GenerateTitleAsync(string firstUserMessage)
     {
-        if (_state.State.TitleGenerated) return;
+        if (_titleGenerated) return;
 
         var title = firstUserMessage.Length > 50 ? firstUserMessage[..50] + "..." : firstUserMessage;
 
@@ -750,7 +788,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             _identityContext.UserId,
             title);
 
-        _state.State.TitleGenerated = true;
+        _titleGenerated = true;
     }
 
     private async Task TouchTimestampAsync()

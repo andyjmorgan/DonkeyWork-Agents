@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Mcp;
 using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Persistence.Entities.Actors;
 using DonkeyWork.Agents.Persistence.Entities.Research;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +58,9 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     // Research module
     public DbSet<ResearchEntity> Research => Set<ResearchEntity>();
     public DbSet<ResearchTagEntity> ResearchTags => Set<ResearchTagEntity>();
+
+    // Actors module (grain message persistence)
+    public DbSet<GrainMessageEntity> GrainMessages => Set<GrainMessageEntity>();
 
     // Conversations module
     public DbSet<ConversationEntity> Conversations => Set<ConversationEntity>();

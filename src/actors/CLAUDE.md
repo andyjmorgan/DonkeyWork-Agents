@@ -17,7 +17,7 @@ DonkeyWork.Agents.Actors.Api/         # DI registration, options, WebSocket endp
 - One class per file (following project conventions)
 - `IAgentResponseObserver` is the grain observer interface for streaming events to clients
 - No RabbitMQ — grain observers handle real-time event delivery directly
-- SeaweedFS for grain state persistence (custom `IGrainStorage` provider)
+- EF Core + PostgreSQL for grain message persistence via `IGrainMessageStore`
 
 ## Grain Types
 

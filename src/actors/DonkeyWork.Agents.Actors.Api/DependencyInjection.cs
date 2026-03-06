@@ -1,8 +1,10 @@
 using DonkeyWork.Agents.Actors.Api.Endpoints;
 using DonkeyWork.Agents.Actors.Api.Options;
+using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core;
 using DonkeyWork.Agents.Actors.Core.Interceptors;
 using DonkeyWork.Agents.Actors.Core.Options;
+using DonkeyWork.Agents.Actors.Core.Services;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using Grpc.Net.Client;
@@ -16,8 +18,6 @@ using Orleans.Configuration;
 using Orleans.Hosting.Kubernetes;
 
 namespace DonkeyWork.Agents.Actors.Api;
-
-using Orleans.Persistence.SeaweedFs.Hosting;
 
 public static class DependencyInjection
 {
@@ -56,12 +56,6 @@ public static class DependencyInjection
 
             siloBuilder.AddMemoryGrainStorage(Contracts.StorageProviders.PubSub);
 
-            siloBuilder.AddSeaweedFsGrainStorage(Contracts.StorageProviders.SeaweedFs, o =>
-            {
-                o.BaseUrl = options.SeaweedFsBaseUrl;
-                o.BasePath = options.SeaweedFsBasePath;
-            });
-
             siloBuilder.AddIncomingGrainCallFilter<GrainContextInterceptor>();
         });
 
@@ -71,9 +65,7 @@ public static class DependencyInjection
     public static IServiceCollection AddActorsServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<ActorsOptions>()
-            .BindConfiguration(ActorsOptions.SectionName)
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
+            .BindConfiguration(ActorsOptions.SectionName);
 
         services.AddOptions<AnthropicOptions>()
             .BindConfiguration("Anthropic")
@@ -106,6 +98,7 @@ public static class DependencyInjection
         });
 
         services.AddHttpClient();
+        services.AddSingleton<IGrainMessageStore, GrainMessageStore>();
         services.AddActorsCore();
 
         return services;

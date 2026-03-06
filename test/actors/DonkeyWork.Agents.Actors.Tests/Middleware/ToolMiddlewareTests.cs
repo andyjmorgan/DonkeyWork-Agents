@@ -231,6 +231,89 @@ public class ToolMiddlewareTests
 
     #endregion
 
+    #region PersistMessage Tests
+
+    [Fact]
+    public async Task ExecuteAsync_WithPersistMessage_CallsPersistForToolResultMessages()
+    {
+        // Arrange
+        var persistedMessages = new List<InternalMessage>();
+        var executor = new FakeToolExecutor();
+        executor.SetResult("search", new ToolExecutionResult("result content"));
+
+        var context = CreateContext(toolExecutor: executor);
+        context.TurnId = Guid.NewGuid();
+        context.PersistMessage = msg =>
+        {
+            persistedMessages.Add(msg);
+            return Task.CompletedTask;
+        };
+
+        var input = JsonSerializer.Deserialize<JsonElement>("{}");
+        var toolCallMsg = ModelMsg(new ModelResponseToolCall
+        {
+            BlockIndex = 0,
+            ToolName = "search",
+            ToolUseId = "tc-1",
+            Input = input,
+        });
+
+        int callCount = 0;
+        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next = ctx =>
+        {
+            callCount++;
+            if (callCount == 1)
+                return YieldMessages([toolCallMsg]);
+            return YieldMessages([ModelMsg(new ModelResponseTextContent { Content = "Final", BlockIndex = 0 })]);
+        };
+
+        // Act
+        await CollectAll(_middleware.ExecuteAsync(context, next));
+
+        // Assert
+        var toolResult = Assert.Single(persistedMessages.OfType<InternalToolResultMessage>());
+        Assert.Equal("tc-1", toolResult.ToolUseId);
+        Assert.Equal(context.TurnId, toolResult.TurnId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutPersistMessage_StillAddsToolResultToContext()
+    {
+        // Arrange
+        var executor = new FakeToolExecutor();
+        executor.SetResult("search", new ToolExecutionResult("result"));
+
+        var context = CreateContext(toolExecutor: executor);
+        // PersistMessage is null by default
+
+        var input = JsonSerializer.Deserialize<JsonElement>("{}");
+        var toolCallMsg = ModelMsg(new ModelResponseToolCall
+        {
+            BlockIndex = 0,
+            ToolName = "search",
+            ToolUseId = "tc-1",
+            Input = input,
+        });
+
+        int callCount = 0;
+        Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next = ctx =>
+        {
+            callCount++;
+            if (callCount == 1)
+                return YieldMessages([toolCallMsg]);
+            return YieldMessages([ModelMsg(new ModelResponseTextContent { Content = "Final", BlockIndex = 0 })]);
+        };
+
+        // Act
+        await CollectAll(_middleware.ExecuteAsync(context, next));
+
+        // Assert
+        var toolResult = context.Messages.OfType<InternalToolResultMessage>().Single();
+        Assert.Equal("tc-1", toolResult.ToolUseId);
+    }
+
+    #endregion
+
     #region Cancellation Tests
 
     [Fact]

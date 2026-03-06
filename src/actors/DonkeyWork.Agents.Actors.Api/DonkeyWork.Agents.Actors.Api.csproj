@@ -19,7 +19,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\lib\Orleans.Persistence.SeaweedFs\Orleans.Persistence.SeaweedFs.csproj" />
         <ProjectReference Include="..\DonkeyWork.Agents.Actors.Core\DonkeyWork.Agents.Actors.Core.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
     </ItemGroup>

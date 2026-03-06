@@ -6,6 +6,5 @@ namespace DonkeyWork.Agents.Actors.Contracts;
 /// </summary>
 public static class StorageProviders
 {
-    public const string SeaweedFs = "SeaweedFsStore";
     public const string PubSub = "PubSubStore";
 }

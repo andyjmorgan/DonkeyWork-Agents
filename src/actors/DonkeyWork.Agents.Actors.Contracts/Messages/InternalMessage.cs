@@ -10,4 +10,6 @@ namespace DonkeyWork.Agents.Actors.Contracts.Messages;
 public abstract class InternalMessage
 {
     [Id(0)] public required InternalMessageRole Role { get; set; }
+    [Id(1)] public Guid TurnId { get; set; }
+    [Id(2)] public Guid? ParentTurnId { get; set; }
 }

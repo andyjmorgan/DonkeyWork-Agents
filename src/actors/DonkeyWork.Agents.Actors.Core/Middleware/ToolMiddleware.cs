@@ -74,13 +74,20 @@ internal sealed class ToolMiddleware : IModelMiddleware
                     Success = !result.IsError
                 };
 
-                context.Messages.Add(new InternalToolResultMessage
+                var toolResultMessage = new InternalToolResultMessage
                 {
                     Role = InternalMessageRole.User,
                     ToolUseId = toolCall.ToolUseId,
                     Content = result.Content,
-                    IsError = result.IsError
-                });
+                    IsError = result.IsError,
+                    TurnId = context.TurnId,
+                    ParentTurnId = context.ParentTurnId,
+                };
+
+                context.Messages.Add(toolResultMessage);
+
+                if (context.PersistMessage is not null)
+                    await context.PersistMessage(toolResultMessage);
             }
 
             // Loop back — next iteration calls LLM with tool results appended

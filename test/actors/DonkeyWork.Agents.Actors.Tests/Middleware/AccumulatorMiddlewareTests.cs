@@ -218,6 +218,56 @@ public class AccumulatorMiddlewareTests
 
     #endregion
 
+    #region PersistMessage Tests
+
+    [Fact]
+    public async Task ExecuteAsync_WithPersistMessage_CallsPersistForAssistantMessage()
+    {
+        // Arrange
+        InternalMessage? persistedMessage = null;
+        var context = CreateContext();
+        context.TurnId = Guid.NewGuid();
+        context.PersistMessage = msg =>
+        {
+            persistedMessage = msg;
+            return Task.CompletedTask;
+        };
+        var messages = new BaseMiddlewareMessage[]
+        {
+            ModelMsg(new ModelResponseTextContent { Content = "Hello", BlockIndex = 0 }),
+        };
+
+        // Act
+        await ConsumeAll(_middleware.ExecuteAsync(context, NextThatYields(messages)));
+
+        // Assert
+        Assert.NotNull(persistedMessage);
+        var assistant = Assert.IsType<InternalAssistantMessage>(persistedMessage);
+        Assert.Equal("Hello", assistant.TextContent);
+        Assert.Equal(context.TurnId, assistant.TurnId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutPersistMessage_DoesNotThrow()
+    {
+        // Arrange
+        var context = CreateContext();
+        // PersistMessage is null by default
+        var messages = new BaseMiddlewareMessage[]
+        {
+            ModelMsg(new ModelResponseTextContent { Content = "Hello", BlockIndex = 0 }),
+        };
+
+        // Act - should not throw
+        await ConsumeAll(_middleware.ExecuteAsync(context, NextThatYields(messages)));
+
+        // Assert
+        var assistant = Assert.Single(context.Messages.OfType<InternalAssistantMessage>());
+        Assert.Equal("Hello", assistant.TextContent);
+    }
+
+    #endregion
+
     #region Server Tool Use Tests
 
     [Fact]

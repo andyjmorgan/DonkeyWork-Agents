@@ -145,10 +145,15 @@ internal sealed class AccumulatorMiddleware : IModelMiddleware
             Role = InternalMessageRole.Assistant,
             TextContent = string.IsNullOrEmpty(fullText) ? null : fullText,
             ToolUses = toolCalls,
-            ContentBlocks = contentBlocks
+            ContentBlocks = contentBlocks,
+            TurnId = context.TurnId,
+            ParentTurnId = context.ParentTurnId,
         };
 
         context.Messages.Add(assistantMessage);
+
+        if (context.PersistMessage is not null)
+            await context.PersistMessage(assistantMessage);
 
         _logger.LogDebug(
             "AccumulatorMiddleware accumulated {BlockCount} content blocks, {ToolCount} tool uses, text={HasText}",

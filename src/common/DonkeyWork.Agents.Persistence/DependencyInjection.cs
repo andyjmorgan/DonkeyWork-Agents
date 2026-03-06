@@ -39,6 +39,20 @@ public static class DependencyInjection
                 .AddInterceptors(auditableInterceptor);
         });
 
+        // Register DbContextFactory for components that need short-lived contexts (e.g. Orleans grains)
+        services.AddDbContextFactory<AgentsDbContext>((serviceProvider, dbContextOptions) =>
+        {
+            dbContextOptions
+                .UseNpgsql(options.ConnectionString, npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "public");
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorCodesToAdd: null);
+                });
+        });
+
         // Register migration service
         services.AddScoped<IMigrationService, MigrationService>();
 
