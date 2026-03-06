@@ -1303,6 +1303,48 @@ export const fetchImageAsBlob = async (objectKey: string): Promise<string> => {
 // Export fetchWithAuth for hooks that need raw fetch access (e.g., SSE streaming)
 export { fetchWithAuth }
 
+// Sandbox Credential Mapping Types
+export type CredentialFieldType = 'ApiKey' | 'AccessToken' | 'RefreshToken' | 'Username' | 'Password' | 'ClientId' | 'ClientSecret' | 'WebhookSecret' | 'Custom'
+
+export interface SandboxCredentialMapping {
+  id: string
+  baseDomain: string
+  headerName: string
+  headerValuePrefix?: string
+  credentialId: string
+  credentialType: string
+  credentialFieldType: CredentialFieldType
+  createdAt: string
+}
+
+export interface CreateSandboxCredentialMappingRequest {
+  baseDomain: string
+  headerName: string
+  headerValuePrefix?: string
+  credentialId: string
+  credentialType: string
+  credentialFieldType: CredentialFieldType
+}
+
+export interface UpdateSandboxCredentialMappingRequest {
+  headerName?: string
+  headerValuePrefix?: string
+  credentialId?: string
+  credentialType?: string
+  credentialFieldType?: CredentialFieldType
+}
+
+export const sandboxCredentialMappings = {
+  list: () => api.get<SandboxCredentialMapping[]>('/api/v1/sandbox-credential-mappings'),
+  get: (id: string) => api.get<SandboxCredentialMapping>(`/api/v1/sandbox-credential-mappings/${id}`),
+  create: (data: CreateSandboxCredentialMappingRequest) =>
+    api.post<SandboxCredentialMapping>('/api/v1/sandbox-credential-mappings', data),
+  update: (id: string, data: UpdateSandboxCredentialMappingRequest) =>
+    api.put<SandboxCredentialMapping>(`/api/v1/sandbox-credential-mappings/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/sandbox-credential-mappings/${id}`),
+  domains: () => api.get<string[]>('/api/v1/sandbox-credential-mappings/domains'),
+}
+
 // MCP Server Configuration Types
 export type McpTransportType = 'Stdio' | 'Http'
 export type McpHttpTransportMode = 'AutoDetect' | 'Sse' | 'StreamableHttp'

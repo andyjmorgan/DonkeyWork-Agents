@@ -61,6 +61,7 @@ const navigationGroups: NavGroup[] = [
       { name: 'Credentials', href: '/credentials', icon: KeyRound, iconColor: 'text-rose-500' },
       { name: 'OAuth Clients', href: '/oauth-clients', icon: Shield, iconColor: 'text-purple-500' },
       { name: 'Connected Accounts', href: '/connected-accounts', icon: LinkIcon, iconColor: 'text-green-500' },
+      { name: 'Sandbox Credentials', href: '/sandbox-credentials', icon: Server, iconColor: 'text-orange-500' },
     ],
   },
 ]
