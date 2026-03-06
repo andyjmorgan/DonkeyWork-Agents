@@ -21,8 +21,16 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@donkeywork/api-client": ["../../packages/api-client/src/index.ts"],
+      "@donkeywork/api-client/types": ["../../packages/api-client/src/types/index.ts"],
+      "@donkeywork/chat": ["../../packages/chat/src/index.ts"],
+      "@donkeywork/editor": ["../../packages/editor/src/index.ts"],
+      "@donkeywork/platform": ["../../packages/platform/src/index.ts"],
+      "@donkeywork/stores": ["../../packages/stores/src/index.ts"],
+      "@donkeywork/ui": ["../../packages/ui/src/index.ts"],
+      "@donkeywork/ui/lib/utils": ["../../packages/ui/src/lib/utils.ts"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "../../packages/*/src"]
 }
