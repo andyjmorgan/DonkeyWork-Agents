@@ -33,6 +33,11 @@ public class McpHttpConfigurationEntity
     public McpHttpAuthType AuthType { get; set; } = McpHttpAuthType.None;
 
     /// <summary>
+    /// Optional reference to an OAuth token (connected account) for Bearer auth.
+    /// </summary>
+    public Guid? OAuthTokenId { get; set; }
+
+    /// <summary>
     /// Navigation property to the parent configuration.
     /// </summary>
     public McpServerConfigurationEntity McpServerConfiguration { get; set; } = null!;

@@ -40,6 +40,9 @@ public class McpHttpConfigurationConfiguration : IEntityTypeConfiguration<McpHtt
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(e => e.OAuthTokenId)
+            .HasColumnName("oauth_token_id");
+
         // Index on FK
         builder.HasIndex(e => e.McpServerConfigurationId)
             .IsUnique()

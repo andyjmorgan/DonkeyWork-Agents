@@ -24,6 +24,7 @@ import { Separator } from '@/components/ui/separator'
 import {
   mcpServers,
   credentials,
+  oauth,
   type McpServerDetails,
   type McpTransportType,
   type McpHttpTransportMode,
@@ -31,6 +32,7 @@ import {
   type CreateMcpServerRequest,
   type UpdateMcpServerRequest,
   type CredentialSummary,
+  type OAuthToken,
   type CreateMcpEnvironmentVariableRequest,
   type CreateMcpHttpHeaderConfigurationRequest,
 } from '@/lib/api'
@@ -94,13 +96,9 @@ export function McpServerDialog({
   const [httpTransportMode, setHttpTransportMode] = useState<McpHttpTransportMode>('AutoDetect')
   const [authType, setAuthType] = useState<McpHttpAuthType>('None')
 
-  // OAuth fields
-  const [clientId, setClientId] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
-  const [redirectUri, setRedirectUri] = useState('')
-  const [scopes, setScopes] = useState('')
-  const [authorizationEndpoint, setAuthorizationEndpoint] = useState('')
-  const [tokenEndpoint, setTokenEndpoint] = useState('')
+  // OAuth connected account
+  const [oauthTokens, setOauthTokens] = useState<OAuthToken[]>([])
+  const [selectedOAuthTokenId, setSelectedOAuthTokenId] = useState('')
 
   // Header auth fields
   const [headers, setHeaders] = useState<HeaderEntry[]>([])
@@ -117,10 +115,11 @@ export function McpServerDialog({
 
   const isEditing = !!editingServer
 
-  // Load credentials when dialog opens
+  // Load credentials and OAuth tokens when dialog opens
   useEffect(() => {
     if (open) {
       credentials.list().then(setAvailableCredentials).catch(() => {})
+      oauth.listTokens().then(setOauthTokens).catch(() => {})
     }
   }, [open])
 
@@ -157,14 +156,8 @@ export function McpServerDialog({
           setHttpTransportMode(http.transportMode)
           setAuthType(http.authType)
 
-          if (http.oauthConfiguration) {
-            const oauth = http.oauthConfiguration
-            setClientId(oauth.clientId)
-            setClientSecret(oauth.clientSecret || '')
-            setRedirectUri(oauth.redirectUri)
-            setScopes(oauth.scopes?.join(' ') || '')
-            setAuthorizationEndpoint(oauth.authorizationEndpoint)
-            setTokenEndpoint(oauth.tokenEndpoint)
+          if (http.oauthTokenId) {
+            setSelectedOAuthTokenId(http.oauthTokenId)
           }
 
           if (http.headerConfigurations) {
@@ -199,12 +192,7 @@ export function McpServerDialog({
     setEndpoint('')
     setHttpTransportMode('AutoDetect')
     setAuthType('None')
-    setClientId('')
-    setClientSecret('')
-    setRedirectUri('')
-    setScopes('')
-    setAuthorizationEndpoint('')
-    setTokenEndpoint('')
+    setSelectedOAuthTokenId('')
     setHeaders([])
     setRevealedHeaders(new Set())
     setError(null)
@@ -250,16 +238,7 @@ export function McpServerDialog({
           transportMode: httpTransportMode,
           authType,
           ...(authType === 'OAuth'
-            ? {
-                oauthConfiguration: {
-                  clientId,
-                  clientSecret: clientSecret || undefined,
-                  redirectUri,
-                  scopes: scopes ? scopes.split(/\s+/).filter(Boolean) : undefined,
-                  authorizationEndpoint,
-                  tokenEndpoint,
-                },
-              }
+            ? { oauthTokenId: selectedOAuthTokenId || undefined }
             : {}),
           ...(authType === 'Header'
             ? { headerConfigurations: buildHeadersPayload() }
@@ -646,82 +625,37 @@ export function McpServerDialog({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="None">None</SelectItem>
-                      <SelectItem value="OAuth">OAuth 2.0</SelectItem>
+                      <SelectItem value="OAuth">Connected Account</SelectItem>
                       <SelectItem value="Header">API Key / Header</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* OAuth Configuration */}
+                {/* OAuth Connected Account */}
                 {authType === 'OAuth' && (
                   <div className="space-y-4 p-4 rounded-lg border border-border bg-muted/30">
-                    <h4 className="text-sm font-medium">OAuth 2.0 Configuration</h4>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="clientId">Client ID</Label>
-                        <Input
-                          id="clientId"
-                          value={clientId}
-                          onChange={(e) => setClientId(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="clientSecret">Client Secret</Label>
-                        <Input
-                          id="clientSecret"
-                          type="password"
-                          value={clientSecret}
-                          onChange={(e) => setClientSecret(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="redirectUri">Redirect URI</Label>
-                      <Input
-                        id="redirectUri"
-                        placeholder="https://your-app.com/oauth/callback"
-                        value={redirectUri}
-                        onChange={(e) => setRedirectUri(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="scopes">Scopes</Label>
-                      <Input
-                        id="scopes"
-                        placeholder="read write"
-                        value={scopes}
-                        onChange={(e) => setScopes(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">Space-separated list of scopes</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="authorizationEndpoint">Authorization Endpoint</Label>
-                        <Input
-                          id="authorizationEndpoint"
-                          placeholder="https://auth.example.com/authorize"
-                          value={authorizationEndpoint}
-                          onChange={(e) => setAuthorizationEndpoint(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tokenEndpoint">Token Endpoint</Label>
-                        <Input
-                          id="tokenEndpoint"
-                          placeholder="https://auth.example.com/token"
-                          value={tokenEndpoint}
-                          onChange={(e) => setTokenEndpoint(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
+                    <h4 className="text-sm font-medium">Connected Account</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Select a connected account to authenticate with. The access token will be sent as a Bearer token in the Authorization header.
+                    </p>
+                    {oauthTokens.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No connected accounts found. Connect an account in Settings first.
+                      </p>
+                    ) : (
+                      <Select value={selectedOAuthTokenId} onValueChange={setSelectedOAuthTokenId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select connected account..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {oauthTokens.map((token) => (
+                            <SelectItem key={token.id} value={token.id}>
+                              {token.email} ({token.provider})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 )}
 

@@ -20,6 +20,9 @@ public sealed class McpHttpConfigurationV1
     [JsonPropertyName("oauthConfiguration")]
     public McpHttpOAuthConfigurationV1? OAuthConfiguration { get; init; }
 
+    [JsonPropertyName("oauthTokenId")]
+    public Guid? OAuthTokenId { get; init; }
+
     [JsonPropertyName("headerConfigurations")]
     public List<McpHttpHeaderConfigurationV1> HeaderConfigurations { get; init; } = [];
 }

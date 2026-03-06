@@ -20,6 +20,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
     private readonly IExternalApiKeyService _externalApiKeyService;
+    private readonly IOAuthTokenService _oAuthTokenService;
     private readonly ILogger<McpServerConfigurationService> _logger;
     private readonly byte[] _encryptionKey;
 
@@ -27,12 +28,14 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
         IExternalApiKeyService externalApiKeyService,
+        IOAuthTokenService oAuthTokenService,
         IOptions<PersistenceOptions> options,
         ILogger<McpServerConfigurationService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
         _externalApiKeyService = externalApiKeyService;
+        _oAuthTokenService = oAuthTokenService;
         _logger = logger;
         _encryptionKey = DeriveKey(options.Value.EncryptionKey);
     }
@@ -102,7 +105,8 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
                 McpServerConfigurationId = configId,
                 Endpoint = request.HttpConfiguration.Endpoint,
                 TransportMode = request.HttpConfiguration.TransportMode,
-                AuthType = request.HttpConfiguration.AuthType
+                AuthType = request.HttpConfiguration.AuthType,
+                OAuthTokenId = request.HttpConfiguration.OAuthTokenId
             };
             _dbContext.McpHttpConfigurations.Add(httpConfig);
 
@@ -269,7 +273,8 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
                 McpServerConfigurationId = id,
                 Endpoint = request.HttpConfiguration.Endpoint,
                 TransportMode = request.HttpConfiguration.TransportMode,
-                AuthType = request.HttpConfiguration.AuthType
+                AuthType = request.HttpConfiguration.AuthType,
+                OAuthTokenId = request.HttpConfiguration.OAuthTokenId
             };
             _dbContext.McpHttpConfigurations.Add(httpConfig);
 
@@ -375,7 +380,31 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
 
             var headers = new Dictionary<string, string>();
 
-            if (entity.HttpConfiguration.AuthType == McpHttpAuthType.Header)
+            if (entity.HttpConfiguration.AuthType == McpHttpAuthType.OAuth
+                && entity.HttpConfiguration.OAuthTokenId.HasValue)
+            {
+                try
+                {
+                    var token = await _oAuthTokenService.GetByIdAsync(
+                        _identityContext.UserId,
+                        entity.HttpConfiguration.OAuthTokenId.Value,
+                        cancellationToken);
+                    if (token != null)
+                    {
+                        headers["Authorization"] = $"Bearer {token.AccessToken}";
+                    }
+                    else
+                    {
+                        _logger.LogWarning("OAuth token {TokenId} not found for MCP server {Id} ({Name})",
+                            entity.HttpConfiguration.OAuthTokenId.Value, entity.Id, entity.Name);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve OAuth token for MCP server {Id} ({Name})", entity.Id, entity.Name);
+                }
+            }
+            else if (entity.HttpConfiguration.AuthType == McpHttpAuthType.Header)
             {
                 foreach (var header in entity.HttpConfiguration.HeaderConfigurations)
                 {
@@ -516,6 +545,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             Endpoint = entity.Endpoint,
             TransportMode = entity.TransportMode,
             AuthType = entity.AuthType,
+            OAuthTokenId = entity.OAuthTokenId,
             OAuthConfiguration = entity.OAuthConfiguration == null ? null : MapOAuthConfiguration(entity.OAuthConfiguration),
             HeaderConfigurations = entity.HeaderConfigurations.Select(h => new McpHttpHeaderConfigurationV1
             {

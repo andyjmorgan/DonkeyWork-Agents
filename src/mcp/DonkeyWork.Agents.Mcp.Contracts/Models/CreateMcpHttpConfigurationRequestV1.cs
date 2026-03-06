@@ -24,6 +24,9 @@ public sealed class CreateMcpHttpConfigurationRequestV1
     [JsonPropertyName("oauthConfiguration")]
     public CreateMcpHttpOAuthConfigurationRequestV1? OAuthConfiguration { get; init; }
 
+    [JsonPropertyName("oauthTokenId")]
+    public Guid? OAuthTokenId { get; init; }
+
     [JsonPropertyName("headerConfigurations")]
     public List<CreateMcpHttpHeaderConfigurationRequestV1>? HeaderConfigurations { get; init; }
 }

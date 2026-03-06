@@ -1388,6 +1388,7 @@ export interface McpHttpConfigurationV1 {
   transportMode: McpHttpTransportMode
   authType: McpHttpAuthType
   oauthConfiguration?: McpHttpOAuthConfigurationV1
+  oauthTokenId?: string
   headerConfigurations?: McpHttpHeaderConfigurationV1[]
 }
 
@@ -1450,6 +1451,7 @@ export interface CreateMcpHttpConfigurationRequest {
   transportMode: McpHttpTransportMode
   authType: McpHttpAuthType
   oauthConfiguration?: CreateMcpHttpOAuthConfigurationRequest
+  oauthTokenId?: string
   headerConfigurations?: CreateMcpHttpHeaderConfigurationRequest[]
 }
 
