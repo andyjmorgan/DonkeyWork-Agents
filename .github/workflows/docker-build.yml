@@ -184,7 +184,7 @@ jobs:
         run: pnpm run lint || true
 
       - name: Type check
-        run: pnpm exec tsc -b
+        run: pnpm --filter @donkeywork/web exec tsc -b
 
       - name: Test
         run: pnpm run test:run
