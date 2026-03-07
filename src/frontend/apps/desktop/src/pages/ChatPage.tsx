@@ -10,22 +10,22 @@ const defaultChatConfig: ChatConfig = {
 }
 
 export function ChatPage() {
-  const [conversationId, setConversationId] = useState<string | undefined>()
+  const [chatKey, setChatKey] = useState('new')
 
-  const onConversationCreated = useCallback((id: string) => {
-    setConversationId(id)
+  const onConversationCreated = useCallback((_id: string) => {
+    // Don't update key — AgentChatPanel manages its own conversation state internally.
+    // Changing the key would remount the component and kill the active WebSocket.
   }, [])
 
   const onReset = useCallback(() => {
-    setConversationId(undefined)
+    setChatKey(`new-${Date.now()}`)
   }, [])
 
   return (
     <ChatConfigProvider config={defaultChatConfig}>
       <div className="flex h-full flex-col overflow-hidden">
         <AgentChatPanel
-          key={conversationId ?? 'new'}
-          conversationId={conversationId}
+          key={chatKey}
           onConversationCreated={onConversationCreated}
           onReset={onReset}
         />

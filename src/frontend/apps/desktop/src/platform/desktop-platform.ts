@@ -2,8 +2,8 @@ import { type PlatformConfig, type StorageAdapter } from '@donkeywork/platform'
 import { Store } from '@tauri-apps/plugin-store'
 import { open } from '@tauri-apps/plugin-shell'
 
-const API_BASE_URL = 'https://mcp.donkeywork.dev'
-const WS_BASE_URL = 'wss://mcp.donkeywork.dev'
+const API_BASE_URL = 'https://agents.donkeywork.dev'
+const WS_BASE_URL = 'wss://agents.donkeywork.dev'
 
 let navigateFn: ((path: string) => void) | null = null
 

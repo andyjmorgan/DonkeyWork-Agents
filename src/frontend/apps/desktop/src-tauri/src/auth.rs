@@ -6,12 +6,13 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_store::StoreExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
 
 const STORE_FILENAME: &str = "auth.json";
 const KEYCLOAK_AUTHORITY: &str =
-    "https://auth.donkeywork.dev/realms/donkeywork-agents";
-const KEYCLOAK_CLIENT_ID: &str = "donkeywork-frontend";
+    "https://auth.donkeywork.dev/realms/Agents";
+const KEYCLOAK_CLIENT_ID: &str = "donkeywork-agents-api";
 const API_BASE_URL: &str = "https://agents.donkeywork.dev";
 
 // Store keys
@@ -89,22 +90,28 @@ fn now_millis() -> i64 {
         .as_millis() as i64
 }
 
-/// Start the OAuth PKCE flow - opens system browser
+/// Start the OAuth PKCE flow using a localhost callback server.
+/// Opens the system browser, waits for the callback, exchanges the code,
+/// and returns the tokens directly.
 #[tauri::command]
 pub async fn start_auth(
     app: AppHandle,
     pkce_state: tauri::State<'_, SharedPkceState>,
-) -> Result<(), String> {
+) -> Result<AuthTokens, String> {
     let code_verifier = generate_code_verifier();
     let code_challenge = generate_code_challenge(&code_verifier);
 
-    // Store verifier for later exchange
-    {
-        let mut state = pkce_state.lock().await;
-        state.code_verifier = Some(code_verifier);
-    }
+    // Bind to a random available port
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .map_err(|e| format!("Failed to bind callback server: {}", e))?;
 
-    let redirect_uri = "donkeywork://auth/callback";
+    let port = listener
+        .local_addr()
+        .map_err(|e| format!("Failed to get local address: {}", e))?
+        .port();
+
+    let redirect_uri = format!("http://localhost:{}/auth/callback", port);
 
     let auth_url = format!(
         "{}/protocol/openid-connect/auth?\
@@ -118,32 +125,25 @@ pub async fn start_auth(
         KEYCLOAK_AUTHORITY,
         urlencoding::encode(KEYCLOAK_CLIENT_ID),
         urlencoding::encode("openid profile email"),
-        urlencoding::encode(redirect_uri),
+        urlencoding::encode(&redirect_uri),
         urlencoding::encode(&code_challenge),
     );
 
     // Open system browser
-    app.opener().open_url(&auth_url, None::<&str>).map_err(|e| e.to_string())?;
+    app.opener()
+        .open_url(&auth_url, None::<&str>)
+        .map_err(|e| e.to_string())?;
 
-    Ok(())
-}
+    // Wait for the callback (with timeout)
+    let code = tokio::time::timeout(
+        tokio::time::Duration::from_secs(300),
+        wait_for_callback(listener),
+    )
+    .await
+    .map_err(|_| "Login timed out after 5 minutes".to_string())?
+    .map_err(|e| format!("Callback failed: {}", e))?;
 
-/// Exchange authorization code for tokens
-#[tauri::command]
-pub async fn exchange_code(
-    app: AppHandle,
-    code: String,
-    pkce_state: tauri::State<'_, SharedPkceState>,
-) -> Result<AuthTokens, String> {
-    let code_verifier = {
-        let mut state = pkce_state.lock().await;
-        state
-            .code_verifier
-            .take()
-            .ok_or_else(|| "No PKCE code verifier found. Please start login again.".to_string())?
-    };
-
-    let redirect_uri = "donkeywork://auth/callback";
+    // Exchange code for tokens
     let token_endpoint = format!(
         "{}/protocol/openid-connect/token",
         KEYCLOAK_AUTHORITY
@@ -152,9 +152,9 @@ pub async fn exchange_code(
     let params = [
         ("grant_type", "authorization_code"),
         ("client_id", KEYCLOAK_CLIENT_ID),
-        ("code", &code),
-        ("redirect_uri", redirect_uri),
-        ("code_verifier", &code_verifier),
+        ("code", code.as_str()),
+        ("redirect_uri", redirect_uri.as_str()),
+        ("code_verifier", code_verifier.as_str()),
     ];
 
     let client = reqwest::Client::new();
@@ -185,6 +185,73 @@ pub async fn exchange_code(
     store_tokens_internal(&app, &tokens)?;
 
     Ok(tokens)
+}
+
+/// Wait for the OAuth callback on the local TCP listener.
+/// Parses the authorization code from the query string and sends a success page.
+async fn wait_for_callback(listener: tokio::net::TcpListener) -> Result<String, String> {
+    let (mut stream, _) = listener
+        .accept()
+        .await
+        .map_err(|e| format!("Failed to accept connection: {}", e))?;
+
+    let mut buf = vec![0u8; 4096];
+    let n = stream
+        .read(&mut buf)
+        .await
+        .map_err(|e| format!("Failed to read request: {}", e))?;
+
+    let request = String::from_utf8_lossy(&buf[..n]);
+
+    // Parse the GET request line to extract the path
+    let path = request
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .ok_or_else(|| "Invalid HTTP request".to_string())?;
+
+    // Parse query parameters from the path
+    let url = format!("http://localhost{}", path);
+    let parsed = reqwest::Url::parse(&url)
+        .map_err(|e| format!("Failed to parse callback URL: {}", e))?;
+
+    // Check for errors
+    if let Some(error) = parsed.query_pairs().find(|(k, _)| k == "error") {
+        let error_desc = parsed
+            .query_pairs()
+            .find(|(k, _)| k == "error_description")
+            .map(|(_, v)| v.to_string())
+            .unwrap_or_default();
+
+        let error_page = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n\
+            <html><body style=\"font-family:system-ui;text-align:center;padding:60px\">\
+            <h2>Authentication Failed</h2><p>{}: {}</p>\
+            <p>You can close this tab.</p></body></html>",
+            error.1, error_desc
+        );
+        let _ = stream.write_all(error_page.as_bytes()).await;
+        let _ = stream.shutdown().await;
+        return Err(format!("Auth error: {}", error.1));
+    }
+
+    let code = parsed
+        .query_pairs()
+        .find(|(k, _)| k == "code")
+        .map(|(_, v)| v.to_string())
+        .ok_or_else(|| "No authorization code in callback".to_string())?;
+
+    // Send success response and close
+    let success_page = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n\
+        <html><body style=\"font-family:system-ui;text-align:center;padding:60px\">\
+        <h2>Login Successful!</h2>\
+        <p>You can close this tab and return to DonkeyWork.</p>\
+        <script>window.close()</script></body></html>";
+
+    let _ = stream.write_all(success_page.as_bytes()).await;
+    let _ = stream.shutdown().await;
+
+    Ok(code)
 }
 
 /// Store tokens securely using tauri-plugin-store
@@ -408,4 +475,3 @@ async fn refresh_tokens_internal(app: &AppHandle) -> Result<AuthTokens, String> 
 
     Ok(tokens)
 }
-

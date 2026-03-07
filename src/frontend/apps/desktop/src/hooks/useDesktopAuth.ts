@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { onOpenUrl } from '@tauri-apps/plugin-deep-link'
 import { useAuthStore } from '@donkeywork/stores'
 
 interface StoredTokens {
@@ -35,7 +34,7 @@ function parseJwt(token: string) {
 
 export function useDesktopAuth() {
   const { setTokens, setUser, logout, isAuthenticated } = useAuthStore()
-  const isExchanging = useRef(false)
+  const isLoggingIn = useRef(false)
 
   // Restore session on mount
   useEffect(() => {
@@ -87,53 +86,6 @@ export function useDesktopAuth() {
     restoreSession()
   }, [setTokens, setUser, logout])
 
-  // Listen for deep link auth callback
-  useEffect(() => {
-    const unlistenPromise = onOpenUrl(async (urls) => {
-      for (const urlStr of urls) {
-        try {
-          const url = new URL(urlStr)
-          if (url.hostname === 'auth' && url.pathname === '/callback') {
-            const code = url.searchParams.get('code')
-            const error = url.searchParams.get('error')
-
-            if (error) {
-              console.error('Auth error:', error)
-              return
-            }
-
-            if (code && !isExchanging.current) {
-              isExchanging.current = true
-              try {
-                const tokens = await invoke<AuthTokens>('exchange_code', { code })
-                setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
-                const payload = parseJwt(tokens.accessToken)
-                if (payload) {
-                  setUser({
-                    id: payload.sub,
-                    email: payload.email,
-                    name: payload.name,
-                    username: payload.preferred_username,
-                  })
-                }
-              } catch (e) {
-                console.error('Code exchange failed:', e)
-              } finally {
-                isExchanging.current = false
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Failed to parse deep link URL:', e)
-        }
-      }
-    })
-
-    return () => {
-      unlistenPromise.then((unlisten) => unlisten())
-    }
-  }, [setTokens, setUser])
-
   // Listen for background token refresh events from Rust
   useEffect(() => {
     const unlistenRefreshed = listen<AuthTokens>('tokens-refreshed', (event) => {
@@ -151,7 +103,7 @@ export function useDesktopAuth() {
     }
   }, [setTokens, logout])
 
-  // Periodic token refresh from React side (same as web)
+  // Periodic token refresh from React side
   const checkAndRefreshToken = useCallback(async () => {
     const state = useAuthStore.getState()
     if (!state.isAuthenticated) return
@@ -174,8 +126,25 @@ export function useDesktopAuth() {
   }, [isAuthenticated, checkAndRefreshToken])
 
   const startLogin = useCallback(async () => {
-    await invoke('start_auth')
-  }, [])
+    if (isLoggingIn.current) return
+    isLoggingIn.current = true
+    try {
+      // start_auth opens browser, waits for callback, exchanges code, returns tokens
+      const tokens = await invoke<AuthTokens>('start_auth')
+      setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
+      const payload = parseJwt(tokens.accessToken)
+      if (payload) {
+        setUser({
+          id: payload.sub,
+          email: payload.email,
+          name: payload.name,
+          username: payload.preferred_username,
+        })
+      }
+    } finally {
+      isLoggingIn.current = false
+    }
+  }, [setTokens, setUser])
 
   const handleLogout = useCallback(async () => {
     await invoke('clear_tokens')

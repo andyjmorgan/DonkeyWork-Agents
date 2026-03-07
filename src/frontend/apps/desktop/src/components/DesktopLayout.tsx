@@ -1,4 +1,5 @@
 import { DesktopSidebar } from './DesktopSidebar'
+import { ErrorBoundary } from './ErrorBoundary'
 import { ChatPage } from '../pages/ChatPage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
 
@@ -21,7 +22,9 @@ export function DesktopLayout({ currentPage, onNavigate }: { currentPage: Page; 
     <div className="flex h-screen overflow-hidden">
       <DesktopSidebar currentPage={currentPage} onNavigate={onNavigate} />
       <main className="flex-1 overflow-hidden">
-        <PageComponent />
+        <ErrorBoundary key={currentPage}>
+          <PageComponent />
+        </ErrorBoundary>
       </main>
     </div>
   )

@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicholasgasior/tauri-plugin-deep-link/refs/heads/main/schemas/capabilities.schema.json",
   "identifier": "default",
   "description": "Default capability for the main window",
   "windows": ["main"],
@@ -7,7 +6,6 @@
     "core:default",
     "shell:allow-open",
     "opener:default",
-    "store:default",
-    "deep-link:default"
+    "store:default"
   ]
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Github, Loader2 } from 'lucide-react'
+import { Github, Loader2, X } from 'lucide-react'
 
 export function LoginPage({ onLogin }: { onLogin: () => Promise<void> }) {
   const [isLoading, setIsLoading] = useState(false)
@@ -12,6 +12,10 @@ export function LoginPage({ onLogin }: { onLogin: () => Promise<void> }) {
       console.error('Login failed:', e)
       setIsLoading(false)
     }
+  }
+
+  const handleCancel = () => {
+    setIsLoading(false)
   }
 
   return (
@@ -28,28 +32,33 @@ export function LoginPage({ onLogin }: { onLogin: () => Promise<void> }) {
             </p>
           </div>
 
-          <button
-            onClick={handleLogin}
-            disabled={isLoading}
-            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-foreground text-background font-medium text-sm transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
+          {isLoading ? (
+            <>
+              <div className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-muted text-muted-foreground font-medium text-sm">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 Waiting for browser...
-              </>
-            ) : (
-              <>
-                <Github className="h-5 w-5" />
-                Sign in with GitHub
-              </>
-            )}
-          </button>
+              </div>
 
-          {isLoading && (
-            <p className="text-xs text-muted-foreground">
-              Complete sign-in in your browser, then come back here
-            </p>
+              <p className="text-xs text-muted-foreground">
+                Complete sign-in in your browser, then come back here
+              </p>
+
+              <button
+                onClick={handleCancel}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleLogin}
+              className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-foreground text-background font-medium text-sm transition-opacity hover:opacity-90 cursor-pointer"
+            >
+              <Github className="h-5 w-5" />
+              Sign in with GitHub
+            </button>
           )}
         </div>
       </main>
