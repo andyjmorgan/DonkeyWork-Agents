@@ -1305,12 +1305,23 @@ export { fetchWithAuth }
 
 // Sandbox Credential Mapping Types
 export type CredentialFieldType = 'ApiKey' | 'AccessToken' | 'RefreshToken' | 'Username' | 'Password' | 'ClientId' | 'ClientSecret' | 'WebhookSecret' | 'Custom'
+export type HeaderValueFormat = 'Raw' | 'BasicAuth'
+
+export interface SandboxProviderStatus {
+  provider: string
+  displayName: string
+  hasOAuthToken: boolean
+  isEnabled: boolean
+  domains: string[]
+}
 
 export interface SandboxCredentialMapping {
   id: string
   baseDomain: string
   headerName: string
   headerValuePrefix?: string
+  headerValueFormat: HeaderValueFormat
+  basicAuthUsername?: string
   credentialId: string
   credentialType: string
   credentialFieldType: CredentialFieldType
@@ -1321,6 +1332,8 @@ export interface CreateSandboxCredentialMappingRequest {
   baseDomain: string
   headerName: string
   headerValuePrefix?: string
+  headerValueFormat?: HeaderValueFormat
+  basicAuthUsername?: string
   credentialId: string
   credentialType: string
   credentialFieldType: CredentialFieldType
@@ -1329,6 +1342,8 @@ export interface CreateSandboxCredentialMappingRequest {
 export interface UpdateSandboxCredentialMappingRequest {
   headerName?: string
   headerValuePrefix?: string
+  headerValueFormat?: HeaderValueFormat
+  basicAuthUsername?: string
   credentialId?: string
   credentialType?: string
   credentialFieldType?: CredentialFieldType
@@ -1343,6 +1358,11 @@ export const sandboxCredentialMappings = {
     api.put<SandboxCredentialMapping>(`/api/v1/sandbox-credential-mappings/${id}`, data),
   delete: (id: string) => api.delete(`/api/v1/sandbox-credential-mappings/${id}`),
   domains: () => api.get<string[]>('/api/v1/sandbox-credential-mappings/domains'),
+  listProviders: () => api.get<SandboxProviderStatus[]>('/api/v1/sandbox-credential-mappings/providers'),
+  enableProvider: (provider: string) =>
+    api.post<SandboxCredentialMapping[]>(`/api/v1/sandbox-credential-mappings/providers/${provider}`, {}),
+  disableProvider: (provider: string) =>
+    api.delete(`/api/v1/sandbox-credential-mappings/providers/${provider}`),
 }
 
 // MCP Server Configuration Types

@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Api.Controllers;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
@@ -24,6 +25,8 @@ public class SandboxCredentialMappingsControllerTests
         string baseDomain = "api.example.com",
         string headerName = "Authorization",
         string? headerValuePrefix = "Bearer ",
+        HeaderValueFormat headerValueFormat = HeaderValueFormat.Raw,
+        string? basicAuthUsername = null,
         Guid? credentialId = null,
         string credentialType = "ExternalApiKey",
         CredentialFieldType credentialFieldType = CredentialFieldType.ApiKey)
@@ -34,6 +37,8 @@ public class SandboxCredentialMappingsControllerTests
             BaseDomain = baseDomain,
             HeaderName = headerName,
             HeaderValuePrefix = headerValuePrefix,
+            HeaderValueFormat = headerValueFormat,
+            BasicAuthUsername = basicAuthUsername,
             CredentialId = credentialId ?? Guid.NewGuid(),
             CredentialType = credentialType,
             CredentialFieldType = credentialFieldType,
@@ -259,6 +264,117 @@ public class SandboxCredentialMappingsControllerTests
         // Assert
         Assert.IsType<NotFoundResult>(result);
         _serviceMock.Verify(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    #endregion
+
+    #region ListProviders Tests
+
+    [Fact]
+    public async Task ListProviders_ReturnsOkWithStatuses()
+    {
+        // Arrange
+        var statuses = new List<SandboxProviderStatusV1>
+        {
+            new SandboxProviderStatusV1
+            {
+                Provider = OAuthProvider.GitHub,
+                DisplayName = "GitHub",
+                HasOAuthToken = true,
+                IsEnabled = false,
+                Domains = new List<string> { "api.github.com", "github.com" },
+            },
+        };
+
+        _serviceMock
+            .Setup(s => s.ListProviderStatusesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(statuses);
+
+        // Act
+        var result = await _controller.ListProviders();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsAssignableFrom<IReadOnlyList<SandboxProviderStatusV1>>(okResult.Value);
+        Assert.Single(response);
+        Assert.Equal(OAuthProvider.GitHub, response[0].Provider);
+    }
+
+    #endregion
+
+    #region EnableProvider Tests
+
+    [Fact]
+    public async Task EnableProvider_ReturnsCreated()
+    {
+        // Arrange
+        var mappings = new List<SandboxCredentialMappingV1>
+        {
+            CreateMapping(baseDomain: "api.github.com"),
+            CreateMapping(baseDomain: "github.com"),
+        };
+
+        _serviceMock
+            .Setup(s => s.CreateFromProviderAsync(OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mappings);
+
+        // Act
+        var result = await _controller.EnableProvider(OAuthProvider.GitHub);
+
+        // Assert
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(201, objectResult.StatusCode);
+        var response = Assert.IsAssignableFrom<IReadOnlyList<SandboxCredentialMappingV1>>(objectResult.Value);
+        Assert.Equal(2, response.Count);
+    }
+
+    [Fact]
+    public async Task EnableProvider_WhenNoToken_ReturnsBadRequest()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.CreateFromProviderAsync(OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("No OAuth token found for provider GitHub"));
+
+        // Act
+        var result = await _controller.EnableProvider(OAuthProvider.GitHub);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    #endregion
+
+    #region DisableProvider Tests
+
+    [Fact]
+    public async Task DisableProvider_ReturnsNoContent()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.DeleteByProviderAsync(OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.DisableProvider(OAuthProvider.GitHub);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task DisableProvider_WhenNoTemplate_ReturnsBadRequest()
+    {
+        // Arrange
+        _serviceMock
+            .Setup(s => s.DeleteByProviderAsync(OAuthProvider.Google, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("No template found for provider Google"));
+
+        // Act
+        var result = await _controller.DisableProvider(OAuthProvider.Google);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     #endregion

@@ -12,6 +12,10 @@ public sealed class SandboxCredentialMappingV1
 
     public string? HeaderValuePrefix { get; init; }
 
+    public required HeaderValueFormat HeaderValueFormat { get; init; }
+
+    public string? BasicAuthUsername { get; init; }
+
     public required Guid CredentialId { get; init; }
 
     public required string CredentialType { get; init; }

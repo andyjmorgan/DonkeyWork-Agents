@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,62 @@ public class SandboxCredentialMappingsController : ControllerBase
     public SandboxCredentialMappingsController(ISandboxCredentialMappingService service)
     {
         _service = service;
+    }
+
+    /// <summary>
+    /// List provider template statuses.
+    /// </summary>
+    /// <response code="200">Returns the list of provider statuses.</response>
+    [HttpGet("providers")]
+    [ProducesResponseType<IReadOnlyList<SandboxProviderStatusV1>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListProviders()
+    {
+        var statuses = await _service.ListProviderStatusesAsync();
+        return Ok(statuses);
+    }
+
+    /// <summary>
+    /// Enable a provider template by creating its credential mappings.
+    /// </summary>
+    /// <param name="provider">The OAuth provider.</param>
+    /// <response code="201">Returns the created mappings.</response>
+    /// <response code="400">Provider template not found or no OAuth token connected.</response>
+    [HttpPost("providers/{provider}")]
+    [ProducesResponseType<IReadOnlyList<SandboxCredentialMappingV1>>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> EnableProvider(OAuthProvider provider)
+    {
+        try
+        {
+            var mappings = await _service.CreateFromProviderAsync(provider);
+            return StatusCode(StatusCodes.Status201Created, mappings);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Disable a provider template by removing its credential mappings.
+    /// </summary>
+    /// <param name="provider">The OAuth provider.</param>
+    /// <response code="204">Provider mappings removed.</response>
+    /// <response code="400">Provider template not found.</response>
+    [HttpDelete("providers/{provider}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DisableProvider(OAuthProvider provider)
+    {
+        try
+        {
+            await _service.DeleteByProviderAsync(provider);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>

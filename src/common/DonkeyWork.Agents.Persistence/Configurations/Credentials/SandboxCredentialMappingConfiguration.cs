@@ -36,6 +36,14 @@ public class SandboxCredentialMappingConfiguration : IEntityTypeConfiguration<Sa
             .IsRequired()
             .HasMaxLength(50);
 
+        builder.Property(e => e.HeaderValueFormat)
+            .IsRequired()
+            .HasMaxLength(50)
+            .HasDefaultValue("Raw");
+
+        builder.Property(e => e.BasicAuthUsername)
+            .HasMaxLength(255);
+
         builder.Property(e => e.CredentialFieldType)
             .IsRequired()
             .HasMaxLength(50);

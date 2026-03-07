@@ -58,6 +58,8 @@ public class SandboxCredentialMappingServiceTests : IDisposable
         string baseDomain = "api.example.com",
         string headerName = "Authorization",
         string? headerValuePrefix = null,
+        string headerValueFormat = "Raw",
+        string? basicAuthUsername = null,
         Guid? credentialId = null,
         string credentialType = "ExternalApiKey",
         CredentialFieldType credentialFieldType = CredentialFieldType.ApiKey,
@@ -69,6 +71,8 @@ public class SandboxCredentialMappingServiceTests : IDisposable
             BaseDomain = baseDomain,
             HeaderName = headerName,
             HeaderValuePrefix = headerValuePrefix,
+            HeaderValueFormat = headerValueFormat,
+            BasicAuthUsername = basicAuthUsername,
             CredentialId = credentialId ?? Guid.NewGuid(),
             CredentialType = credentialType,
             CredentialFieldType = credentialFieldType.ToString(),
@@ -506,6 +510,218 @@ public class SandboxCredentialMappingServiceTests : IDisposable
 
         // Assert
         Assert.Null(result);
+    }
+
+    #endregion
+
+    #region ResolveForDomainAsync BasicAuth Tests
+
+    [Fact]
+    public async Task ResolveForDomainAsync_WithBasicAuthFormat_ReturnsBase64EncodedHeader()
+    {
+        // Arrange
+        var credentialId = Guid.NewGuid();
+        await SeedMappingAsync(
+            baseDomain: "github.com",
+            headerName: "Authorization",
+            credentialId: credentialId,
+            credentialType: "OAuthToken",
+            credentialFieldType: CredentialFieldType.AccessToken,
+            headerValueFormat: "BasicAuth",
+            basicAuthUsername: "x-access-token");
+
+        _oAuthTokenServiceMock
+            .Setup(s => s.GetByIdAsync(_userId, credentialId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OAuthToken
+            {
+                Id = credentialId,
+                UserId = _userId,
+                Provider = OAuthProvider.GitHub,
+                ExternalUserId = "ext_123",
+                Email = "user@github.com",
+                AccessToken = "test-token",
+                RefreshToken = "refresh-token",
+                Scopes = new List<string> { "repo" },
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+
+        // Act
+        var result = await _service.ResolveForDomainAsync("github.com");
+
+        // Assert
+        Assert.NotNull(result);
+        var expectedValue = "Basic " + Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("x-access-token:test-token"));
+        Assert.Equal(expectedValue, result.Headers["Authorization"]);
+    }
+
+    #endregion
+
+    #region CreateFromProviderAsync Tests
+
+    [Fact]
+    public async Task CreateFromProviderAsync_WithGitHub_CreatesBothMappings()
+    {
+        // Arrange
+        var tokenId = Guid.NewGuid();
+        _oAuthTokenServiceMock
+            .Setup(s => s.GetByProviderAsync(_userId, OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OAuthToken
+            {
+                Id = tokenId,
+                UserId = _userId,
+                Provider = OAuthProvider.GitHub,
+                ExternalUserId = "ext_123",
+                Email = "user@github.com",
+                AccessToken = "test-token",
+                RefreshToken = "refresh-token",
+                Scopes = new List<string> { "repo" },
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+
+        // Act
+        var result = await _service.CreateFromProviderAsync(OAuthProvider.GitHub);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, m => m.BaseDomain == "api.github.com" && m.HeaderValueFormat == HeaderValueFormat.Raw);
+        Assert.Contains(result, m => m.BaseDomain == "github.com" && m.HeaderValueFormat == HeaderValueFormat.BasicAuth);
+    }
+
+    [Fact]
+    public async Task CreateFromProviderAsync_WithNoToken_ThrowsInvalidOperation()
+    {
+        // Arrange
+        _oAuthTokenServiceMock
+            .Setup(s => s.GetByProviderAsync(_userId, OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OAuthToken?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateFromProviderAsync(OAuthProvider.GitHub));
+    }
+
+    [Fact]
+    public async Task CreateFromProviderAsync_WithUnknownProvider_ThrowsInvalidOperation()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateFromProviderAsync(OAuthProvider.Google));
+    }
+
+    #endregion
+
+    #region DeleteByProviderAsync Tests
+
+    [Fact]
+    public async Task DeleteByProviderAsync_RemovesProviderMappings()
+    {
+        // Arrange
+        await SeedMappingAsync(baseDomain: "api.github.com", headerName: "Authorization");
+        await SeedMappingAsync(baseDomain: "github.com", headerName: "Authorization");
+
+        // Act
+        await _service.DeleteByProviderAsync(OAuthProvider.GitHub);
+
+        // Assert
+        var remaining = await _service.ListAsync();
+        Assert.Empty(remaining);
+    }
+
+    [Fact]
+    public async Task DeleteByProviderAsync_DoesNotRemoveOtherMappings()
+    {
+        // Arrange
+        await SeedMappingAsync(baseDomain: "api.github.com", headerName: "Authorization");
+        await SeedMappingAsync(baseDomain: "api.openai.com", headerName: "Authorization");
+
+        // Act
+        await _service.DeleteByProviderAsync(OAuthProvider.GitHub);
+
+        // Assert
+        var remaining = await _service.ListAsync();
+        Assert.Single(remaining);
+        Assert.Equal("api.openai.com", remaining[0].BaseDomain);
+    }
+
+    #endregion
+
+    #region ListProviderStatusesAsync Tests
+
+    [Fact]
+    public async Task ListProviderStatusesAsync_WithTokenAndMappings_ReturnsEnabled()
+    {
+        // Arrange
+        _oAuthTokenServiceMock
+            .Setup(s => s.GetByProviderAsync(_userId, OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OAuthToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = _userId,
+                Provider = OAuthProvider.GitHub,
+                ExternalUserId = "ext_123",
+                Email = "user@github.com",
+                AccessToken = "test-token",
+                RefreshToken = "refresh-token",
+                Scopes = new List<string> { "repo" },
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+
+        await SeedMappingAsync(baseDomain: "api.github.com", headerName: "Authorization");
+        await SeedMappingAsync(baseDomain: "github.com", headerName: "Authorization");
+
+        // Act
+        var result = await _service.ListProviderStatusesAsync();
+
+        // Assert
+        var github = result.First(s => s.Provider == OAuthProvider.GitHub);
+        Assert.True(github.HasOAuthToken);
+        Assert.True(github.IsEnabled);
+    }
+
+    [Fact]
+    public async Task ListProviderStatusesAsync_WithTokenButNoMappings_ReturnsNotEnabled()
+    {
+        // Arrange
+        _oAuthTokenServiceMock
+            .Setup(s => s.GetByProviderAsync(_userId, OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OAuthToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = _userId,
+                Provider = OAuthProvider.GitHub,
+                ExternalUserId = "ext_123",
+                Email = "user@github.com",
+                AccessToken = "test-token",
+                RefreshToken = "refresh-token",
+                Scopes = new List<string> { "repo" },
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+
+        // Act
+        var result = await _service.ListProviderStatusesAsync();
+
+        // Assert
+        var github = result.First(s => s.Provider == OAuthProvider.GitHub);
+        Assert.True(github.HasOAuthToken);
+        Assert.False(github.IsEnabled);
+    }
+
+    [Fact]
+    public async Task ListProviderStatusesAsync_WithNoToken_ReturnsNotConnected()
+    {
+        // Arrange
+        _oAuthTokenServiceMock
+            .Setup(s => s.GetByProviderAsync(_userId, OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((OAuthToken?)null);
+
+        // Act
+        var result = await _service.ListProviderStatusesAsync();
+
+        // Assert
+        var github = result.First(s => s.Provider == OAuthProvider.GitHub);
+        Assert.False(github.HasOAuthToken);
+        Assert.False(github.IsEnabled);
     }
 
     #endregion

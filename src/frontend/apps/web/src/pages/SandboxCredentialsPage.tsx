@@ -11,7 +11,8 @@ import {
 } from '@donkeywork/ui'
 import { CreateSandboxCredentialMappingDialog } from '@/components/sandbox-credentials/CreateSandboxCredentialMappingDialog'
 import { EditSandboxCredentialMappingDialog } from '@/components/sandbox-credentials/EditSandboxCredentialMappingDialog'
-import { sandboxCredentialMappings, type SandboxCredentialMapping } from '@donkeywork/api-client'
+import { SandboxProviderCard } from '@/components/sandbox-credentials/SandboxProviderCard'
+import { sandboxCredentialMappings, type SandboxCredentialMapping, type SandboxProviderStatus } from '@donkeywork/api-client'
 
 const fieldTypeLabels: Record<string, string> = {
   ApiKey: 'API Key',
@@ -32,6 +33,7 @@ const credentialTypeLabels: Record<string, string> = {
 
 export function SandboxCredentialsPage() {
   const [mappings, setMappings] = useState<SandboxCredentialMapping[]>([])
+  const [providerStatuses, setProviderStatuses] = useState<SandboxProviderStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMapping, setEditingMapping] = useState<SandboxCredentialMapping | null>(null)
@@ -49,8 +51,28 @@ export function SandboxCredentialsPage() {
     }
   }
 
+  const loadProviders = async () => {
+    try {
+      const data = await sandboxCredentialMappings.listProviders()
+      setProviderStatuses(data)
+    } catch (error) {
+      console.error('Failed to load provider statuses:', error)
+    }
+  }
+
+  const handleEnableProvider = async (provider: string) => {
+    await sandboxCredentialMappings.enableProvider(provider)
+    await Promise.all([loadProviders(), loadMappings()])
+  }
+
+  const handleDisableProvider = async (provider: string) => {
+    await sandboxCredentialMappings.disableProvider(provider)
+    await Promise.all([loadProviders(), loadMappings()])
+  }
+
   useEffect(() => {
     loadMappings()
+    loadProviders()
   }, [])
 
   const handleDelete = async (id: string) => {
@@ -88,6 +110,27 @@ export function SandboxCredentialsPage() {
           </p>
         </div>
       </div>
+
+      {providerStatuses.length > 0 && (
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Quick Setup</h2>
+            <p className="text-sm text-muted-foreground">
+              Enable providers to automatically configure sandbox credential mappings
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {providerStatuses.map((status) => (
+              <SandboxProviderCard
+                key={status.provider}
+                status={status}
+                onEnable={handleEnableProvider}
+                onDisable={handleDisableProvider}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">

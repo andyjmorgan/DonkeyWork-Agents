@@ -8,6 +8,10 @@ public class SandboxCredentialMappingEntity : BaseEntity
 
     public string? HeaderValuePrefix { get; set; }
 
+    public string HeaderValueFormat { get; set; } = "Raw";
+
+    public string? BasicAuthUsername { get; set; }
+
     public Guid CredentialId { get; set; }
 
     public string CredentialType { get; set; } = string.Empty;

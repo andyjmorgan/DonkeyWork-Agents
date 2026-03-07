@@ -13,6 +13,10 @@ public sealed class CreateSandboxCredentialMappingRequestV1
 
     public string? HeaderValuePrefix { get; set; }
 
+    public HeaderValueFormat HeaderValueFormat { get; set; } = HeaderValueFormat.Raw;
+
+    public string? BasicAuthUsername { get; set; }
+
     [Required]
     public Guid CredentialId { get; set; }
 
