@@ -7,18 +7,28 @@ import { LoginPage } from './pages/LoginPage'
 
 type Page = 'chat' | 'conversations' | 'notes' | 'research' | 'tasks' | 'projects' | 'settings'
 
+export interface PageParams {
+  conversationId?: string
+}
+
 function AuthenticatedApp() {
   const [currentPage, setCurrentPage] = useState<Page>('chat')
+  const [pageParams, setPageParams] = useState<PageParams>({})
+
+  const handleNavigate = useCallback((page: Page, params?: PageParams) => {
+    setCurrentPage(page)
+    setPageParams(params ?? {})
+  }, [])
 
   const navigate = useCallback((path: string) => {
     const page = path.replace(/^\//, '').split('/')[0] || 'chat'
-    setCurrentPage(page as Page)
-  }, [])
+    handleNavigate(page as Page)
+  }, [handleNavigate])
 
   // Wire up platform navigation
   setDesktopNavigate(navigate)
 
-  return <DesktopLayout currentPage={currentPage} onNavigate={setCurrentPage} />
+  return <DesktopLayout currentPage={currentPage} pageParams={pageParams} onNavigate={handleNavigate} />
 }
 
 function AppContent() {

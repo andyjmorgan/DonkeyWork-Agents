@@ -1,5 +1,7 @@
-import { Bubbles, MessageSquare, StickyNote, FlaskConical, CheckSquare, FolderKanban, Settings, Sun, Moon } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bubbles, MessageSquare, StickyNote, FlaskConical, CheckSquare, FolderKanban, Settings, Sun, Moon, Trash2 } from 'lucide-react'
 import { useThemeStore } from '@donkeywork/stores'
+import { conversations, type ConversationSummary } from '@donkeywork/api-client'
 
 type Page = 'chat' | 'conversations' | 'notes' | 'research' | 'tasks' | 'projects' | 'settings'
 
@@ -37,7 +39,70 @@ function NavButton({ item, isActive, onClick }: { item: NavItem; isActive: boole
   )
 }
 
-export function DesktopSidebar({ currentPage, onNavigate }: { currentPage: Page; onNavigate: (page: Page) => void }) {
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d`
+  return `${Math.floor(days / 7)}w`
+}
+
+function RecentConversations({ onOpenConversation }: { onOpenConversation: (id: string) => void }) {
+  const [items, setItems] = useState<ConversationSummary[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    conversations.listNavi(0, 5).then((res) => {
+      if (!cancelled) setItems(res.items)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  const handleDelete = async (e: React.MouseEvent, conv: ConversationSummary) => {
+    e.stopPropagation()
+    await conversations.delete(conv.id)
+    setItems((prev) => prev.filter((c) => c.id !== conv.id))
+  }
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="mt-1 space-y-0.5">
+      {items.map((conv) => (
+        <button
+          key={conv.id}
+          onClick={() => onOpenConversation(conv.id)}
+          className="flex items-center gap-2 w-full px-2.5 py-1 pl-7 rounded-lg text-xs transition-colors cursor-pointer group text-muted-foreground/70 hover:bg-muted hover:text-foreground"
+        >
+          <MessageSquare className="h-3 w-3 shrink-0 text-cyan-500/60" />
+          <span className="truncate flex-1 text-left">{conv.title}</span>
+          <span className="text-[10px] text-muted-foreground/40 shrink-0 group-hover:hidden">
+            {timeAgo(conv.updatedAt ?? conv.createdAt)}
+          </span>
+          <span
+            role="button"
+            onClick={(e) => handleDelete(e, conv)}
+            className="hidden group-hover:flex items-center justify-center shrink-0 rounded p-0.5 text-muted-foreground/40 hover:text-red-400 transition-colors"
+          >
+            <Trash2 className="h-3 w-3" />
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+interface DesktopSidebarProps {
+  currentPage: Page
+  onNavigate: (page: Page) => void
+  onOpenConversation: (id: string) => void
+}
+
+export function DesktopSidebar({ currentPage, onNavigate, onOpenConversation }: DesktopSidebarProps) {
   const { theme, toggleTheme } = useThemeStore()
 
   const sections = {
@@ -61,6 +126,7 @@ export function DesktopSidebar({ currentPage, onNavigate }: { currentPage: Page;
           {sections.main.map(item => (
             <NavButton key={item.id} item={item} isActive={currentPage === item.id} onClick={() => onNavigate(item.id)} />
           ))}
+          <RecentConversations onOpenConversation={onOpenConversation} />
         </div>
 
         <div>

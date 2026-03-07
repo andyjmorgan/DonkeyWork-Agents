@@ -9,8 +9,12 @@ const defaultChatConfig: ChatConfig = {
   ),
 }
 
-export function ChatPage() {
-  const [chatKey, setChatKey] = useState('new')
+interface ChatPageProps {
+  conversationId?: string
+}
+
+export function ChatPage({ conversationId }: ChatPageProps) {
+  const [chatKey, setChatKey] = useState(() => conversationId ?? `new-${Date.now()}`)
 
   const onConversationCreated = useCallback((_id: string) => {
     // Don't update key — AgentChatPanel manages its own conversation state internally.
@@ -26,6 +30,7 @@ export function ChatPage() {
       <div className="flex h-full flex-col overflow-hidden">
         <AgentChatPanel
           key={chatKey}
+          conversationId={conversationId}
           onConversationCreated={onConversationCreated}
           onReset={onReset}
         />
