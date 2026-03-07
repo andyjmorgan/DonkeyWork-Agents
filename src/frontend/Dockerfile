@@ -14,6 +14,7 @@ COPY packages/editor/package.json ./packages/editor/
 COPY packages/platform/package.json ./packages/platform/
 COPY packages/stores/package.json ./packages/stores/
 COPY packages/ui/package.json ./packages/ui/
+COPY packages/workspace/package.json ./packages/workspace/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
