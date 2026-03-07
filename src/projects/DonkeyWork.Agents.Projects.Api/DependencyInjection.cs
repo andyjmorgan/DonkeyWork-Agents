@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<ITaskItemService, TaskItemService>();
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IResearchService, ResearchService>();
+        services.AddScoped<IProjectNotificationService, ProjectNotificationService>();
 
         return services;
     }

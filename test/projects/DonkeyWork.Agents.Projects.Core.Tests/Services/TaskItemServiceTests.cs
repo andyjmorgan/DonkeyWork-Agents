@@ -2,6 +2,7 @@ using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Projects.Contracts.Models;
+using DonkeyWork.Agents.Projects.Contracts.Services;
 using DonkeyWork.Agents.Projects.Core.Services;
 using DonkeyWork.Agents.Projects.Core.Tests.Helpers;
 using Microsoft.Extensions.Logging;
@@ -24,8 +25,9 @@ public class TaskItemServiceTests : IDisposable
     {
         (_dbContext, _identityContext) = MockDbContext.CreateWithIdentityContext();
         var notificationService = new Mock<INotificationService>();
+        var projectNotificationService = new Mock<IProjectNotificationService>();
         var logger = new Mock<ILogger<TaskItemService>>();
-        _service = new TaskItemService(_dbContext, _identityContext, notificationService.Object, logger.Object);
+        _service = new TaskItemService(_dbContext, _identityContext, notificationService.Object, projectNotificationService.Object, logger.Object);
     }
 
     public void Dispose()

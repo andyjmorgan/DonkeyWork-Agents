@@ -6,6 +6,7 @@ using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Research;
 using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
+using DonkeyWork.Agents.Projects.Contracts.Models.Notifications;
 using EntityResearchStatus = DonkeyWork.Agents.Persistence.Entities.Research.ResearchStatus;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
@@ -18,17 +19,20 @@ public class ResearchService : IResearchService
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
     private readonly INotificationService _notificationService;
+    private readonly IProjectNotificationService _projectNotificationService;
     private readonly ILogger<ResearchService> _logger;
 
     public ResearchService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
         INotificationService notificationService,
+        IProjectNotificationService projectNotificationService,
         ILogger<ResearchService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
         _notificationService = notificationService;
+        _projectNotificationService = projectNotificationService;
         _logger = logger;
     }
 
@@ -197,6 +201,19 @@ public class ResearchService : IResearchService
             Message = notificationMessage,
             EntityId = id
         });
+
+        // Send typed notification when status changed
+        if (statusChanged)
+        {
+            _ = _projectNotificationService.SendResearchStatusChangedAsync(
+                _identityContext.UserId,
+                new ResearchStatusChangedNotification
+                {
+                    ResearchId = id,
+                    Subject = request.Subject,
+                    Status = FormatStatus(request.Status)
+                });
+        }
 
         return await GetByIdAsync(id, ct: ct);
     }

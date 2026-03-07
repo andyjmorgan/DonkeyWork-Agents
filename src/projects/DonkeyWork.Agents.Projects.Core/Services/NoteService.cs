@@ -6,6 +6,7 @@ using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
+using DonkeyWork.Agents.Projects.Contracts.Models.Notifications;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,17 +18,20 @@ public class NoteService : INoteService
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
     private readonly INotificationService _notificationService;
+    private readonly IProjectNotificationService _projectNotificationService;
     private readonly ILogger<NoteService> _logger;
 
     public NoteService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
         INotificationService notificationService,
+        IProjectNotificationService projectNotificationService,
         ILogger<NoteService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
         _notificationService = notificationService;
+        _projectNotificationService = projectNotificationService;
         _logger = logger;
     }
 
@@ -218,6 +222,15 @@ public class NoteService : INoteService
             EntityId = noteId,
             ParentId = request.MilestoneId ?? request.ProjectId
         });
+
+        // Send typed notification
+        _ = _projectNotificationService.SendNoteUpdatedAsync(
+            _identityContext.UserId,
+            new NoteUpdatedNotification
+            {
+                NoteId = noteId,
+                Title = request.Title
+            });
 
         return await GetByIdAsync(noteId, cancellationToken: cancellationToken);
     }

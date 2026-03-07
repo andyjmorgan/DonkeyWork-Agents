@@ -6,6 +6,7 @@ using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
+using DonkeyWork.Agents.Projects.Contracts.Models.Notifications;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,17 +18,20 @@ public class TaskItemService : ITaskItemService
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
     private readonly INotificationService _notificationService;
+    private readonly IProjectNotificationService _projectNotificationService;
     private readonly ILogger<TaskItemService> _logger;
 
     public TaskItemService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
         INotificationService notificationService,
+        IProjectNotificationService projectNotificationService,
         ILogger<TaskItemService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
         _notificationService = notificationService;
+        _projectNotificationService = projectNotificationService;
         _logger = logger;
     }
 
@@ -238,6 +242,20 @@ public class TaskItemService : ITaskItemService
             EntityId = taskItemId,
             ParentId = request.MilestoneId ?? request.ProjectId
         });
+
+        // Send typed notification when status changed
+        if (statusChanged)
+        {
+            _ = _projectNotificationService.SendTaskStatusChangedAsync(
+                _identityContext.UserId,
+                new TaskStatusChangedNotification
+                {
+                    TaskId = taskItemId,
+                    Title = request.Title,
+                    OldStatus = FormatStatus((Contracts.Models.TaskItemStatus)(int)oldStatus),
+                    NewStatus = FormatStatus(request.Status)
+                });
+        }
 
         return await GetByIdAsync(taskItemId, cancellationToken: cancellationToken);
     }

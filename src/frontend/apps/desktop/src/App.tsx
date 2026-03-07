@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { PlatformProvider } from '@donkeywork/platform'
 import { desktopPlatformConfig, setDesktopNavigate } from './platform/desktop-platform'
 import { useDesktopAuth } from './hooks/useDesktopAuth'
+import { useNotificationHub } from './hooks/useNotificationHub'
 import { DesktopLayout } from './components/DesktopLayout'
 import { LoginPage } from './pages/LoginPage'
 
@@ -12,6 +13,8 @@ export interface PageParams {
 }
 
 function AuthenticatedApp() {
+  useNotificationHub()
+
   const [currentPage, setCurrentPage] = useState<Page>('chat')
   const [pageParams, setPageParams] = useState<PageParams>({})
 

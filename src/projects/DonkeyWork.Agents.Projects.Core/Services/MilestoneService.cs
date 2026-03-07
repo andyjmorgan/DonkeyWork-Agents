@@ -6,6 +6,7 @@ using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Projects.Contracts.Helpers;
 using DonkeyWork.Agents.Projects.Contracts.Models;
+using DonkeyWork.Agents.Projects.Contracts.Models.Notifications;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,17 +18,20 @@ public class MilestoneService : IMilestoneService
     private readonly AgentsDbContext _dbContext;
     private readonly IIdentityContext _identityContext;
     private readonly INotificationService _notificationService;
+    private readonly IProjectNotificationService _projectNotificationService;
     private readonly ILogger<MilestoneService> _logger;
 
     public MilestoneService(
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
         INotificationService notificationService,
+        IProjectNotificationService projectNotificationService,
         ILogger<MilestoneService> logger)
     {
         _dbContext = dbContext;
         _identityContext = identityContext;
         _notificationService = notificationService;
+        _projectNotificationService = projectNotificationService;
         _logger = logger;
     }
 
@@ -250,6 +254,24 @@ public class MilestoneService : IMilestoneService
             EntityId = milestoneId,
             ParentId = milestone.ProjectId
         });
+
+        // Send typed notification when milestone status changed to Completed
+        if (statusChanged && newStatus == Persistence.Entities.Projects.MilestoneStatus.Completed)
+        {
+            var projectName = await _dbContext.Projects
+                .Where(p => p.Id == milestone.ProjectId)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync(cancellationToken) ?? "Unknown";
+
+            _ = _projectNotificationService.SendMilestoneCompletedAsync(
+                _identityContext.UserId,
+                new MilestoneCompletedNotification
+                {
+                    MilestoneId = milestoneId,
+                    Name = request.Name,
+                    ProjectName = projectName
+                });
+        }
 
         return await GetByIdAsync(milestoneId, cancellationToken: cancellationToken);
     }
