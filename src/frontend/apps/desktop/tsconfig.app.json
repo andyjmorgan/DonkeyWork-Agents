@@ -29,7 +29,8 @@
       "@donkeywork/platform": ["../../packages/platform/src/index.ts"],
       "@donkeywork/stores": ["../../packages/stores/src/index.ts"],
       "@donkeywork/ui": ["../../packages/ui/src/index.ts"],
-      "@donkeywork/ui/lib/utils": ["../../packages/ui/src/lib/utils.ts"]
+      "@donkeywork/ui/lib/utils": ["../../packages/ui/src/lib/utils.ts"],
+      "@donkeywork/workspace": ["../../packages/workspace/src/index.ts"]
     }
   },
   "include": ["src", "../../packages/*/src"]

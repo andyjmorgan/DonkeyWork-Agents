@@ -2,11 +2,25 @@ import { useState, useEffect } from 'react'
 import { Bubbles, MessageSquare, StickyNote, FlaskConical, CheckSquare, FolderKanban, Settings, Sun, Moon, Trash2 } from 'lucide-react'
 import { useThemeStore } from '@donkeywork/stores'
 import { conversations, type ConversationSummary } from '@donkeywork/api-client'
+import type { Page } from '../types'
 
-type Page = 'chat' | 'conversations' | 'notes' | 'research' | 'tasks' | 'projects' | 'settings'
+type SidebarPage = 'chat' | 'conversations' | 'notes' | 'research' | 'tasks' | 'projects' | 'settings'
+
+/** Maps sub-pages to the parent sidebar item that should be highlighted */
+const parentPageMap: Partial<Record<Page, SidebarPage>> = {
+  'note-editor': 'notes',
+  'task-editor': 'tasks',
+  'research-editor': 'research',
+  'project-detail': 'projects',
+  'milestone-detail': 'projects',
+}
+
+function getActiveSidebarPage(currentPage: Page): SidebarPage {
+  return parentPageMap[currentPage] ?? (currentPage as SidebarPage)
+}
 
 interface NavItem {
-  id: Page
+  id: SidebarPage
   label: string
   icon: React.ComponentType<{ className?: string }>
   section: 'main' | 'workspace' | 'system'
@@ -104,6 +118,7 @@ interface DesktopSidebarProps {
 
 export function DesktopSidebar({ currentPage, onNavigate, onOpenConversation }: DesktopSidebarProps) {
   const { theme, toggleTheme } = useThemeStore()
+  const activeSidebarPage = getActiveSidebarPage(currentPage)
 
   const sections = {
     main: navItems.filter(i => i.section === 'main'),
@@ -124,7 +139,7 @@ export function DesktopSidebar({ currentPage, onNavigate, onOpenConversation }: 
       <nav className="flex-1 px-2 py-2 space-y-4 overflow-y-auto">
         <div className="space-y-0.5">
           {sections.main.map(item => (
-            <NavButton key={item.id} item={item} isActive={currentPage === item.id} onClick={() => onNavigate(item.id)} />
+            <NavButton key={item.id} item={item} isActive={activeSidebarPage === item.id} onClick={() => onNavigate(item.id)} />
           ))}
           <RecentConversations onOpenConversation={onOpenConversation} />
         </div>
@@ -135,7 +150,7 @@ export function DesktopSidebar({ currentPage, onNavigate, onOpenConversation }: 
           </div>
           <div className="space-y-0.5 mt-1">
             {sections.workspace.map(item => (
-              <NavButton key={item.id} item={item} isActive={currentPage === item.id} onClick={() => onNavigate(item.id)} />
+              <NavButton key={item.id} item={item} isActive={activeSidebarPage === item.id} onClick={() => onNavigate(item.id)} />
             ))}
           </div>
         </div>
@@ -143,7 +158,7 @@ export function DesktopSidebar({ currentPage, onNavigate, onOpenConversation }: 
         <div>
           <div className="space-y-0.5">
             {sections.system.map(item => (
-              <NavButton key={item.id} item={item} isActive={currentPage === item.id} onClick={() => onNavigate(item.id)} />
+              <NavButton key={item.id} item={item} isActive={activeSidebarPage === item.id} onClick={() => onNavigate(item.id)} />
             ))}
           </div>
         </div>

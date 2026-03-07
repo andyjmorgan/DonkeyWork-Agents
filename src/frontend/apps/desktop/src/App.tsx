@@ -8,12 +8,7 @@ import { useNotificationHub } from './hooks/useNotificationHub'
 import { useAutoUpdater } from './hooks/useAutoUpdater'
 import { DesktopLayout } from './components/DesktopLayout'
 import { LoginPage } from './pages/LoginPage'
-
-type Page = 'chat' | 'conversations' | 'notes' | 'research' | 'tasks' | 'projects' | 'settings'
-
-export interface PageParams {
-  conversationId?: string
-}
+import type { Page, PageParams } from './types'
 
 function AuthenticatedApp() {
   useNotificationHub()
@@ -28,7 +23,8 @@ function AuthenticatedApp() {
   }, [])
 
   const navigate = useCallback((path: string) => {
-    const page = path.replace(/^\//, '').split('/')[0] || 'chat'
+    const segments = path.replace(/^\//, '').split('/')
+    const page = segments[0] || 'chat'
     handleNavigate(page as Page)
   }, [handleNavigate])
 
