@@ -41,5 +41,12 @@
       "minimumSystemVersion": "10.15"
     }
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/andyjmorgan/DonkeyWork-Agents/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
+    }
+  }
 }

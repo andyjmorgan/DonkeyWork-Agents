@@ -1,8 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { listen } from '@tauri-apps/api/event'
 import { PlatformProvider } from '@donkeywork/platform'
+import { useThemeStore } from '@donkeywork/stores'
 import { desktopPlatformConfig, setDesktopNavigate } from './platform/desktop-platform'
 import { useDesktopAuth } from './hooks/useDesktopAuth'
 import { useNotificationHub } from './hooks/useNotificationHub'
+import { useAutoUpdater } from './hooks/useAutoUpdater'
 import { DesktopLayout } from './components/DesktopLayout'
 import { LoginPage } from './pages/LoginPage'
 
@@ -14,6 +17,7 @@ export interface PageParams {
 
 function AuthenticatedApp() {
   useNotificationHub()
+  useAutoUpdater()
 
   const [currentPage, setCurrentPage] = useState<Page>('chat')
   const [pageParams, setPageParams] = useState<PageParams>({})
@@ -30,6 +34,26 @@ function AuthenticatedApp() {
 
   // Wire up platform navigation
   setDesktopNavigate(navigate)
+
+  // Listen for native menu events from Tauri
+  useEffect(() => {
+    const unlisten = listen<string>('menu-event', (event) => {
+      switch (event.payload) {
+        case 'new_conversation':
+          handleNavigate('chat')
+          break
+        case 'toggle_theme':
+          useThemeStore.getState().toggleTheme()
+          break
+        case 'preferences':
+          handleNavigate('settings')
+          break
+      }
+    })
+    return () => {
+      unlisten.then((fn) => fn())
+    }
+  }, [handleNavigate])
 
   return <DesktopLayout currentPage={currentPage} pageParams={pageParams} onNavigate={handleNavigate} />
 }
