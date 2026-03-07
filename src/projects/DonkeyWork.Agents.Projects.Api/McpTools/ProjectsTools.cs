@@ -89,7 +89,7 @@ public class ProjectsTools
     [McpTool(
         Name = "projects_update",
         Title = "Update Project",
-        Description = "Update an existing project's details. Only provided fields are updated - omit fields to keep their current values. Does not affect milestones, tasks, or notes within the project - use the respective tools to manage those.",
+        Description = "Update an existing project's details. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. Does not affect milestones, tasks, or notes within the project - use the respective tools to manage those.",
         Icon = "edit")]
     public async Task<UpdateAcknowledgmentV1?> UpdateProject(
         [Description("The unique identifier of the project to update")] Guid id,

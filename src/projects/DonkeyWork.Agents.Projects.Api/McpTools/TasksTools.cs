@@ -98,7 +98,7 @@ public class TasksTools
     [McpTool(
         Name = "tasks_update",
         Title = "Update Task",
-        Description = "Update an existing task. Only provided fields are updated - omit fields to keep their current values. You can move tasks between standalone/project/milestone associations by setting projectId and milestoneId.",
+        Description = "Update an existing task. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. You can move tasks between standalone/project/milestone associations by setting projectId and milestoneId.",
         Icon = "edit")]
     public async Task<UpdateAcknowledgmentV1?> UpdateTask(
         [Description("The unique identifier of the task to update")] Guid id,

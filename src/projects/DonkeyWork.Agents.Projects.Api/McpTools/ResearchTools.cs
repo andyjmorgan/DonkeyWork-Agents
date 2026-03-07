@@ -90,7 +90,7 @@ public class ResearchTools
     [McpTool(
         Name = "research_update",
         Title = "Update Research",
-        Description = "Update an existing research item. Only provided fields are updated - omit fields to keep their current values. When completing, both summary and completionNotes are required. When cancelling, completionNotes is required.",
+        Description = "Update an existing research item. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. When completing, both summary and completionNotes are required. When cancelling, completionNotes is required.",
         Icon = "edit")]
     public async Task<UpdateAcknowledgmentV1?> UpdateResearch(
         [Description("The unique identifier of the research item to update")] Guid id,

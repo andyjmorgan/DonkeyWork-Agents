@@ -96,7 +96,7 @@ public class NotesTools
     [McpTool(
         Name = "notes_update",
         Title = "Update Note",
-        Description = "Update an existing note. Only provided fields are updated - omit fields to keep their current values. You can move notes between standalone/project/milestone/research associations by setting projectId, milestoneId, or researchId.",
+        Description = "Update an existing note. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the title, pass just `id` and `title`. You can move notes between standalone/project/milestone/research associations by setting projectId, milestoneId, or researchId.",
         Icon = "edit")]
     public async Task<UpdateAcknowledgmentV1?> UpdateNote(
         [Description("The unique identifier of the note to update")] Guid id,

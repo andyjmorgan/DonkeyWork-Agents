@@ -99,7 +99,7 @@ public class MilestonesTools
     [McpTool(
         Name = "milestones_update",
         Title = "Update Milestone",
-        Description = "Update an existing milestone's details. Only provided fields are updated - omit fields to keep their current values. Does not affect tasks or notes within the milestone.",
+        Description = "Update an existing milestone's details. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. Does not affect tasks or notes within the milestone.",
         Icon = "edit")]
     public async Task<UpdateAcknowledgmentV1?> UpdateMilestone(
         [Description("The unique identifier of the milestone to update")] Guid id,
