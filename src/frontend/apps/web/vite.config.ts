@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['langium'],
+  },
   server: {
     port: 5199,
     strictPort: true,
