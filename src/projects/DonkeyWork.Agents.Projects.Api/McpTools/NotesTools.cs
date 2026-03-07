@@ -98,7 +98,7 @@ public class NotesTools
         Title = "Update Note",
         Description = "Update an existing note. Only provided fields are updated - omit fields to keep their current values. You can move notes between standalone/project/milestone/research associations by setting projectId, milestoneId, or researchId.",
         Icon = "edit")]
-    public async Task<NoteV1?> UpdateNote(
+    public async Task<UpdateAcknowledgmentV1?> UpdateNote(
         [Description("The unique identifier of the note to update")] Guid id,
         [Description("New title for the note (omit to keep current)")] string? title = null,
         [Description("New content (supports markdown, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
@@ -125,7 +125,13 @@ public class NotesTools
             ResearchId = researchId ?? current.ResearchId
         };
 
-        return await _noteService.UpdateAsync(id, request, ct);
+        var updated = await _noteService.UpdateAsync(id, request, ct);
+        if (updated == null)
+        {
+            return null;
+        }
+
+        return new UpdateAcknowledgmentV1 { Id = id, Status = "updated" };
     }
 
     /// <summary>

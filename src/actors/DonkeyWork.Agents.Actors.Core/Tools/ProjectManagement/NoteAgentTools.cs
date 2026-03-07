@@ -109,7 +109,9 @@ public sealed class NoteAgentTools
             ResearchId = researchId,
         };
         var note = await _noteService.UpdateAsync(noteId, request, ct);
-        return note is not null ? ToolResult.Json(note) : ToolResult.NotFound("Note", noteId);
+        return note is not null
+            ? ToolResult.Json(new UpdateAcknowledgmentV1 { Id = noteId, Status = "updated" })
+            : ToolResult.NotFound("Note", noteId);
     }
 
     [AgentTool("notes_delete", DisplayName = "Delete Note")]

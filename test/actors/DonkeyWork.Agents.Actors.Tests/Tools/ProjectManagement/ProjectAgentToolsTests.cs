@@ -117,7 +117,8 @@ public class ProjectAgentToolsTests
 
         // Assert
         Assert.False(result.IsError);
-        Assert.Contains("Updated", result.Content);
+        Assert.Contains(projectId.ToString(), result.Content);
+        Assert.Contains("updated", result.Content);
     }
 
     [Fact]

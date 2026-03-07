@@ -91,7 +91,7 @@ public class ProjectsTools
         Title = "Update Project",
         Description = "Update an existing project's details. Only provided fields are updated - omit fields to keep their current values. Does not affect milestones, tasks, or notes within the project - use the respective tools to manage those.",
         Icon = "edit")]
-    public async Task<ProjectDetailsV1?> UpdateProject(
+    public async Task<UpdateAcknowledgmentV1?> UpdateProject(
         [Description("The unique identifier of the project to update")] Guid id,
         [Description("New name for the project (omit to keep current)")] string? name = null,
         [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
@@ -114,7 +114,13 @@ public class ProjectsTools
             CompletionNotes = completionNotes ?? current.CompletionNotes
         };
 
-        return await _projectService.UpdateAsync(id, request, ct);
+        var updated = await _projectService.UpdateAsync(id, request, ct);
+        if (updated == null)
+        {
+            return null;
+        }
+
+        return new UpdateAcknowledgmentV1 { Id = id, Status = "updated" };
     }
 
     /// <summary>

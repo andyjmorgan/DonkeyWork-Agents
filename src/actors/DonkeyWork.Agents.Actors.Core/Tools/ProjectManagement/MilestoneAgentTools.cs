@@ -80,7 +80,9 @@ public sealed class MilestoneAgentTools
             SortOrder = sortOrder,
         };
         var milestone = await _milestoneService.UpdateAsync(milestoneId, request, ct);
-        return milestone is not null ? ToolResult.Json(milestone) : ToolResult.NotFound("Milestone", milestoneId);
+        return milestone is not null
+            ? ToolResult.Json(new UpdateAcknowledgmentV1 { Id = milestoneId, Status = "updated" })
+            : ToolResult.NotFound("Milestone", milestoneId);
     }
 
     [AgentTool("milestones_delete", DisplayName = "Delete Milestone")]

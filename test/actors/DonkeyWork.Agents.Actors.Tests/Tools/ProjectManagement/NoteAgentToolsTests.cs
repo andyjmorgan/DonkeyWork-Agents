@@ -174,7 +174,8 @@ public class NoteAgentToolsTests
 
         // Assert
         Assert.False(result.IsError);
-        Assert.Contains("Updated", result.Content);
+        Assert.Contains(noteId.ToString(), result.Content);
+        Assert.Contains("updated", result.Content);
     }
 
     [Fact]

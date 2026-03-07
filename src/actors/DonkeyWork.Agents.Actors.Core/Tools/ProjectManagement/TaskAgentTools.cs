@@ -109,7 +109,9 @@ public sealed class TaskAgentTools
             MilestoneId = milestoneId,
         };
         var task = await _taskItemService.UpdateAsync(taskItemId, request, ct);
-        return task is not null ? ToolResult.Json(task) : ToolResult.NotFound("Task", taskItemId);
+        return task is not null
+            ? ToolResult.Json(new UpdateAcknowledgmentV1 { Id = taskItemId, Status = "updated" })
+            : ToolResult.NotFound("Task", taskItemId);
     }
 
     [AgentTool("tasks_delete", DisplayName = "Delete Task")]

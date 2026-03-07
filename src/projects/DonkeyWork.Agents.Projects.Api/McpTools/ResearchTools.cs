@@ -92,7 +92,7 @@ public class ResearchTools
         Title = "Update Research",
         Description = "Update an existing research item. Only provided fields are updated - omit fields to keep their current values. When completing, both summary and completionNotes are required. When cancelling, completionNotes is required.",
         Icon = "edit")]
-    public async Task<ResearchDetailsV1?> UpdateResearch(
+    public async Task<UpdateAcknowledgmentV1?> UpdateResearch(
         [Description("The unique identifier of the research item to update")] Guid id,
         [Description("New subject for the research (omit to keep current)")] string? subject = null,
         [Description("New content/scope (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
@@ -117,7 +117,13 @@ public class ResearchTools
             CompletionNotes = completionNotes ?? current.CompletionNotes
         };
 
-        return await _researchService.UpdateAsync(id, request, ct);
+        var updated = await _researchService.UpdateAsync(id, request, ct);
+        if (updated == null)
+        {
+            return null;
+        }
+
+        return new UpdateAcknowledgmentV1 { Id = id, Status = "updated" };
     }
 
     /// <summary>

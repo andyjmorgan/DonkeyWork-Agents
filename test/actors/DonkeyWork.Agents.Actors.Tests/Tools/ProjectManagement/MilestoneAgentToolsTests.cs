@@ -136,7 +136,8 @@ public class MilestoneAgentToolsTests
 
         // Assert
         Assert.False(result.IsError);
-        Assert.Contains("Updated", result.Content);
+        Assert.Contains(milestoneId.ToString(), result.Content);
+        Assert.Contains("updated", result.Content);
     }
 
     [Fact]

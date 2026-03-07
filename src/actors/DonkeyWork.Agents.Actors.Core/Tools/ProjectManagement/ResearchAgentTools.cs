@@ -71,7 +71,9 @@ public sealed class ResearchAgentTools
             CompletionNotes = completionNotes,
         };
         var research = await _researchService.UpdateAsync(researchId, request, ct);
-        return research is not null ? ToolResult.Json(research) : ToolResult.NotFound("Research", researchId);
+        return research is not null
+            ? ToolResult.Json(new UpdateAcknowledgmentV1 { Id = researchId, Status = "updated" })
+            : ToolResult.NotFound("Research", researchId);
     }
 
     [AgentTool("research_delete", DisplayName = "Delete Research")]

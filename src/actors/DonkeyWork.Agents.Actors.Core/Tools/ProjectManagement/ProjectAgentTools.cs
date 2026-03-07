@@ -69,7 +69,9 @@ public sealed class ProjectAgentTools
             CompletionNotes = completionNotes,
         };
         var project = await _projectService.UpdateAsync(projectId, request, ct);
-        return project is not null ? ToolResult.Json(project) : ToolResult.NotFound("Project", projectId);
+        return project is not null
+            ? ToolResult.Json(new UpdateAcknowledgmentV1 { Id = projectId, Status = "updated" })
+            : ToolResult.NotFound("Project", projectId);
     }
 
     [AgentTool("projects_delete", DisplayName = "Delete Project")]

@@ -101,7 +101,7 @@ public class MilestonesTools
         Title = "Update Milestone",
         Description = "Update an existing milestone's details. Only provided fields are updated - omit fields to keep their current values. Does not affect tasks or notes within the milestone.",
         Icon = "edit")]
-    public async Task<MilestoneDetailsV1?> UpdateMilestone(
+    public async Task<UpdateAcknowledgmentV1?> UpdateMilestone(
         [Description("The unique identifier of the milestone to update")] Guid id,
         [Description("New name for the milestone (omit to keep current)")] string? name = null,
         [Description("New content/description (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
@@ -130,7 +130,13 @@ public class MilestonesTools
             SortOrder = sortOrder ?? current.SortOrder
         };
 
-        return await _milestoneService.UpdateAsync(id, request, ct);
+        var updated = await _milestoneService.UpdateAsync(id, request, ct);
+        if (updated == null)
+        {
+            return null;
+        }
+
+        return new UpdateAcknowledgmentV1 { Id = id, Status = "updated" };
     }
 
     /// <summary>

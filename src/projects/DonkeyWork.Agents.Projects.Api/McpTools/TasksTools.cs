@@ -100,7 +100,7 @@ public class TasksTools
         Title = "Update Task",
         Description = "Update an existing task. Only provided fields are updated - omit fields to keep their current values. You can move tasks between standalone/project/milestone associations by setting projectId and milestoneId.",
         Icon = "edit")]
-    public async Task<TaskItemV1?> UpdateTask(
+    public async Task<UpdateAcknowledgmentV1?> UpdateTask(
         [Description("The unique identifier of the task to update")] Guid id,
         [Description("New title for the task (omit to keep current)")] string? title = null,
         [Description("New description (supports markdown, omit to keep current)")] string? description = null,
@@ -131,7 +131,13 @@ public class TasksTools
             MilestoneId = milestoneId ?? current.MilestoneId
         };
 
-        return await _taskItemService.UpdateAsync(id, request, ct);
+        var updated = await _taskItemService.UpdateAsync(id, request, ct);
+        if (updated == null)
+        {
+            return null;
+        }
+
+        return new UpdateAcknowledgmentV1 { Id = id, Status = "updated" };
     }
 
     /// <summary>
