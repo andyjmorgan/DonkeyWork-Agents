@@ -136,10 +136,22 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
             })()}
             {hasResult && (() => {
               const parsed = tryParseJson(box.result!);
+              const isCommandResult = parsed && typeof parsed === "object" && "stdout" in (parsed as Record<string, unknown>) && "exitCode" in (parsed as Record<string, unknown>);
               return (
                 <div className="px-3 py-2">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Response</span>
-                  {parsed ? (
+                  {isCommandResult ? (() => {
+                    const cmd = parsed as { stdout?: string; stderr?: string; exitCode?: number; timedOut?: boolean };
+                    return (
+                      <div className="mt-1 max-h-48 overflow-y-auto space-y-1">
+                        {cmd.stdout && <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed">{cmd.stdout}</pre>}
+                        {cmd.stderr && <pre className="text-xs text-red-400 whitespace-pre-wrap break-words font-mono leading-relaxed">{cmd.stderr}</pre>}
+                        {(cmd.exitCode !== 0 || cmd.timedOut) && (
+                          <span className="text-[10px] text-muted-foreground">exit {cmd.exitCode}{cmd.timedOut ? " (timed out)" : ""}</span>
+                        )}
+                      </div>
+                    );
+                  })() : parsed ? (
                     renderJson(parsed, { collapsed: 1, className: "mt-1 max-h-48 overflow-y-auto" })
                   ) : (
                     <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words font-mono leading-relaxed max-h-48 overflow-y-auto">{box.result}</pre>
