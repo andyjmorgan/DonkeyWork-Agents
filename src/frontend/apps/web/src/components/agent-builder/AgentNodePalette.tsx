@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Brain, FileText, Server, Zap, Box, Bot, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgentBuilderStore } from '@/store/agentBuilder'
-import { mcpServers, agentDefinitions, type McpServerSummary, type AgentDefinitionSummary } from '@donkeywork/api-client'
+import { mcpServers, agentDefinitions, prompts as promptsApi, type McpServerSummary, type AgentDefinitionSummary, type PromptSummary } from '@donkeywork/api-client'
 
 const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
@@ -72,10 +72,12 @@ export function AgentNodePalette() {
   const isReadOnly = useAgentBuilderStore((s) => s.isReadOnly)
   const [serverList, setServerList] = useState<McpServerSummary[]>([])
   const [agentList, setAgentList] = useState<AgentDefinitionSummary[]>([])
+  const [promptList, setPromptList] = useState<PromptSummary[]>([])
 
   useEffect(() => {
     mcpServers.list().then(setServerList).catch(console.error)
     agentDefinitions.list().then(setAgentList).catch(console.error)
+    promptsApi.list().then(setPromptList).catch(console.error)
   }, [])
 
   const handleDragStart = (event: React.DragEvent, item: PaletteItem) => {
@@ -97,6 +99,11 @@ export function AgentNodePalette() {
   const hasSubAgent = (subAgentId: string) =>
     nodes.some(
       (n) => n.data?.nodeType === 'agentSubAgent' && n.data?.subAgentId === subAgentId
+    )
+
+  const hasPrompt = (promptId: string) =>
+    nodes.some(
+      (n) => n.data?.nodeType === 'agentPrompt' && n.data?.promptId === promptId
     )
 
   const renderItem = (item: PaletteItem) => {
@@ -146,20 +153,6 @@ export function AgentNodePalette() {
       color: 'blue',
       isDisabled: isReadOnly || hasNodeOfType('agentModel'),
     },
-    {
-      key: 'prompt',
-      dragData: {
-        nodeType: 'agentPrompt',
-        displayName: 'Prompt',
-        icon: 'file-text',
-        color: 'emerald',
-        canDelete: true,
-      },
-      displayName: 'Prompt',
-      icon: 'file-text',
-      color: 'emerald',
-      isDisabled: isReadOnly,
-    },
   ]
 
   // MCP Server items (from API)
@@ -178,6 +171,24 @@ export function AgentNodePalette() {
     icon: 'server',
     color: 'purple',
     isDisabled: isReadOnly || hasMcpServer(server.id),
+  }))
+
+  // Prompt items (from API)
+  const promptItems: PaletteItem[] = promptList.map((prompt) => ({
+    key: `prompt-${prompt.id}`,
+    dragData: {
+      nodeType: 'agentPrompt',
+      displayName: prompt.name,
+      icon: 'file-text',
+      color: 'emerald',
+      canDelete: true,
+      promptId: prompt.id,
+      promptName: prompt.name,
+    },
+    displayName: prompt.name,
+    icon: 'file-text',
+    color: 'emerald',
+    isDisabled: isReadOnly || hasPrompt(prompt.id),
   }))
 
   // Tool Group items
@@ -243,6 +254,20 @@ export function AgentNodePalette() {
           Core
         </h3>
         <div className="space-y-2">{coreItems.map(renderItem)}</div>
+      </div>
+
+      {/* Prompts */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+          Prompts
+        </h3>
+        <div className="space-y-2">
+          {promptItems.length > 0 ? (
+            promptItems.map(renderItem)
+          ) : (
+            <p className="text-xs text-muted-foreground px-1">No prompts in library</p>
+          )}
+        </div>
       </div>
 
       {/* Agents */}

@@ -20,4 +20,5 @@ public sealed class AgentContract
     [Id(14)] public bool EnableSandbox { get; init; }
     [Id(15)] public string? SandboxPodName { get; init; }
     [Id(16)] public string? ModelId { get; init; }
+    [Id(17)] public string[] Prompts { get; init; } = [];
 }

@@ -88,25 +88,8 @@ function createModelNode(id: string): Node {
   }
 }
 
-function createPromptNode(id: string): Node {
-  return {
-    id,
-    type: 'agentSatellite',
-    position: { x: 400, y: 50 },
-    data: {
-      label: 'Prompt',
-      nodeType: 'agentPrompt',
-      displayName: 'Prompt',
-      icon: 'file-text',
-      color: 'emerald',
-      canDelete: false,
-    },
-  }
-}
-
 function createInitialState() {
   const modelId = generateGuid()
-  const promptId = generateGuid()
 
   return {
     agentId: null,
@@ -118,17 +101,8 @@ function createInitialState() {
     lingerSeconds: 60,
     timeoutSeconds: 300,
     persistMessages: false,
-    nodes: [createModelNode(modelId), createPromptNode(promptId)] as Node[],
-    edges: [
-      {
-        id: generateGuid(),
-        source: promptId,
-        target: modelId,
-        targetHandle: 'prompts',
-        type: 'default' as const,
-        animated: true,
-      },
-    ] as Edge[],
+    nodes: [createModelNode(modelId)] as Node[],
+    edges: [] as Edge[],
     viewport: { x: 0, y: 0, zoom: 1 },
     nodeConfigurations: {
       [modelId]: {
@@ -137,12 +111,8 @@ function createInitialState() {
         maxTokens: 4096,
         reasoningEffort: '',
         stream: true,
-        webSearch: { enabled: false, maxUses: 5 },
-        webFetch: { enabled: false, maxUses: 5 },
-      },
-      [promptId]: {
-        type: 'agentPrompt',
-        systemPrompt: '',
+        webSearch: false,
+        webFetch: false,
       },
     } as Record<string, AgentNodeConfig>,
     selectedNodeId: null,
@@ -258,6 +228,16 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       if (exists) return
     }
 
+    // For prompts, check if this specific prompt is already on the canvas
+    if (nodeType === 'agentPrompt' && schemaInfo.promptId) {
+      const exists = nodes.some(
+        (n) =>
+          n.data?.nodeType === 'agentPrompt' &&
+          n.data?.promptId === schemaInfo.promptId
+      )
+      if (exists) return
+    }
+
     // For sub-agents, check if this specific agent is already on the canvas
     if (nodeType === 'agentSubAgent' && schemaInfo.subAgentId) {
       const exists = nodes.some(
@@ -288,6 +268,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         mcpServerId: schemaInfo.mcpServerId,
         toolGroupId: schemaInfo.toolGroupId,
         subAgentId: schemaInfo.subAgentId,
+        promptId: schemaInfo.promptId,
       },
     }
 
@@ -311,6 +292,12 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         type: nodeType,
         subAgentId: schemaInfo.subAgentId as string,
         subAgentName: schemaInfo.subAgentName as string,
+      }
+    } else if (nodeType === 'agentPrompt') {
+      config = {
+        type: nodeType,
+        promptId: schemaInfo.promptId as string,
+        promptName: schemaInfo.promptName as string,
       }
     } else if (nodeType === 'agentSandbox') {
       config = { type: nodeType, enabled: true }
@@ -522,14 +509,12 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       }
     }
 
-    // Prompt nodes — concatenate all prompts
+    // Prompt nodes — collect prompt IDs
     const promptNodes = nodes.filter((n) => n.data?.nodeType === 'agentPrompt')
-    const prompts = promptNodes
-      .map((n) => (nodeConfigurations[n.id]?.systemPrompt as string) || '')
+    const promptIds = promptNodes
+      .map((n) => nodeConfigurations[n.id]?.promptId as string)
       .filter(Boolean)
-    if (prompts.length > 0) {
-      contract.systemPrompt = prompts.join('\n\n')
-    }
+    if (promptIds.length > 0) contract.prompts = promptIds
 
     // MCP Servers — each node is one server
     const mcpNodes = nodes.filter((n) => n.data?.nodeType === 'agentMcpServer')

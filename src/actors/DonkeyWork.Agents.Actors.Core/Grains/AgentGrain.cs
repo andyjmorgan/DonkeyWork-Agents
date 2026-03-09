@@ -21,6 +21,7 @@ using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
+using DonkeyWork.Agents.Prompts.Contracts.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,6 +41,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private readonly IMcpServerConfigurationService _mcpServerConfigService;
     private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
     private readonly IGrainMessageStore _messageStore;
+    private readonly IPromptService _promptService;
 
     private List<InternalMessage> _messages = [];
     private int _nextSequenceNumber;
@@ -75,7 +77,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         IExternalApiKeyService apiKeyService,
         IMcpServerConfigurationService mcpServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
-        IGrainMessageStore messageStore)
+        IGrainMessageStore messageStore,
+        IPromptService promptService)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -87,6 +90,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _mcpServerConfigService = mcpServerConfigService;
         _mcpSandboxManagerClient = mcpSandboxManagerClient;
         _messageStore = messageStore;
+        _promptService = promptService;
     }
 
     #region IAgentGrain
@@ -206,11 +210,35 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         if (string.IsNullOrEmpty(apiKey))
             throw new InvalidOperationException("No Anthropic API key configured. Add one in Settings > API Keys.");
 
+        // Resolve library prompts and prepend to system prompt
+        var resolvedPromptContent = string.Empty;
+        if (contract.Prompts.Length > 0)
+        {
+            var promptTexts = new List<string>();
+            foreach (var promptIdStr in contract.Prompts)
+            {
+                if (Guid.TryParse(promptIdStr, out var promptGuid))
+                {
+                    var prompt = await _promptService.GetByIdAsync(promptGuid, ct);
+                    if (prompt is not null)
+                        promptTexts.Add(prompt.Content);
+                }
+            }
+            if (promptTexts.Count > 0)
+                resolvedPromptContent = string.Join("\n\n", promptTexts);
+        }
+
+        var combinedPrompt = string.IsNullOrEmpty(resolvedPromptContent)
+            ? contract.SystemPrompt
+            : string.IsNullOrEmpty(contract.SystemPrompt)
+                ? resolvedPromptContent
+                : resolvedPromptContent + "\n\n" + contract.SystemPrompt;
+
         // Append sandbox documentation when sandbox tools are in scope
         var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
         var systemPrompt = hasSandbox
-            ? contract.SystemPrompt + SandboxTools.SystemPromptFragment
-            : contract.SystemPrompt;
+            ? combinedPrompt + SandboxTools.SystemPromptFragment
+            : combinedPrompt;
 
         var turnId = Guid.NewGuid();
 
