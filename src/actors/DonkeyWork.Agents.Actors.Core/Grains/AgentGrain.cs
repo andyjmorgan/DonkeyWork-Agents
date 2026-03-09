@@ -524,6 +524,11 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Looking for existing sandbox...", null));
 
             using var scope = ServiceProvider.CreateScope();
+
+            // Hydrate the scoped IIdentityContext so DbContext query filters work
+            var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
+            scopedIdentity?.SetIdentity(_identityContext.UserId);
+
             var client = scope.ServiceProvider.GetRequiredService<SandboxManagerClient>();
 
             var podName = await client.FindSandboxAsync(userId, conversationId, CancellationToken.None);
