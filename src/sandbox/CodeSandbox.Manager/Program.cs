@@ -111,7 +111,8 @@ app.UseSerilogRequestLogging(options =>
     options.GetLevel = (httpContext, elapsed, ex) =>
     {
         var path = httpContext.Request.Path.Value ?? "";
-        if (path.Equals("/healthz", StringComparison.OrdinalIgnoreCase))
+        if (path.Equals("/healthz", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/grpc.health.v1.Health", StringComparison.OrdinalIgnoreCase))
         {
             return Serilog.Events.LogEventLevel.Debug;
         }
