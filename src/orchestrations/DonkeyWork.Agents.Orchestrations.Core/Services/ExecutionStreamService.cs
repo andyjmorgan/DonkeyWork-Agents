@@ -1,30 +1,33 @@
-using System.Buffers;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Stream.Client;
-using RabbitMQ.Stream.Client.Reliable;
+using NATS.Client.JetStream;
+using NATS.Client.JetStream.Models;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Services;
 
 /// <summary>
 /// Singleton service for managing execution streams.
-/// Handles stream lifecycle and reading events.
+/// Uses a shared NATS JetStream stream with per-execution subject filtering.
 /// </summary>
-public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
+public class ExecutionStreamService : IExecutionStreamService
 {
     private readonly ILogger<ExecutionStreamService> _logger;
-    private readonly StreamSystem _streamSystem;
+    private readonly INatsJSContext _jsContext;
+    private readonly string _streamName;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public ExecutionStreamService(
         ILogger<ExecutionStreamService> logger,
-        StreamSystem streamSystem)
+        INatsJSContext jsContext,
+        string streamName)
     {
         _logger = logger;
-        _streamSystem = streamSystem;
+        _jsContext = jsContext;
+        _streamName = streamName;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -33,78 +36,97 @@ public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
         };
     }
 
-    public async Task CreateStreamAsync(Guid executionId)
+    public Task CreateStreamAsync(Guid executionId)
     {
-        var streamName = GetStreamName(executionId);
-
-        try
-        {
-            await _streamSystem.CreateStream(new StreamSpec(streamName));
-            _logger.LogInformation("Created stream {StreamName} for execution {ExecutionId}", streamName, executionId);
-        }
-        catch (CreateStreamException ex) when (ex.Message.Contains("already exists"))
-        {
-            _logger.LogDebug("Stream {StreamName} already exists", streamName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create stream {StreamName} for execution {ExecutionId}", streamName, executionId);
-            throw;
-        }
+        // No-op: the shared JetStream stream with wildcard subject "execution.>"
+        // is created at startup. Individual execution subjects are created implicitly
+        // when the first message is published.
+        _logger.LogDebug("Stream ready for execution {ExecutionId} (shared stream: {StreamName})",
+            executionId, _streamName);
+        return Task.CompletedTask;
     }
 
     public async IAsyncEnumerable<ExecutionEvent> ReadEventsAsync(Guid executionId, long offset = 0)
     {
-        var streamName = GetStreamName(executionId);
-        var eventQueue = new System.Collections.Concurrent.ConcurrentQueue<ExecutionEvent>();
+        var subject = $"execution.{executionId}";
+        var eventQueue = new ConcurrentQueue<ExecutionEvent>();
         var completionSource = new TaskCompletionSource<bool>();
         var newEventSignal = new SemaphoreSlim(0);
 
-        _logger.LogInformation("Starting to read events from stream {StreamName} with offset {Offset}", streamName, offset);
+        _logger.LogInformation("Starting to read events from subject {Subject} with offset {Offset}",
+            subject, offset);
 
-        Consumer? consumer = null;
+        // Create an ephemeral ordered consumer filtered to this execution's subject
+        var consumerConfig = new ConsumerConfig
+        {
+            FilterSubject = subject,
+            AckPolicy = ConsumerConfigAckPolicy.None,
+            DeliverPolicy = ConsumerConfigDeliverPolicy.All
+        };
+
+        INatsJSConsumer consumer;
         try
         {
-            consumer = await Consumer.Create(
-                new ConsumerConfig(_streamSystem, streamName)
+            consumer = await _jsContext.CreateOrUpdateConsumerAsync(_streamName, consumerConfig);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create consumer for subject {Subject}", subject);
+            throw;
+        }
+
+        _logger.LogInformation("Consumer created for subject {Subject}", subject);
+
+        // Start a background fetch loop
+        var cts = new CancellationTokenSource();
+        var fetchTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (!cts.Token.IsCancellationRequested)
                 {
-                    ClientProvidedName = $"consumer-{executionId}-{Guid.NewGuid()}",
-                    OffsetSpec = new OffsetTypeOffset((ulong)Math.Max(0, offset)),
-                    MessageHandler = async (stream, consumerInstance, context, message) =>
+                    await foreach (var msg in consumer.FetchAsync<byte[]>(
+                        new NatsJSFetchOpts { MaxMsgs = 100 },
+                        cancellationToken: cts.Token))
                     {
                         try
                         {
-                            var bytes = message.Data.Contents.ToArray();
-                            var json = Encoding.UTF8.GetString(bytes);
-                            _logger.LogDebug("Received message from stream {StreamName}: {Json}", streamName, json);
+                            var json = Encoding.UTF8.GetString(msg.Data ?? []);
+                            _logger.LogDebug("Received message from subject {Subject}: {Json}", subject, json);
 
                             var evt = JsonSerializer.Deserialize<ExecutionEvent>(json, _jsonOptions);
-
                             if (evt != null)
                             {
-                                _logger.LogDebug("Enqueuing event {EventType} to queue", evt.GetType().Name);
                                 eventQueue.Enqueue(evt);
-                                newEventSignal.Release(); // Signal that a new event is available
+                                newEventSignal.Release();
 
-                                // Signal completion if we received a terminal event
                                 if (evt is ExecutionCompletedEvent or ExecutionFailedEvent)
                                 {
-                                    _logger.LogInformation("Received terminal event {EventType}, signaling completion", evt.GetType().Name);
+                                    _logger.LogInformation("Received terminal event {EventType}, signaling completion",
+                                        evt.GetType().Name);
                                     completionSource.TrySetResult(true);
+                                    return;
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Failed to deserialize event from stream {StreamName}", streamName);
+                            _logger.LogError(ex, "Failed to deserialize event from subject {Subject}", subject);
                         }
-
-                        await Task.CompletedTask;
                     }
-                });
 
-            _logger.LogInformation("Consumer created for stream {StreamName}", streamName);
+                    // Brief pause between fetches when no messages available
+                    await Task.Delay(50, cts.Token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected on shutdown
+            }
+        }, cts.Token);
 
+        try
+        {
             // Yield events as they arrive
             var timeout = TimeSpan.FromMinutes(10);
             var startTime = DateTime.UtcNow;
@@ -115,14 +137,16 @@ public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
                 // Dequeue and yield all available events
                 while (eventQueue.TryDequeue(out var evt))
                 {
-                    _logger.LogDebug("Yielding event {EventType} (total yielded: {Count})", evt.GetType().Name, ++yieldCount);
+                    _logger.LogDebug("Yielding event {EventType} (total yielded: {Count})",
+                        evt.GetType().Name, ++yieldCount);
                     yield return evt;
                 }
 
                 // Check if execution completed
                 if (completionSource.Task.IsCompleted)
                 {
-                    _logger.LogInformation("Execution completed, breaking from read loop. Total events yielded: {Count}", yieldCount);
+                    _logger.LogInformation(
+                        "Execution completed, breaking from read loop. Total events yielded: {Count}", yieldCount);
                     break;
                 }
 
@@ -137,52 +161,38 @@ public class ExecutionStreamService : IExecutionStreamService, IAsyncDisposable
                 yield return evt;
             }
 
-            _logger.LogInformation("Finished reading events from stream {StreamName}. Total events: {Count}", streamName, yieldCount);
+            _logger.LogInformation("Finished reading events from subject {Subject}. Total events: {Count}",
+                subject, yieldCount);
         }
         finally
         {
-            if (consumer != null)
+            await cts.CancelAsync();
+            try
             {
-                _logger.LogDebug("Closing consumer for stream {StreamName}", streamName);
-                await consumer.Close();
+                await fetchTask;
             }
+            catch (OperationCanceledException)
+            {
+                // Expected
+            }
+            cts.Dispose();
         }
     }
 
     public async Task DeleteStreamAsync(Guid executionId)
     {
-        var streamName = GetStreamName(executionId);
+        var subject = $"execution.{executionId}";
 
         try
         {
-            await _streamSystem.DeleteStream(streamName);
-            _logger.LogInformation("Deleted stream {StreamName} for execution {ExecutionId}", streamName, executionId);
-        }
-        catch (DeleteStreamException ex) when (ex.Message.Contains("does not exist"))
-        {
-            _logger.LogDebug("Stream {StreamName} does not exist", streamName);
+            await _jsContext.PurgeStreamAsync(_streamName, new StreamPurgeRequest { Filter = subject });
+            _logger.LogInformation("Purged messages for subject {Subject} in stream {StreamName}",
+                subject, _streamName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete stream {StreamName}", streamName);
+            _logger.LogError(ex, "Failed to purge messages for subject {Subject}", subject);
             throw;
-        }
-    }
-
-    private static string GetStreamName(Guid executionId)
-    {
-        return $"execution-{executionId}";
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
-            await _streamSystem.Close();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error closing StreamSystem");
         }
     }
 }

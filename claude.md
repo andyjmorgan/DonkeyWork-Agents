@@ -171,7 +171,7 @@ src/
 ## Infrastructure
 
 - **Database:** PostgreSQL with pgcrypto and pgvector extensions
-- **Message Broker:** RabbitMQ
+- **Message Broker:** NATS JetStream
 - **Identity:** Keycloak
 
 ## Database
@@ -527,7 +527,7 @@ public class AuthControllerTests
 
 ## Integration Tests
 
-Integration tests use TestContainers to spin up real PostgreSQL and RabbitMQ instances for end-to-end API testing.
+Integration tests use TestContainers to spin up real PostgreSQL and NATS instances for end-to-end API testing.
 
 **Requirements**: Docker must be running for integration tests to work.
 
@@ -538,7 +538,7 @@ test/integration/DonkeyWork.Agents.Integration.Tests/
 ├── Infrastructure/
 │   ├── Containers/
 │   │   ├── PostgresContainerFixture.cs    # pgvector/pgvector:pg17 container
-│   │   ├── RabbitMqContainerFixture.cs    # RabbitMQ with streams plugin
+│   │   ├── NatsContainerFixture.cs         # NATS with JetStream
 │   │   └── InfrastructureFixture.cs       # Combined fixture for xUnit collection
 │   ├── Authentication/
 │   │   ├── TestAuthenticationHandler.cs   # Bypasses JWT auth, sets IdentityContext

@@ -21,6 +21,7 @@
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Actors.Core\DonkeyWork.Agents.Actors.Core.csproj" />
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
+        <ProjectReference Include="..\..\lib\Orleans.Streaming.Nats\Orleans.Streaming.Nats.csproj" />
     </ItemGroup>
 
     <ItemGroup>

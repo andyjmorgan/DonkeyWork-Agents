@@ -7,4 +7,5 @@ namespace DonkeyWork.Agents.Actors.Contracts;
 public static class StorageProviders
 {
     public const string PubSub = "PubSubStore";
+    public const string NatsStream = "NatsStream";
 }

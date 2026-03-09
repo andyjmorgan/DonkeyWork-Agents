@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SandboxCredentialsPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SandboxCredentialsPage, AgentDefinitionsPage, AgentBuilderPage } from '@/pages'
 import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -45,13 +45,15 @@ export default function App() {
           {/* Protected routes */}
           {isAuthenticated ? (
             <>
-              {/* Editor page - full screen, no layout wrapper */}
+              {/* Editor pages - full screen, no layout wrapper */}
               <Route path="/orchestrations/:id/edit" element={<OrchestrationEditorPage />} />
+              <Route path="/agent-definitions/:id/edit" element={<AgentBuilderPage />} />
 
               {/* Regular pages with layout */}
               <Route element={<AppLayout />}>
                 <Route path="/" element={<Navigate to="/orchestrations" replace />} />
                 <Route path="/orchestrations" element={<OrchestrationsPage />} />
+                <Route path="/agent-definitions" element={<AgentDefinitionsPage />} />
                 <Route path="/chat" element={<Navigate to="/agent-chat" replace />} />
                 <Route path="/conversations" element={<ConversationsPage />} />
                 <Route path="/agent-chat" element={<AgentChatPage />} />

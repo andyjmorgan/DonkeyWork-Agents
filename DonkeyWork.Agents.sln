@@ -155,6 +155,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeSandbox.McpServer.Integ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeSandbox.Manager.Contracts", "src\sandbox\CodeSandbox.Manager.Contracts\CodeSandbox.Manager.Contracts.csproj", "{928F4F51-7661-4867-9568-712B4F441B05}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.Streaming.Nats", "src\lib\Orleans.Streaming.Nats\Orleans.Streaming.Nats.csproj", "{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -801,6 +803,18 @@ Global
 		{928F4F51-7661-4867-9568-712B4F441B05}.Release|x64.Build.0 = Release|Any CPU
 		{928F4F51-7661-4867-9568-712B4F441B05}.Release|x86.ActiveCfg = Release|Any CPU
 		{928F4F51-7661-4867-9568-712B4F441B05}.Release|x86.Build.0 = Release|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Debug|x64.Build.0 = Debug|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Debug|x86.Build.0 = Debug|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Release|x64.ActiveCfg = Release|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Release|x64.Build.0 = Release|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Release|x86.ActiveCfg = Release|Any CPU
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -878,5 +892,6 @@ Global
 		{A6BC5410-4DA0-4CF6-A850-93E83DCCE8C7} = {9DFD235D-26BF-3709-B283-D6F022DF8F5B}
 		{4F02FFF1-5704-479E-91DD-B806730584D5} = {9DFD235D-26BF-3709-B283-D6F022DF8F5B}
 		{928F4F51-7661-4867-9568-712B4F441B05} = {3D40F055-384E-DE04-BB81-B7972E166B19}
+		{959EF8F2-6EF8-4870-AEDC-CCE5401ACBE8} = {60F8C46A-F32D-BE63-A7A0-43DD10EE6710}
 	EndGlobalSection
 EndGlobal

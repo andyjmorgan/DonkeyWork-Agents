@@ -1,5 +1,3 @@
-using System.Net;
-using DonkeyWork.Agents.Orchestrations.Api.Options;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Identity.Core.Services;
 using DonkeyWork.Agents.Integration.Tests.Infrastructure.Authentication;
@@ -14,7 +12,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using RabbitMQ.Stream.Client;
+using NATS.Client.Core;
+using NATS.Client.JetStream;
 
 namespace DonkeyWork.Agents.Integration.Tests.Infrastructure.Factories;
 
@@ -47,12 +46,8 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 ["Storage:SecretKey"] = "minioadmin",
                 ["Storage:DefaultBucket"] = "test-bucket",
 
-                // RabbitMQ Stream options - will be overridden in ConfigureTestServices
-                ["RabbitMqStream:Host"] = _infrastructure.RabbitMq.HostName,
-                ["RabbitMqStream:Port"] = _infrastructure.RabbitMq.StreamPort.ToString(),
-                ["RabbitMqStream:Username"] = "guest",
-                ["RabbitMqStream:Password"] = "guest",
-                ["RabbitMqStream:VirtualHost"] = "/",
+                // NATS options
+                ["Nats:Url"] = _infrastructure.Nats.Url,
 
                 // Persistence - will be overridden in ConfigureTestServices
                 ["Persistence:ConnectionString"] = _infrastructure.Postgres.ConnectionString,
@@ -113,20 +108,9 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                     "McpAuth", _ => { });
 
-            // Remove and re-register StreamSystem with our test container config
-            services.RemoveAll<StreamSystem>();
-            services.AddSingleton(sp =>
-            {
-                var opts = sp.GetRequiredService<IOptions<RabbitMqStreamOptions>>().Value;
-                var config = new StreamSystemConfig
-                {
-                    UserName = opts.Username,
-                    Password = opts.Password,
-                    VirtualHost = opts.VirtualHost,
-                    Endpoints = new List<EndPoint> { new DnsEndPoint(opts.Host, opts.Port) }
-                };
-                return StreamSystem.Create(config).GetAwaiter().GetResult();
-            });
+            // Remove and re-register NATS connection with test container config
+            services.RemoveAll<NatsConnection>();
+            services.RemoveAll<INatsJSContext>();
         });
 
         builder.UseEnvironment("Test");

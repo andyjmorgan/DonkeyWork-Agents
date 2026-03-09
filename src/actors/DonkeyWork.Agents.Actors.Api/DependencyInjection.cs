@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.Clustering.Kubernetes;
 using Orleans.Configuration;
 using Orleans.Hosting.Kubernetes;
+using Orleans.Streaming.Nats.Hosting;
 
 namespace DonkeyWork.Agents.Actors.Api;
 
@@ -55,6 +56,15 @@ public static class DependencyInjection
             });
 
             siloBuilder.AddMemoryGrainStorage(Contracts.StorageProviders.PubSub);
+
+            siloBuilder.AddNatsStream(Contracts.StorageProviders.NatsStream, opts =>
+            {
+                opts.Url = configuration["Nats:Url"] ?? "nats://localhost:4222";
+                opts.StreamName = "orleans-actors";
+                opts.Partitions = 4;
+                opts.ConsumerName = "donkeywork-silo";
+                opts.MaxAge = TimeSpan.FromHours(24);
+            });
 
             siloBuilder.AddIncomingGrainCallFilter<GrainContextInterceptor>();
         });

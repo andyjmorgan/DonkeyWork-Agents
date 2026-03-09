@@ -58,7 +58,7 @@ public class OrchestrationExecutionEntity : BaseEntity
     public int? TotalTokensUsed { get; set; }
 
     /// <summary>
-    /// RabbitMQ stream name for this execution.
+    /// NATS subject name for this execution.
     /// </summary>
     public string StreamName { get; set; } = string.Empty;
 

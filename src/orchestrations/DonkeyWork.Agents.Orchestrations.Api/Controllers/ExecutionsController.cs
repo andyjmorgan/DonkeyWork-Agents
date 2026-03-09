@@ -447,7 +447,7 @@ public class ExecutionsController : ControllerBase
             input,
             HttpContext.RequestAborted);
 
-        // Stream events from RabbitMQ in real-time
+        // Stream events from NATS in real-time
         await foreach (var evt in _streamService.ReadEventsAsync(executionId))
         {
             var json = JsonSerializer.Serialize(evt, _jsonOptions);
@@ -557,7 +557,7 @@ public class ExecutionsController : ControllerBase
             conversation,
             HttpContext.RequestAborted);
 
-        // Stream events from RabbitMQ in real-time
+        // Stream events from NATS in real-time
         await foreach (var evt in _streamService.ReadEventsAsync(executionId))
         {
             var json = JsonSerializer.Serialize(evt, _jsonOptions);

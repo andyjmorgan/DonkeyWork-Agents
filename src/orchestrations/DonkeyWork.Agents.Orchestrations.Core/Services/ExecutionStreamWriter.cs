@@ -1,34 +1,31 @@
-using System.Text;
 using System.Text.Json;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Stream.Client;
-using RabbitMQ.Stream.Client.Reliable;
+using NATS.Client.JetStream;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Services;
 
 /// <summary>
 /// Scoped service for writing events to the execution stream.
-/// Creates a single producer that lives for the duration of the execution.
+/// Publishes to a per-execution NATS subject for the duration of the execution.
 /// </summary>
 public class ExecutionStreamWriter : IExecutionStreamWriter
 {
     private readonly ILogger<ExecutionStreamWriter> _logger;
-    private readonly StreamSystem _streamSystem;
+    private readonly INatsJSContext _jsContext;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    private Producer? _producer;
     private Guid _executionId;
-    private string? _streamName;
+    private string? _subject;
     private bool _initialized;
 
     public ExecutionStreamWriter(
         ILogger<ExecutionStreamWriter> logger,
-        StreamSystem streamSystem)
+        INatsJSContext jsContext)
     {
         _logger = logger;
-        _streamSystem = streamSystem;
+        _jsContext = jsContext;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -37,7 +34,7 @@ public class ExecutionStreamWriter : IExecutionStreamWriter
         };
     }
 
-    public async Task InitializeAsync(Guid executionId)
+    public Task InitializeAsync(Guid executionId)
     {
         if (_initialized)
         {
@@ -45,32 +42,16 @@ public class ExecutionStreamWriter : IExecutionStreamWriter
         }
 
         _executionId = executionId;
-        _streamName = $"execution-{executionId}";
-
-        _producer = await Producer.Create(
-            new ProducerConfig(_streamSystem, _streamName)
-            {
-                ClientProvidedName = $"producer-{executionId}",
-                ConfirmationHandler = confirmation =>
-                {
-                    if (confirmation.Status != ConfirmationStatus.Confirmed)
-                    {
-                        _logger.LogWarning(
-                            "Message not confirmed for stream {StreamName}: {Status}",
-                            _streamName,
-                            confirmation.Status);
-                    }
-                    return Task.CompletedTask;
-                }
-            });
-
+        _subject = $"execution.{executionId}";
         _initialized = true;
+
         _logger.LogDebug("Initialized stream writer for execution {ExecutionId}", executionId);
+        return Task.CompletedTask;
     }
 
     public async Task WriteEventAsync(ExecutionEvent evt)
     {
-        if (!_initialized || _producer == null)
+        if (!_initialized || _subject == null)
         {
             throw new InvalidOperationException("ExecutionStreamWriter must be initialized before writing events");
         }
@@ -79,30 +60,18 @@ public class ExecutionStreamWriter : IExecutionStreamWriter
         evt.ExecutionId = _executionId;
         evt.Timestamp = DateTime.UtcNow;
 
-        var json = JsonSerializer.Serialize<ExecutionEvent>(evt, _jsonOptions);
-        var message = new Message(Encoding.UTF8.GetBytes(json));
+        var json = JsonSerializer.SerializeToUtf8Bytes<ExecutionEvent>(evt, _jsonOptions);
 
-        // Send the message
-        await _producer.Send(message);
+        var ack = await _jsContext.PublishAsync(_subject, json);
+        ack.EnsureSuccess();
 
-        _logger.LogDebug("Wrote event {EventType} to stream {StreamName}",
-            evt.GetType().Name, _streamName);
+        _logger.LogDebug("Wrote event {EventType} to subject {Subject}",
+            evt.GetType().Name, _subject);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_producer != null)
-        {
-            try
-            {
-                await _producer.Close();
-                _logger.LogDebug("Closed producer for execution {ExecutionId}", _executionId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error closing producer for execution {ExecutionId}", _executionId);
-            }
-            _producer = null;
-        }
+        // No-op: NATS connection is shared at the singleton level
+        return ValueTask.CompletedTask;
     }
 }

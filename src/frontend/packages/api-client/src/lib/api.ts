@@ -1502,3 +1502,153 @@ export const mcpServers = {
   update: (id: string, data: UpdateMcpServerRequest) => api.put<McpServerDetails>(`/api/v1/mcp-servers/${id}`, data),
   delete: (id: string) => api.delete(`/api/v1/mcp-servers/${id}`),
 }
+
+// Agent Definition Types
+export type AgentLifecycle = 'Task' | 'Linger'
+export type AgentType = 'Standard' | 'System'
+
+export interface AgentContractV1 {
+  systemPrompt?: string
+  toolGroups?: string[]
+  maxTokens?: number
+  reasoningEffort?: string
+  stream?: boolean
+  webSearch?: boolean
+  webFetch?: boolean
+  persistMessages?: boolean
+  lifecycle?: AgentLifecycle
+  lingerSeconds?: number
+  agentType?: AgentType
+  keyPrefix?: string
+  timeoutSeconds?: number
+  mcpServers?: string[]
+  subAgents?: string[]
+  enableSandbox?: boolean
+  modelId?: string
+}
+
+export interface AgentDefinitionSummary {
+  id: string
+  name: string
+  description?: string
+  isSystem: boolean
+  lifecycle: AgentLifecycle
+  modelId?: string
+  createdAt: string
+}
+
+export interface AgentDefinitionDetails {
+  id: string
+  name: string
+  description?: string
+  isSystem: boolean
+  contract: AgentContractV1
+  reactFlowData?: { nodes: unknown[]; edges: unknown[]; viewport: { x: number; y: number; zoom: number } }
+  nodeConfigurations?: Record<string, unknown>
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateAgentDefinitionRequest {
+  name: string
+  description?: string
+}
+
+export interface UpdateAgentDefinitionRequest {
+  name?: string
+  description?: string
+  contract?: AgentContractV1
+  reactFlowData?: { nodes: unknown[]; edges: unknown[]; viewport: { x: number; y: number; zoom: number } }
+  nodeConfigurations?: Record<string, unknown>
+}
+
+// Agent Definitions API - localStorage-backed stub
+const AGENT_DEFS_KEY = 'donkeywork_agent_definitions'
+
+function getStoredAgents(): AgentDefinitionDetails[] {
+  try {
+    const stored = localStorage.getItem(AGENT_DEFS_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function setStoredAgents(agents: AgentDefinitionDetails[]) {
+  localStorage.setItem(AGENT_DEFS_KEY, JSON.stringify(agents))
+}
+
+function generateId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+export const agentDefinitions = {
+  list: async (): Promise<AgentDefinitionSummary[]> => {
+    const agents = getStoredAgents()
+    return agents.map(a => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      isSystem: a.isSystem,
+      lifecycle: a.contract.lifecycle || 'Task',
+      modelId: a.contract.modelId,
+      createdAt: a.createdAt,
+    }))
+  },
+
+  get: async (id: string): Promise<AgentDefinitionDetails> => {
+    const agents = getStoredAgents()
+    const agent = agents.find(a => a.id === id)
+    if (!agent) throw new Error('Agent definition not found')
+    return agent
+  },
+
+  create: async (data: CreateAgentDefinitionRequest): Promise<AgentDefinitionDetails> => {
+    const agents = getStoredAgents()
+    const newAgent: AgentDefinitionDetails = {
+      id: generateId(),
+      name: data.name,
+      description: data.description,
+      isSystem: false,
+      contract: {
+        lifecycle: 'Task',
+        stream: true,
+        maxTokens: 4096,
+        timeoutSeconds: 300,
+      },
+      createdAt: new Date().toISOString(),
+    }
+    agents.push(newAgent)
+    setStoredAgents(agents)
+    return newAgent
+  },
+
+  update: async (id: string, data: UpdateAgentDefinitionRequest): Promise<AgentDefinitionDetails> => {
+    const agents = getStoredAgents()
+    const index = agents.findIndex(a => a.id === id)
+    if (index === -1) throw new Error('Agent definition not found')
+
+    const updated: AgentDefinitionDetails = {
+      ...agents[index],
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.contract !== undefined && { contract: data.contract }),
+      ...(data.reactFlowData !== undefined && { reactFlowData: data.reactFlowData }),
+      ...(data.nodeConfigurations !== undefined && { nodeConfigurations: data.nodeConfigurations }),
+      updatedAt: new Date().toISOString(),
+    }
+    agents[index] = updated
+    setStoredAgents(agents)
+    return updated
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const agents = getStoredAgents()
+    const filtered = agents.filter(a => a.id !== id)
+    setStoredAgents(filtered)
+  },
+}

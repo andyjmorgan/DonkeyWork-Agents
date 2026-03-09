@@ -33,22 +33,17 @@ services:
       timeout: 5s
       retries: 5
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: donkeywork-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+  nats:
+    image: nats:2.10-alpine
+    container_name: donkeywork-nats
+    command: "--jetstream --store_dir=/data"
     ports:
-      - "5673:5672"    # AMQP
-      - "5553:5552"    # Stream protocol
-      - "15673:15672"  # Management UI
+      - "4222:4222"    # Client
+      - "8222:8222"    # Monitoring
     volumes:
-      - ./data/rabbitmq:/var/lib/rabbitmq
-    command: >
-      bash -c "rabbitmq-plugins enable rabbitmq_stream && rabbitmq-server"
+      - ./data/nats:/data
     healthcheck:
-      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -70,16 +65,13 @@ services:
       Storage__DefaultBucket: "files"
       Storage__UsePathStyleAddressing: "true"
       Keycloak__FrontendUrl: "http://localhost:5199"
-      RabbitMqStream__Host: "rabbitmq"
-      RabbitMqStream__Port: "5552"
-      RabbitMqStream__Username: "guest"
-      RabbitMqStream__Password: "guest"
+      Nats__Url: "nats://nats:4222"
     depends_on:
       postgres:
         condition: service_healthy
       seaweedfs:
         condition: service_healthy
-      rabbitmq:
+      nats:
         condition: service_healthy
 
   sandbox-manager:

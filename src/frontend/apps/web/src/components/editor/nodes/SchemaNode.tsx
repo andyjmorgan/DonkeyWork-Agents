@@ -11,6 +11,8 @@ import {
   FileText,
   Clock,
   Brain,
+  Server,
+  Download,
   type LucideIcon
 } from 'lucide-react'
 import { BaseNode } from './BaseNode'
@@ -44,6 +46,8 @@ const iconMap: Record<string, LucideIcon> = {
   'file-text': FileText,
   clock: Clock,
   brain: Brain,
+  server: Server,
+  download: Download,
 }
 
 /**

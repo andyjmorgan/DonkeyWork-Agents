@@ -16,7 +16,8 @@ DonkeyWork.Agents.Actors.Api/         # DI registration, options, WebSocket endp
 - All serializable types use `[GenerateSerializer]` and `[Id(N)]` attributes
 - One class per file (following project conventions)
 - `IAgentResponseObserver` is the grain observer interface for streaming events to clients
-- No RabbitMQ — grain observers handle real-time event delivery directly
+- NATS JetStream streaming provider available via `Orleans.Streaming.Nats` for grain-to-grain pub/sub
+- Grain observers (`IAgentResponseObserver`) handle real-time event delivery to clients directly
 - EF Core + PostgreSQL for grain message persistence via `IGrainMessageStore`
 
 ## Grain Types

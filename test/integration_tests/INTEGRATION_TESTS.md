@@ -6,7 +6,7 @@ This document describes the integration tests that need to be recreated using Te
 
 The integration tests require the following services:
 - **PostgreSQL** (pgvector) - Database
-- **RabbitMQ** with Stream plugin - Message broker
+- **NATS** with JetStream - Message broker
 
 ## Test Project: DonkeyWork.Agents.Agents.Api.Tests
 
@@ -111,11 +111,11 @@ When recreating these tests with Testcontainers:
 
 1. Add Testcontainers NuGet packages:
    - `Testcontainers.PostgreSql`
-   - `Testcontainers.RabbitMq`
+   - `Testcontainers` (for NATS)
 
 2. Create a base fixture class that:
    - Starts PostgreSQL (pgvector image) container
-   - Starts RabbitMQ (with stream plugin) container
+   - Starts NATS (with JetStream) container
    - Runs EF Core migrations
    - Provides connection strings to WebApplicationFactory
 
@@ -129,6 +129,6 @@ When recreating these tests with Testcontainers:
 
 The application expects these configuration values:
 - `Persistence__ConnectionString` - PostgreSQL connection
-- `RabbitMqStream__Host`, `Port`, `Username`, `Password` - RabbitMQ connection
+- `Nats__Url` - NATS JetStream connection
 - `Keycloak__Authority`, `Audience` - Auth config (can be mocked)
 - `Storage__ServiceUrl` - SeaweedFS (not needed for agent tests)

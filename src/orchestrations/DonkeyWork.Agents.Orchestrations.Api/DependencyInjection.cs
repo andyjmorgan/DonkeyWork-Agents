@@ -1,4 +1,3 @@
-using System.Net;
 using DonkeyWork.Agents.Orchestrations.Api.Options;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Core.Execution;
@@ -10,7 +9,10 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Providers;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Schema;
 using Microsoft.Extensions.DependencyInjection;
-using RabbitMQ.Stream.Client;
+using Microsoft.Extensions.Options;
+using NATS.Client.Core;
+using NATS.Client.JetStream;
+using NATS.Client.JetStream.Models;
 
 namespace DonkeyWork.Agents.Orchestrations.Api;
 
@@ -24,31 +26,64 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        services.AddOptions<RabbitMqStreamOptions>()
-            .BindConfiguration(RabbitMqStreamOptions.SectionName)
+        services.AddOptions<NatsOptions>()
+            .BindConfiguration(NatsOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        // Register RabbitMQ StreamSystem as singleton
+        // Register NATS connection and JetStream context as singletons
         services.AddSingleton(sp =>
         {
-            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RabbitMqStreamOptions>>().Value;
+            var options = sp.GetRequiredService<IOptions<NatsOptions>>().Value;
+            var connection = new NatsConnection(new NatsOpts { Url = options.Url });
+            connection.ConnectAsync().GetAwaiter().GetResult();
+            return connection;
+        });
 
-            var config = new StreamSystemConfig
+        services.AddSingleton<INatsJSContext>(sp =>
+        {
+            var connection = sp.GetRequiredService<NatsConnection>();
+            var options = sp.GetRequiredService<IOptions<NatsOptions>>().Value;
+            var jsContext = new NatsJSContext(connection);
+
+            // Ensure the shared stream exists with wildcard subject
+            var config = new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
             {
-                UserName = options.Username,
-                Password = options.Password,
-                VirtualHost = options.VirtualHost,
-                Endpoints = new List<EndPoint> { new DnsEndPoint(options.Host, options.Port) }
+                MaxAge = options.MaxAge
             };
 
-            return StreamSystem.Create(config).GetAwaiter().GetResult();
+            try
+            {
+                jsContext.CreateStreamAsync(config).GetAwaiter().GetResult();
+            }
+            catch (NatsJSApiException ex) when (ex.Error.ErrCode == 10058)
+            {
+                // Stream already exists — update config
+                try
+                {
+                    jsContext.UpdateStreamAsync(config).GetAwaiter().GetResult();
+                }
+                catch
+                {
+                    // Config update not critical
+                }
+            }
+
+            return jsContext;
         });
 
         // Register services
         services.AddScoped<IOrchestrationService, OrchestrationService>();
         services.AddScoped<IOrchestrationVersionService, OrchestrationVersionService>();
-        services.AddSingleton<IExecutionStreamService, ExecutionStreamService>();
+
+        services.AddSingleton<IExecutionStreamService>(sp =>
+        {
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ExecutionStreamService>>();
+            var jsContext = sp.GetRequiredService<INatsJSContext>();
+            var options = sp.GetRequiredService<IOptions<NatsOptions>>().Value;
+            return new ExecutionStreamService(logger, jsContext, options.StreamName);
+        });
+
         services.AddScoped<IOrchestrationExecutor, OrchestrationExecutor>();
 
         // Register node schema services

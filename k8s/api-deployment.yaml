@@ -100,22 +100,8 @@ spec:
               value: "true"
             - name: Storage__FileSystemBasePath
               value: "/mnt/storage"
-            - name: RabbitMqStream__Host
-              value: "rabbitmq.rabbitmq.svc.cluster.local"
-            - name: RabbitMqStream__Port
-              value: "5552"
-            - name: RabbitMqStream__Username
-              valueFrom:
-                secretKeyRef:
-                  name: donkeywork-agents-secrets
-                  key: RABBITMQ_USER
-            - name: RabbitMqStream__Password
-              valueFrom:
-                secretKeyRef:
-                  name: donkeywork-agents-secrets
-                  key: RABBITMQ_PASSWORD
-            - name: RabbitMqStream__VirtualHost
-              value: "/"
+            - name: Nats__Url
+              value: "nats://nats.nats.svc.cluster.local:4222"
             - name: Agents__ExecutionTimeout
               value: "00:20:00"
             - name: Agents__StreamRetention
