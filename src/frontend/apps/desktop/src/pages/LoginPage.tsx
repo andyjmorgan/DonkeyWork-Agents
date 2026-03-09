@@ -63,30 +63,21 @@ export function LoginPage({ onLogin }: { onLogin: (provider: string) => Promise<
               </button>
             </>
           ) : (
-            <div className="space-y-3">
+            <div className="flex gap-3">
               <button
                 onClick={() => handleLogin('github')}
-                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-foreground text-background font-medium text-sm transition-opacity hover:opacity-90 cursor-pointer"
+                className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm transition-colors hover:bg-muted cursor-pointer"
               >
                 <Github className="h-5 w-5" />
-                Sign in with GitHub
+                GitHub
               </button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">or</span>
-                </div>
-              </div>
 
               <button
                 onClick={() => handleLogin('microsoft')}
-                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm transition-colors hover:bg-muted cursor-pointer"
+                className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm transition-colors hover:bg-muted cursor-pointer"
               >
                 <MicrosoftIcon className="h-5 w-5" />
-                Sign in with Microsoft
+                Microsoft
               </button>
             </div>
           )}
