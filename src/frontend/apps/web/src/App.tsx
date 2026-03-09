@@ -24,7 +24,7 @@ function TokenRefreshManager({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, hasHydrated } = useAuthStore()
 
   return (
     <PlatformProvider config={webPlatformConfig}>
@@ -79,9 +79,9 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </>
-          ) : (
+          ) : hasHydrated ? (
             <Route path="*" element={<Navigate to="/login" replace />} />
-          )}
+          ) : null}
         </Routes>
         </TokenRefreshManager>
       </TooltipProvider>

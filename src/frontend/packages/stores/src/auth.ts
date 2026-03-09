@@ -25,6 +25,7 @@ interface AuthState {
   isAuthenticated: boolean
   isRefreshing: boolean
   refreshPromise: Promise<boolean> | null
+  hasHydrated: boolean
 
   setTokens: (accessToken: string, refreshToken: string | null, expiresIn: number) => void
   setUser: (user: User) => void
@@ -45,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isRefreshing: false,
       refreshPromise: null,
+      hasHydrated: false,
 
       setTokens: (accessToken, refreshToken, expiresIn) => {
         const now = Date.now()
@@ -184,6 +186,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'donkeywork-auth',
       storage: createJSONStorage(() => createPlatformStorage()),
+      onRehydrateStorage: () => () => {
+        useAuthStore.setState({ hasHydrated: true })
+      },
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
