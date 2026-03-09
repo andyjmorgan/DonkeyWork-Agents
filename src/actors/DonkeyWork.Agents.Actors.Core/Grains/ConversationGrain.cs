@@ -735,6 +735,14 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 if (credentialMappingService is not null)
                 {
                     credentialDomains = await credentialMappingService.GetConfiguredDomainsAsync(CancellationToken.None);
+                    _logger.LogInformation(
+                        "Resolved {Count} credential domain(s) for sandbox: [{Domains}]",
+                        credentialDomains?.Count ?? 0,
+                        credentialDomains is not null ? string.Join(", ", credentialDomains) : "none");
+                }
+                else
+                {
+                    _logger.LogWarning("ISandboxCredentialMappingService not registered - no credential domains will be injected");
                 }
 
                 Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));

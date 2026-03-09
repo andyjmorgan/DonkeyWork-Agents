@@ -17,7 +17,6 @@ public class GrpcCredentialProvider : ICredentialProvider, IDisposable
     private readonly HashSet<string> _dynamicDomains;
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<GrpcCredentialProvider> _logger;
-    private readonly ICredentialProvider _staticFallback;
 
     public GrpcCredentialProvider(
         ProxyConfiguration config,
@@ -27,18 +26,31 @@ public class GrpcCredentialProvider : ICredentialProvider, IDisposable
         _userId = config.CredentialStoreUserId ?? string.Empty;
         _cacheTtl = TimeSpan.FromSeconds(config.CredentialCacheTtlSeconds);
         _dynamicDomains = new HashSet<string>(config.DynamicCredentialDomains, StringComparer.OrdinalIgnoreCase);
-        _staticFallback = new StaticCredentialProvider(config);
 
         var httpHandler = new HttpClientHandler();
 
         if (!string.IsNullOrEmpty(config.GrpcClientCertPath) &&
-            !string.IsNullOrEmpty(config.GrpcClientKeyPath) &&
-            File.Exists(config.GrpcClientCertPath) &&
-            File.Exists(config.GrpcClientKeyPath))
+            !string.IsNullOrEmpty(config.GrpcClientKeyPath))
         {
-            var clientCert = X509Certificate2.CreateFromPemFile(config.GrpcClientCertPath, config.GrpcClientKeyPath);
-            httpHandler.ClientCertificates.Add(clientCert);
-            _logger.LogInformation("Loaded gRPC client certificate from {Path}", config.GrpcClientCertPath);
+            if (File.Exists(config.GrpcClientCertPath) && File.Exists(config.GrpcClientKeyPath))
+            {
+                var clientCert = X509Certificate2.CreateFromPemFile(config.GrpcClientCertPath, config.GrpcClientKeyPath);
+                httpHandler.ClientCertificates.Add(clientCert);
+                _logger.LogInformation("Loaded gRPC client certificate from {Path}", config.GrpcClientCertPath);
+            }
+            else
+            {
+                _logger.LogWarning("gRPC client certificate configured but files not found: cert={CertPath}, key={KeyPath}",
+                    config.GrpcClientCertPath, config.GrpcClientKeyPath);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(config.GrpcCaCertPath))
+        {
+            if (!File.Exists(config.GrpcCaCertPath))
+            {
+                _logger.LogWarning("gRPC CA certificate configured but file not found: {Path}", config.GrpcCaCertPath);
+            }
         }
 
         if (!string.IsNullOrEmpty(config.GrpcCaCertPath) && File.Exists(config.GrpcCaCertPath))
@@ -70,18 +82,20 @@ public class GrpcCredentialProvider : ICredentialProvider, IDisposable
 
     public async Task<Dictionary<string, string>?> GetHeadersForDomainAsync(string domain, CancellationToken ct = default)
     {
-        // Check static credentials first (backward compatible)
-        var staticHeaders = await _staticFallback.GetHeadersForDomainAsync(domain, ct);
-        if (staticHeaders is not null)
-            return staticHeaders;
-
         // Only attempt dynamic resolution for configured domains
         if (!_dynamicDomains.Contains(domain))
+        {
+            _logger.LogDebug("Domain {Domain} not in dynamic domains list, skipping credential resolution", domain);
             return null;
+        }
 
         // Check cache
         if (_cache.TryGetValue(domain, out var cached) && !cached.IsExpired)
+        {
+            _logger.LogDebug("Cache hit for domain {Domain}: {Count} header(s)",
+                domain, cached.Headers?.Count ?? 0);
             return cached.Headers;
+        }
 
         // Fetch from gRPC
         try

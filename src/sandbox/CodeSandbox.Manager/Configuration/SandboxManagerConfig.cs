@@ -53,8 +53,6 @@ public class SandboxManagerConfig
 
     public List<string> AuthProxyBlockedDomains { get; set; } = new();
 
-    public List<AuthProxyDomainCredentialConfig> AuthProxyDomainCredentials { get; set; } = new();
-
     public string AuthProxyCaSecretName { get; set; } = "sandbox-proxy-ca";
 
     // Internal gRPC credential store settings
@@ -114,13 +112,6 @@ public class SandboxManagerConfig
 
     // Optional: Direct k8s connection (alternative to kubeconfig)
     public KubernetesConnectionConfig? Connection { get; set; }
-}
-
-public class AuthProxyDomainCredentialConfig
-{
-    public string BaseDomain { get; set; } = string.Empty;
-
-    public Dictionary<string, string> Headers { get; set; } = new();
 }
 
 public class KubernetesConnectionConfig

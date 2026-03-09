@@ -625,26 +625,6 @@ public class SandboxService : ISandboxService
             });
         }
 
-        // Add domain credentials as indexed environment variables
-        for (int i = 0; i < _config.AuthProxyDomainCredentials.Count; i++)
-        {
-            var cred = _config.AuthProxyDomainCredentials[i];
-            envVars.Add(new V1EnvVar
-            {
-                Name = $"ProxyConfiguration__DomainCredentials__{i}__BaseDomain",
-                Value = cred.BaseDomain
-            });
-
-            foreach (var (headerName, headerValue) in cred.Headers)
-            {
-                envVars.Add(new V1EnvVar
-                {
-                    Name = $"ProxyConfiguration__DomainCredentials__{i}__Headers__{headerName}",
-                    Value = headerValue
-                });
-            }
-        }
-
         var volumeMounts = new List<V1VolumeMount>
         {
             new()
@@ -658,8 +638,12 @@ public class SandboxService : ISandboxService
         var extraVolumes = new List<V1Volume>();
 
         // Add gRPC credential store configuration if configured
-        if (!string.IsNullOrEmpty(_config.CredentialStoreGrpcUrl) && request.DynamicCredentialDomains.Count > 0)
+        if (!string.IsNullOrEmpty(_config.CredentialStoreGrpcUrl))
         {
+            _logger.LogInformation(
+                "Configuring auth proxy credential store: URL={Url}, UserId={UserId}, DynamicDomains=[{Domains}]",
+                _config.CredentialStoreGrpcUrl, request.UserId,
+                request.DynamicCredentialDomains.Count > 0 ? string.Join(", ", request.DynamicCredentialDomains) : "none");
             envVars.Add(new V1EnvVar
             {
                 Name = "ProxyConfiguration__CredentialStoreUrl",
@@ -736,6 +720,10 @@ public class SandboxService : ISandboxService
                     }
                 }
             });
+        }
+        else
+        {
+            _logger.LogWarning("CredentialStoreGrpcUrl not configured - auth proxy will not inject credentials");
         }
 
         var container = new V1Container

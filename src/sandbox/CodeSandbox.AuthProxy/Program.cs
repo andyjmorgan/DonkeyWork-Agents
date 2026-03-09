@@ -45,7 +45,8 @@ if (!string.IsNullOrEmpty(proxyConfig.CredentialStoreUrl))
 }
 else
 {
-    builder.Services.AddSingleton<ICredentialProvider>(new StaticCredentialProvider(proxyConfig));
+    Log.Warning("No CredentialStoreUrl configured - credential injection disabled");
+    builder.Services.AddSingleton<ICredentialProvider>(new NullCredentialProvider());
 }
 
 builder.Services.AddHostedService<ProxyServer>();
@@ -61,17 +62,17 @@ Log.Information("Auth Proxy configured: proxy port {ProxyPort}, health port {Hea
     proxyConfig.ProxyPort, proxyConfig.HealthPort,
     proxyConfig.BlockedDomains.Count > 0 ? string.Join(", ", proxyConfig.BlockedDomains) : "(none)");
 
-if (proxyConfig.DomainCredentials.Count > 0)
+Log.Information("Credential provider: {Provider}",
+    string.IsNullOrEmpty(proxyConfig.CredentialStoreUrl) ? "None" : "GrpcCredentialProvider");
+
+if (proxyConfig.DynamicCredentialDomains.Count > 0)
 {
-    foreach (var cred in proxyConfig.DomainCredentials)
-    {
-        Log.Information("Domain credentials configured for {Domain}: {HeaderCount} header(s) [{Headers}]",
-            cred.BaseDomain, cred.Headers.Count, string.Join(", ", cred.Headers.Keys));
-    }
+    Log.Information("Dynamic credential domains: [{Domains}]",
+        string.Join(", ", proxyConfig.DynamicCredentialDomains));
 }
 else
 {
-    Log.Information("No domain credentials configured - header injection disabled");
+    Log.Information("No dynamic credential domains configured");
 }
 
 await app.RunAsync();

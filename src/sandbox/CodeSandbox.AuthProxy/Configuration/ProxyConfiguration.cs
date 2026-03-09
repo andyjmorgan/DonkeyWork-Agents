@@ -16,8 +16,6 @@ public class ProxyConfiguration
 
     public string CaPrivateKeyPath { get; set; } = "/certs/ca.key";
 
-    public List<DomainCredentialConfig> DomainCredentials { get; set; } = new();
-
     public string? CredentialStoreUrl { get; set; }
 
     public string? CredentialStoreUserId { get; set; }
@@ -31,11 +29,4 @@ public class ProxyConfiguration
     public string? GrpcClientKeyPath { get; set; }
 
     public string? GrpcCaCertPath { get; set; }
-}
-
-public class DomainCredentialConfig
-{
-    public string BaseDomain { get; set; } = string.Empty;
-
-    public Dictionary<string, string> Headers { get; set; } = new();
 }
