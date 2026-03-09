@@ -8,6 +8,8 @@ import {
   useReactFlow,
   useNodesInitialized,
   type Connection,
+  type Edge,
+  type IsValidConnection,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { LayoutGrid } from 'lucide-react'
@@ -91,8 +93,8 @@ export function AgentCanvasInner() {
 
   // Validate connections: source must be a satellite, target must be Model,
   // and the targetHandle must match the node type's expected handle
-  const isValidConnection = useCallback(
-    (connection: Connection) => {
+  const isValidConnection: IsValidConnection<Edge> = useCallback(
+    (connection: Edge | Connection) => {
       const targetNode = nodes.find((n) => n.id === connection.target)
       if (targetNode?.data?.nodeType !== 'agentModel') return false
 

@@ -12,9 +12,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using NATS.Client.Core;
-using NATS.Client.JetStream;
-
 namespace DonkeyWork.Agents.Integration.Tests.Infrastructure.Factories;
 
 public class IntegrationTestWebApplicationFactory : WebApplicationFactory<DonkeyWork.Agents.Api.Program>
@@ -108,9 +105,8 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                     "McpAuth", _ => { });
 
-            // Remove and re-register NATS connection with test container config
-            services.RemoveAll<NatsConnection>();
-            services.RemoveAll<INatsJSContext>();
+            // NATS connection uses test container URL from config override above
+            // No need to re-register - the Nats:Url config points to the test container
         });
 
         builder.UseEnvironment("Test");

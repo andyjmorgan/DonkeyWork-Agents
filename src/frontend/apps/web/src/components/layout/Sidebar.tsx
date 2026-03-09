@@ -118,7 +118,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   to="/agent-chat"
                   end
                   onClick={onClose}
-                  className={({ isActive }) =>
+                  className={({ isActive }: { isActive: boolean }) =>
                     cn(
                       'flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-sm font-medium transition-colors',
                       isActive
@@ -163,7 +163,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                       key={item.name}
                       to={item.href}
                       onClick={onClose}
-                      className={({ isActive }) =>
+                      className={({ isActive }: { isActive: boolean }) =>
                         cn(
                           'flex items-center gap-3 rounded-md px-3 py-2 pl-9 text-sm font-medium transition-colors',
                           isActive

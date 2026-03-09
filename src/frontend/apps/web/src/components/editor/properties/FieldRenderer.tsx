@@ -332,7 +332,7 @@ export function FieldRenderer({
               height="200px"
               defaultLanguage="plaintext"
               value={String(value ?? '')}
-              onChange={(val) => onChange(val ?? '')}
+              onChange={(val: string | undefined) => onChange(val ?? '')}
               theme="vs-dark"
               options={{
                 minimap: { enabled: false },
@@ -352,7 +352,7 @@ export function FieldRenderer({
               height="200px"
               defaultLanguage="json"
               value={typeof value === 'string' ? value : JSON.stringify(value ?? {}, null, 2)}
-              onChange={(val) => {
+              onChange={(val: string | undefined) => {
                 try {
                   onChange(JSON.parse(val ?? '{}'))
                 } catch {

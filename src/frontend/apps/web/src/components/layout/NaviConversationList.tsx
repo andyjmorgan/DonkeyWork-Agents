@@ -51,7 +51,7 @@ export function NaviConversationList({ onNavigate }: { onNavigate?: () => void }
           key={conv.id}
           to={`/agent-chat/${conv.id}`}
           onClick={onNavigate}
-          className={({ isActive }) =>
+          className={({ isActive }: { isActive: boolean }) =>
             cn(
               'flex items-center gap-2.5 rounded-md px-3 py-1.5 pl-9 text-xs transition-colors group',
               isActive
