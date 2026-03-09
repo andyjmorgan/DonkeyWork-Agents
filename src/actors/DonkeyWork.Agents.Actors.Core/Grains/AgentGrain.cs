@@ -210,29 +210,22 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         if (string.IsNullOrEmpty(apiKey))
             throw new InvalidOperationException("No Anthropic API key configured. Add one in Settings > API Keys.");
 
-        // Resolve library prompts and prepend to system prompt
-        var resolvedPromptContent = string.Empty;
-        if (contract.Prompts.Length > 0)
+        // Collect all prompt parts: library prompts first, then contract system prompts
+        var promptParts = new List<string>();
+
+        foreach (var promptIdStr in contract.Prompts)
         {
-            var promptTexts = new List<string>();
-            foreach (var promptIdStr in contract.Prompts)
+            if (Guid.TryParse(promptIdStr, out var promptGuid))
             {
-                if (Guid.TryParse(promptIdStr, out var promptGuid))
-                {
-                    var prompt = await _promptService.GetByIdAsync(promptGuid, ct);
-                    if (prompt is not null)
-                        promptTexts.Add(prompt.Content);
-                }
+                var prompt = await _promptService.GetByIdAsync(promptGuid, ct);
+                if (prompt is not null)
+                    promptParts.Add(prompt.Content);
             }
-            if (promptTexts.Count > 0)
-                resolvedPromptContent = string.Join("\n\n", promptTexts);
         }
 
-        var combinedPrompt = string.IsNullOrEmpty(resolvedPromptContent)
-            ? contract.SystemPrompt
-            : string.IsNullOrEmpty(contract.SystemPrompt)
-                ? resolvedPromptContent
-                : resolvedPromptContent + "\n\n" + contract.SystemPrompt;
+        promptParts.AddRange(contract.SystemPrompt.Where(s => !string.IsNullOrEmpty(s)));
+
+        var combinedPrompt = string.Join("\n\n", promptParts);
 
         // Append sandbox documentation when sandbox tools are in scope
         var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);

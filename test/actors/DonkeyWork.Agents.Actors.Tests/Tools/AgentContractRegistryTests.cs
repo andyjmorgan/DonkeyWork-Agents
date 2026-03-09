@@ -120,7 +120,7 @@ public class AgentContractRegistryTests
         // Assert
         Assert.NotNull(descriptor);
         var contract = descriptor.Contract;
-        Assert.Contains("research agent", contract.SystemPrompt);
+        Assert.Contains(contract.SystemPrompt, s => s.Contains("research agent"));
         Assert.NotNull(contract.WebSearch);
         Assert.True(contract.WebSearch.Enabled);
         Assert.Equal("research", contract.AgentType);

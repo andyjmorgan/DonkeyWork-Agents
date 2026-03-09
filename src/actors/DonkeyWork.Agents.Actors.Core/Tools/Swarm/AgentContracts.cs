@@ -8,7 +8,7 @@ public static class AgentContracts
     [AgentContractDefinition("research")]
     public static AgentContract Research() => new()
     {
-        SystemPrompt = ResearchSystemPrompt,
+        SystemPrompt = [ResearchSystemPrompt],
         ToolGroups = [],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 10 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 10 },
@@ -25,7 +25,7 @@ public static class AgentContracts
     [AgentContractDefinition("deep_research")]
     public static AgentContract DeepResearch() => new()
     {
-        SystemPrompt = DeepResearchSystemPrompt,
+        SystemPrompt = [DeepResearchSystemPrompt],
         ToolGroups = ["swarm_spawn", "swarm_management", "project_management"],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 10 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 10 },
@@ -42,7 +42,7 @@ public static class AgentContracts
     [AgentContractDefinition("conversation")]
     public static AgentContract Conversation() => new()
     {
-        SystemPrompt = ConversationSystemPrompt,
+        SystemPrompt = [ConversationSystemPrompt],
         ToolGroups = ["swarm_spawn", "swarm_delegate", "swarm_management", "project_management", "sandbox"],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 5 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },
@@ -58,7 +58,7 @@ public static class AgentContracts
     [AgentContractDefinition("delegate")]
     public static AgentContract Delegate() => new()
     {
-        SystemPrompt = DelegateSystemPrompt,
+        SystemPrompt = [DelegateSystemPrompt],
         ToolGroups = [],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 5 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },

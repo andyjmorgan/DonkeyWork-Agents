@@ -3,7 +3,7 @@ namespace DonkeyWork.Agents.Actors.Contracts.Contracts;
 [GenerateSerializer]
 public sealed class AgentContract
 {
-    [Id(0)] public required string SystemPrompt { get; init; }
+    [Id(0)] public string[] SystemPrompt { get; init; } = [];
     [Id(1)] public string[] ToolGroups { get; init; } = [];
     [Id(2)] public int MaxTokens { get; init; } = 20_000;
     [Id(3)] public int ThinkingBudgetTokens { get; init; } = 10_000;

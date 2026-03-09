@@ -1514,7 +1514,7 @@ export type AgentLifecycle = 'Task' | 'Linger'
 export type AgentType = 'Standard' | 'System'
 
 export interface AgentContractV1 {
-  systemPrompt?: string
+  systemPrompt?: string[]
   toolGroups?: string[]
   maxTokens?: number
   reasoningEffort?: string
