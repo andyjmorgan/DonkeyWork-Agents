@@ -36,12 +36,21 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
         .item(
             &SubmenuBuilder::new(app, "File")
                 .item(
+                    &MenuItemBuilder::with_id("new_item", "New Item")
+                        .accelerator("CmdOrCtrl+N")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::with_id("close_item", "Close Item")
+                        .accelerator("CmdOrCtrl+W")
+                        .build(app)?,
+                )
+                .separator()
+                .item(
                     &MenuItemBuilder::with_id("new_conversation", "New Conversation")
                         .accelerator("CmdOrCtrl+Shift+N")
                         .build(app)?,
                 )
-                .separator()
-                .close_window()
                 .build()?,
         )
         // Edit menu
@@ -62,6 +71,42 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
                 .item(
                     &MenuItemBuilder::with_id("toggle_theme", "Toggle Theme")
                         .accelerator("CmdOrCtrl+Shift+T")
+                        .build(app)?,
+                )
+                .build()?,
+        )
+        // Go menu
+        .item(
+            &SubmenuBuilder::new(app, "Go")
+                .item(
+                    &MenuItemBuilder::with_id("go_chat", "Navi")
+                        .accelerator("CmdOrCtrl+1")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::with_id("go_notes", "Notes")
+                        .accelerator("CmdOrCtrl+2")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::with_id("go_research", "Research")
+                        .accelerator("CmdOrCtrl+3")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::with_id("go_tasks", "Tasks")
+                        .accelerator("CmdOrCtrl+4")
+                        .build(app)?,
+                )
+                .item(
+                    &MenuItemBuilder::with_id("go_projects", "Projects")
+                        .accelerator("CmdOrCtrl+5")
+                        .build(app)?,
+                )
+                .separator()
+                .item(
+                    &MenuItemBuilder::with_id("go_search", "Search History")
+                        .accelerator("CmdOrCtrl+Shift+F")
                         .build(app)?,
                 )
                 .build()?,
@@ -113,8 +158,9 @@ pub fn run() {
             Ok(())
         })
         .on_menu_event(|app, event| match event.id().as_ref() {
-            "new_conversation" => {
-                let _ = app.emit("menu-event", "new_conversation");
+            "new_conversation" | "new_item" | "close_item" | "go_chat" | "go_notes"
+            | "go_research" | "go_tasks" | "go_projects" | "go_search" => {
+                let _ = app.emit("menu-event", event.id().as_ref());
             }
             "toggle_theme" => {
                 let _ = app.emit("menu-event", "toggle_theme");
