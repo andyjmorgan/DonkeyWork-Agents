@@ -101,7 +101,7 @@ spec:
             - name: Storage__FileSystemBasePath
               value: "/mnt/storage"
             - name: Nats__Url
-              value: "nats://nats.donkeywork-agents.svc.cluster.local:4222"
+              value: "nats://nats-0.nats-headless.donkeywork-agents.svc.cluster.local:4222,nats://nats-1.nats-headless.donkeywork-agents.svc.cluster.local:4222,nats://nats-2.nats-headless.donkeywork-agents.svc.cluster.local:4222"
             - name: Agents__ExecutionTimeout
               value: "00:20:00"
             - name: Agents__StreamRetention
