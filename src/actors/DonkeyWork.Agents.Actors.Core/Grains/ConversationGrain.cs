@@ -108,6 +108,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _observer = observer;
         EnsureProcessingLoop();
         EmitQueueStatus();
+        EmitMcpServerStatus();
         return Task.CompletedTask;
     }
 
@@ -671,6 +672,17 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             _grainContext.GrainKey,
             _pendingCount,
             _currentTurnCts is not null));
+    }
+
+    private void EmitMcpServerStatus()
+    {
+        if (_mcpToolProvider is null) return;
+
+        foreach (var (serverName, toolCount) in _mcpToolProvider.GetConnectedServerSummaries())
+        {
+            Emit(new StreamMcpServerStatusEvent(
+                _grainContext.GrainKey, serverName, true, 0, toolCount, null));
+        }
     }
 
     private void EnsureSandboxProvisioning(AgentContract contract)

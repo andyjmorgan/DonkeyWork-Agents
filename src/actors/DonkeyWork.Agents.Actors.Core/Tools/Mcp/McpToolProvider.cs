@@ -162,6 +162,22 @@ internal sealed class McpToolProvider : IAsyncDisposable
     }
 
     /// <summary>
+    /// Returns a summary of connected servers (name → tool count) for re-emitting status on observer reconnect.
+    /// </summary>
+    public IReadOnlyList<(string ServerName, int ToolCount)> GetConnectedServerSummaries()
+    {
+        var servers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (_, serverName) in _toolServerNames)
+        {
+            servers.TryGetValue(serverName, out var count);
+            servers[serverName] = count + 1;
+        }
+
+        return servers.Select(kv => (kv.Key, kv.Value)).ToList();
+    }
+
+    /// <summary>
     /// Checks whether a tool with the given name exists in this provider.
     /// </summary>
     public bool HasTool(string toolName) =>
