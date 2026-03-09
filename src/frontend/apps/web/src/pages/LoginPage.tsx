@@ -2,10 +2,24 @@ import { Button } from '@donkeywork/ui'
 import { Logo } from '@/components/branding/Logo'
 import { Github } from 'lucide-react'
 
+function MicrosoftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+    </svg>
+  )
+}
+
 export function LoginPage() {
   const handleGitHubLogin = () => {
-    // Redirect to backend auth endpoint with GitHub identity provider hint
     window.location.href = '/api/v1/auth/login?idpHint=github'
+  }
+
+  const handleMicrosoftLogin = () => {
+    window.location.href = '/api/v1/auth/login?idpHint=microsoft'
   }
 
   return (
@@ -23,14 +37,35 @@ export function LoginPage() {
             </div>
           </div>
 
-          <Button
-            size="lg"
-            className="w-full"
-            onClick={handleGitHubLogin}
-          >
-            <Github className="mr-2 h-5 w-5" />
-            Sign in with GitHub
-          </Button>
+          <div className="space-y-3">
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleGitHubLogin}
+            >
+              <Github className="mr-2 h-5 w-5" />
+              Sign in with GitHub
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">or</span>
+              </div>
+            </div>
+
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full"
+              onClick={handleMicrosoftLogin}
+            >
+              <MicrosoftIcon className="mr-2 h-5 w-5" />
+              Sign in with Microsoft
+            </Button>
+          </div>
         </div>
       </main>
 

@@ -125,12 +125,12 @@ export function useDesktopAuth() {
     return () => clearInterval(interval)
   }, [isAuthenticated, checkAndRefreshToken])
 
-  const startLogin = useCallback(async () => {
+  const startLogin = useCallback(async (provider: string) => {
     if (isLoggingIn.current) return
     isLoggingIn.current = true
     try {
       // start_auth opens browser, waits for callback, exchanges code, returns tokens
-      const tokens = await invoke<AuthTokens>('start_auth')
+      const tokens = await invoke<AuthTokens>('start_auth', { idpHint: provider })
       setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
       const payload = parseJwt(tokens.accessToken)
       if (payload) {

@@ -97,6 +97,7 @@ fn now_millis() -> i64 {
 pub async fn start_auth(
     app: AppHandle,
     pkce_state: tauri::State<'_, SharedPkceState>,
+    idp_hint: String,
 ) -> Result<AuthTokens, String> {
     let code_verifier = generate_code_verifier();
     let code_challenge = generate_code_challenge(&code_verifier);
@@ -121,12 +122,13 @@ pub async fn start_auth(
          &redirect_uri={}\
          &code_challenge={}\
          &code_challenge_method=S256\
-         &kc_idp_hint=github",
+         &kc_idp_hint={}",
         KEYCLOAK_AUTHORITY,
         urlencoding::encode(KEYCLOAK_CLIENT_ID),
         urlencoding::encode("openid profile email"),
         urlencoding::encode(&redirect_uri),
         urlencoding::encode(&code_challenge),
+        urlencoding::encode(&idp_hint),
     );
 
     // Open system browser

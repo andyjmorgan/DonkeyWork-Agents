@@ -1,13 +1,24 @@
 import { useState } from 'react'
 import { Github, Loader2, X } from 'lucide-react'
 
-export function LoginPage({ onLogin }: { onLogin: () => Promise<void> }) {
+function MicrosoftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+    </svg>
+  )
+}
+
+export function LoginPage({ onLogin }: { onLogin: (provider: string) => Promise<void> }) {
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = async () => {
+  const handleLogin = async (provider: string) => {
     setIsLoading(true)
     try {
-      await onLogin()
+      await onLogin(provider)
     } catch (e) {
       console.error('Login failed:', e)
       setIsLoading(false)
@@ -52,13 +63,32 @@ export function LoginPage({ onLogin }: { onLogin: () => Promise<void> }) {
               </button>
             </>
           ) : (
-            <button
-              onClick={handleLogin}
-              className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-foreground text-background font-medium text-sm transition-opacity hover:opacity-90 cursor-pointer"
-            >
-              <Github className="h-5 w-5" />
-              Sign in with GitHub
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleLogin('github')}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-foreground text-background font-medium text-sm transition-opacity hover:opacity-90 cursor-pointer"
+              >
+                <Github className="h-5 w-5" />
+                Sign in with GitHub
+              </button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleLogin('microsoft')}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm transition-colors hover:bg-muted cursor-pointer"
+              >
+                <MicrosoftIcon className="h-5 w-5" />
+                Sign in with Microsoft
+              </button>
+            </div>
           )}
         </div>
       </main>

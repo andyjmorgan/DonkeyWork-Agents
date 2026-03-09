@@ -121,7 +121,7 @@ function AppContent() {
   const { startLogin, isAuthenticated } = useDesktopAuth()
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={startLogin} />
+    return <LoginPage onLogin={(provider) => startLogin(provider)} />
   }
 
   return <AuthenticatedApp />
