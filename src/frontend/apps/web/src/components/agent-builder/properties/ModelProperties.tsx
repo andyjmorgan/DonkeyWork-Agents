@@ -42,8 +42,12 @@ export function ModelProperties({ nodeId }: ModelPropertiesProps) {
   const maxTokens = (config.maxTokens as number) || 4096
   const reasoningEffort = (config.reasoningEffort as string) || ''
   const stream = (config.stream as boolean) ?? true
-  const webSearch = (config.webSearch as boolean) ?? false
-  const webFetch = (config.webFetch as boolean) ?? false
+  const webSearchConfig = config.webSearch as { enabled: boolean; maxUses: number } | boolean | undefined
+  const webSearch = typeof webSearchConfig === 'object' ? webSearchConfig?.enabled ?? false : !!webSearchConfig
+  const webSearchMaxUses = typeof webSearchConfig === 'object' ? webSearchConfig?.maxUses ?? 5 : 5
+  const webFetchConfig = config.webFetch as { enabled: boolean; maxUses: number } | boolean | undefined
+  const webFetch = typeof webFetchConfig === 'object' ? webFetchConfig?.enabled ?? false : !!webFetchConfig
+  const webFetchMaxUses = typeof webFetchConfig === 'object' ? webFetchConfig?.maxUses ?? 5 : 5
 
   // Group models by provider
   const grouped = allModels.reduce(
@@ -142,21 +146,65 @@ export function ModelProperties({ nodeId }: ModelPropertiesProps) {
       </div>
 
       {/* Web Search */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Label>Web Search</Label>
-          <p className="text-xs text-muted-foreground">Allow the agent to search the web</p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Web Search</Label>
+            <p className="text-xs text-muted-foreground">Allow the agent to search the web</p>
+          </div>
+          <Switch
+            checked={webSearch}
+            onCheckedChange={(v) => update('webSearch', { enabled: v, maxUses: webSearchMaxUses })}
+            disabled={isReadOnly}
+          />
         </div>
-        <Switch checked={webSearch} onCheckedChange={(v) => update('webSearch', v)} disabled={isReadOnly} />
+        {webSearch && (
+          <div className="space-y-2 pl-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Max uses per turn</Label>
+              <span className="text-xs font-medium tabular-nums">{webSearchMaxUses}</span>
+            </div>
+            <Slider
+              value={[webSearchMaxUses]}
+              onValueChange={([v]) => update('webSearch', { enabled: true, maxUses: v })}
+              min={1}
+              max={20}
+              step={1}
+              disabled={isReadOnly}
+            />
+          </div>
+        )}
       </div>
 
       {/* Web Fetch */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Label>Web Fetch</Label>
-          <p className="text-xs text-muted-foreground">Allow the agent to fetch web pages</p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Web Fetch</Label>
+            <p className="text-xs text-muted-foreground">Allow the agent to fetch web pages</p>
+          </div>
+          <Switch
+            checked={webFetch}
+            onCheckedChange={(v) => update('webFetch', { enabled: v, maxUses: webFetchMaxUses })}
+            disabled={isReadOnly}
+          />
         </div>
-        <Switch checked={webFetch} onCheckedChange={(v) => update('webFetch', v)} disabled={isReadOnly} />
+        {webFetch && (
+          <div className="space-y-2 pl-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Max uses per turn</Label>
+              <span className="text-xs font-medium tabular-nums">{webFetchMaxUses}</span>
+            </div>
+            <Slider
+              value={[webFetchMaxUses]}
+              onValueChange={([v]) => update('webFetch', { enabled: true, maxUses: v })}
+              min={1}
+              max={20}
+              step={1}
+              disabled={isReadOnly}
+            />
+          </div>
+        )}
       </div>
 
     </div>

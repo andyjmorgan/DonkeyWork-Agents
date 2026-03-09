@@ -137,8 +137,8 @@ function createInitialState() {
         maxTokens: 4096,
         reasoningEffort: '',
         stream: true,
-        webSearch: false,
-        webFetch: false,
+        webSearch: { enabled: false, maxUses: 5 },
+        webFetch: { enabled: false, maxUses: 5 },
       },
       [promptId]: {
         type: 'agentPrompt',
@@ -512,8 +512,12 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
           maxTokens: cfg.maxTokens as number,
           reasoningEffort: (cfg.reasoningEffort as string) || undefined,
           stream: cfg.stream as boolean,
-          webSearch: cfg.webSearch as boolean,
-          webFetch: cfg.webFetch as boolean,
+          webSearch: typeof cfg.webSearch === 'object'
+            ? cfg.webSearch as { enabled: boolean; maxUses: number }
+            : { enabled: !!cfg.webSearch, maxUses: 5 },
+          webFetch: typeof cfg.webFetch === 'object'
+            ? cfg.webFetch as { enabled: boolean; maxUses: number }
+            : { enabled: !!cfg.webFetch, maxUses: 5 },
         }
       }
     }

@@ -1519,8 +1519,8 @@ export interface AgentContractV1 {
   maxTokens?: number
   reasoningEffort?: string
   stream?: boolean
-  webSearch?: boolean
-  webFetch?: boolean
+  webSearch?: { enabled: boolean; maxUses: number }
+  webFetch?: { enabled: boolean; maxUses: number }
   persistMessages?: boolean
   lifecycle?: AgentLifecycle
   lingerSeconds?: number
@@ -1531,6 +1531,7 @@ export interface AgentContractV1 {
   subAgents?: string[]
   enableSandbox?: boolean
   modelId?: string
+  prompts?: string[]
 }
 
 export interface AgentDefinitionSummary {
