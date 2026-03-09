@@ -20,6 +20,8 @@ using DonkeyWork.Agents.Identity.Api.McpTools;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
 using DonkeyWork.Agents.Actors.Api;
+using DonkeyWork.Agents.AgentDefinitions.Api;
+using DonkeyWork.Agents.Prompts.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authorization;
@@ -93,6 +95,12 @@ builder.Services.AddMcpApi();
 builder.Services.AddConversationsApi(builder.Configuration);
 
 builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly, typeof(IdentityTools).Assembly);
+
+// Add Agent Definitions module
+builder.Services.AddAgentDefinitionsApi();
+
+// Add Prompts module
+builder.Services.AddPromptsApi();
 
 // Add Providers module
 builder.Services.AddProvidersApi();

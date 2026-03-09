@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, Save, Loader2, Settings } from 'lucide-react'
+import { ArrowLeft, Download, Save, Loader2, Settings, FlaskConical } from 'lucide-react'
 import { Button, Badge } from '@donkeywork/ui'
 import { AgentCanvas } from '@/components/agent-builder/AgentCanvas'
 import { AgentNodePalette } from '@/components/agent-builder/AgentNodePalette'
 import { AgentPropertiesPanel } from '@/components/agent-builder/AgentPropertiesPanel'
 import { AgentMetadataDialog } from '@/components/agent-builder/AgentMetadataDialog'
+import { AgentTestPanel } from '@/components/agent-builder/AgentTestPanel'
 import { useAgentBuilderStore } from '@/store/agentBuilder'
 import { agentDefinitions } from '@donkeywork/api-client'
 import { toast } from 'sonner'
@@ -27,6 +28,7 @@ export function AgentBuilderPage() {
   const exportToJson = useAgentBuilderStore((s) => s.exportToJson)
 
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
+  const [isTestPanelOpen, setIsTestPanelOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -131,6 +133,10 @@ export function AgentBuilderPage() {
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Settings</span>
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsTestPanelOpen(true)}>
+            <FlaskConical className="h-4 w-4" />
+            <span className="hidden sm:inline">Test</span>
+          </Button>
           {!isReadOnly && (
             <Button
               size="sm"
@@ -171,6 +177,9 @@ export function AgentBuilderPage() {
         description={agentDescription}
         onSave={handleMetadataSave}
       />
+
+      {/* Test Panel */}
+      <AgentTestPanel open={isTestPanelOpen} onClose={() => setIsTestPanelOpen(false)} />
     </div>
   )
 }

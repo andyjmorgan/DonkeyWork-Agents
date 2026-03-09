@@ -1532,8 +1532,6 @@ export interface AgentDefinitionSummary {
   name: string
   description?: string
   isSystem: boolean
-  lifecycle: AgentLifecycle
-  modelId?: string
   createdAt: string
 }
 
@@ -1562,93 +1560,50 @@ export interface UpdateAgentDefinitionRequest {
   nodeConfigurations?: Record<string, unknown>
 }
 
-// Agent Definitions API - localStorage-backed stub
-const AGENT_DEFS_KEY = 'donkeywork_agent_definitions'
-
-function getStoredAgents(): AgentDefinitionDetails[] {
-  try {
-    const stored = localStorage.getItem(AGENT_DEFS_KEY)
-    return stored ? JSON.parse(stored) : []
-  } catch {
-    return []
-  }
-}
-
-function setStoredAgents(agents: AgentDefinitionDetails[]) {
-  localStorage.setItem(AGENT_DEFS_KEY, JSON.stringify(agents))
-}
-
-function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
-
+// Agent Definitions API
 export const agentDefinitions = {
-  list: async (): Promise<AgentDefinitionSummary[]> => {
-    const agents = getStoredAgents()
-    return agents.map(a => ({
-      id: a.id,
-      name: a.name,
-      description: a.description,
-      isSystem: a.isSystem,
-      lifecycle: a.contract.lifecycle || 'Task',
-      modelId: a.contract.modelId,
-      createdAt: a.createdAt,
-    }))
-  },
+  list: () => api.get<AgentDefinitionSummary[]>('/api/v1/agent-definitions'),
+  get: (id: string) => api.get<AgentDefinitionDetails>(`/api/v1/agent-definitions/${id}`),
+  create: (data: CreateAgentDefinitionRequest) => api.post<AgentDefinitionDetails>('/api/v1/agent-definitions', data),
+  update: (id: string, data: UpdateAgentDefinitionRequest) => api.put<AgentDefinitionDetails>(`/api/v1/agent-definitions/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/agent-definitions/${id}`),
+}
 
-  get: async (id: string): Promise<AgentDefinitionDetails> => {
-    const agents = getStoredAgents()
-    const agent = agents.find(a => a.id === id)
-    if (!agent) throw new Error('Agent definition not found')
-    return agent
-  },
+// Prompt Types
+export type PromptType = 'System' | 'User'
 
-  create: async (data: CreateAgentDefinitionRequest): Promise<AgentDefinitionDetails> => {
-    const agents = getStoredAgents()
-    const newAgent: AgentDefinitionDetails = {
-      id: generateId(),
-      name: data.name,
-      description: data.description,
-      isSystem: false,
-      contract: {
-        lifecycle: 'Task',
-        stream: true,
-        maxTokens: 4096,
-        timeoutSeconds: 300,
-      },
-      createdAt: new Date().toISOString(),
-    }
-    agents.push(newAgent)
-    setStoredAgents(agents)
-    return newAgent
-  },
+export interface PromptSummary {
+  id: string
+  name: string
+  description?: string
+  promptType: PromptType
+  createdAt: string
+}
 
-  update: async (id: string, data: UpdateAgentDefinitionRequest): Promise<AgentDefinitionDetails> => {
-    const agents = getStoredAgents()
-    const index = agents.findIndex(a => a.id === id)
-    if (index === -1) throw new Error('Agent definition not found')
+export interface PromptDetails extends PromptSummary {
+  content: string
+  updatedAt?: string
+}
 
-    const updated: AgentDefinitionDetails = {
-      ...agents[index],
-      ...(data.name !== undefined && { name: data.name }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.contract !== undefined && { contract: data.contract }),
-      ...(data.reactFlowData !== undefined && { reactFlowData: data.reactFlowData }),
-      ...(data.nodeConfigurations !== undefined && { nodeConfigurations: data.nodeConfigurations }),
-      updatedAt: new Date().toISOString(),
-    }
-    agents[index] = updated
-    setStoredAgents(agents)
-    return updated
-  },
+export interface CreatePromptRequest {
+  name: string
+  description?: string
+  content: string
+  promptType: PromptType
+}
 
-  delete: async (id: string): Promise<void> => {
-    const agents = getStoredAgents()
-    const filtered = agents.filter(a => a.id !== id)
-    setStoredAgents(filtered)
-  },
+export interface UpdatePromptRequest {
+  name?: string
+  description?: string
+  content?: string
+  promptType?: PromptType
+}
+
+// Prompts API
+export const prompts = {
+  list: () => api.get<PromptSummary[]>('/api/v1/prompts'),
+  get: (id: string) => api.get<PromptDetails>(`/api/v1/prompts/${id}`),
+  create: (data: CreatePromptRequest) => api.post<PromptDetails>('/api/v1/prompts', data),
+  update: (id: string, data: UpdatePromptRequest) => api.put<PromptDetails>(`/api/v1/prompts/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/prompts/${id}`),
 }

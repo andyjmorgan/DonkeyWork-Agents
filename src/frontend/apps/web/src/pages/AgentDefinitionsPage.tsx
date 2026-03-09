@@ -132,10 +132,6 @@ export function AgentDefinitionsPage() {
                       )}
                     </div>
                     <div className="text-sm">
-                      <span className="text-muted-foreground">Lifecycle: </span>
-                      <span>{agent.lifecycle}</span>
-                    </div>
-                    <div className="text-sm">
                       <span className="text-muted-foreground">Created: </span>
                       <span>{new Date(agent.createdAt).toLocaleDateString()}</span>
                     </div>
@@ -178,7 +174,6 @@ export function AgentDefinitionsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Lifecycle</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
@@ -199,7 +194,6 @@ export function AgentDefinitionsPage() {
                         <Badge variant="outline">Custom</Badge>
                       )}
                     </TableCell>
-                    <TableCell>{agent.lifecycle}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(agent.createdAt).toLocaleDateString()}
                     </TableCell>

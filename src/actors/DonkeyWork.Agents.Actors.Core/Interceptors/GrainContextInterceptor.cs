@@ -67,6 +67,10 @@ public sealed class GrainContextInterceptor : IIncomingGrainCallFilter
                         grainContext.ConversationId = parts[1];
                     agentType = "Research";
                 }
+                else if (grainKey.StartsWith(AgentKeys.TestPrefix))
+                {
+                    agentType = "Test";
+                }
             }
 
             // Hydrate IIdentityContext from the caller's RequestContext.

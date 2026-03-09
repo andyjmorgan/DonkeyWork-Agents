@@ -117,6 +117,7 @@ public static class DependencyInjection
     public static IEndpointRouteBuilder MapActorsEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapConversationWebSocket();
+        endpoints.MapAgentTestEndpoint();
         return endpoints;
     }
 }

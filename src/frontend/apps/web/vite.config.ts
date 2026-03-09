@@ -13,6 +13,11 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['langium'],
   },
+  build: {
+    rollupOptions: {
+      external: [/^vscode-/, /^langium/],
+    },
+  },
   server: {
     port: 5199,
     strictPort: true,
