@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Brain, FileText, Server, Zap, Box, Bot, type LucideIcon } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Brain, FileText, Server, Zap, Box, Bot, Plus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgentBuilderStore } from '@/store/agentBuilder'
 import { mcpServers, agentDefinitions, prompts as promptsApi, type McpServerSummary, type AgentDefinitionSummary, type PromptSummary } from '@donkeywork/api-client'
+import { CreatePromptDialog } from './CreatePromptDialog'
 
 const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
@@ -73,12 +74,17 @@ export function AgentNodePalette() {
   const [serverList, setServerList] = useState<McpServerSummary[]>([])
   const [agentList, setAgentList] = useState<AgentDefinitionSummary[]>([])
   const [promptList, setPromptList] = useState<PromptSummary[]>([])
+  const [createPromptOpen, setCreatePromptOpen] = useState(false)
+
+  const refreshPrompts = useCallback(() => {
+    promptsApi.list().then(setPromptList).catch(console.error)
+  }, [])
 
   useEffect(() => {
     mcpServers.list().then(setServerList).catch(console.error)
     agentDefinitions.list().then(setAgentList).catch(console.error)
-    promptsApi.list().then(setPromptList).catch(console.error)
-  }, [])
+    refreshPrompts()
+  }, [refreshPrompts])
 
   const handleDragStart = (event: React.DragEvent, item: PaletteItem) => {
     if (item.isDisabled) return
@@ -258,9 +264,20 @@ export function AgentNodePalette() {
 
       {/* Prompts */}
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
-          Prompts
-        </h3>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Prompts
+          </h3>
+          {!isReadOnly && (
+            <button
+              onClick={() => setCreatePromptOpen(true)}
+              className="flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Create new prompt"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         <div className="space-y-2">
           {promptItems.length > 0 ? (
             promptItems.map(renderItem)
@@ -269,6 +286,12 @@ export function AgentNodePalette() {
           )}
         </div>
       </div>
+
+      <CreatePromptDialog
+        open={createPromptOpen}
+        onOpenChange={setCreatePromptOpen}
+        onCreated={refreshPrompts}
+      />
 
       {/* Agents */}
       <div>
