@@ -1305,6 +1305,10 @@ export { fetchWithAuth }
 
 // Sandbox Credential Mapping Types
 export type CredentialFieldType = 'ApiKey' | 'AccessToken' | 'RefreshToken' | 'Username' | 'Password' | 'ClientId' | 'ClientSecret' | 'WebhookSecret' | 'Custom'
+
+export interface CredentialFieldsResponse {
+  fields: CredentialFieldType[]
+}
 export type HeaderValueFormat = 'Raw' | 'BasicAuth'
 
 export interface SandboxProviderStatus {
@@ -1364,6 +1368,8 @@ export const sandboxCredentialMappings = {
     api.post<SandboxCredentialMapping[]>(`/api/v1/sandbox-credential-mappings/providers/${provider}`, {}),
   disableProvider: (provider: string) =>
     api.delete(`/api/v1/sandbox-credential-mappings/providers/${provider}`),
+  getCredentialFields: (credentialId: string, credentialType: string) =>
+    api.get<CredentialFieldsResponse>(`/api/v1/sandbox-credential-mappings/credential-fields?credentialId=${credentialId}&credentialType=${credentialType}`),
 }
 
 // MCP Server Configuration Types

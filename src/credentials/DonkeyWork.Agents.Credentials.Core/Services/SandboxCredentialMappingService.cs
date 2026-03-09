@@ -317,6 +317,29 @@ public sealed class SandboxCredentialMappingService : ISandboxCredentialMappingS
         await _dbContext.SaveChangesAsync(ct);
     }
 
+    public async Task<IReadOnlyList<CredentialFieldType>> GetCredentialFieldsAsync(
+        Guid credentialId,
+        string credentialType,
+        CancellationToken ct = default)
+    {
+        var userId = _identityContext.UserId;
+
+        switch (credentialType)
+        {
+            case "ExternalApiKey":
+                var apiKey = await _externalApiKeyService.GetByIdAsync(userId, credentialId, ct);
+                if (apiKey is null)
+                    return [];
+                return apiKey.Fields.Keys.ToList();
+
+            case "OAuthToken":
+                return [CredentialFieldType.AccessToken, CredentialFieldType.RefreshToken];
+
+            default:
+                return [];
+        }
+    }
+
     private static SandboxCredentialMappingV1 ToModel(SandboxCredentialMappingEntity entity)
     {
         return new SandboxCredentialMappingV1

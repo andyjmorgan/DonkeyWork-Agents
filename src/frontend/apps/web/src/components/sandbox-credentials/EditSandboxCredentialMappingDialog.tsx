@@ -32,18 +32,6 @@ interface EditSandboxCredentialMappingDialogProps {
   onUpdated?: () => void
 }
 
-const CREDENTIAL_FIELD_TYPES: CredentialFieldType[] = [
-  'ApiKey',
-  'AccessToken',
-  'RefreshToken',
-  'Username',
-  'Password',
-  'ClientId',
-  'ClientSecret',
-  'WebhookSecret',
-  'Custom',
-]
-
 const fieldTypeLabels: Record<CredentialFieldType, string> = {
   ApiKey: 'API Key',
   AccessToken: 'Access Token',
@@ -69,6 +57,9 @@ export function EditSandboxCredentialMappingDialog({
   const [credentialFieldType, setCredentialFieldType] = useState<CredentialFieldType>(mapping.credentialFieldType)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [availableFields, setAvailableFields] = useState<CredentialFieldType[]>([])
+  const [loadingFields, setLoadingFields] = useState(false)
 
   const [apiKeyCredentials, setApiKeyCredentials] = useState<CredentialSummary[]>([])
   const [oauthTokens, setOauthTokens] = useState<OAuthToken[]>([])
@@ -109,8 +100,27 @@ export function EditSandboxCredentialMappingDialog({
   useEffect(() => {
     if (hasChangedType) {
       setCredentialId('')
+      setAvailableFields([])
     }
   }, [credentialType, hasChangedType])
+
+  // Fetch available fields when credential is selected
+  useEffect(() => {
+    if (!credentialId || !credentialType) {
+      setAvailableFields([])
+      return
+    }
+    setLoadingFields(true)
+    sandboxCredentialMappings.getCredentialFields(credentialId, credentialType)
+      .then(res => {
+        setAvailableFields(res.fields)
+        if (res.fields.length === 1) {
+          setCredentialFieldType(res.fields[0])
+        }
+      })
+      .catch(err => console.error('Failed to load credential fields:', err))
+      .finally(() => setLoadingFields(false))
+  }, [credentialId, credentialType])
 
   const credentialOptions = credentialType === 'ExternalApiKey'
     ? apiKeyCredentials.map(c => ({ id: c.id, label: `${c.name} (${c.provider})` }))
@@ -239,24 +249,35 @@ export function EditSandboxCredentialMappingDialog({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Credential Field</Label>
-              <Select value={credentialFieldType} onValueChange={(v) => setCredentialFieldType(v as CredentialFieldType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CREDENTIAL_FIELD_TYPES.map(ft => (
-                    <SelectItem key={ft} value={ft}>
-                      {fieldTypeLabels[ft]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Which field from the credential to use as the header value
-              </p>
-            </div>
+            {availableFields.length > 1 && (
+              <div className="space-y-2">
+                <Label>Credential Field</Label>
+                <Select value={credentialFieldType} onValueChange={(v) => setCredentialFieldType(v as CredentialFieldType)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingFields ? 'Loading...' : 'Select a field'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableFields.map(ft => (
+                      <SelectItem key={ft} value={ft}>
+                        {fieldTypeLabels[ft]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Which field from the credential to use as the header value
+                </p>
+              </div>
+            )}
+
+            {availableFields.length === 1 && (
+              <div className="space-y-2">
+                <Label>Credential Field</Label>
+                <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
+                  {fieldTypeLabels[availableFields[0]]}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

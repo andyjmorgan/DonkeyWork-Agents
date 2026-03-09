@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Common.Contracts.Enums;
+using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 
 namespace DonkeyWork.Agents.Credentials.Contracts.Services;
@@ -24,4 +25,9 @@ public interface ISandboxCredentialMappingService
     Task<IReadOnlyList<SandboxCredentialMappingV1>> CreateFromProviderAsync(OAuthProvider provider, CancellationToken ct = default);
 
     Task DeleteByProviderAsync(OAuthProvider provider, CancellationToken ct = default);
+
+    Task<IReadOnlyList<CredentialFieldType>> GetCredentialFieldsAsync(
+        Guid credentialId,
+        string credentialType,
+        CancellationToken ct = default);
 }

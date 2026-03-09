@@ -185,6 +185,22 @@ public class SandboxCredentialMappingsController : ControllerBase
     }
 
     /// <summary>
+    /// Get the available credential fields for a given credential.
+    /// </summary>
+    /// <param name="credentialId">The credential ID.</param>
+    /// <param name="credentialType">The credential type (ExternalApiKey or OAuthToken).</param>
+    /// <response code="200">Returns the available fields.</response>
+    [HttpGet("credential-fields")]
+    [ProducesResponseType<CredentialFieldsResponseV1>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCredentialFields(
+        [FromQuery] Guid credentialId,
+        [FromQuery] string credentialType)
+    {
+        var fields = await _service.GetCredentialFieldsAsync(credentialId, credentialType);
+        return Ok(new CredentialFieldsResponseV1 { Fields = fields });
+    }
+
+    /// <summary>
     /// Get the list of domains that have credential mappings configured.
     /// </summary>
     /// <response code="200">Returns the list of configured domains.</response>
