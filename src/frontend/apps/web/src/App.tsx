@@ -23,8 +23,22 @@ function TokenRefreshManager({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-export default function App() {
+function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, hasHydrated } = useAuthStore()
+
+  if (!hasHydrated) {
+    return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" /></div>
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
+
+export default function App() {
+  const { isAuthenticated } = useAuthStore()
 
   return (
     <PlatformProvider config={webPlatformConfig}>
@@ -42,49 +56,42 @@ export default function App() {
           <Route path="/login/callback" element={<LoginCallbackPage />} />
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
-          {/* Protected routes */}
-          {isAuthenticated ? (
-            <>
-              {/* Editor pages - full screen, no layout wrapper */}
-              <Route path="/orchestrations/:id/edit" element={<OrchestrationEditorPage />} />
-              <Route path="/agent-definitions/:id/edit" element={<AgentBuilderPage />} />
+          {/* Editor pages - full screen, no layout wrapper */}
+          <Route path="/orchestrations/:id/edit" element={<AuthGuard><OrchestrationEditorPage /></AuthGuard>} />
+          <Route path="/agent-definitions/:id/edit" element={<AuthGuard><AgentBuilderPage /></AuthGuard>} />
 
-              {/* Regular pages with layout */}
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Navigate to="/orchestrations" replace />} />
-                <Route path="/orchestrations" element={<OrchestrationsPage />} />
-                <Route path="/agent-definitions" element={<AgentDefinitionsPage />} />
-                <Route path="/chat" element={<Navigate to="/agent-chat" replace />} />
-                <Route path="/conversations" element={<ConversationsPage />} />
-                <Route path="/agent-chat" element={<AgentChatPage />} />
-                <Route path="/agent-chat/:conversationId" element={<AgentChatPage />} />
-                <Route path="/executions" element={<ExecutionsPage />} />
-                <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
-                <Route path="/workspace" element={<ProjectsPage />} />
-                <Route path="/workspace/:id" element={<ProjectDetailPage />} />
-                <Route path="/workspace/:projectId/milestones/:milestoneId" element={<MilestoneDetailPage />} />
-                <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/notes" element={<NotesPage />} />
-                <Route path="/notes/:noteId" element={<NoteEditorPage />} />
-                <Route path="/research" element={<ResearchPage />} />
-                <Route path="/research/:researchId" element={<ResearchEditorPage />} />
-                <Route path="/files" element={<FilesPage />} />
-                <Route path="/skills" element={<SkillsPage />} />
-                <Route path="/tasks/:taskId" element={<TaskEditorPage />} />
-                <Route path="/api-keys" element={<ApiKeysPage />} />
-                <Route path="/credentials" element={<CredentialsPage />} />
-                <Route path="/oauth-clients" element={<OAuthClientsPage />} />
-                <Route path="/connected-accounts" element={<ConnectedAccountsPage />} />
-                <Route path="/sandbox-credentials" element={<SandboxCredentialsPage />} />
-                <Route path="/prompts" element={<PromptsPage />} />
-                <Route path="/mcp-servers" element={<McpServersPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </>
-          ) : hasHydrated ? (
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          ) : null}
+          {/* Regular pages with layout */}
+          <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
+            <Route path="/" element={<Navigate to="/orchestrations" replace />} />
+            <Route path="/orchestrations" element={<OrchestrationsPage />} />
+            <Route path="/agent-definitions" element={<AgentDefinitionsPage />} />
+            <Route path="/chat" element={<Navigate to="/agent-chat" replace />} />
+            <Route path="/conversations" element={<ConversationsPage />} />
+            <Route path="/agent-chat" element={<AgentChatPage />} />
+            <Route path="/agent-chat/:conversationId" element={<AgentChatPage />} />
+            <Route path="/executions" element={<ExecutionsPage />} />
+            <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
+            <Route path="/workspace" element={<ProjectsPage />} />
+            <Route path="/workspace/:id" element={<ProjectDetailPage />} />
+            <Route path="/workspace/:projectId/milestones/:milestoneId" element={<MilestoneDetailPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/notes" element={<NotesPage />} />
+            <Route path="/notes/:noteId" element={<NoteEditorPage />} />
+            <Route path="/research" element={<ResearchPage />} />
+            <Route path="/research/:researchId" element={<ResearchEditorPage />} />
+            <Route path="/files" element={<FilesPage />} />
+            <Route path="/skills" element={<SkillsPage />} />
+            <Route path="/tasks/:taskId" element={<TaskEditorPage />} />
+            <Route path="/api-keys" element={<ApiKeysPage />} />
+            <Route path="/credentials" element={<CredentialsPage />} />
+            <Route path="/oauth-clients" element={<OAuthClientsPage />} />
+            <Route path="/connected-accounts" element={<ConnectedAccountsPage />} />
+            <Route path="/sandbox-credentials" element={<SandboxCredentialsPage />} />
+            <Route path="/prompts" element={<PromptsPage />} />
+            <Route path="/mcp-servers" element={<McpServersPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
         </Routes>
         </TokenRefreshManager>
       </TooltipProvider>
