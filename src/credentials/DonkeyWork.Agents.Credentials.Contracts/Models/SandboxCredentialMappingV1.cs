@@ -23,4 +23,6 @@ public sealed class SandboxCredentialMappingV1
     public required CredentialFieldType CredentialFieldType { get; init; }
 
     public required DateTimeOffset CreatedAt { get; init; }
+
+    public string? ManagedByProvider { get; init; }
 }

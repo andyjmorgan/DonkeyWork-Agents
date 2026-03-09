@@ -17,4 +17,6 @@ public class SandboxCredentialMappingEntity : BaseEntity
     public string CredentialType { get; set; } = string.Empty;
 
     public string CredentialFieldType { get; set; } = string.Empty;
+
+    public string? ManagedByProvider { get; set; }
 }

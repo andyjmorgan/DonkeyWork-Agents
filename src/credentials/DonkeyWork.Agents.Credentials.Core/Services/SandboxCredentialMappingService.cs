@@ -37,6 +37,7 @@ public sealed class SandboxCredentialMappingService : ISandboxCredentialMappingS
     public async Task<IReadOnlyList<SandboxCredentialMappingV1>> ListAsync(CancellationToken ct = default)
     {
         var entities = await _dbContext.SandboxCredentialMappings
+            .Where(e => e.ManagedByProvider == null)
             .OrderBy(e => e.BaseDomain)
             .ThenBy(e => e.HeaderName)
             .ToListAsync(ct);
@@ -84,6 +85,9 @@ public sealed class SandboxCredentialMappingService : ISandboxCredentialMappingS
             .FirstOrDefaultAsync(e => e.Id == id, ct)
             ?? throw new InvalidOperationException("Sandbox credential mapping not found");
 
+        if (entity.ManagedByProvider is not null)
+            throw new InvalidOperationException("Cannot modify a provider-managed credential mapping. Disable the provider instead.");
+
         if (request.HeaderName is not null)
             entity.HeaderName = request.HeaderName;
 
@@ -117,6 +121,9 @@ public sealed class SandboxCredentialMappingService : ISandboxCredentialMappingS
 
         if (entity is null)
             return;
+
+        if (entity.ManagedByProvider is not null)
+            throw new InvalidOperationException("Cannot delete a provider-managed credential mapping. Disable the provider instead.");
 
         _dbContext.SandboxCredentialMappings.Remove(entity);
         await _dbContext.SaveChangesAsync(ct);
@@ -268,6 +275,7 @@ public sealed class SandboxCredentialMappingService : ISandboxCredentialMappingS
                 existing.CredentialId = token.Id;
                 existing.CredentialType = "OAuthToken";
                 existing.CredentialFieldType = mapping.CredentialFieldType.ToString();
+                existing.ManagedByProvider = provider.ToString();
             }
             else
             {
@@ -282,6 +290,7 @@ public sealed class SandboxCredentialMappingService : ISandboxCredentialMappingS
                     CredentialId = token.Id,
                     CredentialType = "OAuthToken",
                     CredentialFieldType = mapping.CredentialFieldType.ToString(),
+                    ManagedByProvider = provider.ToString(),
                 };
                 _dbContext.SandboxCredentialMappings.Add(existing);
             }
@@ -322,6 +331,7 @@ public sealed class SandboxCredentialMappingService : ISandboxCredentialMappingS
             CredentialType = entity.CredentialType,
             CredentialFieldType = Enum.Parse<CredentialFieldType>(entity.CredentialFieldType),
             CreatedAt = entity.CreatedAt,
+            ManagedByProvider = entity.ManagedByProvider,
         };
     }
 }

@@ -1319,6 +1319,7 @@ export interface SandboxCredentialMapping {
   id: string
   baseDomain: string
   headerName: string
+  managedByProvider?: string
   headerValuePrefix?: string
   headerValueFormat: HeaderValueFormat
   basicAuthUsername?: string

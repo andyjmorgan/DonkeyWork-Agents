@@ -63,7 +63,8 @@ public class SandboxCredentialMappingServiceTests : IDisposable
         Guid? credentialId = null,
         string credentialType = "ExternalApiKey",
         CredentialFieldType credentialFieldType = CredentialFieldType.ApiKey,
-        Guid? userId = null)
+        Guid? userId = null,
+        string? managedByProvider = null)
     {
         var entity = new SandboxCredentialMappingEntity
         {
@@ -76,6 +77,7 @@ public class SandboxCredentialMappingServiceTests : IDisposable
             CredentialId = credentialId ?? Guid.NewGuid(),
             CredentialType = credentialType,
             CredentialFieldType = credentialFieldType.ToString(),
+            ManagedByProvider = managedByProvider,
         };
 
         _dbContext.SandboxCredentialMappings.Add(entity);
@@ -129,6 +131,22 @@ public class SandboxCredentialMappingServiceTests : IDisposable
         // Assert
         Assert.Single(result);
         Assert.Equal("my-domain.com", result[0].BaseDomain);
+    }
+
+    [Fact]
+    public async Task ListAsync_ExcludesProviderManagedMappings()
+    {
+        // Arrange
+        await SeedMappingAsync(baseDomain: "api.openai.com", headerName: "Authorization");
+        await SeedMappingAsync(baseDomain: "api.github.com", headerName: "Authorization", managedByProvider: "GitHub");
+        await SeedMappingAsync(baseDomain: "github.com", headerName: "Authorization", managedByProvider: "GitHub");
+
+        // Act
+        var result = await _service.ListAsync();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("api.openai.com", result[0].BaseDomain);
     }
 
     #endregion
@@ -247,6 +265,25 @@ public class SandboxCredentialMappingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateAsync_ProviderManagedMapping_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var entity = await SeedMappingAsync(
+            baseDomain: "api.github.com",
+            headerName: "Authorization",
+            managedByProvider: "GitHub");
+
+        var request = new UpdateSandboxCredentialMappingRequestV1
+        {
+            HeaderName = "X-Api-Key",
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateAsync(entity.Id, request));
+    }
+
+    [Fact]
     public async Task UpdateAsync_NonExistentId_ThrowsInvalidOperationException()
     {
         // Arrange
@@ -276,6 +313,20 @@ public class SandboxCredentialMappingServiceTests : IDisposable
         // Assert
         var result = await _service.GetByIdAsync(entity.Id);
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ProviderManagedMapping_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var entity = await SeedMappingAsync(
+            baseDomain: "api.github.com",
+            headerName: "Authorization",
+            managedByProvider: "GitHub");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.DeleteAsync(entity.Id));
     }
 
     [Fact]
@@ -586,6 +637,37 @@ public class SandboxCredentialMappingServiceTests : IDisposable
         Assert.Equal(2, result.Count);
         Assert.Contains(result, m => m.BaseDomain == "api.github.com" && m.HeaderValueFormat == HeaderValueFormat.Raw);
         Assert.Contains(result, m => m.BaseDomain == "github.com" && m.HeaderValueFormat == HeaderValueFormat.BasicAuth);
+    }
+
+    [Fact]
+    public async Task CreateFromProviderAsync_SetsManagedByProviderField()
+    {
+        // Arrange
+        var tokenId = Guid.NewGuid();
+        _oAuthTokenServiceMock
+            .Setup(s => s.GetByProviderAsync(_userId, OAuthProvider.GitHub, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OAuthToken
+            {
+                Id = tokenId,
+                UserId = _userId,
+                Provider = OAuthProvider.GitHub,
+                ExternalUserId = "ext_123",
+                Email = "user@github.com",
+                AccessToken = "test-token",
+                RefreshToken = "refresh-token",
+                Scopes = new List<string> { "repo" },
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+
+        // Act
+        var result = await _service.CreateFromProviderAsync(OAuthProvider.GitHub);
+
+        // Assert
+        Assert.All(result, m => Assert.Equal("GitHub", m.ManagedByProvider));
+
+        // Verify entities in DB
+        var entities = await _dbContext.SandboxCredentialMappings.ToListAsync();
+        Assert.All(entities, e => Assert.Equal("GitHub", e.ManagedByProvider));
     }
 
     [Fact]

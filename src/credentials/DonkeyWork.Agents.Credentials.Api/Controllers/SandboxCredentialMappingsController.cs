@@ -133,9 +133,11 @@ public class SandboxCredentialMappingsController : ControllerBase
     /// <param name="id">The mapping ID.</param>
     /// <param name="request">The updated mapping details.</param>
     /// <response code="200">Returns the updated mapping.</response>
+    /// <response code="400">Mapping is provider-managed and cannot be modified.</response>
     /// <response code="404">Mapping not found.</response>
     [HttpPut("{id:guid}")]
     [ProducesResponseType<SandboxCredentialMappingV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSandboxCredentialMappingRequestV1 request)
     {
@@ -143,8 +145,15 @@ public class SandboxCredentialMappingsController : ControllerBase
         if (existing is null)
             return NotFound();
 
-        var mapping = await _service.UpdateAsync(id, request);
-        return Ok(mapping);
+        try
+        {
+            var mapping = await _service.UpdateAsync(id, request);
+            return Ok(mapping);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>
@@ -152,9 +161,11 @@ public class SandboxCredentialMappingsController : ControllerBase
     /// </summary>
     /// <param name="id">The mapping ID.</param>
     /// <response code="204">Mapping deleted.</response>
+    /// <response code="400">Mapping is provider-managed and cannot be deleted.</response>
     /// <response code="404">Mapping not found.</response>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -162,8 +173,15 @@ public class SandboxCredentialMappingsController : ControllerBase
         if (existing is null)
             return NotFound();
 
-        await _service.DeleteAsync(id);
-        return NoContent();
+        try
+        {
+            await _service.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>

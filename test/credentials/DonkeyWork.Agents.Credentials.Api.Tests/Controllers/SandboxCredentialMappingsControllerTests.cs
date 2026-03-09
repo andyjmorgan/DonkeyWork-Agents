@@ -205,6 +205,33 @@ public class SandboxCredentialMappingsControllerTests
     }
 
     [Fact]
+    public async Task Update_ProviderManagedMapping_ReturnsBadRequest()
+    {
+        // Arrange
+        var mappingId = Guid.NewGuid();
+        var existingMapping = CreateMapping(id: mappingId);
+
+        var request = new UpdateSandboxCredentialMappingRequestV1
+        {
+            HeaderName = "Authorization",
+        };
+
+        _serviceMock
+            .Setup(s => s.GetByIdAsync(mappingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingMapping);
+
+        _serviceMock
+            .Setup(s => s.UpdateAsync(mappingId, request, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Cannot modify a provider-managed credential mapping. Disable the provider instead."));
+
+        // Act
+        var result = await _controller.Update(mappingId, request);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
     public async Task Update_NonExistentId_ReturnsNotFound()
     {
         // Arrange
@@ -246,6 +273,28 @@ public class SandboxCredentialMappingsControllerTests
         // Assert
         Assert.IsType<NoContentResult>(result);
         _serviceMock.Verify(s => s.DeleteAsync(mappingId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_ProviderManagedMapping_ReturnsBadRequest()
+    {
+        // Arrange
+        var mappingId = Guid.NewGuid();
+        var existingMapping = CreateMapping(id: mappingId);
+
+        _serviceMock
+            .Setup(s => s.GetByIdAsync(mappingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingMapping);
+
+        _serviceMock
+            .Setup(s => s.DeleteAsync(mappingId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Cannot delete a provider-managed credential mapping. Disable the provider instead."));
+
+        // Act
+        var result = await _controller.Delete(mappingId);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]

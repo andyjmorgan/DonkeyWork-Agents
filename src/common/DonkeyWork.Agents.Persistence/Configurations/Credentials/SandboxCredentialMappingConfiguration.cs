@@ -48,6 +48,9 @@ public class SandboxCredentialMappingConfiguration : IEntityTypeConfiguration<Sa
             .IsRequired()
             .HasMaxLength(50);
 
+        builder.Property(e => e.ManagedByProvider)
+            .HasMaxLength(50);
+
         builder.Property(e => e.CreatedAt)
             .IsRequired();
 
