@@ -434,15 +434,21 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
+        // Extract userId from the grain key because IIdentityContext is not yet
+        // hydrated during activation (the GrainContextInterceptor only runs on
+        // incoming grain calls, which happen after activation).
+        var grainKey = this.GetPrimaryKeyString();
+        var userId = AgentKeys.ExtractUserId(grainKey);
+
         var (messages, nextSeq) = await _messageStore.LoadMessagesAsync(
-            this.GetPrimaryKeyString(), _identityContext.UserId, cancellationToken);
+            grainKey, userId, cancellationToken);
 
         _messages = messages;
         _nextSequenceNumber = nextSeq;
 
         _logger.LogInformation(
             "Grain activated {GrainType} {GrainKey} (messages: {MessageCount})",
-            nameof(AgentGrain), this.GetPrimaryKeyString(), _messages.Count);
+            nameof(AgentGrain), grainKey, _messages.Count);
 
         await base.OnActivateAsync(cancellationToken);
     }
