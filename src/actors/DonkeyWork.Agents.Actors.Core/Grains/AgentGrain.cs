@@ -177,9 +177,15 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             ? [..contract.ToolGroups, "sandbox"]
             : contract.ToolGroups;
 
+        _logger.LogInformation(
+            "Contract: EnableSandbox={EnableSandbox}, ToolGroups=[{ToolGroups}], EffectiveToolGroups=[{EffectiveToolGroups}]",
+            contract.EnableSandbox, string.Join(", ", contract.ToolGroups), string.Join(", ", effectiveToolGroups));
+
         EnsureSandboxProvisioning(contract);
 
         var toolTypes = ResolveToolGroups(effectiveToolGroups);
+        _logger.LogInformation("Resolved {ToolTypeCount} tool types from {GroupCount} groups",
+            toolTypes.Length, effectiveToolGroups.Length);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
 
         // Populate grain context with contract's MCP servers and sub-agents for swarm tool inheritance
