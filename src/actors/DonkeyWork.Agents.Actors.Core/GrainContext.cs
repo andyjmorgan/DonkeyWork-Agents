@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,8 @@ public class GrainContext
     public ILogger Logger { get; set; } = null!;
     public Action<string>? ProgressCallback { get; set; }
     public SandboxProvisioningHandle? SandboxHandle { get; set; }
+    public McpServerReference[] McpServers { get; set; } = [];
+    public SubAgentReference[] SubAgents { get; set; } = [];
 
     public void ReportProgress(string breadcrumb) => ProgressCallback?.Invoke(breadcrumb);
 }

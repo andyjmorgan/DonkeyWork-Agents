@@ -293,6 +293,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         SetupGrainContext();
         EnsureSandboxProvisioning(contract);
 
+        // Populate grain context with contract's MCP servers and sub-agents for swarm tool inheritance
+        _grainContext.McpServers = contract.McpServers;
+        _grainContext.SubAgents = contract.SubAgents;
+
         var toolTypes = ResolveToolGroups(contract.ToolGroups);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
 
@@ -378,7 +382,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 ApiKey = apiKey,
                 ModelId = modelId,
                 MaxTokens = contract.MaxTokens,
-                ThinkingBudgetTokens = contract.ThinkingBudgetTokens > 0 ? contract.ThinkingBudgetTokens : null,
+                ThinkingBudgetTokens = contract.ReasoningEffort is null
+                    ? (contract.ThinkingBudgetTokens > 0 ? contract.ThinkingBudgetTokens : null)
+                    : null,
+                ReasoningEffort = contract.ReasoningEffort,
                 WebSearch = new WebSearchOptions
                 {
                     Enabled = contract.WebSearch.Enabled,

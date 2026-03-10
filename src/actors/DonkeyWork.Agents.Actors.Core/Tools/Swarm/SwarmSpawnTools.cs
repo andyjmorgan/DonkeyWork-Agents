@@ -16,7 +16,8 @@ public sealed class SwarmSpawnTools
         IIdentityContext identityContext,
         CancellationToken ct)
     {
-        var contract = AgentContracts.Research();
+        var contract = AgentContracts.Research()
+            .WithParentContext(context);
         return await SwarmAgentSpawner.SpawnAsync(contract, query, label, context, identityContext, ct);
     }
 
@@ -31,7 +32,8 @@ public sealed class SwarmSpawnTools
         IIdentityContext identityContext,
         CancellationToken ct)
     {
-        var contract = AgentContracts.DeepResearch();
+        var contract = AgentContracts.DeepResearch()
+            .WithParentContext(context);
         return await SwarmAgentSpawner.SpawnAsync(contract, query, label, context, identityContext, ct);
     }
 }

@@ -16,7 +16,8 @@ public sealed class SwarmDelegateSpawnTools
         IIdentityContext identityContext,
         CancellationToken ct)
     {
-        var contract = AgentContracts.Delegate();
+        var contract = AgentContracts.Delegate()
+            .WithParentContext(context);
         return await SwarmAgentSpawner.SpawnAsync(contract, task, label, context, identityContext, ct);
     }
 }

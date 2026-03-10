@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
 import { agentNodeTypes } from '@/components/agent-builder/agentNodeTypes'
-import type { AgentContractV1, AgentDefinitionDetails } from '@donkeywork/api-client'
+import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference } from '@donkeywork/api-client'
 
 export interface AgentNodeConfig {
   type: string
@@ -497,7 +497,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
           ...contract,
           modelId: cfg.modelId as string,
           maxTokens: cfg.maxTokens as number,
-          reasoningEffort: (cfg.reasoningEffort as string) || undefined,
+          reasoningEffort: ((cfg.reasoningEffort as string) || 'None') as ReasoningEffort,
           stream: cfg.stream as boolean,
           webSearch: typeof cfg.webSearch === 'object'
             ? cfg.webSearch as { enabled: boolean; maxUses: number }
@@ -516,19 +516,35 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       .filter(Boolean)
     if (promptIds.length > 0) contract.prompts = promptIds
 
-    // MCP Servers — each node is one server
+    // MCP Servers — each node is one server, include id + name + description
     const mcpNodes = nodes.filter((n) => n.data?.nodeType === 'agentMcpServer')
-    const mcpIds = mcpNodes
-      .map((n) => nodeConfigurations[n.id]?.mcpServerId as string)
-      .filter(Boolean)
-    if (mcpIds.length > 0) contract.mcpServers = mcpIds
+    const mcpRefs: McpServerReference[] = mcpNodes
+      .map((n) => {
+        const cfg = nodeConfigurations[n.id]
+        if (!cfg?.mcpServerId) return null
+        return {
+          id: cfg.mcpServerId as string,
+          name: (cfg.mcpServerName as string) || '',
+          description: (cfg.mcpServerDescription as string) || undefined,
+        }
+      })
+      .filter((r): r is McpServerReference => r !== null)
+    if (mcpRefs.length > 0) contract.mcpServers = mcpRefs
 
-    // Sub-Agents — each node references another agent
+    // Sub-Agents — each node references another agent, include id + name + description
     const subAgentNodes = nodes.filter((n) => n.data?.nodeType === 'agentSubAgent')
-    const subAgentIds = subAgentNodes
-      .map((n) => nodeConfigurations[n.id]?.subAgentId as string)
-      .filter(Boolean)
-    if (subAgentIds.length > 0) contract.subAgents = subAgentIds
+    const subAgentRefs: SubAgentReference[] = subAgentNodes
+      .map((n) => {
+        const cfg = nodeConfigurations[n.id]
+        if (!cfg?.subAgentId) return null
+        return {
+          id: cfg.subAgentId as string,
+          name: (cfg.subAgentName as string) || '',
+          description: (cfg.subAgentDescription as string) || undefined,
+        }
+      })
+      .filter((r): r is SubAgentReference => r !== null)
+    if (subAgentRefs.length > 0) contract.subAgents = subAgentRefs
 
     // Tool Groups — each node may contain multiple tool IDs
     const toolNodes = nodes.filter((n) => n.data?.nodeType === 'agentToolGroup')

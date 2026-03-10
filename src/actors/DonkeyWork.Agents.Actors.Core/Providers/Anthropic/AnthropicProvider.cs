@@ -33,11 +33,37 @@ internal sealed class AnthropicProvider : IAiProvider
         var messageParams = MapMessages(messages);
         var mappedTools = AnthropicToolMapper.MapTools(tools, options);
 
-        // Compute thinking and temperature before the initializer (init-only props)
+        // Compute thinking, effort, and temperature before the initializer (init-only props)
         BetaThinkingConfigParam? thinking = null;
+        BetaOutputConfig? outputConfig = null;
         double? temperature = null;
-        if (options.ThinkingBudgetTokens is > 0)
+
+        if (options.ReasoningEffort is not null)
         {
+            // Enum-based reasoning effort (from agent builder)
+            if (options.ReasoningEffort == Common.Contracts.Enums.ReasoningEffort.None)
+            {
+                thinking = new BetaThinkingConfigDisabled();
+            }
+            else
+            {
+                thinking = new BetaThinkingConfigAdaptive();
+                temperature = 1; // Required by Anthropic when thinking is enabled
+                outputConfig = new BetaOutputConfig
+                {
+                    Effort = options.ReasoningEffort.Value switch
+                    {
+                        Common.Contracts.Enums.ReasoningEffort.Low => Effort.Low,
+                        Common.Contracts.Enums.ReasoningEffort.Medium => Effort.Medium,
+                        Common.Contracts.Enums.ReasoningEffort.High => Effort.High,
+                        _ => Effort.Medium,
+                    }
+                };
+            }
+        }
+        else if (options.ThinkingBudgetTokens is > 0)
+        {
+            // Budget-based thinking (from hardcoded swarm contracts)
             thinking = new BetaThinkingConfigEnabled
             {
                 BudgetTokens = options.ThinkingBudgetTokens.Value
@@ -57,7 +83,8 @@ internal sealed class AnthropicProvider : IAiProvider
             System = systemPrompt,
             Temperature = temperature,
             Tools = mappedTools!,
-            Thinking = thinking!
+            Thinking = thinking!,
+            OutputConfig = outputConfig!,
         };
 
         return options.Stream

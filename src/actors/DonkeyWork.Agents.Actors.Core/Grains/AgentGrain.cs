@@ -176,14 +176,19 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         var toolTypes = ResolveToolGroups(contract.ToolGroups);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
 
+        // Populate grain context with contract's MCP servers and sub-agents for swarm tool inheritance
+        _grainContext.McpServers = contract.McpServers;
+        _grainContext.SubAgents = contract.SubAgents;
+
         // Initialize MCP tools (lazy, once per activation)
         // Only connect to MCP servers specified in the contract's McpServers list
         if (_mcpToolProvider is null && contract.McpServers is { Length: > 0 })
         {
             var allowedIds = new HashSet<Guid>(
                 contract.McpServers
-                    .Where(s => Guid.TryParse(s, out _))
-                    .Select(Guid.Parse));
+                    .Select(s => Guid.TryParse(s.Id, out var id) ? id : (Guid?)null)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value));
 
             var httpConfigs = (await _mcpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
                 .Where(c => allowedIds.Contains(c.Id))
@@ -270,7 +275,10 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 ApiKey = apiKey,
                 ModelId = modelId,
                 MaxTokens = contract.MaxTokens,
-                ThinkingBudgetTokens = contract.ThinkingBudgetTokens > 0 ? contract.ThinkingBudgetTokens : null,
+                ThinkingBudgetTokens = contract.ReasoningEffort is null
+                    ? (contract.ThinkingBudgetTokens > 0 ? contract.ThinkingBudgetTokens : null)
+                    : null,
+                ReasoningEffort = contract.ReasoningEffort,
                 WebSearch = new WebSearchOptions
                 {
                     Enabled = contract.WebSearch.Enabled,
@@ -625,6 +633,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         }
         return types.ToArray();
     }
+
 
     private void Emit(StreamEventBase evt)
     {

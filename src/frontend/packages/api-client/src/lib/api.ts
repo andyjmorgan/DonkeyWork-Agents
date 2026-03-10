@@ -1517,11 +1517,25 @@ export const mcpServers = {
 export type AgentLifecycle = 'Task' | 'Linger'
 export type AgentType = 'Standard' | 'System'
 
+export type ReasoningEffort = 'None' | 'Low' | 'Medium' | 'High'
+
+export interface McpServerReference {
+  id: string
+  name: string
+  description?: string
+}
+
+export interface SubAgentReference {
+  id: string
+  name: string
+  description?: string
+}
+
 export interface AgentContractV1 {
   systemPrompt?: string[]
   toolGroups?: string[]
   maxTokens?: number
-  reasoningEffort?: string
+  reasoningEffort?: ReasoningEffort
   stream?: boolean
   webSearch?: { enabled: boolean; maxUses: number }
   webFetch?: { enabled: boolean; maxUses: number }
@@ -1531,8 +1545,8 @@ export interface AgentContractV1 {
   agentType?: AgentType
   keyPrefix?: string
   timeoutSeconds?: number
-  mcpServers?: string[]
-  subAgents?: string[]
+  mcpServers?: McpServerReference[]
+  subAgents?: SubAgentReference[]
   enableSandbox?: boolean
   modelId?: string
   prompts?: string[]
