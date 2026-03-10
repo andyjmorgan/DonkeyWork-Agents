@@ -480,6 +480,9 @@ public class SandboxService : ISandboxService
                 new V1EnvVar { Name = "no_proxy", Value = "localhost,127.0.0.1" },
                 new V1EnvVar { Name = "NODE_EXTRA_CA_CERTS", Value = "/etc/proxy-ca/ca.crt" },
                 new V1EnvVar { Name = "GIT_SSL_CAINFO", Value = "/etc/proxy-ca/ca.crt" },
+                new V1EnvVar { Name = "CURL_CA_BUNDLE", Value = "/etc/proxy-ca/ca.crt" },
+                new V1EnvVar { Name = "SSL_CERT_FILE", Value = "/etc/proxy-ca/ca.crt" },
+                new V1EnvVar { Name = "REQUESTS_CA_BUNDLE", Value = "/etc/proxy-ca/ca.crt" },
             });
         }
 
