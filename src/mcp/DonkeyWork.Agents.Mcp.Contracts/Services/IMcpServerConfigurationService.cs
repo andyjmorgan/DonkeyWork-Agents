@@ -42,4 +42,14 @@ public interface IMcpServerConfigurationService
     /// Gets connection-ready configurations for all enabled stdio MCP servers.
     /// </summary>
     Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetEnabledStdioConfigsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets connection-ready configurations for all enabled HTTP MCP servers that have ConnectToNavi set.
+    /// </summary>
+    Task<IReadOnlyList<McpConnectionConfigV1>> GetNaviConnectionConfigsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets connection-ready configurations for all enabled stdio MCP servers that have ConnectToNavi set.
+    /// </summary>
+    Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetNaviStdioConfigsAsync(CancellationToken cancellationToken = default);
 }

@@ -43,6 +43,11 @@ public class McpServerConfigurationConfiguration : IEntityTypeConfiguration<McpS
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(e => e.ConnectToNavi)
+            .HasColumnName("connect_to_navi")
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();

@@ -234,8 +234,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 var internalMsg = FormatMessage(message);
                 internalMsg.TurnId = turnId;
                 _messages.Add(internalMsg);
-                await _messageStore.AppendMessageAsync(
-                    _grainContext.GrainKey, _identityContext.UserId, internalMsg, _nextSequenceNumber++, ct);
+                _nextSequenceNumber = await _messageStore.AppendMessageAsync(
+                    _grainContext.GrainKey, _identityContext.UserId, internalMsg, _nextSequenceNumber, ct);
 
                 var preview = internalMsg is InternalContentMessage content
                     ? content.Content[..Math.Min(content.Content.Length, 100)]
@@ -299,8 +299,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         // Initialize MCP tools (lazy, once per activation)
         if (_mcpToolProvider is null)
         {
-            var httpConfigs = await _mcpServerConfigService.GetEnabledConnectionConfigsAsync(ct);
-            var stdioConfigs = await _mcpServerConfigService.GetEnabledStdioConfigsAsync(ct);
+            var httpConfigs = await _mcpServerConfigService.GetNaviConnectionConfigsAsync(ct);
+            var stdioConfigs = await _mcpServerConfigService.GetNaviStdioConfigsAsync(ct);
 
             if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
             {
@@ -382,8 +382,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             PersistMessage = async msg =>
             {
                 msg.TurnId = turnId;
-                await _messageStore.AppendMessageAsync(
-                    _grainContext.GrainKey, _identityContext.UserId, msg, _nextSequenceNumber++, ct);
+                _nextSequenceNumber = await _messageStore.AppendMessageAsync(
+                    _grainContext.GrainKey, _identityContext.UserId, msg, _nextSequenceNumber, ct);
             },
         };
 

@@ -64,25 +64,60 @@ public sealed class GrainMessageStore : IGrainMessageStore
     public async Task<int> AppendMessageAsync(
         string grainKey, Guid userId, InternalMessage message, int sequenceNumber, CancellationToken ct = default)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
-
         var json = JsonSerializer.Serialize(message, JsonOptions);
 
-        dbContext.GrainMessages.Add(new GrainMessageEntity
+        try
         {
-            GrainKey = grainKey,
-            UserId = userId,
-            SequenceNumber = sequenceNumber,
-            MessageJson = json,
-        });
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
 
-        await dbContext.SaveChangesAsync(ct);
+            dbContext.GrainMessages.Add(new GrainMessageEntity
+            {
+                GrainKey = grainKey,
+                UserId = userId,
+                SequenceNumber = sequenceNumber,
+                MessageJson = json,
+            });
 
-        _logger.LogDebug(
-            "Appended message seq={Seq} for grain {GrainKey}",
-            sequenceNumber, grainKey);
+            await dbContext.SaveChangesAsync(ct);
 
-        return sequenceNumber + 1;
+            _logger.LogDebug(
+                "Appended message seq={Seq} for grain {GrainKey}",
+                sequenceNumber, grainKey);
+
+            return sequenceNumber + 1;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+        {
+            _logger.LogWarning(
+                "Duplicate sequence number {Seq} for grain {GrainKey}, resolving from database",
+                sequenceNumber, grainKey);
+
+            // Determine the correct next sequence number from the database
+            await using var freshContext = await _dbContextFactory.CreateDbContextAsync(ct);
+
+            var maxSeq = await freshContext.GrainMessages
+                .IgnoreQueryFilters()
+                .Where(e => e.GrainKey == grainKey && e.UserId == userId)
+                .MaxAsync(e => (int?)e.SequenceNumber, ct) ?? -1;
+
+            var correctedSeq = maxSeq + 1;
+
+            freshContext.GrainMessages.Add(new GrainMessageEntity
+            {
+                GrainKey = grainKey,
+                UserId = userId,
+                SequenceNumber = correctedSeq,
+                MessageJson = json,
+            });
+
+            await freshContext.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "Recovered: appended message at corrected seq={Seq} for grain {GrainKey}",
+                correctedSeq, grainKey);
+
+            return correctedSeq + 1;
+        }
     }
 
     public async Task RollbackFromAsync(

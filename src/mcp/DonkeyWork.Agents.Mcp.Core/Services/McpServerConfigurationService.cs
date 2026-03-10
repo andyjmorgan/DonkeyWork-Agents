@@ -56,6 +56,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             Description = request.Description,
             TransportType = request.TransportType,
             IsEnabled = request.IsEnabled,
+            ConnectToNavi = request.ConnectToNavi,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -201,6 +202,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         entity.Description = request.Description;
         entity.TransportType = request.TransportType;
         entity.IsEnabled = request.IsEnabled;
+        entity.ConnectToNavi = request.ConnectToNavi;
         entity.UpdatedAt = now;
 
         // Capture existing header values (encrypted or credential refs) so we can preserve them if the update doesn't provide new values
@@ -487,6 +489,134 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         return configs;
     }
 
+    public async Task<IReadOnlyList<McpConnectionConfigV1>> GetNaviConnectionConfigsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.McpServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.IsEnabled && c.ConnectToNavi && c.TransportType == McpTransportType.Http)
+            .Include(c => c.HttpConfiguration)
+                .ThenInclude(h => h!.HeaderConfigurations)
+            .ToListAsync(cancellationToken);
+
+        var configs = new List<McpConnectionConfigV1>();
+
+        foreach (var entity in entities)
+        {
+            if (entity.HttpConfiguration is null)
+            {
+                _logger.LogWarning("Enabled HTTP MCP server {Id} ({Name}) has no HTTP configuration, skipping", entity.Id, entity.Name);
+                continue;
+            }
+
+            var headers = new Dictionary<string, string>();
+
+            if (entity.HttpConfiguration.AuthType == McpHttpAuthType.OAuth
+                && entity.HttpConfiguration.OAuthTokenId.HasValue)
+            {
+                try
+                {
+                    var token = await _oAuthTokenService.GetByIdAsync(
+                        _identityContext.UserId,
+                        entity.HttpConfiguration.OAuthTokenId.Value,
+                        cancellationToken);
+                    if (token != null)
+                    {
+                        headers["Authorization"] = $"Bearer {token.AccessToken}";
+                    }
+                    else
+                    {
+                        _logger.LogWarning("OAuth token {TokenId} not found for MCP server {Id} ({Name})",
+                            entity.HttpConfiguration.OAuthTokenId.Value, entity.Id, entity.Name);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve OAuth token for MCP server {Id} ({Name})", entity.Id, entity.Name);
+                }
+            }
+            else if (entity.HttpConfiguration.AuthType == McpHttpAuthType.Header)
+            {
+                foreach (var header in entity.HttpConfiguration.HeaderConfigurations)
+                {
+                    try
+                    {
+                        var resolvedValue = await ResolveHeaderValueAsync(header, entity.Id, entity.Name, cancellationToken);
+                        if (resolvedValue != null)
+                        {
+                            headers[header.HeaderName] = resolvedValue;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to resolve header {HeaderName} for MCP server {Id} ({Name})", header.HeaderName, entity.Id, entity.Name);
+                    }
+                }
+            }
+
+            configs.Add(new McpConnectionConfigV1
+            {
+                Id = entity.Id,
+                Name = entity.Name,
+                Endpoint = entity.HttpConfiguration.Endpoint,
+                TransportMode = entity.HttpConfiguration.TransportMode,
+                Headers = headers,
+            });
+        }
+
+        return configs;
+    }
+
+    public async Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetNaviStdioConfigsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.McpServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.IsEnabled && c.ConnectToNavi && c.TransportType == McpTransportType.Stdio)
+            .Include(c => c.StdioConfiguration)
+                .ThenInclude(s => s!.EnvironmentVariableConfigurations)
+            .ToListAsync(cancellationToken);
+
+        var configs = new List<McpStdioConnectionConfigV1>();
+
+        foreach (var entity in entities)
+        {
+            if (entity.StdioConfiguration is null)
+            {
+                _logger.LogWarning("Enabled stdio MCP server {Id} ({Name}) has no stdio configuration, skipping", entity.Id, entity.Name);
+                continue;
+            }
+
+            var envVars = new Dictionary<string, string>();
+            foreach (var envVar in entity.StdioConfiguration.EnvironmentVariableConfigurations)
+            {
+                try
+                {
+                    var resolvedValue = await ResolveEnvVarValueAsync(envVar, entity.Id, entity.Name, cancellationToken);
+                    if (resolvedValue != null)
+                    {
+                        envVars[envVar.Name] = resolvedValue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve environment variable {EnvVarName} for MCP server {Id} ({Name})", envVar.Name, entity.Id, entity.Name);
+                }
+            }
+
+            configs.Add(new McpStdioConnectionConfigV1
+            {
+                Id = entity.Id,
+                Name = entity.Name,
+                Command = entity.StdioConfiguration.Command,
+                Arguments = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.Arguments) ?? [],
+                EnvironmentVariables = envVars,
+                PreExecScripts = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.PreExecScripts) ?? [],
+                WorkingDirectory = entity.StdioConfiguration.WorkingDirectory,
+            });
+        }
+
+        return configs;
+    }
+
     #region Mapping
 
     private McpServerSummaryV1 MapToSummary(McpServerConfigurationEntity entity)
@@ -498,6 +628,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             Description = entity.Description,
             TransportType = entity.TransportType,
             IsEnabled = entity.IsEnabled,
+            ConnectToNavi = entity.ConnectToNavi,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
@@ -512,6 +643,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             Description = entity.Description,
             TransportType = entity.TransportType,
             IsEnabled = entity.IsEnabled,
+            ConnectToNavi = entity.ConnectToNavi,
             StdioConfiguration = entity.StdioConfiguration == null ? null : MapStdioConfiguration(entity.StdioConfiguration),
             HttpConfiguration = entity.HttpConfiguration == null ? null : MapHttpConfiguration(entity.HttpConfiguration),
             CreatedAt = entity.CreatedAt,

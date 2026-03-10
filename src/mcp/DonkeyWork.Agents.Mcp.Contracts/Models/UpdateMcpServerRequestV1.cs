@@ -25,6 +25,9 @@ public sealed class UpdateMcpServerRequestV1
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; init; } = true;
 
+    [JsonPropertyName("connectToNavi")]
+    public bool ConnectToNavi { get; init; }
+
     [JsonPropertyName("stdioConfiguration")]
     public CreateMcpStdioConfigurationRequestV1? StdioConfiguration { get; init; }
 

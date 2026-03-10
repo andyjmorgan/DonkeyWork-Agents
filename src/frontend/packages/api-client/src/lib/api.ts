@@ -1425,6 +1425,7 @@ export interface McpServerSummary {
   description?: string
   transportType: McpTransportType
   isEnabled: boolean
+  connectToNavi?: boolean
   createdAt: string
   updatedAt?: string
 }
@@ -1435,6 +1436,7 @@ export interface McpServerDetails {
   description?: string
   transportType: McpTransportType
   isEnabled: boolean
+  connectToNavi?: boolean
   stdioConfiguration?: McpStdioConfigurationV1
   httpConfiguration?: McpHttpConfigurationV1
   createdAt: string
@@ -1487,6 +1489,7 @@ export interface CreateMcpServerRequest {
   description?: string
   transportType: McpTransportType
   isEnabled?: boolean
+  connectToNavi?: boolean
   stdioConfiguration?: CreateMcpStdioConfigurationRequest
   httpConfiguration?: CreateMcpHttpConfigurationRequest
 }
@@ -1496,6 +1499,7 @@ export interface UpdateMcpServerRequest {
   description?: string
   transportType: McpTransportType
   isEnabled?: boolean
+  connectToNavi?: boolean
   stdioConfiguration?: CreateMcpStdioConfigurationRequest
   httpConfiguration?: CreateMcpHttpConfigurationRequest
 }

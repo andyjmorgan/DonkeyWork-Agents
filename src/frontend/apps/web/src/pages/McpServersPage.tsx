@@ -142,6 +142,9 @@ export function McpServersPage() {
                       <div className="flex items-center gap-2">
                         {getTransportIcon(server.transportType)}
                         <span className="text-sm font-medium">{server.name}</span>
+                        {server.connectToNavi && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">Navi</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={server.transportType === 'Stdio' ? 'secondary' : 'outline'}>
@@ -203,6 +206,9 @@ export function McpServersPage() {
                         <div className="flex items-center gap-2">
                           {getTransportIcon(server.transportType)}
                           <span className="font-medium">{server.name}</span>
+                          {server.connectToNavi && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">Navi</Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>

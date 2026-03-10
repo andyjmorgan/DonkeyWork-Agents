@@ -23,6 +23,9 @@ public sealed class McpServerSummaryV1
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; init; }
 
+    [JsonPropertyName("connectToNavi")]
+    public bool ConnectToNavi { get; init; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }
 

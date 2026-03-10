@@ -177,10 +177,20 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
 
         // Initialize MCP tools (lazy, once per activation)
-        if (_mcpToolProvider is null)
+        // Only connect to MCP servers specified in the contract's McpServers list
+        if (_mcpToolProvider is null && contract.McpServers is { Length: > 0 })
         {
-            var httpConfigs = await _mcpServerConfigService.GetEnabledConnectionConfigsAsync(ct);
-            var stdioConfigs = await _mcpServerConfigService.GetEnabledStdioConfigsAsync(ct);
+            var allowedIds = new HashSet<Guid>(
+                contract.McpServers
+                    .Where(s => Guid.TryParse(s, out _))
+                    .Select(Guid.Parse));
+
+            var httpConfigs = (await _mcpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
+                .Where(c => allowedIds.Contains(c.Id))
+                .ToList();
+            var stdioConfigs = (await _mcpServerConfigService.GetEnabledStdioConfigsAsync(ct))
+                .Where(c => allowedIds.Contains(c.Id))
+                .ToList();
 
             if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
             {

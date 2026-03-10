@@ -23,6 +23,9 @@ public sealed class McpServerDetailsV1
     [JsonPropertyName("isEnabled")]
     public bool IsEnabled { get; init; }
 
+    [JsonPropertyName("connectToNavi")]
+    public bool ConnectToNavi { get; init; }
+
     [JsonPropertyName("stdioConfiguration")]
     public McpStdioConfigurationV1? StdioConfiguration { get; init; }
 

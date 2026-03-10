@@ -28,6 +28,11 @@ public class McpServerConfigurationEntity : BaseEntity
     public bool IsEnabled { get; set; } = true;
 
     /// <summary>
+    /// Whether this server should be connected to the Navi conversation agent.
+    /// </summary>
+    public bool ConnectToNavi { get; set; }
+
+    /// <summary>
     /// Navigation property to stdio configuration (when TransportType is Stdio).
     /// </summary>
     public McpStdioConfigurationEntity? StdioConfiguration { get; set; }

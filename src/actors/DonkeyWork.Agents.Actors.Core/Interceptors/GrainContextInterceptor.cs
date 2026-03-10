@@ -69,6 +69,9 @@ public sealed class GrainContextInterceptor : IIncomingGrainCallFilter
                 }
                 else if (grainKey.StartsWith(AgentKeys.TestPrefix))
                 {
+                    var parts = grainKey[AgentKeys.TestPrefix.Length..].Split(':');
+                    if (parts.Length >= 2)
+                        grainContext.ConversationId = parts[1];
                     agentType = "Test";
                 }
             }

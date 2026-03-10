@@ -81,6 +81,7 @@ export function McpServerDialog({
   const [description, setDescription] = useState('')
   const [transportType, setTransportType] = useState<McpTransportType>('Stdio')
   const [isEnabled, setIsEnabled] = useState(true)
+  const [connectToNavi, setConnectToNavi] = useState(false)
 
   // Stdio fields
   const [command, setCommand] = useState('')
@@ -130,6 +131,7 @@ export function McpServerDialog({
         setDescription(editingServer.description || '')
         setTransportType(editingServer.transportType)
         setIsEnabled(editingServer.isEnabled)
+        setConnectToNavi(editingServer.connectToNavi ?? false)
 
         if (editingServer.stdioConfiguration) {
           const stdio = editingServer.stdioConfiguration
@@ -182,6 +184,7 @@ export function McpServerDialog({
     setDescription('')
     setTransportType('Stdio')
     setIsEnabled(true)
+    setConnectToNavi(false)
     setCommand('')
     setArgs('')
     setEnvVars([])
@@ -250,6 +253,7 @@ export function McpServerDialog({
           description: description || undefined,
           transportType,
           isEnabled,
+          connectToNavi,
           ...stdioConfig,
           ...httpConfig,
         }
@@ -260,6 +264,7 @@ export function McpServerDialog({
           description: description || undefined,
           transportType,
           isEnabled,
+          connectToNavi,
           ...stdioConfig,
           ...httpConfig,
         }
@@ -455,6 +460,20 @@ export function McpServerDialog({
                   id="isEnabled"
                   checked={isEnabled}
                   onCheckedChange={setIsEnabled}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="connectToNavi">Connect to Navi</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically attach this server to Navi conversations
+                  </p>
+                </div>
+                <Switch
+                  id="connectToNavi"
+                  checked={connectToNavi}
+                  onCheckedChange={setConnectToNavi}
                 />
               </div>
             </div>
