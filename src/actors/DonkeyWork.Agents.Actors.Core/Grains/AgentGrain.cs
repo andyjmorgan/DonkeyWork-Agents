@@ -171,9 +171,15 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         List<InternalMessage> messages,
         CancellationToken ct)
     {
+        // Ensure "sandbox" is in tool groups when EnableSandbox is set (e.g. from test mode)
+        var effectiveToolGroups = contract.EnableSandbox
+            && !contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
+            ? [..contract.ToolGroups, "sandbox"]
+            : contract.ToolGroups;
+
         EnsureSandboxProvisioning(contract);
 
-        var toolTypes = ResolveToolGroups(contract.ToolGroups);
+        var toolTypes = ResolveToolGroups(effectiveToolGroups);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
 
         // Populate grain context with contract's MCP servers and sub-agents for swarm tool inheritance
@@ -258,7 +264,9 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         var combinedPrompt = string.Join("\n\n", promptParts);
 
         // Append sandbox documentation when sandbox tools are in scope
-        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase) || _hasMcpSandbox;
+        var hasSandbox = contract.EnableSandbox
+                         || contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
+                         || _hasMcpSandbox;
         var systemPrompt = hasSandbox
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
@@ -553,7 +561,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     private void EnsureSandboxProvisioning(AgentContract contract)
     {
-        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
+        var hasSandbox = contract.EnableSandbox
+                         || contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
         if (!hasSandbox) return;
 
         if (_sandboxHandle is null)

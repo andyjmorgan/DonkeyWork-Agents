@@ -367,7 +367,9 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         var combinedPrompt = string.Join("\n\n", promptParts);
 
         // Append sandbox documentation when sandbox tools are in scope
-        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase) || _hasMcpSandbox;
+        var hasSandbox = contract.EnableSandbox
+                         || contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
+                         || _hasMcpSandbox;
         var systemPrompt = hasSandbox
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
@@ -736,7 +738,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
     private void EnsureSandboxProvisioning(AgentContract contract)
     {
-        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
+        var hasSandbox = contract.EnableSandbox
+                         || contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
         if (!hasSandbox) return;
 
         if (_sandboxHandle is null)
