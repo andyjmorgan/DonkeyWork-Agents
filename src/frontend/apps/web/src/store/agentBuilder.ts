@@ -522,11 +522,12 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       .map((n) => {
         const cfg = nodeConfigurations[n.id]
         if (!cfg?.mcpServerId) return null
-        return {
+        const ref: McpServerReference = {
           id: cfg.mcpServerId as string,
           name: (cfg.mcpServerName as string) || '',
-          description: (cfg.mcpServerDescription as string) || undefined,
         }
+        if (cfg.mcpServerDescription) ref.description = cfg.mcpServerDescription as string
+        return ref
       })
       .filter((r): r is McpServerReference => r !== null)
     if (mcpRefs.length > 0) contract.mcpServers = mcpRefs
@@ -537,11 +538,12 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       .map((n) => {
         const cfg = nodeConfigurations[n.id]
         if (!cfg?.subAgentId) return null
-        return {
+        const ref: SubAgentReference = {
           id: cfg.subAgentId as string,
           name: (cfg.subAgentName as string) || '',
-          description: (cfg.subAgentDescription as string) || undefined,
         }
+        if (cfg.subAgentDescription) ref.description = cfg.subAgentDescription as string
+        return ref
       })
       .filter((r): r is SubAgentReference => r !== null)
     if (subAgentRefs.length > 0) contract.subAgents = subAgentRefs
@@ -553,7 +555,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
     )
 
     // Auto-include swarm tools when sub-agents are connected
-    if (subAgentIds.length > 0) {
+    if (subAgentRefs.length > 0) {
       const swarmTools = ['swarm_spawn', 'swarm_delegate', 'swarm_management']
       for (const tool of swarmTools) {
         if (!allToolIds.includes(tool)) allToolIds.push(tool)
