@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
 import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SandboxCredentialsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage } from '@/pages'
@@ -26,8 +27,28 @@ function TokenRefreshManager({ children }: { children: React.ReactNode }) {
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, hasHydrated } = useAuthStore()
 
+  useEffect(() => {
+    if (hasHydrated) return
+
+    // Force rehydration if it hasn't happened yet
+    useAuthStore.persist.rehydrate()
+
+    // Safety timeout: if hasHydrated is still false after 1s, force it
+    const timer = setTimeout(() => {
+      if (!useAuthStore.getState().hasHydrated) {
+        useAuthStore.setState({ hasHydrated: true })
+      }
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [hasHydrated])
+
   if (!hasHydrated) {
-    return <div className="flex h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" /></div>
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" />
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
