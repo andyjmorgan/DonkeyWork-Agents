@@ -61,6 +61,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private bool _titleGenerated;
     private AgentContract? _contract;
     private McpToolProvider? _mcpToolProvider;
+    private bool _hasMcpSandbox;
     private SandboxProvisioningHandle? _sandboxHandle;
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
@@ -293,7 +294,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         EnsureSandboxProvisioning(contract);
 
         var toolTypes = ResolveToolGroups(contract.ToolGroups);
-        var localTools = toolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(toolTypes) : null;
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
 
         // Initialize MCP tools (lazy, once per activation)
@@ -316,8 +316,23 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                         Emit(new StreamMcpServerStatusEvent(_grainContext.GrainKey, name, success, ms, toolCount, error));
                     },
                     ct);
+
+                // Auto-include sandbox tools when MCP servers are connected
+                if (!contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase))
+                {
+                    _hasMcpSandbox = true;
+                    _sandboxHandle = new SandboxProvisioningHandle();
+                    _grainContext.SandboxHandle = _sandboxHandle;
+                    _ = ProvisionSandboxInternalAsync(_sandboxHandle);
+                }
             }
         }
+
+        // Include sandbox tools if MCP servers triggered auto-sandbox
+        var effectiveToolTypes = _hasMcpSandbox && !contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
+            ? [..toolTypes, typeof(SandboxTools)]
+            : toolTypes;
+        var localTools = effectiveToolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(effectiveToolTypes) : null;
 
         // Combine local + MCP tool definitions
         var mcpTools = _mcpToolProvider?.GetToolDefinitions() ?? [];
@@ -348,7 +363,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         var combinedPrompt = string.Join("\n\n", promptParts);
 
         // Append sandbox documentation when sandbox tools are in scope
-        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
+        var hasSandbox = contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase) || _hasMcpSandbox;
         var systemPrompt = hasSandbox
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
