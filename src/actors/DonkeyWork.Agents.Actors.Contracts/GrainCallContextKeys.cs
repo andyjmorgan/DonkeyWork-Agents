@@ -7,4 +7,5 @@ namespace DonkeyWork.Agents.Actors.Contracts;
 public static class GrainCallContextKeys
 {
     public const string UserId = "DonkeyWork.UserId";
+    public const string ConversationId = "DonkeyWork.ConversationId";
 }

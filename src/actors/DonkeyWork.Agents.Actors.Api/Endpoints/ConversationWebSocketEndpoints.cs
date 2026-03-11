@@ -60,13 +60,14 @@ public static class ConversationWebSocketEndpoints
         var grainKey = $"{AgentKeys.ConversationPrefix}{identityContext.UserId}:{id}";
 
         RequestContext.Set(GrainCallContextKeys.UserId, identityContext.UserId.ToString());
+        RequestContext.Set(GrainCallContextKeys.ConversationId, id.ToString());
 
         var grain = grainFactory.GetGrain<IConversationGrain>(grainKey);
 
         await grain.SubscribeAsync(observerRef);
 
         rpc.AddLocalRpcTarget(
-            new ConversationRpcTarget(grain, observerRef, identityContext.UserId.ToString(), grainKey),
+            new ConversationRpcTarget(grain, observerRef, identityContext.UserId.ToString(), id.ToString(), grainKey),
             new JsonRpcTargetOptions { MethodNameTransform = CommonMethodNameTransforms.CamelCase });
 
         rpc.StartListening();
@@ -74,7 +75,7 @@ public static class ConversationWebSocketEndpoints
     }
 }
 
-internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResponseObserver observer, string userId, string grainKey)
+internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResponseObserver observer, string userId, string conversationId, string grainKey)
 {
     /// <summary>
     /// Client request: { jsonrpc: "2.0", id: N, method: "message", params: { text: "..." } }
@@ -159,5 +160,6 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     private void SetCallContext()
     {
         RequestContext.Set(GrainCallContextKeys.UserId, userId);
+        RequestContext.Set(GrainCallContextKeys.ConversationId, conversationId);
     }
 }

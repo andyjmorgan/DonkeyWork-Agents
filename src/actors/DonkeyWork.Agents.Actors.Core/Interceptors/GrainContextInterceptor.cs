@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Identity.Contracts.Services;
@@ -10,6 +11,17 @@ namespace DonkeyWork.Agents.Actors.Core.Interceptors;
 public sealed class GrainContextInterceptor : IIncomingGrainCallFilter
 {
     private readonly ILogger<GrainContextInterceptor> _logger;
+
+    private static readonly FrozenDictionary<string, string> PrefixToAgentType =
+        new Dictionary<string, string>
+        {
+            [AgentKeys.ConversationPrefix] = "Conversation",
+            [AgentKeys.DelegatePrefix] = "Delegate",
+            [AgentKeys.DeepResearchPrefix] = "DeepResearch",
+            [AgentKeys.ResearchPrefix] = "Research",
+            [AgentKeys.CustomAgentPrefix] = "Custom",
+            [AgentKeys.TestPrefix] = "Test",
+        }.ToFrozenDictionary();
 
     public GrainContextInterceptor(ILogger<GrainContextInterceptor> logger)
     {
@@ -39,47 +51,34 @@ public sealed class GrainContextInterceptor : IIncomingGrainCallFilter
             {
                 grainContext.GrainKey = grainKey;
 
-                if (grainKey.StartsWith(AgentKeys.ConversationPrefix))
+                // Determine agent type from key prefix.
+                // Adding a new prefix only requires a new entry in PrefixToAgentType.
+                string? matchedPrefix = null;
+                foreach (var (prefix, type) in PrefixToAgentType)
                 {
-                    var parts = grainKey[AgentKeys.ConversationPrefix.Length..].Split(':');
-                    if (parts.Length >= 2)
-                        grainContext.ConversationId = parts[1];
-                    agentType = "Conversation";
+                    if (grainKey.StartsWith(prefix))
+                    {
+                        agentType = type;
+                        matchedPrefix = prefix;
+                        break;
+                    }
                 }
-                else if (grainKey.StartsWith(AgentKeys.DelegatePrefix))
+
+                // Hydrate ConversationId: prefer RequestContext, fall back to key parsing.
+                // RequestContext is set by the WebSocket handler and by SwarmAgentSpawner
+                // before outgoing grain calls. Key parsing handles cases where RequestContext
+                // is unavailable (e.g. grain-internal async processing).
+                var callerConversationId = RequestContext.Get(GrainCallContextKeys.ConversationId) as string;
+                if (callerConversationId is not null)
                 {
-                    var parts = grainKey[AgentKeys.DelegatePrefix.Length..].Split(':');
-                    if (parts.Length >= 2)
-                        grainContext.ConversationId = parts[1];
-                    agentType = "Delegate";
+                    grainContext.ConversationId = callerConversationId;
                 }
-                else if (grainKey.StartsWith(AgentKeys.DeepResearchPrefix))
+                else if (matchedPrefix is not null)
                 {
-                    var parts = grainKey[AgentKeys.DeepResearchPrefix.Length..].Split(':');
+                    // All keys follow {prefix}{userId}:{conversationId}[:{rest}]
+                    var parts = grainKey[matchedPrefix.Length..].Split(':');
                     if (parts.Length >= 2)
                         grainContext.ConversationId = parts[1];
-                    agentType = "DeepResearch";
-                }
-                else if (grainKey.StartsWith(AgentKeys.ResearchPrefix))
-                {
-                    var parts = grainKey[AgentKeys.ResearchPrefix.Length..].Split(':');
-                    if (parts.Length >= 2)
-                        grainContext.ConversationId = parts[1];
-                    agentType = "Research";
-                }
-                else if (grainKey.StartsWith(AgentKeys.CustomAgentPrefix))
-                {
-                    var parts = grainKey[AgentKeys.CustomAgentPrefix.Length..].Split(':');
-                    if (parts.Length >= 2)
-                        grainContext.ConversationId = parts[1];
-                    agentType = "Custom";
-                }
-                else if (grainKey.StartsWith(AgentKeys.TestPrefix))
-                {
-                    var parts = grainKey[AgentKeys.TestPrefix.Length..].Split(':');
-                    if (parts.Length >= 2)
-                        grainContext.ConversationId = parts[1];
-                    agentType = "Test";
                 }
             }
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
@@ -34,6 +35,11 @@ internal static class SwarmAgentSpawner
         {
             Label = label,
         });
+
+        // Propagate caller context so the sub-agent's interceptor can hydrate
+        // GrainContext and IIdentityContext without relying solely on key parsing.
+        RequestContext.Set(GrainCallContextKeys.UserId, identityContext.UserId.ToString());
+        RequestContext.Set(GrainCallContextKeys.ConversationId, context.ConversationId);
 
         // Get the agent grain and fire-and-forget the execution
         var grain = context.GrainFactory.GetGrain<IAgentGrain>(agentKey);
