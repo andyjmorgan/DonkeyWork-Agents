@@ -5,18 +5,24 @@ using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 public sealed class SwarmCustomAgentSpawnTools
 {
+    private readonly IAgentDefinitionService _agentDefinitionService;
+
     private static readonly JsonSerializerOptions ContractJsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters = { new JsonStringEnumConverter() },
         AllowOutOfOrderMetadataProperties = true,
     };
+
+    public SwarmCustomAgentSpawnTools(IAgentDefinitionService agentDefinitionService)
+    {
+        _agentDefinitionService = agentDefinitionService;
+    }
 
     [AgentTool("spawn_custom_agent")]
     [Description("Spawn a custom agent by its definition ID. The agent will execute the task using its configured model, tools, and system prompt.")]
@@ -29,15 +35,9 @@ public sealed class SwarmCustomAgentSpawnTools
         string label,
         GrainContext context,
         IIdentityContext identityContext,
-        IServiceProvider serviceProvider,
         CancellationToken ct)
     {
-        using var scope = serviceProvider.CreateScope();
-        var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
-        scopedIdentity?.SetIdentity(identityContext.UserId);
-
-        var agentDefinitionService = scope.ServiceProvider.GetRequiredService<IAgentDefinitionService>();
-        var definition = await agentDefinitionService.GetByIdAsync(agent_id, ct);
+        var definition = await _agentDefinitionService.GetByIdAsync(agent_id, ct);
 
         if (definition is null)
             return ToolResult.Error($"Agent definition '{agent_id}' not found.");
