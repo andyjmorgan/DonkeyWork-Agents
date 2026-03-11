@@ -1,21 +1,38 @@
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
+using DonkeyWork.Agents.Actors.Contracts.Models;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 internal static class AgentContractExtensions
 {
-    /// <summary>
-    /// Creates a copy of the contract with MCP servers and sub-agents inherited from the parent grain context.
-    /// </summary>
-    public static AgentContract WithParentContext(this AgentContract contract, GrainContext context)
+    private static readonly HashSet<string> ExcludedChildToolGroups = new(StringComparer.OrdinalIgnoreCase)
     {
-        if (context.McpServers is not { Length: > 0 } && context.SubAgents is not { Length: > 0 })
+        ToolGroupNames.SwarmDelegate,
+        ToolGroupNames.SwarmManagement,
+    };
+
+    /// <summary>
+    /// Creates a copy of the contract with MCP servers, sub-agents, and tool groups inherited from the parent grain context.
+    /// Tool groups are only inherited when the child contract has none defined; swarm tools are excluded from inheritance.
+    /// If <paramref name="toolGroupOverrides"/> is provided, those groups are used instead of inherited ones.
+    /// </summary>
+    public static AgentContract WithParentContext(this AgentContract contract, GrainContext context, string[]? toolGroupOverrides = null)
+    {
+        if (context.McpServers is not { Length: > 0 }
+            && context.SubAgents is not { Length: > 0 }
+            && context.ToolGroups is not { Length: > 0 })
             return contract;
+
+        var toolGroups = toolGroupOverrides is { Length: > 0 }
+            ? toolGroupOverrides
+            : contract.ToolGroups.Length > 0
+                ? contract.ToolGroups
+                : context.ToolGroups.Where(g => !ExcludedChildToolGroups.Contains(g)).ToArray();
 
         return new AgentContract
         {
             SystemPrompt = contract.SystemPrompt,
-            ToolGroups = contract.ToolGroups,
+            ToolGroups = toolGroups,
             MaxTokens = contract.MaxTokens,
             ThinkingBudgetTokens = contract.ThinkingBudgetTokens,
             Stream = contract.Stream,

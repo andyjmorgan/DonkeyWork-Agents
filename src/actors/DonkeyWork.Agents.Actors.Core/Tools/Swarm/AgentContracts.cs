@@ -77,7 +77,7 @@ public static class AgentContracts
         ## Guidelines
 
         - Read the task instructions carefully
-        - Use web search and fetch if needed to complete the task
+        - Use all available tools (sandbox, project management, web search, MCP servers) as needed to complete the task
         - Return a clear, structured response with your results
         - If the task is ambiguous, make reasonable assumptions and note them
         """;

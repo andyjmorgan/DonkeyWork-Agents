@@ -299,9 +299,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         SetupGrainContext();
         EnsureSandboxProvisioning(contract);
 
-        // Populate grain context with contract's MCP servers and sub-agents for swarm tool inheritance
+        // Populate grain context with contract's MCP servers, sub-agents, and tool groups for swarm tool inheritance
         _grainContext.McpServers = contract.McpServers;
         _grainContext.SubAgents = contract.SubAgents;
+        _grainContext.ToolGroups = contract.ToolGroups;
 
         var toolTypes = ResolveToolGroups(contract.ToolGroups);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;

@@ -13,12 +13,14 @@ public sealed class SwarmDelegateSpawnTools
         string task,
         [Description("A short label describing this delegated task")]
         string label,
+        [Description("Optional list of tool group names to give the delegate (e.g. [\"sandbox\", \"project_management\"]). If omitted, the delegate inherits the parent's tool groups.")]
+        string[]? tool_groups,
         GrainContext context,
         IIdentityContext identityContext,
         CancellationToken ct)
     {
         var contract = AgentContracts.Delegate()
-            .WithParentContext(context);
+            .WithParentContext(context, tool_groups);
         return await SwarmAgentSpawner.SpawnAsync(contract, task, label, context, identityContext, ct);
     }
 }

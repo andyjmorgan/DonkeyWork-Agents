@@ -187,9 +187,10 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             toolTypes.Length, effectiveToolGroups.Length);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
 
-        // Populate grain context with contract's MCP servers and sub-agents for swarm tool inheritance
+        // Populate grain context with contract's MCP servers, sub-agents, and tool groups for swarm tool inheritance
         _grainContext.McpServers = contract.McpServers;
         _grainContext.SubAgents = contract.SubAgents;
+        _grainContext.ToolGroups = effectiveToolGroups;
 
         // Initialize MCP tools (lazy, once per activation)
         // Only connect to MCP servers specified in the contract's McpServers list

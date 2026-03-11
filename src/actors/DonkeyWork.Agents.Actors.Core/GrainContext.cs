@@ -17,6 +17,7 @@ public class GrainContext
     public SandboxProvisioningHandle? SandboxHandle { get; set; }
     public McpServerReference[] McpServers { get; set; } = [];
     public SubAgentReference[] SubAgents { get; set; } = [];
+    public string[] ToolGroups { get; set; } = [];
 
     public void ReportProgress(string breadcrumb) => ProgressCallback?.Invoke(breadcrumb);
 }
