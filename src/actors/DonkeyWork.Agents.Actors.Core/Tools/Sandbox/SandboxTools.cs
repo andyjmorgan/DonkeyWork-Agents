@@ -1,15 +1,22 @@
 using System.ComponentModel;
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using Grpc.Core;
+using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 
 public sealed class SandboxTools
 {
-    private readonly SandboxManagerClient _client;
+    private const int MaxRetries = 2;
+    private static readonly TimeSpan[] RetryDelays = [TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1)];
 
-    public SandboxTools(SandboxManagerClient client)
+    private readonly SandboxManagerClient _client;
+    private readonly ILogger<SandboxTools> _logger;
+
+    public SandboxTools(SandboxManagerClient client, ILogger<SandboxTools> logger)
     {
         _client = client;
+        _logger = logger;
     }
 
     [AgentTool("sandbox_exec", DisplayName = "Sandbox Execute")]
@@ -50,23 +57,33 @@ public sealed class SandboxTools
 
         context.ReportProgress($"sandbox: {Truncate(command, 60)}");
 
-        try
+        for (var attempt = 0; ; attempt++)
         {
-            var result = await _client.ExecuteCommandAsync(sandboxId, command, timeout_seconds, ct);
-            var response = ToolResult.Json(new
+            try
             {
-                stdout = result.Stdout,
-                stderr = result.Stderr,
-                exitCode = result.ExitCode,
-                timedOut = result.TimedOut,
-            });
-            return result.ExitCode == 0 && !result.TimedOut
-                ? response
-                : ToolResult.Error(response.Content);
-        }
-        catch (Exception ex)
-        {
-            return ToolResult.Error($"Sandbox execution failed: {ex.Message}");
+                var result = await _client.ExecuteCommandAsync(sandboxId, command, timeout_seconds, ct);
+                var response = ToolResult.Json(new
+                {
+                    stdout = result.Stdout,
+                    stderr = result.Stderr,
+                    exitCode = result.ExitCode,
+                    timedOut = result.TimedOut,
+                });
+                return result.ExitCode == 0 && !result.TimedOut
+                    ? response
+                    : ToolResult.Error(response.Content);
+            }
+            catch (RpcException ex) when (attempt < MaxRetries && IsTransient(ex.StatusCode))
+            {
+                _logger.LogWarning(ex,
+                    "Transient gRPC error on sandbox_exec attempt {Attempt}/{MaxRetries} (status={Status}), retrying",
+                    attempt + 1, MaxRetries, ex.StatusCode);
+                await Task.Delay(RetryDelays[attempt], ct);
+            }
+            catch (Exception ex)
+            {
+                return ToolResult.Error($"Sandbox execution failed: {ex.Message}");
+            }
         }
     }
 
@@ -81,6 +98,9 @@ public sealed class SandboxTools
         }
         return sandboxId;
     }
+
+    private static bool IsTransient(StatusCode status) =>
+        status is StatusCode.Unavailable or StatusCode.Aborted or StatusCode.Internal;
 
     private static string Truncate(string text, int maxLength)
         => text.Length <= maxLength ? text : text[..maxLength] + "...";
