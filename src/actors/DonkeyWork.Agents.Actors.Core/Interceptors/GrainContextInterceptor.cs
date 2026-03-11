@@ -17,7 +17,7 @@ public sealed class GrainContextInterceptor : IIncomingGrainCallFilter
         {
             [AgentKeys.ConversationPrefix] = "Conversation",
             [AgentKeys.DelegatePrefix] = "Delegate",
-            [AgentKeys.CustomAgentPrefix] = "Custom",
+            [AgentKeys.AgentPrefix] = "Agent",
             [AgentKeys.TestPrefix] = "Test",
         }.ToFrozenDictionary();
 

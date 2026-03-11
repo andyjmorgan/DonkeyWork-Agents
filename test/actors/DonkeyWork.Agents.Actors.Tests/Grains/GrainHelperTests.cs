@@ -186,7 +186,7 @@ public class GrainHelperTests
     public void ResolveToolGroups_WithKnownGroups_ReturnsTypes()
     {
         // Act
-        var types = SharedGrainHelpers.ResolveToolGroups(["swarm_delegate", "swarm_management"]);
+        var types = SharedGrainHelpers.ResolveToolGroups([ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement]);
 
         // Assert
         Assert.Equal(2, types.Length);
@@ -216,7 +216,7 @@ public class GrainHelperTests
     public void ResolveToolGroups_WithMixed_OnlyReturnsKnown()
     {
         // Act
-        var types = SharedGrainHelpers.ResolveToolGroups(["swarm_delegate", "nonexistent", "swarm_management"]);
+        var types = SharedGrainHelpers.ResolveToolGroups([ToolGroupNames.SwarmDelegate, "nonexistent", ToolGroupNames.SwarmManagement]);
 
         // Assert
         Assert.Equal(2, types.Length);
@@ -299,8 +299,8 @@ internal static class SharedGrainHelpers
 {
     private static readonly Dictionary<string, Type> ToolGroupMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["swarm_delegate"] = typeof(DonkeyWork.Agents.Actors.Core.Tools.Swarm.SwarmDelegateSpawnTools),
-        ["swarm_management"] = typeof(DonkeyWork.Agents.Actors.Core.Tools.Swarm.SwarmAgentManagementTools),
+        [ToolGroupNames.SwarmDelegate] = typeof(DonkeyWork.Agents.Actors.Core.Tools.Swarm.SwarmDelegateSpawnTools),
+        [ToolGroupNames.SwarmManagement] = typeof(DonkeyWork.Agents.Actors.Core.Tools.Swarm.SwarmAgentManagementTools),
     };
 
     public static Type[] ResolveToolGroups(string[] toolGroups)

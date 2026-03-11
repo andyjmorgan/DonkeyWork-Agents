@@ -100,7 +100,7 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
         SetCallContext();
         // If the key doesn't match a known agent prefix, treat it as a self-cancel
         var resolvedKey = key.StartsWith(AgentKeys.DelegatePrefix)
-                          || key.StartsWith(AgentKeys.CustomAgentPrefix)
+                          || key.StartsWith(AgentKeys.AgentPrefix)
                           || key.StartsWith(AgentKeys.ConversationPrefix)
                           || key.StartsWith(AgentKeys.TestPrefix)
             ? key

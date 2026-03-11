@@ -70,16 +70,16 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private Type[]? _effectiveToolTypes;
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
-        ["swarm_delegate"] = [typeof(SwarmDelegateSpawnTools)],
-        ["swarm_management"] = [typeof(SwarmAgentManagementTools)],
-        ["project_management"] = [
+        [ToolGroupNames.SwarmDelegate] = [typeof(SwarmDelegateSpawnTools)],
+        [ToolGroupNames.SwarmManagement] = [typeof(SwarmAgentManagementTools)],
+        [ToolGroupNames.ProjectManagement] = [
             typeof(ProjectAgentTools),
             typeof(MilestoneAgentTools),
             typeof(TaskAgentTools),
             typeof(NoteAgentTools),
             typeof(ResearchAgentTools),
         ],
-        ["sandbox"] = [typeof(SandboxTools)],
+        [ToolGroupNames.Sandbox] = [typeof(SandboxTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public ConversationGrain(
@@ -328,7 +328,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                     ct);
 
                 // Auto-include sandbox tools when MCP servers are connected
-                if (!contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase))
+                if (!contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
                 {
                     _hasMcpSandbox = true;
                     _sandboxHandle = new SandboxProvisioningHandle();
@@ -345,7 +345,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         }
 
         // Include sandbox tools if MCP servers triggered auto-sandbox
-        var effectiveToolTypes = _hasMcpSandbox && !contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
+        var effectiveToolTypes = _hasMcpSandbox && !contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
             ? [..toolTypes, typeof(SandboxTools)]
             : toolTypes;
 
@@ -395,7 +395,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
         // Append sandbox documentation when sandbox tools are in scope
         var hasSandbox = contract.EnableSandbox
-                         || contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
+                         || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
                          || _hasMcpSandbox;
         var systemPrompt = hasSandbox
             ? combinedPrompt + SandboxTools.SystemPromptFragment
@@ -404,7 +404,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         // Append custom agent catalog when Navi-connected agents are available
         if (_naviAgentDefinitions is { Count: > 0 })
         {
-            var catalog = "\n\n## Custom Agents\n\nAvailable via `spawn_agent` (use agent name):\n";
+            var catalog = $"\n\n## Custom Agents\n\nAvailable via `{ToolNames.SpawnAgent}` (use agent name):\n";
             foreach (var agent in _naviAgentDefinitions)
             {
                 var desc = !string.IsNullOrEmpty(agent.Description) ? agent.Description : "No description";
@@ -600,8 +600,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         // Determine agent type from the key prefix
         var agentType = agentKey switch
         {
-            _ when agentKey.StartsWith(AgentKeys.DelegatePrefix) => "delegate",
-            _ when agentKey.StartsWith(AgentKeys.CustomAgentPrefix) => "custom",
+            _ when agentKey.StartsWith(AgentKeys.DelegatePrefix) => AgentTypes.Delegate,
+            _ when agentKey.StartsWith(AgentKeys.AgentPrefix) => AgentTypes.Agent,
             _ => "unknown",
         };
 
@@ -768,7 +768,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private void EnsureSandboxProvisioning(AgentContract contract)
     {
         var hasSandbox = contract.EnableSandbox
-                         || contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase);
+                         || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase);
         if (!hasSandbox) return;
 
         if (_sandboxHandle is null)

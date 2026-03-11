@@ -5,23 +5,23 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 public static class AgentContracts
 {
-    [AgentContractDefinition("conversation")]
+    [AgentContractDefinition(AgentTypes.Conversation)]
     public static AgentContract Conversation() => new()
     {
         SystemPrompt = [ConversationSystemPrompt],
-        ToolGroups = ["swarm_delegate", "swarm_management", "project_management", "sandbox"],
+        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 5 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },
         MaxTokens = 20_000,
         ThinkingBudgetTokens = 10_000,
-        AgentType = "conversation",
+        AgentType = AgentTypes.Conversation,
         KeyPrefix = AgentKeys.ConversationPrefix,
         Lifecycle = AgentLifecycle.Linger,
         LingerSeconds = 1800,
         PersistMessages = true,
     };
 
-    [AgentContractDefinition("delegate")]
+    [AgentContractDefinition(AgentTypes.Delegate)]
     public static AgentContract Delegate() => new()
     {
         SystemPrompt = [DelegateSystemPrompt],
@@ -30,7 +30,7 @@ public static class AgentContracts
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },
         MaxTokens = 16_000,
         ThinkingBudgetTokens = 8_000,
-        AgentType = "delegate",
+        AgentType = AgentTypes.Delegate,
         KeyPrefix = AgentKeys.DelegatePrefix,
         Lifecycle = AgentLifecycle.Task,
         TimeoutSeconds = 300,

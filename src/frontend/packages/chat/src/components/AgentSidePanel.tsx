@@ -7,7 +7,7 @@ import { extractAgentTree, countAll, countActive } from "./agentTreeUtils";
 import { Check, ChevronRight, PanelRightClose, Ban, AlertTriangle } from "lucide-react";
 
 const AGENT_COLORS: Record<string, { bg: string; border: string; text: string; dotBg: string }> = {
-  custom: { bg: "bg-blue-500/10", border: "border-blue-500/25", text: "text-blue-400", dotBg: "bg-blue-400" },
+  agent: { bg: "bg-blue-500/10", border: "border-blue-500/25", text: "text-blue-400", dotBg: "bg-blue-400" },
   websearch: { bg: "bg-cyan-500/10", border: "border-cyan-500/25", text: "text-cyan-400", dotBg: "bg-cyan-400" },
 };
 

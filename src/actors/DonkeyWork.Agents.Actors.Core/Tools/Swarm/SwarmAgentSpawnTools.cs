@@ -24,7 +24,7 @@ public sealed class SwarmAgentSpawnTools
         _agentDefinitionService = agentDefinitionService;
     }
 
-    [AgentTool("spawn_agent")]
+    [AgentTool(ToolNames.SpawnAgent)]
     [Description("Spawn an agent by name. The agent will execute the task using its configured model, tools, and system prompt.")]
     public async Task<ToolResult> SpawnAgent(
         [Description("The name of the agent to spawn")]
@@ -68,8 +68,8 @@ public sealed class SwarmAgentSpawnTools
             PersistMessages = contract.PersistMessages,
             Lifecycle = AgentLifecycle.Task,
             LingerSeconds = contract.LingerSeconds,
-            AgentType = "custom",
-            KeyPrefix = AgentKeys.CustomAgentPrefix,
+            AgentType = AgentTypes.Agent,
+            KeyPrefix = AgentKeys.AgentPrefix,
             TimeoutSeconds = contract.TimeoutSeconds,
             McpServers = contract.McpServers,
             EnableSandbox = contract.EnableSandbox,

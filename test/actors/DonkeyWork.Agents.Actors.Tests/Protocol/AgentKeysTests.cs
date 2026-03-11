@@ -49,13 +49,13 @@ public class AgentKeysTests
     }
 
     [Fact]
-    public void Create_WithCustomAgentPrefix_IncludesAllComponents()
+    public void Create_WithAgentPrefix_IncludesAllComponents()
     {
         // Act
-        var key = AgentKeys.Create(AgentKeys.CustomAgentPrefix, TestUserId, TestConversationId, TestTaskId);
+        var key = AgentKeys.Create(AgentKeys.AgentPrefix, TestUserId, TestConversationId, TestTaskId);
 
         // Assert
-        Assert.StartsWith("custom:", key);
+        Assert.StartsWith("agent:", key);
         Assert.Contains(TestUserId.ToString(), key);
         Assert.Contains(TestConversationId.ToString(), key);
         Assert.Contains(TestTaskId.ToString(), key);
