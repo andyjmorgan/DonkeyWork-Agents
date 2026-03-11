@@ -66,7 +66,7 @@ public static class ConversationWebSocketEndpoints
         await grain.SubscribeAsync(observerRef);
 
         rpc.AddLocalRpcTarget(
-            new ConversationRpcTarget(grain, observerRef, identityContext.UserId.ToString()),
+            new ConversationRpcTarget(grain, observerRef, identityContext.UserId.ToString(), grainKey),
             new JsonRpcTargetOptions { MethodNameTransform = CommonMethodNameTransforms.CamelCase });
 
         rpc.StartListening();
@@ -74,7 +74,7 @@ public static class ConversationWebSocketEndpoints
     }
 }
 
-internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResponseObserver observer, string userId)
+internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResponseObserver observer, string userId, string grainKey)
 {
     /// <summary>
     /// Client request: { jsonrpc: "2.0", id: N, method: "message", params: { text: "..." } }
@@ -91,11 +91,21 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
 
     /// <summary>
     /// Client notification: { jsonrpc: "2.0", method: "cancel", params: { key: "...", scope?: "active" } }
+    /// The frontend may send a key like "swarm:{conversationId}" for self-cancel.
+    /// Resolve any non-prefixed key to the actual grain key so CancelByKeyAsync can match.
     /// </summary>
     public Task Cancel(string key, string? scope = null)
     {
         SetCallContext();
-        return grain.CancelByKeyAsync(key, scope);
+        // If the key doesn't match a known agent prefix, treat it as a self-cancel
+        var resolvedKey = key.StartsWith(AgentKeys.ResearchPrefix)
+                          || key.StartsWith(AgentKeys.DeepResearchPrefix)
+                          || key.StartsWith(AgentKeys.DelegatePrefix)
+                          || key.StartsWith(AgentKeys.ConversationPrefix)
+                          || key.StartsWith(AgentKeys.TestPrefix)
+            ? key
+            : grainKey;
+        return grain.CancelByKeyAsync(resolvedKey, scope);
     }
 
     /// <summary>
