@@ -11,7 +11,35 @@ import { AgentDetailModal } from "./AgentDetailModal";
 import { AgentSidePanel } from "./AgentSidePanel";
 import { McpSidePanel } from "./McpSidePanel";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "./agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2 } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check } from "lucide-react";
+
+function extractTextFromBoxes(boxes: ContentBox[]): string {
+  return boxes
+    .filter((box) => box.type === "text")
+    .map((box) => (box as { text: string }).text)
+    .join("\n\n");
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+      aria-label="Copy message"
+      type="button"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
 
 function MessageBubble({
   message,
@@ -47,10 +75,15 @@ function MessageBubble({
           <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/10">
             <span className="whitespace-pre-wrap">{message.content}</span>
           </div>
+          <div className="flex justify-end mt-1">
+            <CopyButton text={message.content} />
+          </div>
         </div>
       </div>
     );
   }
+
+  const textContent = extractTextFromBoxes(message.boxes);
 
   return (
     <div className="px-6 py-1.5">
@@ -66,6 +99,11 @@ function MessageBubble({
           <span className="ml-1.5 mt-1 block"><PulseDots color="bg-cyan-400" size="w-1 h-1" /></span>
         )}
       </div>
+      {textContent && !isCurrentTurn && (
+        <div className="flex mt-1">
+          <CopyButton text={textContent} />
+        </div>
+      )}
       <AgentCardGrid
         boxes={message.boxes}
         onAgentClick={onAgentClick}

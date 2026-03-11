@@ -31,15 +31,6 @@ interface NavGroup {
 
 const navigationGroups: NavGroup[] = [
   {
-    name: 'Build',
-    icon: Bot,
-    items: [
-      { name: 'All Orchestrations', href: '/orchestrations', icon: List, iconColor: 'text-cyan-500' },
-      { name: 'Agent Definitions', href: '/agent-definitions', icon: Brain, iconColor: 'text-blue-500' },
-      { name: 'Executions', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
-    ],
-  },
-  {
     name: 'Workspace',
     icon: FolderKanban,
     items: [
@@ -48,6 +39,15 @@ const navigationGroups: NavGroup[] = [
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
       { name: 'Research', href: '/research', icon: FlaskConical, iconColor: 'text-cyan-500' },
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
+    ],
+  },
+  {
+    name: 'Build',
+    icon: Bot,
+    items: [
+      { name: 'All Orchestrations', href: '/orchestrations', icon: List, iconColor: 'text-cyan-500' },
+      { name: 'Agent Definitions', href: '/agent-definitions', icon: Brain, iconColor: 'text-blue-500' },
+      { name: 'Executions', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
     ],
   },
   {

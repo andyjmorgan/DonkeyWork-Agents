@@ -83,7 +83,7 @@ export default function App() {
 
           {/* Regular pages with layout */}
           <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
-            <Route path="/" element={<Navigate to="/orchestrations" replace />} />
+            <Route path="/" element={<Navigate to="/workspace" replace />} />
             <Route path="/orchestrations" element={<OrchestrationsPage />} />
             <Route path="/agent-definitions" element={<AgentDefinitionsPage />} />
             <Route path="/chat" element={<Navigate to="/agent-chat" replace />} />
