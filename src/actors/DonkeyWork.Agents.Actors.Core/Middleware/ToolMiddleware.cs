@@ -9,6 +9,7 @@ namespace DonkeyWork.Agents.Actors.Core.Middleware;
 internal sealed class ToolMiddleware : IModelMiddleware
 {
     private const int MaxIterations = 25;
+    private const int MaxToolResultCharacters = 20_000;
     private readonly ILogger<ToolMiddleware> _logger;
 
     public ToolMiddleware(ILogger<ToolMiddleware> logger) => _logger = logger;
@@ -111,6 +112,18 @@ internal sealed class ToolMiddleware : IModelMiddleware
             result = new ToolExecutionResult(ex.Message, IsError: true);
         }
         sw.Stop();
+
+        // Guard against oversized tool results that would blow the context window
+        if (result.Content.Length > MaxToolResultCharacters)
+        {
+            _logger.LogWarning(
+                "ToolMiddleware tool {Tool} result too large ({Length} chars), replacing with error",
+                toolCall.ToolName, result.Content.Length);
+            result = new ToolExecutionResult(
+                $"Tool result too large ({result.Content.Length:N0} characters, limit is {MaxToolResultCharacters:N0}). " +
+                "Try narrowing your request to return less data.",
+                IsError: true);
+        }
 
         _logger.LogInformation("ToolMiddleware tool {Tool} completed in {Duration}ms, success={Success}",
             toolCall.ToolName, sw.ElapsedMilliseconds, !result.IsError);
