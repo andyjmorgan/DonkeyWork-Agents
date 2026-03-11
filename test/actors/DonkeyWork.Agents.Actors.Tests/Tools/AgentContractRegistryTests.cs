@@ -19,8 +19,6 @@ public class AgentContractRegistryTests
         var registry = new AgentContractRegistry(_logger.Object, typeof(AgentContracts).Assembly);
 
         // Assert
-        Assert.True(registry.HasContract("research"));
-        Assert.True(registry.HasContract("deep_research"));
         Assert.True(registry.HasContract("conversation"));
         Assert.True(registry.HasContract("delegate"));
     }
@@ -53,7 +51,7 @@ public class AgentContractRegistryTests
         var registry = new AgentContractRegistry(_logger.Object, typeof(AgentContracts).Assembly);
 
         // Act & Assert
-        Assert.True(registry.HasContract("research"));
+        Assert.True(registry.HasContract("conversation"));
     }
 
     [Fact]
@@ -73,7 +71,7 @@ public class AgentContractRegistryTests
         var registry = new AgentContractRegistry(_logger.Object, typeof(AgentContracts).Assembly);
 
         // Act & Assert
-        Assert.True(registry.HasContract("RESEARCH"));
+        Assert.True(registry.HasContract("CONVERSATION"));
     }
 
     #endregion
@@ -87,11 +85,11 @@ public class AgentContractRegistryTests
         var registry = new AgentContractRegistry(_logger.Object, typeof(AgentContracts).Assembly);
 
         // Act
-        var descriptor = registry.GetContract("research");
+        var descriptor = registry.GetContract("conversation");
 
         // Assert
         Assert.NotNull(descriptor);
-        Assert.Equal("research", descriptor.Name);
+        Assert.Equal("conversation", descriptor.Name);
         Assert.NotNull(descriptor.Contract);
     }
 
@@ -109,24 +107,6 @@ public class AgentContractRegistryTests
     }
 
     [Fact]
-    public void GetContract_ResearchContract_HasCorrectProperties()
-    {
-        // Arrange
-        var registry = new AgentContractRegistry(_logger.Object, typeof(AgentContracts).Assembly);
-
-        // Act
-        var descriptor = registry.GetContract("research");
-
-        // Assert
-        Assert.NotNull(descriptor);
-        var contract = descriptor.Contract;
-        Assert.Contains(contract.SystemPrompt, s => s.Contains("research agent"));
-        Assert.NotNull(contract.WebSearch);
-        Assert.True(contract.WebSearch.Enabled);
-        Assert.Equal("research", contract.AgentType);
-    }
-
-    [Fact]
     public void GetContract_ConversationContract_HasSwarmToolGroups()
     {
         // Arrange
@@ -138,7 +118,6 @@ public class AgentContractRegistryTests
         // Assert
         Assert.NotNull(descriptor);
         var contract = descriptor.Contract;
-        Assert.Contains("swarm_spawn", contract.ToolGroups);
         Assert.Contains("swarm_management", contract.ToolGroups);
     }
 
@@ -147,7 +126,7 @@ public class AgentContractRegistryTests
     #region GetAllContracts Tests
 
     [Fact]
-    public void GetAllContracts_ReturnsFourContracts()
+    public void GetAllContracts_ReturnsTwoContracts()
     {
         // Arrange
         var registry = new AgentContractRegistry(_logger.Object, typeof(AgentContracts).Assembly);
@@ -156,9 +135,7 @@ public class AgentContractRegistryTests
         var contracts = registry.GetAllContracts();
 
         // Assert
-        Assert.True(contracts.Count >= 4);
-        Assert.Contains(contracts, c => c.Name == "research");
-        Assert.Contains(contracts, c => c.Name == "deep_research");
+        Assert.True(contracts.Count >= 2);
         Assert.Contains(contracts, c => c.Name == "conversation");
         Assert.Contains(contracts, c => c.Name == "delegate");
     }

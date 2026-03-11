@@ -55,7 +55,6 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
-        ["swarm_spawn"] = [typeof(SwarmSpawnTools)],
         ["swarm_delegate"] = [typeof(SwarmDelegateSpawnTools)],
         ["swarm_management"] = [typeof(SwarmAgentManagementTools)],
         ["project_management"] = [
@@ -65,7 +64,6 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             typeof(NoteAgentTools),
             typeof(ResearchAgentTools),
         ],
-        ["swarm_custom_agent"] = [typeof(SwarmCustomAgentSpawnTools)],
         ["sandbox"] = [typeof(SandboxTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
@@ -240,6 +238,18 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         var effectiveToolTypes = _hasMcpSandbox && !effectiveToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
             ? [..toolTypes, typeof(SandboxTools)]
             : toolTypes;
+
+        // Auto-include agent spawn tools when the contract has sub-agents configured
+        if (contract.SubAgents is { Length: > 0 }
+            && !effectiveToolTypes.Contains(typeof(SwarmAgentSpawnTools)))
+        {
+            effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentSpawnTools)];
+
+            // Also include swarm management tools so the agent can wait for / cancel spawned agents
+            if (!effectiveToolTypes.Contains(typeof(SwarmAgentManagementTools)))
+                effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
+        }
+
         var localTools = effectiveToolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(effectiveToolTypes) : null;
 
         // Combine local + MCP tool definitions

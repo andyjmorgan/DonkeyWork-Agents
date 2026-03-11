@@ -560,7 +560,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
 
     // Auto-include swarm tools when sub-agents are connected
     if (subAgentRefs.length > 0) {
-      const swarmTools = ['swarm_spawn', 'swarm_delegate', 'swarm_management']
+      const swarmTools = ['swarm_delegate', 'swarm_management']
       for (const tool of swarmTools) {
         if (!allToolIds.includes(tool)) allToolIds.push(tool)
       }

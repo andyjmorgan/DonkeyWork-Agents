@@ -3,8 +3,7 @@ import type { ContentBox, AgentCompleteReason } from "@donkeywork/api-client";
 import { Check, X, Ban, AlertTriangle } from "lucide-react";
 
 const AGENT_COLORS: Record<string, { bg: string; border: string; text: string; dotBg: string; glow: string }> = {
-  research: { bg: "bg-blue-500/10", border: "border-blue-500/25", text: "text-blue-400", dotBg: "bg-blue-400", glow: "hover:shadow-blue-500/10" },
-  deepresearch: { bg: "bg-purple-500/10", border: "border-purple-500/25", text: "text-purple-400", dotBg: "bg-purple-400", glow: "hover:shadow-purple-500/10" },
+  custom: { bg: "bg-blue-500/10", border: "border-blue-500/25", text: "text-blue-400", dotBg: "bg-blue-400", glow: "hover:shadow-blue-500/10" },
   websearch: { bg: "bg-cyan-500/10", border: "border-cyan-500/25", text: "text-cyan-400", dotBg: "bg-cyan-400", glow: "hover:shadow-cyan-500/10" },
 };
 

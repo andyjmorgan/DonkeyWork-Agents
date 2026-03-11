@@ -8,7 +8,7 @@ using DonkeyWork.Agents.Identity.Contracts.Services;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
-public sealed class SwarmCustomAgentSpawnTools
+public sealed class SwarmAgentSpawnTools
 {
     private readonly IAgentDefinitionService _agentDefinitionService;
 
@@ -19,16 +19,16 @@ public sealed class SwarmCustomAgentSpawnTools
         AllowOutOfOrderMetadataProperties = true,
     };
 
-    public SwarmCustomAgentSpawnTools(IAgentDefinitionService agentDefinitionService)
+    public SwarmAgentSpawnTools(IAgentDefinitionService agentDefinitionService)
     {
         _agentDefinitionService = agentDefinitionService;
     }
 
-    [AgentTool("spawn_custom_agent")]
-    [Description("Spawn a custom agent by its definition ID. The agent will execute the task using its configured model, tools, and system prompt.")]
-    public async Task<ToolResult> SpawnCustomAgent(
-        [Description("The unique ID of the agent definition to spawn")]
-        Guid agent_id,
+    [AgentTool("spawn_agent")]
+    [Description("Spawn an agent by name. The agent will execute the task using its configured model, tools, and system prompt.")]
+    public async Task<ToolResult> SpawnAgent(
+        [Description("The name of the agent to spawn")]
+        string agent_name,
         [Description("Detailed instructions for the task the agent should perform")]
         string task,
         [Description("A short label describing this agent's task")]
@@ -37,10 +37,12 @@ public sealed class SwarmCustomAgentSpawnTools
         IIdentityContext identityContext,
         CancellationToken ct)
     {
-        var definition = await _agentDefinitionService.GetByIdAsync(agent_id, ct);
+        var naviAgents = await _agentDefinitionService.GetNaviConnectedAsync(ct);
+        var definition = naviAgents.FirstOrDefault(a =>
+            string.Equals(a.Name, agent_name, StringComparison.OrdinalIgnoreCase));
 
         if (definition is null)
-            return ToolResult.Error($"Agent definition '{agent_id}' not found.");
+            return ToolResult.Error($"Agent '{agent_name}' not found. Available agents: {string.Join(", ", naviAgents.Select(a => a.Name))}");
 
         AgentContract contract;
         try
@@ -53,7 +55,7 @@ public sealed class SwarmCustomAgentSpawnTools
             return ToolResult.Error($"Failed to parse agent contract: {ex.Message}");
         }
 
-        // Override key fields for custom agent spawning
+        // Override key fields for agent spawning
         contract = new AgentContract
         {
             SystemPrompt = contract.SystemPrompt,

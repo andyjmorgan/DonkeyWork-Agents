@@ -3,8 +3,6 @@ namespace DonkeyWork.Agents.Actors.Contracts.Models;
 public static class AgentKeys
 {
     public const string ConversationPrefix = "conv:";
-    public const string ResearchPrefix = "research:";
-    public const string DeepResearchPrefix = "deepresearch:";
     public const string DelegatePrefix = "delegate:";
     public const string CustomAgentPrefix = "custom:";
     public const string TestPrefix = "test:";
@@ -24,7 +22,7 @@ public static class AgentKeys
     /// </summary>
     public static Guid ExtractUserId(string grainKey)
     {
-        var prefixes = new[] { ConversationPrefix, CustomAgentPrefix, DeepResearchPrefix, DelegatePrefix, ResearchPrefix, TestPrefix };
+        var prefixes = new[] { ConversationPrefix, CustomAgentPrefix, DelegatePrefix, TestPrefix };
         foreach (var prefix in prefixes)
         {
             if (!grainKey.StartsWith(prefix))

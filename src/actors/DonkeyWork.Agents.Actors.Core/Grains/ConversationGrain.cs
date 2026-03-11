@@ -70,7 +70,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private Type[]? _effectiveToolTypes;
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
-        ["swarm_spawn"] = [typeof(SwarmSpawnTools)],
         ["swarm_delegate"] = [typeof(SwarmDelegateSpawnTools)],
         ["swarm_management"] = [typeof(SwarmAgentManagementTools)],
         ["project_management"] = [
@@ -80,7 +79,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             typeof(NoteAgentTools),
             typeof(ResearchAgentTools),
         ],
-        ["swarm_custom_agent"] = [typeof(SwarmCustomAgentSpawnTools)],
         ["sandbox"] = [typeof(SandboxTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
@@ -353,9 +351,9 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
         // Auto-include custom agent spawn tools when Navi-connected agents exist
         if (_naviAgentDefinitions.Count > 0
-            && !effectiveToolTypes.Contains(typeof(SwarmCustomAgentSpawnTools)))
+            && !effectiveToolTypes.Contains(typeof(SwarmAgentSpawnTools)))
         {
-            effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmCustomAgentSpawnTools)];
+            effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentSpawnTools)];
 
             // Also include swarm management tools so the LLM can wait for / cancel custom agents
             if (!effectiveToolTypes.Contains(typeof(SwarmAgentManagementTools)))
@@ -406,7 +404,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         // Append custom agent catalog when Navi-connected agents are available
         if (_naviAgentDefinitions is { Count: > 0 })
         {
-            var catalog = "\n\n## Custom Agents\n\nAvailable via `spawn_custom_agent`:\n";
+            var catalog = "\n\n## Custom Agents\n\nAvailable via `spawn_agent` (use agent name):\n";
             foreach (var agent in _naviAgentDefinitions)
             {
                 var desc = !string.IsNullOrEmpty(agent.Description) ? agent.Description : "No description";
@@ -602,8 +600,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         // Determine agent type from the key prefix
         var agentType = agentKey switch
         {
-            _ when agentKey.StartsWith(AgentKeys.ResearchPrefix) => "research",
-            _ when agentKey.StartsWith(AgentKeys.DeepResearchPrefix) => "deep_research",
             _ when agentKey.StartsWith(AgentKeys.DelegatePrefix) => "delegate",
             _ when agentKey.StartsWith(AgentKeys.CustomAgentPrefix) => "custom",
             _ => "unknown",
@@ -714,14 +710,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 ? string.Join("\n", msg.Result.Parts.OfType<AgentTextPart>().Select(p => p.Text))
                 : "No details available";
             return $"[Agent Notification] Agent '{msg.Label}' (key: {msg.AgentKey}) FAILED:\n{detail}";
-        }
-
-        // Deep research agents persist their own results — no need to wait for them
-        if (msg.AgentKey.StartsWith(AgentKeys.DeepResearchPrefix))
-        {
-            return $"[Agent Notification] Deep research agent '{msg.Label}' (key: {msg.AgentKey}) has completed. " +
-                   $"Results have been saved to the research store. You do NOT need to call wait_for_agent — " +
-                   $"inform the user their research is ready in the research store.";
         }
 
         return $"[Agent Notification] Agent '{msg.Label}' (key: {msg.AgentKey}) has completed successfully. " +

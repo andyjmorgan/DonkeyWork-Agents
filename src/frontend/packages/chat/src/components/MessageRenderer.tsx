@@ -10,8 +10,7 @@ import type {
 import type { ChatMessage, ContentBox, AgentGroupBox } from "@donkeywork/api-client";
 
 const SPAWN_TOOL_NAMES = new Set([
-  "spawn_researcher",
-  "spawn_deep_researcher",
+  "spawn_agent",
   "spawn_delegate",
 ]);
 

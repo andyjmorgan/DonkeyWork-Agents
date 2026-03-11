@@ -6,7 +6,6 @@ interface ToolGroupPropertiesProps {
 }
 
 const toolDescriptions: Record<string, string> = {
-  swarm_spawn: 'Spawn new agents in a swarm',
   swarm_delegate: 'Delegate tasks to other agents',
   swarm_management: 'Manage swarm lifecycle',
   project_management: 'Tasks, notes, milestones',

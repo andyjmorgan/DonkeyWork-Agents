@@ -36,29 +36,6 @@ public class AgentKeysTests
     #region Create Tests
 
     [Fact]
-    public void Create_WithResearchPrefix_IncludesAllComponents()
-    {
-        // Act
-        var key = AgentKeys.Create(AgentKeys.ResearchPrefix, TestUserId, TestConversationId, TestTaskId);
-
-        // Assert
-        Assert.Equal("research:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222:33333333-3333-3333-3333-333333333333", key);
-    }
-
-    [Fact]
-    public void Create_WithDeepResearchPrefix_IncludesAllComponents()
-    {
-        // Act
-        var key = AgentKeys.Create(AgentKeys.DeepResearchPrefix, TestUserId, TestConversationId, TestTaskId);
-
-        // Assert
-        Assert.StartsWith("deepresearch:", key);
-        Assert.Contains(TestUserId.ToString(), key);
-        Assert.Contains(TestConversationId.ToString(), key);
-        Assert.Contains(TestTaskId.ToString(), key);
-    }
-
-    [Fact]
     public void Create_WithDelegatePrefix_IncludesAllComponents()
     {
         // Act
@@ -66,6 +43,22 @@ public class AgentKeysTests
 
         // Assert
         Assert.StartsWith("delegate:", key);
+        Assert.Contains(TestUserId.ToString(), key);
+        Assert.Contains(TestConversationId.ToString(), key);
+        Assert.Contains(TestTaskId.ToString(), key);
+    }
+
+    [Fact]
+    public void Create_WithCustomAgentPrefix_IncludesAllComponents()
+    {
+        // Act
+        var key = AgentKeys.Create(AgentKeys.CustomAgentPrefix, TestUserId, TestConversationId, TestTaskId);
+
+        // Assert
+        Assert.StartsWith("custom:", key);
+        Assert.Contains(TestUserId.ToString(), key);
+        Assert.Contains(TestConversationId.ToString(), key);
+        Assert.Contains(TestTaskId.ToString(), key);
     }
 
     #endregion
