@@ -225,7 +225,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                     ct);
 
                 // Auto-include sandbox tools when MCP servers are connected
-                if (!contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase))
+                if (!effectiveToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase))
                 {
                     _hasMcpSandbox = true;
                     _sandboxHandle = new SandboxProvisioningHandle();
@@ -236,7 +236,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         }
 
         // Include sandbox tools if MCP servers triggered auto-sandbox
-        var effectiveToolTypes = _hasMcpSandbox && !contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
+        var effectiveToolTypes = _hasMcpSandbox && !effectiveToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
             ? [..toolTypes, typeof(SandboxTools)]
             : toolTypes;
         var localTools = effectiveToolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(effectiveToolTypes) : null;
