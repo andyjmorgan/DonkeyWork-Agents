@@ -67,6 +67,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private bool _hasMcpSandbox;
     private SandboxProvisioningHandle? _sandboxHandle;
     private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
+    private Type[]? _effectiveToolTypes;
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
         ["swarm_spawn"] = [typeof(SwarmSpawnTools)],
@@ -361,6 +362,9 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
         }
 
+        // Store effective tool types for execution scope (includes dynamically added tools)
+        _effectiveToolTypes = effectiveToolTypes;
+
         var localTools = effectiveToolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(effectiveToolTypes) : null;
 
         // Combine local + MCP tool definitions
@@ -479,8 +483,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     {
         if (_toolRegistry.HasTool(toolName))
         {
-            var toolTypes = _contract is not null ? ResolveToolGroups(_contract.ToolGroups) : null;
-            var result = await _toolRegistry.ExecuteAsync(toolName, arguments, _grainContext, _identityContext, ServiceProvider, ct, toolTypes);
+            var result = await _toolRegistry.ExecuteAsync(toolName, arguments, _grainContext, _identityContext, ServiceProvider, ct, _effectiveToolTypes);
             return new ToolExecutionResult(result.Content, result.IsError);
         }
 
