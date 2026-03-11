@@ -65,6 +65,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             typeof(NoteAgentTools),
             typeof(ResearchAgentTools),
         ],
+        ["swarm_custom_agent"] = [typeof(SwarmCustomAgentSpawnTools)],
         ["sandbox"] = [typeof(SandboxTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 

@@ -10,4 +10,5 @@ public class AgentDefinitionEntity : BaseEntity
     public JsonDocument Contract { get; set; } = JsonDocument.Parse("{}");
     public JsonDocument? ReactFlowData { get; set; }
     public JsonDocument? NodeConfigurations { get; set; }
+    public bool ConnectToNavi { get; set; }
 }

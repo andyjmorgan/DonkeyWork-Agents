@@ -6,6 +6,7 @@ public static class AgentKeys
     public const string ResearchPrefix = "research:";
     public const string DeepResearchPrefix = "deepresearch:";
     public const string DelegatePrefix = "delegate:";
+    public const string CustomAgentPrefix = "custom:";
     public const string TestPrefix = "test:";
 
     public static string Conversation(Guid userId, Guid conversationId) =>
@@ -23,7 +24,7 @@ public static class AgentKeys
     /// </summary>
     public static Guid ExtractUserId(string grainKey)
     {
-        var prefixes = new[] { ConversationPrefix, DeepResearchPrefix, DelegatePrefix, ResearchPrefix, TestPrefix };
+        var prefixes = new[] { ConversationPrefix, CustomAgentPrefix, DeepResearchPrefix, DelegatePrefix, ResearchPrefix, TestPrefix };
         foreach (var prefix in prefixes)
         {
             if (!grainKey.StartsWith(prefix))

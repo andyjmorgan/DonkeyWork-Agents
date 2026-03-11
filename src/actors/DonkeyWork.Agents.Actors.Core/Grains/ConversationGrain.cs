@@ -18,6 +18,8 @@ using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
+using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
+using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
@@ -47,6 +49,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
     private readonly IGrainMessageStore _messageStore;
     private readonly IPromptService _promptService;
+    private readonly IAgentDefinitionService _agentDefinitionService;
 
     private readonly Channel<ConversationMessage> _queue =
         Channel.CreateUnbounded<ConversationMessage>(new UnboundedChannelOptions { SingleReader = true });
@@ -63,6 +66,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private McpToolProvider? _mcpToolProvider;
     private bool _hasMcpSandbox;
     private SandboxProvisioningHandle? _sandboxHandle;
+    private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
         ["swarm_spawn"] = [typeof(SwarmSpawnTools)],
@@ -75,6 +79,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             typeof(NoteAgentTools),
             typeof(ResearchAgentTools),
         ],
+        ["swarm_custom_agent"] = [typeof(SwarmCustomAgentSpawnTools)],
         ["sandbox"] = [typeof(SandboxTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
@@ -90,7 +95,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         IMcpServerConfigurationService mcpServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
-        IPromptService promptService)
+        IPromptService promptService,
+        IAgentDefinitionService agentDefinitionService)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -104,6 +110,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _mcpSandboxManagerClient = mcpSandboxManagerClient;
         _messageStore = messageStore;
         _promptService = promptService;
+        _agentDefinitionService = agentDefinitionService;
     }
 
     #region IConversationGrain
@@ -332,10 +339,28 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             }
         }
 
+        // Discover Navi-connected custom agent definitions (lazy, once per activation)
+        if (_naviAgentDefinitions is null)
+        {
+            _naviAgentDefinitions = await _agentDefinitionService.GetNaviConnectedAsync(ct);
+        }
+
         // Include sandbox tools if MCP servers triggered auto-sandbox
         var effectiveToolTypes = _hasMcpSandbox && !contract.ToolGroups.Contains("sandbox", StringComparer.OrdinalIgnoreCase)
             ? [..toolTypes, typeof(SandboxTools)]
             : toolTypes;
+
+        // Auto-include custom agent spawn tools when Navi-connected agents exist
+        if (_naviAgentDefinitions.Count > 0
+            && !effectiveToolTypes.Contains(typeof(SwarmCustomAgentSpawnTools)))
+        {
+            effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmCustomAgentSpawnTools)];
+
+            // Also include swarm management tools so the LLM can wait for / cancel custom agents
+            if (!effectiveToolTypes.Contains(typeof(SwarmAgentManagementTools)))
+                effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
+        }
+
         var localTools = effectiveToolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(effectiveToolTypes) : null;
 
         // Combine local + MCP tool definitions
@@ -373,6 +398,18 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         var systemPrompt = hasSandbox
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
+
+        // Append custom agent catalog when Navi-connected agents are available
+        if (_naviAgentDefinitions is { Count: > 0 })
+        {
+            var catalog = "\n\n## Custom Agents\n\nAvailable via `spawn_custom_agent`:\n";
+            foreach (var agent in _naviAgentDefinitions)
+            {
+                var desc = !string.IsNullOrEmpty(agent.Description) ? agent.Description : "No description";
+                catalog += $"- **{agent.Name}** (agent_id: `{agent.Id}`): {desc}\n";
+            }
+            systemPrompt += catalog;
+        }
 
         var context = new ModelMiddlewareContext
         {
@@ -565,6 +602,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             _ when agentKey.StartsWith(AgentKeys.ResearchPrefix) => "research",
             _ when agentKey.StartsWith(AgentKeys.DeepResearchPrefix) => "deep_research",
             _ when agentKey.StartsWith(AgentKeys.DelegatePrefix) => "delegate",
+            _ when agentKey.StartsWith(AgentKeys.CustomAgentPrefix) => "custom",
             _ => "unknown",
         };
 

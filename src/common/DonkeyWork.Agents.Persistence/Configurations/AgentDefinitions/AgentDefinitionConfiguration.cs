@@ -57,6 +57,10 @@ public class AgentDefinitionConfiguration : IEntityTypeConfiguration<AgentDefini
                 v => v == null ? null : JsonDocumentToString(v),
                 v => v == null ? null : JsonDocument.Parse(v, default));
 
+        builder.Property(e => e.ConnectToNavi)
+            .HasColumnName("connect_to_navi")
+            .HasDefaultValue(false);
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();

@@ -1557,6 +1557,7 @@ export interface AgentDefinitionSummary {
   name: string
   description?: string
   isSystem: boolean
+  connectToNavi?: boolean
   createdAt: string
 }
 
@@ -1565,6 +1566,7 @@ export interface AgentDefinitionDetails {
   name: string
   description?: string
   isSystem: boolean
+  connectToNavi?: boolean
   contract: AgentContractV1
   reactFlowData?: { nodes: unknown[]; edges: unknown[]; viewport: { x: number; y: number; zoom: number } }
   nodeConfigurations?: Record<string, unknown>
@@ -1580,6 +1582,7 @@ export interface CreateAgentDefinitionRequest {
 export interface UpdateAgentDefinitionRequest {
   name?: string
   description?: string
+  connectToNavi?: boolean
   contract?: AgentContractV1
   reactFlowData?: { nodes: unknown[]; edges: unknown[]; viewport: { x: number; y: number; zoom: number } }
   nodeConfigurations?: Record<string, unknown>

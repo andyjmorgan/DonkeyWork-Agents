@@ -101,6 +101,7 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
         var resolvedKey = key.StartsWith(AgentKeys.ResearchPrefix)
                           || key.StartsWith(AgentKeys.DeepResearchPrefix)
                           || key.StartsWith(AgentKeys.DelegatePrefix)
+                          || key.StartsWith(AgentKeys.CustomAgentPrefix)
                           || key.StartsWith(AgentKeys.ConversationPrefix)
                           || key.StartsWith(AgentKeys.TestPrefix)
             ? key

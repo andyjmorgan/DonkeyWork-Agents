@@ -29,6 +29,7 @@ interface AgentBuilderState {
   lingerSeconds: number
   timeoutSeconds: number
   persistMessages: boolean
+  connectToNavi: boolean
 
   // ReactFlow state
   nodes: Node[]
@@ -51,6 +52,7 @@ interface AgentBuilderState {
     lingerSeconds?: number
     timeoutSeconds?: number
     persistMessages?: boolean
+    connectToNavi?: boolean
   }) => void
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
@@ -101,6 +103,7 @@ function createInitialState() {
     lingerSeconds: 60,
     timeoutSeconds: 300,
     persistMessages: false,
+    connectToNavi: false,
     nodes: [createModelNode(modelId)] as Node[],
     edges: [] as Edge[],
     viewport: { x: 0, y: 0, zoom: 1 },
@@ -445,6 +448,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       lingerSeconds: (contract.lingerSeconds as number) || 60,
       timeoutSeconds: (contract.timeoutSeconds as number) || 300,
       persistMessages: (contract.persistMessages as boolean) ?? false,
+      connectToNavi: (details.connectToNavi as boolean) ?? false,
     }
 
     if (details.reactFlowData && details.nodeConfigurations) {
@@ -603,6 +607,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
     await agentDefinitions.update(state.agentId, {
       name: state.agentName,
       description: state.agentDescription,
+      connectToNavi: state.connectToNavi,
       contract: state.serializeToContract(),
       reactFlowData: {
         nodes: state.nodes,

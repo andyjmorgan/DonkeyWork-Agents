@@ -12,6 +12,7 @@ export function AgentSettingsProperties() {
   const lingerSeconds = useAgentBuilderStore((s) => s.lingerSeconds)
   const timeoutSeconds = useAgentBuilderStore((s) => s.timeoutSeconds)
   const persistMessages = useAgentBuilderStore((s) => s.persistMessages)
+  const connectToNavi = useAgentBuilderStore((s) => s.connectToNavi)
   const setAgentSettings = useAgentBuilderStore((s) => s.setAgentSettings)
   const isReadOnly = useAgentBuilderStore((s) => s.isReadOnly)
 
@@ -78,6 +79,19 @@ export function AgentSettingsProperties() {
         <Switch
           checked={persistMessages}
           onCheckedChange={(v) => setAgentSettings({ persistMessages: v })}
+          disabled={isReadOnly}
+        />
+      </div>
+
+      {/* Connect to Navi */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Label>Connect to Navi</Label>
+          <p className="text-xs text-muted-foreground">Make this agent available as a spawn target in Navi conversations</p>
+        </div>
+        <Switch
+          checked={connectToNavi}
+          onCheckedChange={(v) => setAgentSettings({ connectToNavi: v })}
           disabled={isReadOnly}
         />
       </div>

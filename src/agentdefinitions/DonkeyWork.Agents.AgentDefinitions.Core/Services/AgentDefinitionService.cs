@@ -89,6 +89,9 @@ public class AgentDefinitionService : IAgentDefinitionService
         if (request.Description is not null)
             entity.Description = request.Description;
 
+        if (request.ConnectToNavi is not null)
+            entity.ConnectToNavi = request.ConnectToNavi.Value;
+
         if (request.Contract is not null)
             entity.Contract = JsonDocument.Parse(request.Contract.Value.GetRawText());
 
@@ -123,6 +126,25 @@ public class AgentDefinitionService : IAgentDefinitionService
         return true;
     }
 
+    public async Task<IReadOnlyList<NaviAgentDefinitionV1>> GetNaviConnectedAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = _identityContext.UserId;
+
+        var entities = await _dbContext.AgentDefinitions
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(e => e.ConnectToNavi && e.UserId == userId)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(e => new NaviAgentDefinitionV1
+        {
+            Id = e.Id,
+            Name = e.Name,
+            Description = e.Description,
+            Contract = e.Contract.RootElement.Clone(),
+        }).ToList();
+    }
+
     private static AgentDefinitionSummaryV1 MapToSummary(AgentDefinitionEntity entity)
     {
         return new AgentDefinitionSummaryV1
@@ -131,6 +153,7 @@ public class AgentDefinitionService : IAgentDefinitionService
             Name = entity.Name,
             Description = entity.Description,
             IsSystem = entity.IsSystem,
+            ConnectToNavi = entity.ConnectToNavi,
             CreatedAt = entity.CreatedAt,
         };
     }
@@ -143,6 +166,7 @@ public class AgentDefinitionService : IAgentDefinitionService
             Name = entity.Name,
             Description = entity.Description,
             IsSystem = entity.IsSystem,
+            ConnectToNavi = entity.ConnectToNavi,
             Contract = entity.Contract.RootElement.Clone(),
             ReactFlowData = entity.ReactFlowData?.RootElement.Clone(),
             NodeConfigurations = entity.NodeConfigurations?.RootElement.Clone(),
