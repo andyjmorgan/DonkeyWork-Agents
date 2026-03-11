@@ -8,13 +8,14 @@ namespace DonkeyWork.Agents.Projects.Contracts.Models;
 /// </summary>
 public sealed class CreateResearchRequestV1
 {
-    [JsonPropertyName("subject")]
+    [JsonPropertyName("title")]
     [Required]
     [StringLength(500, MinimumLength = 1)]
-    public required string Subject { get; init; }
+    public required string Title { get; init; }
 
-    [JsonPropertyName("content")]
-    public string? Content { get; init; }
+    [JsonPropertyName("plan")]
+    [Required]
+    public required string Plan { get; init; }
 
     [JsonPropertyName("status")]
     public ResearchStatus Status { get; init; } = ResearchStatus.NotStarted;
@@ -28,22 +29,19 @@ public sealed class CreateResearchRequestV1
 /// </summary>
 public sealed class UpdateResearchRequestV1
 {
-    [JsonPropertyName("subject")]
+    [JsonPropertyName("title")]
     [Required]
     [StringLength(500, MinimumLength = 1)]
-    public required string Subject { get; init; }
+    public required string Title { get; init; }
 
-    [JsonPropertyName("content")]
-    public string? Content { get; init; }
+    [JsonPropertyName("plan")]
+    public string? Plan { get; init; }
 
-    [JsonPropertyName("summary")]
-    public string? Summary { get; init; }
+    [JsonPropertyName("result")]
+    public string? Result { get; init; }
 
     [JsonPropertyName("status")]
     public ResearchStatus Status { get; init; }
-
-    [JsonPropertyName("completionNotes")]
-    public string? CompletionNotes { get; init; }
 
     [JsonPropertyName("tags")]
     public List<TagRequestV1>? Tags { get; init; }

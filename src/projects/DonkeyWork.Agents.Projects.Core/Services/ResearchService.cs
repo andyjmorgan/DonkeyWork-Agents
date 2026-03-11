@@ -39,7 +39,7 @@ public class ResearchService : IResearchService
     public async Task<ResearchDetailsV1> CreateAsync(CreateResearchRequestV1 request, CancellationToken ct = default)
     {
         var userId = _identityContext.UserId;
-        _logger.LogInformation("Creating research for user {UserId} with subject {Subject}", userId, request.Subject);
+        _logger.LogInformation("Creating research for user {UserId} with title {Title}", userId, request.Title);
 
         var researchId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
@@ -48,8 +48,8 @@ public class ResearchService : IResearchService
         {
             Id = researchId,
             UserId = userId,
-            Subject = request.Subject,
-            Content = request.Content,
+            Title = request.Title,
+            Plan = request.Plan,
             Status = (EntityResearchStatus)(int)request.Status,
             CreatedAt = now,
             UpdatedAt = now
@@ -84,7 +84,7 @@ public class ResearchService : IResearchService
         {
             Type = NotificationType.ProjectCreated,
             Title = "Research Created",
-            Message = $"Research '{request.Subject}' has been created",
+            Message = $"Research '{request.Title}' has been created",
             EntityId = researchId
         });
 
@@ -130,16 +130,10 @@ public class ResearchService : IResearchService
         // Validate completion requirements
         var isCompleted = request.Status is Contracts.Models.ResearchStatus.Completed;
         var isCancelled = request.Status is Contracts.Models.ResearchStatus.Cancelled;
-        var isTerminal = isCompleted || isCancelled;
 
-        if (isTerminal && string.IsNullOrWhiteSpace(request.CompletionNotes))
+        if (isCompleted && string.IsNullOrWhiteSpace(request.Result))
         {
-            throw new InvalidOperationException("Completion notes are required when marking research as completed or cancelled.");
-        }
-
-        if (isCompleted && string.IsNullOrWhiteSpace(request.Summary))
-        {
-            throw new InvalidOperationException("Summary is required when marking research as completed.");
+            throw new InvalidOperationException("Result is required when marking research as completed.");
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -148,11 +142,10 @@ public class ResearchService : IResearchService
         var wasTerminal = oldStatus is EntityResearchStatus.Completed or EntityResearchStatus.Cancelled;
         var isNowTerminal = newStatus is EntityResearchStatus.Completed or EntityResearchStatus.Cancelled;
 
-        research.Subject = request.Subject;
-        research.Content = request.Content;
-        research.Summary = request.Summary;
+        research.Title = request.Title;
+        research.Plan = request.Plan;
+        research.Result = request.Result;
         research.Status = newStatus;
-        research.CompletionNotes = request.CompletionNotes;
         research.UpdatedAt = now;
 
         // Set completed timestamp when moving to terminal status
@@ -191,8 +184,8 @@ public class ResearchService : IResearchService
         // Send notification (fire-and-forget)
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
-            ? $"'{request.Subject}' is now {FormatStatus(request.Status)}"
-            : $"'{request.Subject}' has been updated";
+            ? $"'{request.Title}' is now {FormatStatus(request.Status)}"
+            : $"'{request.Title}' has been updated";
 
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
@@ -210,7 +203,7 @@ public class ResearchService : IResearchService
                 new ResearchStatusChangedNotification
                 {
                     ResearchId = id,
-                    Subject = request.Subject,
+                    Title = request.Title,
                     Status = FormatStatus(request.Status)
                 });
         }
@@ -228,7 +221,7 @@ public class ResearchService : IResearchService
             return false;
         }
 
-        var subject = research.Subject;
+        var title = research.Title;
         _dbContext.Research.Remove(research);
         await _dbContext.SaveChangesAsync(ct);
 
@@ -239,7 +232,7 @@ public class ResearchService : IResearchService
         {
             Type = NotificationType.ProjectDeleted,
             Title = "Research Deleted",
-            Message = $"Research '{subject}' has been deleted",
+            Message = $"Research '{title}' has been deleted",
             EntityId = id
         });
 
@@ -260,9 +253,9 @@ public class ResearchService : IResearchService
         return new ResearchSummaryV1
         {
             Id = research.Id,
-            Subject = research.Subject,
-            ContentPreview = ContentTruncationHelper.TruncateContent(research.Content),
-            ContentLength = ContentTruncationHelper.GetContentLength(research.Content),
+            Title = research.Title,
+            PlanPreview = ContentTruncationHelper.TruncateContent(research.Plan),
+            PlanLength = ContentTruncationHelper.GetContentLength(research.Plan),
             Status = (Contracts.Models.ResearchStatus)(int)research.Status,
             CompletedAt = research.CompletedAt,
             Tags = research.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
@@ -277,13 +270,12 @@ public class ResearchService : IResearchService
         return new ResearchDetailsV1
         {
             Id = research.Id,
-            Subject = research.Subject,
-            Content = ContentTruncationHelper.ApplyChunking(research.Content, contentOffset, contentLength),
-            ContentLength = ContentTruncationHelper.GetContentLength(research.Content),
-            Summary = ContentTruncationHelper.ApplyChunking(research.Summary, contentOffset, contentLength),
-            SummaryLength = ContentTruncationHelper.GetContentLength(research.Summary),
+            Title = research.Title,
+            Plan = ContentTruncationHelper.ApplyChunking(research.Plan, contentOffset, contentLength),
+            PlanLength = ContentTruncationHelper.GetContentLength(research.Plan),
+            Result = ContentTruncationHelper.ApplyChunking(research.Result, contentOffset, contentLength),
+            ResultLength = ContentTruncationHelper.GetContentLength(research.Result),
             Status = (Contracts.Models.ResearchStatus)(int)research.Status,
-            CompletionNotes = research.CompletionNotes,
             CompletedAt = research.CompletedAt,
             Tags = research.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
             Notes = research.Notes.OrderBy(n => n.SortOrder).Select(n => new NoteSummaryV1

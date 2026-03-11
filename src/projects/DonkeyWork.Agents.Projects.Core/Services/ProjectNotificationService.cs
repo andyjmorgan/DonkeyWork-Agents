@@ -72,7 +72,7 @@ public class ProjectNotificationService : IProjectNotificationService
         {
             Type = NotificationType.ProjectUpdated,
             Title = $"Research {notification.Status}",
-            Message = $"'{notification.Subject}' is now {notification.Status}",
+            Message = $"'{notification.Title}' is now {notification.Status}",
             EntityId = notification.ResearchId
         }, ct);
     }

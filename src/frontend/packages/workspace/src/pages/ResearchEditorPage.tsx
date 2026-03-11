@@ -51,17 +51,17 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
   const [researchData, setResearchData] = useState<ResearchDetails | null>(null)
 
   // Form fields
-  const [subject, setSubject] = useState('')
-  const [content, setContent] = useState('')
-  const [summary, setSummary] = useState('')
+  const [title, setTitle] = useState('')
+  const [plan, setPlan] = useState('')
+  const [result, setResult] = useState('')
   const [status, setStatus] = useState<ResearchStatus>('NotStarted')
   const [tags, setTags] = useState<TagRequest[]>([])
   const [newTagName, setNewTagName] = useState('')
 
-  // Completion notes dialog
+  // Completion dialog
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
   const [pendingStatus, setPendingStatus] = useState<ResearchStatus | null>(null)
-  const [completionNotesValue, setCompletionNotesValue] = useState('')
+  const [resultValue, setResultValue] = useState('')
   const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false)
 
   // Active tab
@@ -80,12 +80,12 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
       setIsLoading(true)
       const data = await research.get(researchId)
       setResearchData(data)
-      setSubject(data.subject)
-      setContent(data.content || '')
-      setSummary(data.summary || '')
+      setTitle(data.title)
+      setPlan(data.plan || '')
+      setResult(data.result || '')
       setStatus(data.status)
       setTags(data.tags.map((t) => ({ name: t.name })))
-      setCompletionNotesValue(data.completionNotes || '')
+      setResultValue(data.result || '')
     } catch (error) {
       console.error('Failed to load research:', error)
     } finally {
@@ -94,26 +94,25 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
   }
 
   const handleSave = async () => {
-    if (!subject.trim()) return
+    if (!title.trim()) return
 
     try {
       setIsSaving(true)
 
       if (isNewResearch) {
         const created = await research.create({
-          subject,
-          content,
+          title,
+          plan,
           status,
           tags,
         })
         nav.goToResearch(created.id)
       } else if (researchData) {
         await research.update(researchData.id, {
-          subject,
-          content,
-          summary: summary || undefined,
+          title,
+          plan,
+          result: result || undefined,
           status,
-          completionNotes: (status === 'Completed' || status === 'Cancelled') ? completionNotesValue || undefined : undefined,
           tags,
         })
         nav.goToResearchList()
@@ -138,34 +137,31 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
 
   const handleStatusChange = (newStatus: ResearchStatus) => {
     if (newStatus === 'Completed') {
-      if (!content.trim()) {
+      if (!plan.trim()) {
         setActiveTab('results')
         return
       }
       setPendingStatus(newStatus)
       setShowCompletionDialog(true)
     } else if (newStatus === 'Cancelled') {
-      setPendingStatus(newStatus)
-      setShowCompletionDialog(true)
+      setStatus(newStatus)
     } else {
       setStatus(newStatus)
-      setCompletionNotesValue('')
     }
   }
 
-  const handleSubmitCompletionNotes = async () => {
-    if (!pendingStatus || !completionNotesValue.trim()) return
-    if (pendingStatus === 'Completed' && !content.trim()) return
+  const handleSubmitCompletion = async () => {
+    if (!pendingStatus || !resultValue.trim()) return
+    if (pendingStatus === 'Completed' && !plan.trim()) return
 
     if (!isNewResearch && researchData) {
       try {
         setIsSubmittingCompletion(true)
         await research.update(researchData.id, {
-          subject,
-          content,
-          summary: summary || undefined,
+          title,
+          plan,
+          result: resultValue,
           status: pendingStatus,
-          completionNotes: completionNotesValue,
           tags,
         })
         await loadResearch()
@@ -176,6 +172,7 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
       }
     } else {
       setStatus(pendingStatus)
+      setResult(resultValue)
     }
 
     setShowCompletionDialog(false)
@@ -233,7 +230,7 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
             <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
               <Search className="h-4 w-4 shrink-0 text-cyan-500" />
               <span className="truncate max-w-[100px] sm:max-w-[150px] md:max-w-[250px]">
-                {isNewResearch ? 'New Research' : researchData?.subject}
+                {isNewResearch ? 'New Research' : researchData?.title}
               </span>
             </span>
           </div>
@@ -251,7 +248,7 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
           )}
           <Button
             onClick={handleSave}
-            disabled={isSaving || !subject.trim()}
+            disabled={isSaving || !title.trim()}
           >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             <Save className="h-4 w-4 mr-2" />
@@ -273,7 +270,7 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
               <SelectContent>
                 <SelectItem value="NotStarted">Not Started</SelectItem>
                 <SelectItem value="InProgress">In Progress</SelectItem>
-                <SelectItem value="Completed" disabled={!content.trim()}>Completed</SelectItem>
+                <SelectItem value="Completed" disabled={!plan.trim()}>Completed</SelectItem>
                 <SelectItem value="Cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
@@ -307,8 +304,8 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
 
       {/* Topic */}
       <Input
-        value={subject}
-        onChange={(e) => setSubject(e.target.value)}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
         placeholder="Research topic"
         className="text-xl font-semibold border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
       />
@@ -326,8 +323,8 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
 
         <TabsContent value="results" className="mt-4">
           <MarkdownEditor
-            content={content}
-            onChange={setContent}
+            content={plan}
+            onChange={setPlan}
             placeholder="Research findings and results..."
           />
         </TabsContent>
@@ -366,25 +363,21 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
         )}
       </Tabs>
 
-      {/* Completion Notes Dialog */}
+      {/* Completion Dialog */}
       <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {pendingStatus === 'Completed' ? 'Complete Research' : 'Cancel Research'}
-            </DialogTitle>
+            <DialogTitle>Complete Research</DialogTitle>
             <DialogDescription>
-              {pendingStatus === 'Completed'
-                ? 'Provide notes about what was accomplished in this research.'
-                : 'Provide a reason for cancelling this research.'}
+              Provide the result of this research before marking it as completed.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label>{pendingStatus === 'Completed' ? 'Completion Notes' : 'Cancellation Reason'}</Label>
+            <Label>Result</Label>
             <Textarea
-              value={completionNotesValue}
-              onChange={(e) => setCompletionNotesValue(e.target.value)}
-              placeholder={pendingStatus === 'Completed' ? 'What was accomplished...' : 'Why is this being cancelled...'}
+              value={resultValue}
+              onChange={(e) => setResultValue(e.target.value)}
+              placeholder="What was the outcome of this research..."
               rows={4}
             />
           </div>
@@ -393,11 +386,11 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
               Cancel
             </Button>
             <Button
-              onClick={handleSubmitCompletionNotes}
-              disabled={!completionNotesValue.trim() || isSubmittingCompletion}
+              onClick={handleSubmitCompletion}
+              disabled={!resultValue.trim() || isSubmittingCompletion}
             >
               {isSubmittingCompletion && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {pendingStatus === 'Completed' ? 'Mark Complete' : 'Mark Cancelled'}
+              Mark Complete
             </Button>
           </DialogFooter>
         </DialogContent>

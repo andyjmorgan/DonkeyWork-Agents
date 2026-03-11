@@ -24,7 +24,7 @@ public class ResearchAgentToolsTests
     {
         // Arrange
         _researchService.Setup(x => x.ListAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ResearchSummaryV1> { new() { Id = Guid.NewGuid(), Subject = "Research 1" } });
+            .ReturnsAsync(new List<ResearchSummaryV1> { new() { Id = Guid.NewGuid(), Title = "Research 1" } });
 
         // Act
         var result = await _tools.ListResearch();
@@ -45,7 +45,7 @@ public class ResearchAgentToolsTests
     {
         // Arrange
         var researchId = Guid.NewGuid();
-        var research = new ResearchDetailsV1 { Id = researchId, Subject = "Test Research" };
+        var research = new ResearchDetailsV1 { Id = researchId, Title = "Test Research" };
         _researchService.Setup(x => x.GetByIdAsync(researchId, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(research);
 
@@ -81,17 +81,17 @@ public class ResearchAgentToolsTests
     public async Task CreateResearch_DelegatesToService()
     {
         // Arrange
-        var created = new ResearchDetailsV1 { Id = Guid.NewGuid(), Subject = "New Research" };
+        var created = new ResearchDetailsV1 { Id = Guid.NewGuid(), Title = "New Research" };
         _researchService.Setup(x => x.CreateAsync(It.IsAny<CreateResearchRequestV1>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(created);
 
         // Act
-        var result = await _tools.CreateResearch("New Research", "Content", ResearchStatus.InProgress);
+        var result = await _tools.CreateResearch("New Research", "Plan content", ResearchStatus.InProgress);
 
         // Assert
         Assert.False(result.IsError);
         _researchService.Verify(x => x.CreateAsync(
-            It.Is<CreateResearchRequestV1>(r => r.Subject == "New Research" && r.Content == "Content" && r.Status == ResearchStatus.InProgress),
+            It.Is<CreateResearchRequestV1>(r => r.Title == "New Research" && r.Plan == "Plan content" && r.Status == ResearchStatus.InProgress),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -104,18 +104,21 @@ public class ResearchAgentToolsTests
     {
         // Arrange
         var researchId = Guid.NewGuid();
-        var updated = new ResearchDetailsV1 { Id = researchId, Subject = "Updated" };
+        var current = new ResearchDetailsV1 { Id = researchId, Title = "Original" };
+        var updated = new ResearchDetailsV1 { Id = researchId, Title = "Updated" };
+        _researchService.Setup(x => x.GetByIdAsync(researchId, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(current);
         _researchService.Setup(x => x.UpdateAsync(researchId, It.IsAny<UpdateResearchRequestV1>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updated);
 
         // Act
-        var result = await _tools.UpdateResearch(researchId, "Updated", status: ResearchStatus.Completed);
+        var result = await _tools.UpdateResearch(researchId, title: "Updated", status: ResearchStatus.InProgress);
 
         // Assert
         Assert.False(result.IsError);
         _researchService.Verify(x => x.UpdateAsync(
             researchId,
-            It.Is<UpdateResearchRequestV1>(r => r.Subject == "Updated" && r.Status == ResearchStatus.Completed),
+            It.Is<UpdateResearchRequestV1>(r => r.Title == "Updated" && r.Status == ResearchStatus.InProgress),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -124,15 +127,51 @@ public class ResearchAgentToolsTests
     {
         // Arrange
         var researchId = Guid.NewGuid();
-        _researchService.Setup(x => x.UpdateAsync(researchId, It.IsAny<UpdateResearchRequestV1>(), It.IsAny<CancellationToken>()))
+        _researchService.Setup(x => x.GetByIdAsync(researchId, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ResearchDetailsV1?)null);
 
         // Act
-        var result = await _tools.UpdateResearch(researchId, "Updated");
+        var result = await _tools.UpdateResearch(researchId, title: "Updated");
 
         // Assert
         Assert.True(result.IsError);
         Assert.Contains("not found", result.Content);
+    }
+
+    [Fact]
+    public async Task UpdateResearch_CompletedWithoutResult_ReturnsError()
+    {
+        // Arrange
+        var researchId = Guid.NewGuid();
+        var current = new ResearchDetailsV1 { Id = researchId, Title = "Research" };
+        _researchService.Setup(x => x.GetByIdAsync(researchId, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(current);
+
+        // Act
+        var result = await _tools.UpdateResearch(researchId, status: ResearchStatus.Completed);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.Contains("result is required", result.Content);
+    }
+
+    [Fact]
+    public async Task UpdateResearch_CompletedWithResult_Succeeds()
+    {
+        // Arrange
+        var researchId = Guid.NewGuid();
+        var current = new ResearchDetailsV1 { Id = researchId, Title = "Research" };
+        var updated = new ResearchDetailsV1 { Id = researchId, Title = "Research", Status = ResearchStatus.Completed };
+        _researchService.Setup(x => x.GetByIdAsync(researchId, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(current);
+        _researchService.Setup(x => x.UpdateAsync(researchId, It.IsAny<UpdateResearchRequestV1>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(updated);
+
+        // Act
+        var result = await _tools.UpdateResearch(researchId, status: ResearchStatus.Completed, result: "Findings");
+
+        // Assert
+        Assert.False(result.IsError);
     }
 
     #endregion

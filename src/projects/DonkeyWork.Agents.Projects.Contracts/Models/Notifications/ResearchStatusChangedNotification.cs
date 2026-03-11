@@ -11,9 +11,9 @@ public class ResearchStatusChangedNotification
     public required Guid ResearchId { get; init; }
 
     /// <summary>
-    /// The subject of the research item.
+    /// The title of the research item.
     /// </summary>
-    public required string Subject { get; init; }
+    public required string Title { get; init; }
 
     /// <summary>
     /// The new status of the research item.

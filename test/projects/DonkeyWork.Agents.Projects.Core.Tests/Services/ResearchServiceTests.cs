@@ -44,8 +44,8 @@ public class ResearchServiceTests : IDisposable
         // Arrange
         var request = new CreateResearchRequestV1
         {
-            Subject = "test-research",
-            Content = "Test content"
+            Title = "test-research",
+            Plan = "Test plan"
         };
 
         // Act
@@ -54,8 +54,8 @@ public class ResearchServiceTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal(request.Subject, result.Subject);
-        Assert.Equal(request.Content, result.Content);
+        Assert.Equal(request.Title, result.Title);
+        Assert.Equal(request.Plan, result.Plan);
         Assert.Equal(ResearchStatus.NotStarted, result.Status);
         Assert.True(result.CreatedAt <= DateTimeOffset.UtcNow);
 
@@ -71,7 +71,8 @@ public class ResearchServiceTests : IDisposable
         // Arrange
         var request = new CreateResearchRequestV1
         {
-            Subject = "test-research",
+            Title = "test-research",
+            Plan = "Test plan",
             Tags = new List<TagRequestV1>
             {
                 new() { Name = "tag1", Color = "#ff0000" },
@@ -106,8 +107,8 @@ public class ResearchServiceTests : IDisposable
         // Assert
         Assert.NotNull(result);
         Assert.Equal(research.Id, result.Id);
-        Assert.Equal(research.Subject, result.Subject);
-        Assert.Equal(research.Content, result.Content);
+        Assert.Equal(research.Title, result.Title);
+        Assert.Equal(research.Plan, result.Plan);
     }
 
     [Fact]
@@ -131,9 +132,9 @@ public class ResearchServiceTests : IDisposable
     public async Task ListAsync_ReturnsAllResearch()
     {
         // Arrange
-        var research1 = _builder.CreateResearchEntity(subject: "research-1");
-        var research2 = _builder.CreateResearchEntity(subject: "research-2");
-        var research3 = _builder.CreateResearchEntity(subject: "research-3");
+        var research1 = _builder.CreateResearchEntity(title: "research-1");
+        var research2 = _builder.CreateResearchEntity(title: "research-2");
+        var research3 = _builder.CreateResearchEntity(title: "research-3");
         _dbContext.Research.AddRange(research1, research2, research3);
         await _dbContext.SaveChangesAsync();
 
@@ -164,7 +165,7 @@ public class ResearchServiceTests : IDisposable
     #region UpdateAsync Tests
 
     [Fact]
-    public async Task UpdateAsync_ToCompletedWithoutCompletionNotes_ThrowsInvalidOperationException()
+    public async Task UpdateAsync_ToCompletedWithoutResult_ThrowsInvalidOperationException()
     {
         // Arrange
         var research = _builder.CreateResearchEntity();
@@ -172,10 +173,9 @@ public class ResearchServiceTests : IDisposable
 
         var updateRequest = new UpdateResearchRequestV1
         {
-            Subject = research.Subject,
+            Title = research.Title,
             Status = ResearchStatus.Completed,
-            Summary = "Some findings",
-            CompletionNotes = null
+            Result = null
         };
 
         // Act & Assert
@@ -184,7 +184,7 @@ public class ResearchServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_ToCompletedWithoutSummary_ThrowsInvalidOperationException()
+    public async Task UpdateAsync_ToCompletedWithResult_SetsCompletedAt()
     {
         // Arrange
         var research = _builder.CreateResearchEntity();
@@ -192,30 +192,9 @@ public class ResearchServiceTests : IDisposable
 
         var updateRequest = new UpdateResearchRequestV1
         {
-            Subject = research.Subject,
+            Title = research.Title,
             Status = ResearchStatus.Completed,
-            Summary = null,
-            CompletionNotes = "Done researching"
-        };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.UpdateAsync(research.Id, updateRequest));
-    }
-
-    [Fact]
-    public async Task UpdateAsync_ToCompletedWithSummaryAndNotes_SetsCompletedAt()
-    {
-        // Arrange
-        var research = _builder.CreateResearchEntity();
-        MockDbContext.SeedResearch(_dbContext, research);
-
-        var updateRequest = new UpdateResearchRequestV1
-        {
-            Subject = research.Subject,
-            Status = ResearchStatus.Completed,
-            Summary = "Key findings: everything works.",
-            CompletionNotes = "Research completed successfully."
+            Result = "Key findings: everything works."
         };
 
         // Act
@@ -225,8 +204,7 @@ public class ResearchServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(ResearchStatus.Completed, result.Status);
         Assert.NotNull(result.CompletedAt);
-        Assert.Equal("Key findings: everything works.", result.Summary);
-        Assert.Equal("Research completed successfully.", result.CompletionNotes);
+        Assert.Equal("Key findings: everything works.", result.Result);
     }
 
     [Fact]
@@ -235,14 +213,13 @@ public class ResearchServiceTests : IDisposable
         // Arrange
         var research = _builder.CreateResearchEntity(
             status: EntityResearchStatus.Completed);
-        research.Summary = "Findings";
-        research.CompletionNotes = "Done";
+        research.Result = "Findings";
         research.CompletedAt = DateTimeOffset.UtcNow.AddDays(-1);
         MockDbContext.SeedResearch(_dbContext, research);
 
         var updateRequest = new UpdateResearchRequestV1
         {
-            Subject = research.Subject,
+            Title = research.Title,
             Status = ResearchStatus.InProgress
         };
 
@@ -256,7 +233,7 @@ public class ResearchServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_ToCancelledWithNotes_SetsCompletedAt()
+    public async Task UpdateAsync_ToCancelled_SetsCompletedAt()
     {
         // Arrange
         var research = _builder.CreateResearchEntity();
@@ -264,9 +241,8 @@ public class ResearchServiceTests : IDisposable
 
         var updateRequest = new UpdateResearchRequestV1
         {
-            Subject = research.Subject,
-            Status = ResearchStatus.Cancelled,
-            CompletionNotes = "No longer relevant."
+            Title = research.Title,
+            Status = ResearchStatus.Cancelled
         };
 
         // Act
@@ -276,7 +252,6 @@ public class ResearchServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(ResearchStatus.Cancelled, result.Status);
         Assert.NotNull(result.CompletedAt);
-        Assert.Equal("No longer relevant.", result.CompletionNotes);
     }
 
     [Fact]
@@ -286,7 +261,7 @@ public class ResearchServiceTests : IDisposable
         var nonExistentId = Guid.NewGuid();
         var updateRequest = new UpdateResearchRequestV1
         {
-            Subject = "test",
+            Title = "test",
             Status = ResearchStatus.InProgress
         };
 

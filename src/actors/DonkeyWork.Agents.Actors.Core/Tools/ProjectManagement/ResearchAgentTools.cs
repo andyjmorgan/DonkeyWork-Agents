@@ -36,15 +36,15 @@ public sealed class ResearchAgentTools
     [AgentTool("research_create", DisplayName = "Create Research")]
     [Description("Create a new research item.")]
     public async Task<ToolResult> CreateResearch(
-        [Description("The research subject")] string subject,
-        [Description("The research content")] string? content = null,
+        [Description("The research title")] string title,
+        [Description("The research plan")] string plan,
         [Description("Research status: NotStarted, InProgress, Completed, Cancelled")] ResearchStatus? status = null,
         CancellationToken ct = default)
     {
         var request = new CreateResearchRequestV1
         {
-            Subject = subject,
-            Content = content,
+            Title = title,
+            Plan = plan,
             Status = status ?? ResearchStatus.NotStarted,
         };
         var research = await _researchService.CreateAsync(request, ct);
@@ -52,23 +52,31 @@ public sealed class ResearchAgentTools
     }
 
     [AgentTool("research_update", DisplayName = "Update Research")]
-    [Description("Update an existing research item.")]
+    [Description("Update an existing research item. Only researchId is required - omit fields you don't want to change.")]
     public async Task<ToolResult> UpdateResearch(
         [Description("The research ID")] Guid researchId,
-        [Description("The research subject")] string subject,
-        [Description("The research content")] string? content = null,
-        [Description("A brief summary")] string? summary = null,
-        [Description("Research status: NotStarted, InProgress, Completed, Cancelled")] ResearchStatus? status = null,
-        [Description("Completion notes")] string? completionNotes = null,
+        [Description("The research title (omit to keep current)")] string? title = null,
+        [Description("The research plan (omit to keep current)")] string? plan = null,
+        [Description("Result of the research. MUST be provided when setting status to Completed.")] string? result = null,
+        [Description("Research status: NotStarted, InProgress, Completed, Cancelled (omit to keep current)")] ResearchStatus? status = null,
         CancellationToken ct = default)
     {
+        var current = await _researchService.GetByIdAsync(researchId, ct: ct);
+        if (current is null)
+            return ToolResult.NotFound("Research", researchId);
+
+        var effectiveStatus = status ?? current.Status;
+        var effectiveResult = result ?? current.Result;
+
+        if (effectiveStatus is ResearchStatus.Completed && string.IsNullOrWhiteSpace(effectiveResult))
+            return ToolResult.Error("result is required when setting status to Completed. Please call this tool again with result provided.");
+
         var request = new UpdateResearchRequestV1
         {
-            Subject = subject,
-            Content = content,
-            Summary = summary,
-            Status = status ?? ResearchStatus.NotStarted,
-            CompletionNotes = completionNotes,
+            Title = title ?? current.Title,
+            Plan = plan ?? current.Plan,
+            Result = effectiveResult,
+            Status = effectiveStatus,
         };
         var research = await _researchService.UpdateAsync(researchId, request, ct);
         return research is not null

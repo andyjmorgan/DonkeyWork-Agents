@@ -209,13 +209,13 @@ public class TestDataBuilder
     /// Creates a basic CreateResearchRequestV1 with default values.
     /// </summary>
     public static CreateResearchRequestV1 CreateResearchRequest(
-        string subject = "test-research",
-        string? content = "Test research content")
+        string title = "test-research",
+        string plan = "Test research plan")
     {
         return new CreateResearchRequestV1
         {
-            Subject = subject,
-            Content = content
+            Title = title,
+            Plan = plan
         };
     }
 
@@ -225,15 +225,15 @@ public class TestDataBuilder
     public ResearchEntity CreateResearchEntity(
         Guid? id = null,
         Guid? userId = null,
-        string subject = "test-research",
+        string title = "test-research",
         EntityResearchStatus status = EntityResearchStatus.NotStarted)
     {
         return new ResearchEntity
         {
             Id = id ?? Guid.NewGuid(),
             UserId = userId ?? _defaultUserId,
-            Subject = subject,
-            Content = "Test research content",
+            Title = title,
+            Plan = "Test research plan",
             Status = status,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow

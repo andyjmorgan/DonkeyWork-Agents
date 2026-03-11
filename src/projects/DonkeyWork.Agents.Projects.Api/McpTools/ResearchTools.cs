@@ -30,7 +30,7 @@ public class ResearchTools
     [McpTool(
         Name = "research_list",
         Title = "List Research",
-        Description = "List all research items for the current user. Research items track investigation topics with subject, content, findings summary, and associated notes for research material.",
+        Description = "List all research items for the current user. Research items track investigation topics with a title, plan, result, and associated notes.",
         Icon = "list",
         ReadOnlyHint = true)]
     public async Task<IReadOnlyList<ResearchSummaryV1>> ListResearch(CancellationToken ct)
@@ -67,20 +67,20 @@ public class ResearchTools
         Description = "Create a new research item. Research items track investigation topics. After creating, add notes with notes_create using the researchId to attach research material and findings.",
         Icon = "plus")]
     public async Task<object> CreateResearch(
-        [Description("The research subject/question - the original ask")] string subject,
-        [Description("Optional detailed content/scope of the research (supports markdown and mermaid diagrams)")] string? content,
+        [Description("The research title")] string title,
+        [Description("The research plan (supports markdown and mermaid diagrams)")] string plan,
         [Description("Status: NotStarted (default), InProgress, Completed, or Cancelled")] ResearchStatus? status,
         CancellationToken ct)
     {
         var request = new CreateResearchRequestV1
         {
-            Subject = subject,
-            Content = content,
+            Title = title,
+            Plan = plan,
             Status = status ?? ResearchStatus.NotStarted
         };
 
         var result = await _researchService.CreateAsync(request, ct);
-        return new { result.Id, result.Subject };
+        return new { result.Id, result.Title };
     }
 
     /// <summary>
@@ -90,15 +90,14 @@ public class ResearchTools
     [McpTool(
         Name = "research_update",
         Title = "Update Research",
-        Description = "Update an existing research item. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. When completing, both summary and completionNotes are required. When cancelling, completionNotes is required.",
+        Description = "Update an existing research item. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. When completing, result is required.",
         Icon = "edit")]
-    public async Task<UpdateAcknowledgmentV1?> UpdateResearch(
+    public async Task<object?> UpdateResearch(
         [Description("The unique identifier of the research item to update")] Guid id,
-        [Description("New subject for the research (omit to keep current)")] string? subject = null,
-        [Description("New content/scope (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the content - the entire content is sent over the wire, so avoid unnecessary updates.")] string? content = null,
-        [Description("Summary of research findings (required when marking as Completed, omit to keep current)")] string? summary = null,
+        [Description("New title for the research (omit to keep current)")] string? title = null,
+        [Description("New plan (supports markdown and mermaid diagrams, omit to keep current). IMPORTANT: Only provide this if you need to change the plan - the entire content is sent over the wire, so avoid unnecessary updates.")] string? plan = null,
+        [Description("Result of the research. MUST be provided when setting status to Completed.")] string? result = null,
         [Description("Status: NotStarted, InProgress, Completed, or Cancelled (omit to keep current)")] ResearchStatus? status = null,
-        [Description("Completion notes (required when marking as Completed or Cancelled, omit to keep current)")] string? completionNotes = null,
         CancellationToken ct = default)
     {
         // Fetch current research to merge with provided values
@@ -108,13 +107,20 @@ public class ResearchTools
             return null;
         }
 
+        var effectiveStatus = status ?? current.Status;
+        var effectiveResult = result ?? current.Result;
+
+        if (effectiveStatus is ResearchStatus.Completed && string.IsNullOrWhiteSpace(effectiveResult))
+        {
+            return new { error = "result is required when setting status to Completed. Please call this tool again with result provided." };
+        }
+
         var request = new UpdateResearchRequestV1
         {
-            Subject = subject ?? current.Subject,
-            Content = content ?? current.Content,
-            Summary = summary ?? current.Summary,
-            Status = status ?? current.Status,
-            CompletionNotes = completionNotes ?? current.CompletionNotes
+            Title = title ?? current.Title,
+            Plan = plan ?? current.Plan,
+            Result = effectiveResult,
+            Status = effectiveStatus,
         };
 
         var updated = await _researchService.UpdateAsync(id, request, ct);

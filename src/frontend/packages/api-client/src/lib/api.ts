@@ -823,9 +823,9 @@ export type ResearchStatus = 'NotStarted' | 'InProgress' | 'Completed' | 'Cancel
 
 export interface ResearchSummary {
   id: string
-  subject: string
-  contentPreview?: string
-  contentLength: number
+  title: string
+  planPreview?: string
+  planLength: number
   status: ResearchStatus
   completedAt?: string
   tags: Tag[]
@@ -836,13 +836,12 @@ export interface ResearchSummary {
 
 export interface ResearchDetails {
   id: string
-  subject: string
-  content?: string
-  contentLength: number
-  summary?: string
-  summaryLength: number
+  title: string
+  plan?: string
+  planLength: number
+  result?: string
+  resultLength: number
   status: ResearchStatus
-  completionNotes?: string
   completedAt?: string
   tags: Tag[]
   notes: Note[]
@@ -851,18 +850,17 @@ export interface ResearchDetails {
 }
 
 export interface CreateResearchRequest {
-  subject: string
-  content?: string
+  title: string
+  plan: string
   status?: ResearchStatus
   tags?: TagRequest[]
 }
 
 export interface UpdateResearchRequest {
-  subject: string
-  content?: string
-  summary?: string
+  title: string
+  plan?: string
+  result?: string
   status: ResearchStatus
-  completionNotes?: string
   tags?: TagRequest[]
 }
 

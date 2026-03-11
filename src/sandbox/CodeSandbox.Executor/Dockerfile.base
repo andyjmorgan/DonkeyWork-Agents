@@ -33,7 +33,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages (common + skill dependencies)
-RUN pip3 install --no-cache-dir --break-system-packages \
+# Allow runtime pip installs inside ephemeral sandbox containers (PEP 668)
+RUN pip3 config set global.break-system-packages true
+
+RUN pip3 install --no-cache-dir \
     requests \
     numpy \
     pandas \

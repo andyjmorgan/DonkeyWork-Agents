@@ -6,29 +6,24 @@ namespace DonkeyWork.Agents.Persistence.Entities.Research;
 public class ResearchEntity : BaseEntity
 {
     /// <summary>
-    /// The research subject/question - the original ask.
+    /// The research title.
     /// </summary>
-    public string Subject { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Detailed content/scope of the research (markdown supported).
+    /// The research plan (markdown supported).
     /// </summary>
-    public string? Content { get; set; }
+    public string? Plan { get; set; }
 
     /// <summary>
-    /// Summary of research findings (populated when completing research).
+    /// Result of the research (populated when completing research).
     /// </summary>
-    public string? Summary { get; set; }
+    public string? Result { get; set; }
 
     /// <summary>
     /// Research status.
     /// </summary>
     public ResearchStatus Status { get; set; } = ResearchStatus.NotStarted;
-
-    /// <summary>
-    /// Notes on completion (markdown supported).
-    /// </summary>
-    public string? CompletionNotes { get; set; }
 
     /// <summary>
     /// Date when the research was completed.

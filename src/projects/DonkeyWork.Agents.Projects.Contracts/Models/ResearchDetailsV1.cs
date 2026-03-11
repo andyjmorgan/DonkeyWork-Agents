@@ -10,26 +10,23 @@ public sealed class ResearchDetailsV1
     [JsonPropertyName("id")]
     public Guid Id { get; init; }
 
-    [JsonPropertyName("subject")]
-    public required string Subject { get; init; }
+    [JsonPropertyName("title")]
+    public required string Title { get; init; }
 
-    [JsonPropertyName("content")]
-    public string? Content { get; init; }
+    [JsonPropertyName("plan")]
+    public string? Plan { get; init; }
 
-    [JsonPropertyName("contentLength")]
-    public int ContentLength { get; init; }
+    [JsonPropertyName("planLength")]
+    public int PlanLength { get; init; }
 
-    [JsonPropertyName("summary")]
-    public string? Summary { get; init; }
+    [JsonPropertyName("result")]
+    public string? Result { get; init; }
 
-    [JsonPropertyName("summaryLength")]
-    public int SummaryLength { get; init; }
+    [JsonPropertyName("resultLength")]
+    public int ResultLength { get; init; }
 
     [JsonPropertyName("status")]
     public ResearchStatus Status { get; init; }
-
-    [JsonPropertyName("completionNotes")]
-    public string? CompletionNotes { get; init; }
 
     [JsonPropertyName("completedAt")]
     public DateTimeOffset? CompletedAt { get; init; }

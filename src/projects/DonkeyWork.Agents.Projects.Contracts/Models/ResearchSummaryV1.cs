@@ -11,14 +11,14 @@ public sealed class ResearchSummaryV1
     [JsonPropertyName("id")]
     public Guid Id { get; init; }
 
-    [JsonPropertyName("subject")]
-    public required string Subject { get; init; }
+    [JsonPropertyName("title")]
+    public required string Title { get; init; }
 
-    [JsonPropertyName("contentPreview")]
-    public string? ContentPreview { get; init; }
+    [JsonPropertyName("planPreview")]
+    public string? PlanPreview { get; init; }
 
-    [JsonPropertyName("contentLength")]
-    public int ContentLength { get; init; }
+    [JsonPropertyName("planLength")]
+    public int PlanLength { get; init; }
 
     [JsonPropertyName("status")]
     public ResearchStatus Status { get; init; }

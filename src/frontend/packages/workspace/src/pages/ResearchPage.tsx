@@ -38,8 +38,8 @@ export function ResearchPage({ nav }: { nav: WorkspaceNavigation }) {
     nav.goToNewResearch()
   }
 
-  const handleDelete = async (id: string, subject: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${subject}"?`)) return
+  const handleDelete = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return
 
     try {
       setDeletingId(id)
@@ -161,7 +161,7 @@ export function ResearchPage({ nav }: { nav: WorkspaceNavigation }) {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <Search className="h-4 w-4 text-cyan-500 shrink-0" />
-                      <h3 className="font-semibold truncate">{item.subject}</h3>
+                      <h3 className="font-semibold truncate">{item.title}</h3>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       {/* Selection checkbox */}
@@ -183,9 +183,9 @@ export function ResearchPage({ nav }: { nav: WorkspaceNavigation }) {
                       </Badge>
                     </div>
                   </div>
-                  {item.contentPreview && (
+                  {item.planPreview && (
                     <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                      {item.contentPreview}
+                      {item.planPreview}
                     </p>
                   )}
                   {item.tags.length > 0 && (
@@ -207,7 +207,7 @@ export function ResearchPage({ nav }: { nav: WorkspaceNavigation }) {
                   </div>
                   <button
                     className="opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive/80 transition-opacity"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.subject) }}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.title) }}
                     disabled={deletingId === item.id}
                   >
                     {deletingId === item.id ? (

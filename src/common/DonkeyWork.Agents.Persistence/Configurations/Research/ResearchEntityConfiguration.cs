@@ -20,23 +20,20 @@ public class ResearchEntityConfiguration : IEntityTypeConfiguration<ResearchEnti
             .HasColumnName("user_id")
             .IsRequired();
 
-        builder.Property(e => e.Subject)
-            .HasColumnName("subject")
+        builder.Property(e => e.Title)
+            .HasColumnName("title")
             .IsRequired()
             .HasMaxLength(500);
 
-        builder.Property(e => e.Content)
-            .HasColumnName("content");
+        builder.Property(e => e.Plan)
+            .HasColumnName("plan");
 
-        builder.Property(e => e.Summary)
-            .HasColumnName("summary");
+        builder.Property(e => e.Result)
+            .HasColumnName("result");
 
         builder.Property(e => e.Status)
             .HasColumnName("status")
             .IsRequired();
-
-        builder.Property(e => e.CompletionNotes)
-            .HasColumnName("completion_notes");
 
         builder.Property(e => e.CompletedAt)
             .HasColumnName("completed_at");
