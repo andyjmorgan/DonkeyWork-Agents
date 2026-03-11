@@ -33,6 +33,7 @@ public sealed class OAuthTokenService : IOAuthTokenService
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.OAuthTokens
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.UserId == userId && e.Id == id, cancellationToken);
 
         return entity == null ? null : ToModel(entity);

@@ -44,6 +44,7 @@ public sealed class OAuthProviderConfigService : IOAuthProviderConfigService
         CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.OAuthProviderConfigs
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.UserId == userId && e.Provider == provider, cancellationToken);
 
         return entity == null ? null : ToModel(entity);
