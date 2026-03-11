@@ -117,12 +117,12 @@ internal sealed class ToolMiddleware : IModelMiddleware
         if (result.Content.Length > MaxToolResultCharacters)
         {
             _logger.LogWarning(
-                "ToolMiddleware tool {Tool} result too large ({Length} chars), replacing with error",
-                toolCall.ToolName, result.Content.Length);
-            result = new ToolExecutionResult(
-                $"Tool result too large ({result.Content.Length:N0} characters, limit is {MaxToolResultCharacters:N0}). " +
-                "Try narrowing your request to return less data.",
-                IsError: true);
+                "ToolMiddleware tool {Tool} result too large ({Length} chars), truncating to {Limit}",
+                toolCall.ToolName, result.Content.Length, MaxToolResultCharacters);
+            var truncated = result.Content[..MaxToolResultCharacters] +
+                $"\n\n[TRUNCATED — result was {result.Content.Length:N0} characters, showing first {MaxToolResultCharacters:N0}. " +
+                "Try narrowing your request to return less data.]";
+            result = new ToolExecutionResult(truncated, result.IsError);
         }
 
         _logger.LogInformation("ToolMiddleware tool {Tool} completed in {Duration}ms, success={Success}",
