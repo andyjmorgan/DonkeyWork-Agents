@@ -34,6 +34,22 @@ public static class SandboxProviderTemplateRegistry
                 },
             ],
         },
+        new SandboxProviderTemplate
+        {
+            Provider = OAuthProvider.Microsoft,
+            DisplayName = "Microsoft Graph",
+            Mappings =
+            [
+                new SandboxProviderMappingTemplate
+                {
+                    BaseDomain = "graph.microsoft.com",
+                    HeaderName = "Authorization",
+                    HeaderValueFormat = HeaderValueFormat.Raw,
+                    HeaderValuePrefix = "Bearer ",
+                    CredentialFieldType = CredentialFieldType.AccessToken,
+                },
+            ],
+        },
     ];
 
     /// <summary>

@@ -54,6 +54,33 @@ public class SandboxProviderTemplateRegistryTests
 
     #endregion
 
+    #region GetTemplate Microsoft Tests
+
+    [Fact]
+    public void GetTemplate_Microsoft_ReturnsOneMapping()
+    {
+        var template = SandboxProviderTemplateRegistry.GetTemplate(OAuthProvider.Microsoft);
+
+        Assert.NotNull(template);
+        Assert.Equal(OAuthProvider.Microsoft, template.Provider);
+        Assert.Equal("Microsoft Graph", template.DisplayName);
+        Assert.Single(template.Mappings);
+    }
+
+    [Fact]
+    public void GetTemplate_Microsoft_HasGraphDomainWithRawFormat()
+    {
+        var template = SandboxProviderTemplateRegistry.GetTemplate(OAuthProvider.Microsoft)!;
+        var graphMapping = template.Mappings.First(m => m.BaseDomain == "graph.microsoft.com");
+
+        Assert.Equal("Authorization", graphMapping.HeaderName);
+        Assert.Equal(HeaderValueFormat.Raw, graphMapping.HeaderValueFormat);
+        Assert.Equal("Bearer ", graphMapping.HeaderValuePrefix);
+        Assert.Equal(CredentialFieldType.AccessToken, graphMapping.CredentialFieldType);
+    }
+
+    #endregion
+
     #region GetAll Tests
 
     [Fact]
@@ -63,6 +90,7 @@ public class SandboxProviderTemplateRegistryTests
 
         Assert.NotEmpty(templates);
         Assert.Contains(templates, t => t.Provider == OAuthProvider.GitHub);
+        Assert.Contains(templates, t => t.Provider == OAuthProvider.Microsoft);
     }
 
     #endregion

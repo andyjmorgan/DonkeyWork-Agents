@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
@@ -11,11 +12,13 @@ public sealed class SandboxTools
     private static readonly TimeSpan[] RetryDelays = [TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1)];
 
     private readonly SandboxManagerClient _client;
+    private readonly ISandboxCredentialMappingService? _credentialMappingService;
     private readonly ILogger<SandboxTools> _logger;
 
-    public SandboxTools(SandboxManagerClient client, ILogger<SandboxTools> logger)
+    public SandboxTools(SandboxManagerClient client, ILogger<SandboxTools> logger, ISandboxCredentialMappingService? credentialMappingService = null)
     {
         _client = client;
+        _credentialMappingService = credentialMappingService;
         _logger = logger;
     }
 
@@ -93,8 +96,26 @@ public sealed class SandboxTools
         var sandboxId = await _client.FindSandboxAsync(userId, conversationId, ct);
         if (sandboxId is null)
         {
+            // Resolve credential domains so the auth proxy can inject tokens
+            IReadOnlyList<string>? credentialDomains = null;
+            if (_credentialMappingService is not null)
+            {
+                try
+                {
+                    credentialDomains = await _credentialMappingService.GetConfiguredDomainsAsync(ct);
+                    _logger.LogInformation(
+                        "Fallback provisioning resolved {Count} credential domain(s): [{Domains}]",
+                        credentialDomains.Count,
+                        string.Join(", ", credentialDomains));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to resolve credential domains during fallback provisioning");
+                }
+            }
+
             context.ReportProgress("Creating sandbox...");
-            sandboxId = await _client.CreateSandboxAsync(userId, conversationId, context.ReportProgress, ct);
+            sandboxId = await _client.CreateSandboxAsync(userId, conversationId, context.ReportProgress, ct, credentialDomains);
         }
         return sandboxId;
     }
