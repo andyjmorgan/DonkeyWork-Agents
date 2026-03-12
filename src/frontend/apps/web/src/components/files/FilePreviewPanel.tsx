@@ -13,6 +13,7 @@ import { MarkdownViewer } from '@donkeywork/editor'
 import DocViewer, { DocViewerRenderers } from '@iamjariwala/react-doc-viewer'
 import { files, type FileItem } from '@donkeywork/api-client'
 import { JsonViewer } from '../ui/json-viewer'
+import * as XLSX from 'xlsx'
 
 interface FilePreviewPanelProps {
   file: FileItem | null
@@ -21,13 +22,19 @@ interface FilePreviewPanelProps {
   onClose: () => void
 }
 
-type PreviewType = 'markdown' | 'json' | 'text' | 'document' | 'unsupported'
+type PreviewType = 'markdown' | 'json' | 'text' | 'spreadsheet' | 'document' | 'unsupported'
+
+interface SpreadsheetData {
+  sheets: string[]
+  data: Record<string, unknown[][]>
+}
 
 const TEXT_EXTENSIONS = ['txt', 'log', 'xml', 'yaml', 'yml']
 const JSON_EXTENSIONS = ['json']
 const MARKDOWN_EXTENSIONS = ['md']
+const SPREADSHEET_EXTENSIONS = ['xlsx', 'csv']
 const DOCUMENT_EXTENSIONS = [
-  'pdf', 'docx', 'xlsx', 'pptx', 'csv',
+  'pdf', 'docx',
   'png', 'jpg', 'jpeg', 'gif', 'webp',
 ]
 
@@ -40,6 +47,7 @@ function getPreviewType(fileName: string): PreviewType {
   if (MARKDOWN_EXTENSIONS.includes(ext)) return 'markdown'
   if (JSON_EXTENSIONS.includes(ext)) return 'json'
   if (TEXT_EXTENSIONS.includes(ext)) return 'text'
+  if (SPREADSHEET_EXTENSIONS.includes(ext)) return 'spreadsheet'
   if (DOCUMENT_EXTENSIONS.includes(ext)) return 'document'
   return 'unsupported'
 }
@@ -58,6 +66,8 @@ function getTypeLabel(fileName: string): string {
 export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePreviewPanelProps) {
   const [textContent, setTextContent] = useState<string | null>(null)
   const [docUrl, setDocUrl] = useState<string | null>(null)
+  const [spreadsheet, setSpreadsheet] = useState<SpreadsheetData | null>(null)
+  const [activeSheet, setActiveSheet] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -65,6 +75,8 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
     if (!file || !open) {
       setTextContent(null)
       setDocUrl(null)
+      setSpreadsheet(null)
+      setActiveSheet('')
       setError(null)
       return
     }
@@ -79,11 +91,23 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
       setError(null)
       setTextContent(null)
       setDocUrl(null)
+      setSpreadsheet(null)
+      setActiveSheet('')
 
       try {
         if (previewType === 'markdown' || previewType === 'json' || previewType === 'text') {
           const content = await files.fetchText(fileKey)
           setTextContent(content)
+        } else if (previewType === 'spreadsheet') {
+          const { blob } = await files.download(fileKey)
+          const arrayBuffer = await blob.arrayBuffer()
+          const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+          const sheets: Record<string, unknown[][]> = {}
+          for (const name of workbook.SheetNames) {
+            sheets[name] = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1 }) as unknown[][]
+          }
+          setSpreadsheet({ sheets: workbook.SheetNames, data: sheets })
+          setActiveSheet(workbook.SheetNames[0])
         } else {
           const { blob } = await files.download(fileKey)
           const blobUrl = URL.createObjectURL(blob)
@@ -114,6 +138,7 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
   }
 
   const previewType = file ? getPreviewType(file.fileName) : 'unsupported'
+  const sheetRows = spreadsheet && activeSheet ? spreadsheet.data[activeSheet] || [] : []
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
@@ -164,6 +189,43 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
             <pre className="text-sm bg-muted/50 rounded-lg p-4 overflow-auto whitespace-pre-wrap break-words font-mono border">
               {textContent}
             </pre>
+          )}
+
+          {!loading && !error && previewType === 'spreadsheet' && spreadsheet && (
+            <div className="space-y-2">
+              {spreadsheet.sheets.length > 1 && (
+                <div className="flex gap-1 border-b pb-2 overflow-x-auto">
+                  {spreadsheet.sheets.map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => setActiveSheet(name)}
+                      className={`px-3 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${
+                        activeSheet === name
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="overflow-auto border rounded-md max-h-[calc(100vh-200px)]">
+                <table className="w-full text-xs border-collapse">
+                  <tbody>
+                    {sheetRows.map((row, i) => (
+                      <tr key={i} className={i === 0 ? 'bg-muted font-medium sticky top-0' : 'border-t border-border'}>
+                        {(row as unknown[]).map((cell, j) => (
+                          <td key={j} className="px-3 py-1.5 whitespace-nowrap border-r border-border last:border-r-0">
+                            {cell != null ? String(cell) : ''}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {!loading && !error && previewType === 'document' && docUrl && file && (
