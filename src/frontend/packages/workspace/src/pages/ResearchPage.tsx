@@ -183,11 +183,15 @@ export function ResearchPage({ nav }: { nav: WorkspaceNavigation }) {
                       </Badge>
                     </div>
                   </div>
-                  {item.planPreview && (
+                  {item.resultPreview ? (
+                    <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
+                      {item.resultPreview}
+                    </p>
+                  ) : item.planPreview ? (
                     <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
                       {item.planPreview}
                     </p>
-                  )}
+                  ) : null}
                   {item.tags.length > 0 && (
                     <div className="flex gap-1 flex-wrap mt-2">
                       {item.tags.slice(0, 3).map((tag) => (

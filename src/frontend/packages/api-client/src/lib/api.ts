@@ -811,6 +811,8 @@ export interface ResearchSummary {
   title: string
   planPreview?: string
   planLength: number
+  resultPreview?: string
+  resultLength: number
   status: ResearchStatus
   completedAt?: string
   tags: Tag[]

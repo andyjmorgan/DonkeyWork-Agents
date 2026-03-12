@@ -20,6 +20,12 @@ public sealed class ResearchSummaryV1
     [JsonPropertyName("planLength")]
     public int PlanLength { get; init; }
 
+    [JsonPropertyName("resultPreview")]
+    public string? ResultPreview { get; init; }
+
+    [JsonPropertyName("resultLength")]
+    public int ResultLength { get; init; }
+
     [JsonPropertyName("status")]
     public ResearchStatus Status { get; init; }
 

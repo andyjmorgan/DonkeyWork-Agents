@@ -321,7 +321,20 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
           )}
         </TabsList>
 
-        <TabsContent value="results" className="mt-4">
+        <TabsContent value="results" className="mt-4 space-y-6">
+          {/* Result summary (shown for completed research) */}
+          {result && (
+            <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+              <Label className="text-sm font-medium">Result</Label>
+              <Textarea
+                value={result}
+                onChange={(e) => setResult(e.target.value)}
+                placeholder="Research outcome..."
+                rows={4}
+              />
+            </div>
+          )}
+
           <MarkdownEditor
             content={plan}
             onChange={setPlan}

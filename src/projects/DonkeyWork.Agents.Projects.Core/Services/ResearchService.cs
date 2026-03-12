@@ -256,6 +256,8 @@ public class ResearchService : IResearchService
             Title = research.Title,
             PlanPreview = ContentTruncationHelper.TruncateContent(research.Plan),
             PlanLength = ContentTruncationHelper.GetContentLength(research.Plan),
+            ResultPreview = ContentTruncationHelper.TruncateContent(research.Result),
+            ResultLength = ContentTruncationHelper.GetContentLength(research.Result),
             Status = (Contracts.Models.ResearchStatus)(int)research.Status,
             CompletedAt = research.CompletedAt,
             Tags = research.Tags.Select(t => new TagV1 { Id = t.Id, Name = t.Name, Color = t.Color }).ToList(),
