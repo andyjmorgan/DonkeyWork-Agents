@@ -115,7 +115,7 @@ export function AgentDetailModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden bg-card border-border">
+        <DialogContent className="sm:max-w-6xl max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden bg-card border-border">
           <DialogHeader className="px-6 pt-6 pb-3 border-b border-border">
             <DialogTitle className="flex items-center gap-3">
               <span className="rounded-lg bg-cyan-500/10 text-cyan-400 px-2.5 py-1 text-xs uppercase tracking-wider font-semibold border border-cyan-500/20">
@@ -137,7 +137,7 @@ export function AgentDetailModal({
               )}
             </DialogTitle>
             {label && (
-              <DialogDescription className="text-sm text-muted-foreground mt-1">
+              <DialogDescription className="text-sm text-muted-foreground mt-1 truncate">
                 {label}
               </DialogDescription>
             )}

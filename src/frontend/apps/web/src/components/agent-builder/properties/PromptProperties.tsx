@@ -36,7 +36,7 @@ export function PromptProperties({ nodeId }: PromptPropertiesProps) {
       {promptDetails?.content && (
         <div className="space-y-2">
           <div className="text-sm font-medium text-muted-foreground">Content Preview</div>
-          <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm font-mono whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+          <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm font-mono whitespace-pre-wrap">
             {promptDetails.content}
           </div>
         </div>

@@ -69,7 +69,7 @@ export function CreatePromptDialog({ open, onOpenChange, onCreated }: CreateProm
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create Prompt</DialogTitle>
         </DialogHeader>
@@ -113,7 +113,7 @@ export function CreatePromptDialog({ open, onOpenChange, onCreated }: CreateProm
             <Textarea
               id="prompt-content"
               placeholder="Enter the prompt content..."
-              rows={8}
+              rows={16}
               className="font-mono text-sm"
               value={content}
               onChange={(e) => setContent(e.target.value)}
