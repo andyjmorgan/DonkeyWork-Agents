@@ -11,6 +11,7 @@ import type {
   ChatMessage,
   WebSearchResult,
   McpServerStatus,
+  SandboxStatus,
 } from "@donkeywork/api-client";
 import type { InternalMessage, GetStateResponse, TrackedAgent } from "@donkeywork/api-client";
 
@@ -29,6 +30,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [mcpServerStatuses, setMcpServerStatuses] = useState<McpServerStatus[]>([]);
+  const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const nextIdRef = useRef(1);
@@ -244,6 +246,15 @@ export function useAgentConversation(initialConversationId?: string, options?: U
           toolCount: (data.toolCount as number) ?? 0,
           error: (data.error as string) ?? undefined,
         }];
+      });
+      return;
+    }
+
+    if (eventType === "sandbox_status") {
+      setSandboxStatus({
+        status: (data.status as SandboxStatus["status"]) ?? "provisioning",
+        message: (data.message as string) ?? undefined,
+        podName: (data.podName as string) ?? undefined,
       });
       return;
     }
@@ -801,6 +812,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     setIsConnected(false);
     setIsReconnecting(false);
     setMcpServerStatuses([]);
+    setSandboxStatus(null);
     agentGroupIndexRef.current = new Map();
     currentAssistantIdRef.current = null;
     nextIdRef.current = 1;
@@ -818,6 +830,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     isConnected,
     isReconnecting,
     mcpServerStatuses,
+    sandboxStatus,
     sendMessage,
     sendRpc,
     cancel,

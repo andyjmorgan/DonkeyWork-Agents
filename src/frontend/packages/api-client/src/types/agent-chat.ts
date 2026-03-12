@@ -46,6 +46,12 @@ export interface McpServerStatus {
   error?: string
 }
 
+export interface SandboxStatus {
+  status: "provisioning" | "ready" | "failed"
+  message?: string
+  podName?: string
+}
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "progress";

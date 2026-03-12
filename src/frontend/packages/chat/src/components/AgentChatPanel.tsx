@@ -11,7 +11,7 @@ import { AgentDetailModal } from "./AgentDetailModal";
 import { AgentSidePanel } from "./AgentSidePanel";
 import { McpSidePanel } from "./McpSidePanel";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "./agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container } from "lucide-react";
 
 function extractTextFromBoxes(boxes: ContentBox[]): string {
   return boxes
@@ -180,6 +180,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     isConnected,
     isReconnecting,
     mcpServerStatuses,
+    sandboxStatus,
   } = useAgentConversation(initialConversationId, { onConversationCreated, onReset });
 
   const swarmKey = conversationId ? `swarm:${conversationId}` : null;
@@ -292,6 +293,23 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
             )}
           </div>
           <div className="flex items-center gap-1">
+            {sandboxStatus && (
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground"
+                title={sandboxStatus.message ?? sandboxStatus.status}
+              >
+                <Container className="w-4 h-4" />
+                {sandboxStatus.status === "provisioning" && (
+                  <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                )}
+                {sandboxStatus.status === "ready" && (
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                )}
+                {sandboxStatus.status === "failed" && (
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-red-400" />
+                )}
+              </div>
+            )}
             {mcpServerStatuses.length > 0 && !mcpPanelOpen && (
               <Button
                 variant="ghost"

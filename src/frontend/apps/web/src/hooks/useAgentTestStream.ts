@@ -290,6 +290,7 @@ export function useAgentTestStream() {
       case 'progress':
       case 'cancelled':
       case 'mcp_server_status':
+      case 'sandbox_status':
         break
     }
   }
