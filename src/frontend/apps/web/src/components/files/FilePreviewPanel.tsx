@@ -85,8 +85,15 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
           const content = await files.fetchText(fileKey)
           setTextContent(content)
         } else {
-          const url = await files.getUrl(fileKey)
-          setDocUrl(url)
+          // Try presigned URL first, fall back to blob URL via download
+          try {
+            const url = await files.getUrl(fileKey)
+            setDocUrl(url)
+          } catch {
+            const { blob } = await files.download(fileKey)
+            const blobUrl = URL.createObjectURL(blob)
+            setDocUrl(blobUrl)
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load preview')
