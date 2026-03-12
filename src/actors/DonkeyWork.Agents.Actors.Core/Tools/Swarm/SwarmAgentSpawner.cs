@@ -36,6 +36,15 @@ internal static class SwarmAgentSpawner
             Label = label,
         });
 
+        // If the parent has a sandbox ready, pass the pod name so the child reuses it
+        if (string.IsNullOrEmpty(contract.SandboxPodName) && context.SandboxHandle is { } handle)
+        {
+            if (handle.Task.IsCompletedSuccessfully)
+            {
+                contract = contract.WithSandboxPodName(handle.Task.Result);
+            }
+        }
+
         // Propagate caller context so the sub-agent's interceptor can hydrate
         // GrainContext and IIdentityContext without relying solely on key parsing.
         RequestContext.Set(GrainCallContextKeys.UserId, identityContext.UserId.ToString());

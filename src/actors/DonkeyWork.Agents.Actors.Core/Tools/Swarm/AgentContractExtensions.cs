@@ -12,6 +12,33 @@ internal static class AgentContractExtensions
     };
 
     /// <summary>
+    /// Creates a copy of the contract with the specified sandbox pod name.
+    /// </summary>
+    public static AgentContract WithSandboxPodName(this AgentContract contract, string podName) => new()
+    {
+        SystemPrompt = contract.SystemPrompt,
+        ToolGroups = contract.ToolGroups,
+        MaxTokens = contract.MaxTokens,
+        ThinkingBudgetTokens = contract.ThinkingBudgetTokens,
+        Stream = contract.Stream,
+        WebSearch = contract.WebSearch,
+        WebFetch = contract.WebFetch,
+        PersistMessages = contract.PersistMessages,
+        Lifecycle = contract.Lifecycle,
+        LingerSeconds = contract.LingerSeconds,
+        AgentType = contract.AgentType,
+        KeyPrefix = contract.KeyPrefix,
+        TimeoutSeconds = contract.TimeoutSeconds,
+        McpServers = contract.McpServers,
+        EnableSandbox = contract.EnableSandbox,
+        SandboxPodName = podName,
+        ModelId = contract.ModelId,
+        Prompts = contract.Prompts,
+        SubAgents = contract.SubAgents,
+        ReasoningEffort = contract.ReasoningEffort,
+    };
+
+    /// <summary>
     /// Creates a copy of the contract with MCP servers, sub-agents, and tool groups inherited from the parent grain context.
     /// Tool groups are only inherited when the child contract has none defined; swarm tools are excluded from inheritance.
     /// If <paramref name="toolGroupOverrides"/> is provided, those groups are used instead of inherited ones.

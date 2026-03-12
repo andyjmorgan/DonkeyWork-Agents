@@ -583,6 +583,16 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                          || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase);
         if (!hasSandbox) return;
 
+        // If the parent already provisioned a sandbox, reuse it directly
+        if (_sandboxHandle is null && !string.IsNullOrEmpty(contract.SandboxPodName))
+        {
+            _logger.LogInformation("Reusing parent sandbox pod {PodName}", contract.SandboxPodName);
+            _sandboxHandle = new SandboxProvisioningHandle();
+            _sandboxHandle.SetResult(contract.SandboxPodName);
+            _grainContext.SandboxHandle = _sandboxHandle;
+            return;
+        }
+
         if (_sandboxHandle is null)
         {
             _sandboxHandle = new SandboxProvisioningHandle();
