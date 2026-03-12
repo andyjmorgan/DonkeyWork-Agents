@@ -35,6 +35,14 @@ public sealed class SandboxManagerClient
                 new FindSandboxRequest { UserId = userId, ConversationId = conversationId },
                 cancellationToken: ct);
 
+            if (!response.IsReady)
+            {
+                _logger.LogInformation(
+                    "Found sandbox {PodName} but it is not ready (Phase={Phase}), treating as not found",
+                    response.Name, response.Phase);
+                return null;
+            }
+
             _logger.LogInformation("Found existing sandbox {PodName} for UserId={UserId}, ConversationId={ConversationId}",
                 response.Name, userId, conversationId);
             return response.Name;
