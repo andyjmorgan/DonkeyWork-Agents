@@ -12,6 +12,7 @@ import {
 import { MarkdownViewer } from '@donkeywork/editor'
 import DocViewer, { DocViewerRenderers } from '@iamjariwala/react-doc-viewer'
 import { files, type FileItem } from '@donkeywork/api-client'
+import { JsonViewer } from '../ui/json-viewer'
 
 interface FilePreviewPanelProps {
   file: FileItem | null
@@ -20,9 +21,10 @@ interface FilePreviewPanelProps {
   onClose: () => void
 }
 
-type PreviewType = 'markdown' | 'text' | 'document' | 'unsupported'
+type PreviewType = 'markdown' | 'json' | 'text' | 'document' | 'unsupported'
 
-const TEXT_EXTENSIONS = ['txt', 'json', 'log', 'xml', 'yaml', 'yml']
+const TEXT_EXTENSIONS = ['txt', 'log', 'xml', 'yaml', 'yml']
+const JSON_EXTENSIONS = ['json']
 const MARKDOWN_EXTENSIONS = ['md']
 const DOCUMENT_EXTENSIONS = [
   'pdf', 'docx', 'xlsx', 'pptx', 'csv',
@@ -36,6 +38,7 @@ function getExtension(fileName: string): string {
 function getPreviewType(fileName: string): PreviewType {
   const ext = getExtension(fileName)
   if (MARKDOWN_EXTENSIONS.includes(ext)) return 'markdown'
+  if (JSON_EXTENSIONS.includes(ext)) return 'json'
   if (TEXT_EXTENSIONS.includes(ext)) return 'text'
   if (DOCUMENT_EXTENSIONS.includes(ext)) return 'document'
   return 'unsupported'
@@ -78,7 +81,7 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
       setDocUrl(null)
 
       try {
-        if (previewType === 'markdown' || previewType === 'text') {
+        if (previewType === 'markdown' || previewType === 'json' || previewType === 'text') {
           const content = await files.fetchText(fileKey)
           setTextContent(content)
         } else {
@@ -150,6 +153,10 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
             <div className="p-1">
               <MarkdownViewer content={textContent} />
             </div>
+          )}
+
+          {!loading && !error && previewType === 'json' && textContent !== null && (
+            <JsonViewer data={textContent} collapsed={3} />
           )}
 
           {!loading && !error && previewType === 'text' && textContent !== null && (

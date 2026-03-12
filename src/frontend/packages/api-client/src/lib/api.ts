@@ -1213,15 +1213,15 @@ export const files = {
     return { blob, fileName: downloadFileName, contentType }
   },
 
-  // Get presigned URL for a file
+  // Get presigned URL for a file (uses catch-all key route)
   getUrl: async (key: string): Promise<string> => {
-    const data = await api.get<{ url: string; expiresAt: string }>(`/api/v1/files/${encodeURIComponent(key)}/url`)
+    const data = await api.get<{ url: string; expiresAt: string }>(`/api/v1/files/url/${key}`)
     return data.url
   },
 
-  // Fetch file content as text (for markdown/text preview)
+  // Fetch file content as text (for markdown/text preview, uses catch-all key route)
   fetchText: async (key: string): Promise<string> => {
-    const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/${encodeURIComponent(key)}/download`)
+    const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/download/${key}`)
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`)
     }
