@@ -18,12 +18,12 @@ public sealed class AnthropicProviderConfig : ProviderConfig
     public int? TopK { get; init; }
 
     /// <summary>
-    /// Enable extended thinking for supported models (claude-opus-4-5, claude-sonnet-4-5).
+    /// Enable extended thinking for supported models (claude-opus-4-6, claude-sonnet-4-6).
     /// </summary>
     [JsonPropertyName("enableExtendedThinking")]
     [ConfigurableField(Label = "Enable Extended Thinking", ControlType = ControlType.Toggle, Order = 20)]
     [Tab("Anthropic", Order = 1)]
-    [SupportedBy("claude-opus-4-5", "claude-sonnet-4-5")]
+    [SupportedBy("claude-opus-4-6", "claude-sonnet-4-6")]
     [Group("Extended Thinking")]
     public bool? EnableExtendedThinking { get; init; }
 
@@ -33,7 +33,7 @@ public sealed class AnthropicProviderConfig : ProviderConfig
     [JsonPropertyName("thinkingBudget")]
     [ConfigurableField(Label = "Thinking Budget", ControlType = ControlType.Number, Order = 30)]
     [Tab("Anthropic", Order = 1)]
-    [SupportedBy("claude-opus-4-5", "claude-sonnet-4-5")]
+    [SupportedBy("claude-opus-4-6", "claude-sonnet-4-6")]
     [ReliesUpon(FieldName = nameof(EnableExtendedThinking), Value = true)]
     [Group("Extended Thinking")]
     public int? ThinkingBudget { get; init; }
@@ -44,7 +44,7 @@ public sealed class AnthropicProviderConfig : ProviderConfig
     [JsonPropertyName("interleavedThinking")]
     [ConfigurableField(Label = "Interleaved Thinking", ControlType = ControlType.Toggle, Order = 40)]
     [Tab("Anthropic", Order = 1)]
-    [SupportedBy("claude-opus-4-5", "claude-sonnet-4-5")]
+    [SupportedBy("claude-opus-4-6", "claude-sonnet-4-6")]
     [ReliesUpon(FieldName = nameof(EnableExtendedThinking), Value = true)]
     [Group("Extended Thinking")]
     public bool? InterleavedThinking { get; init; }

@@ -88,7 +88,7 @@ public class ModelPipelineTests
             Model = new PipelineModelConfig
             {
                 Provider = LlmProvider.Anthropic,
-                ModelId = "claude-sonnet-4-5",
+                ModelId = "claude-sonnet-4-6",
                 ApiKey = "test-api-key"
             }
         };

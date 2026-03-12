@@ -44,7 +44,7 @@ public class AiClientFactoryTests
         var config = new InternalModelConfig
         {
             Provider = LlmProvider.Anthropic,
-            ModelId = "claude-sonnet-4-5",
+            ModelId = "claude-sonnet-4-6",
             ApiKey = "test-key"
         };
 

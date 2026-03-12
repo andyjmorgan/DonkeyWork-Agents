@@ -296,7 +296,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
             {sandboxStatus && (
               <div
                 className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground"
-                title={sandboxStatus.message ?? sandboxStatus.status}
+                title={sandboxStatus.podName ?? sandboxStatus.message ?? sandboxStatus.status}
               >
                 <Container className="w-4 h-4" />
                 {sandboxStatus.status === "provisioning" && (

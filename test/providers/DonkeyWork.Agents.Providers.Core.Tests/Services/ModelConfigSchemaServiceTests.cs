@@ -24,15 +24,15 @@ public class ModelConfigSchemaServiceTests
     public void GetSchemaForModel_WithAnthropicModel_ReturnsSchemaWithThinkingBudget()
     {
         // Arrange
-        var model = CreateChatModel("claude-opus-4-5", LlmProvider.Anthropic, supportsReasoning: true);
+        var model = CreateChatModel("claude-opus-4-6", LlmProvider.Anthropic, supportsReasoning: true);
         _mockCatalogService.Setup(x => x.GetAllModels()).Returns(new[] { model });
 
         // Act
-        var schema = _service.GetSchemaForModel("claude-opus-4-5");
+        var schema = _service.GetSchemaForModel("claude-opus-4-6");
 
         // Assert
         Assert.NotNull(schema);
-        Assert.Equal("claude-opus-4-5", schema.ModelId);
+        Assert.Equal("claude-opus-4-6", schema.ModelId);
         Assert.Equal(LlmProvider.Anthropic, schema.Provider);
 
         var thinkingBudgetField = schema.Fields.FirstOrDefault(f => f.Name == "thinkingBudget");
@@ -91,11 +91,11 @@ public class ModelConfigSchemaServiceTests
     public void GetSchemaForModel_WithReasoningCapability_IncludesReasoningEffortField()
     {
         // Arrange
-        var model = CreateChatModel("claude-opus-4-5", LlmProvider.Anthropic, supportsReasoning: true);
+        var model = CreateChatModel("claude-opus-4-6", LlmProvider.Anthropic, supportsReasoning: true);
         _mockCatalogService.Setup(x => x.GetAllModels()).Returns(new[] { model });
 
         // Act
-        var schema = _service.GetSchemaForModel("claude-opus-4-5");
+        var schema = _service.GetSchemaForModel("claude-opus-4-6");
 
         // Assert
         Assert.NotNull(schema);
@@ -136,7 +136,7 @@ public class ModelConfigSchemaServiceTests
     {
         // Arrange
         var model = CreateChatModel(
-            "claude-opus-4-5",
+            "claude-opus-4-6",
             LlmProvider.Anthropic,
             supportsReasoning: true,
             configOverrides: new Dictionary<string, FieldOverride>
@@ -147,7 +147,7 @@ public class ModelConfigSchemaServiceTests
         _mockCatalogService.Setup(x => x.GetAllModels()).Returns(new[] { model });
 
         // Act
-        var schema = _service.GetSchemaForModel("claude-opus-4-5");
+        var schema = _service.GetSchemaForModel("claude-opus-4-6");
 
         // Assert
         Assert.NotNull(schema);
