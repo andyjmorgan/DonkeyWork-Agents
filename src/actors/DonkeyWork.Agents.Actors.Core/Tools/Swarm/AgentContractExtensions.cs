@@ -39,22 +39,16 @@ internal static class AgentContractExtensions
     };
 
     /// <summary>
-    /// Creates a copy of the contract with MCP servers, sub-agents, and tool groups inherited from the parent grain context.
-    /// Tool groups are only inherited when the child contract has none defined; swarm tools are excluded from inheritance.
-    /// If <paramref name="toolGroupOverrides"/> is provided, those groups are used instead of inherited ones.
+    /// Creates a copy of the contract inheriting MCP servers, sub-agents, and tool groups from the parent grain context.
+    /// If the contract already defines tool groups (e.g. custom agents), those are kept.
+    /// Otherwise (e.g. delegates), all parent tool groups are inherited (except swarm spawning tools).
+    /// MCP servers and sub-agents are always inherited from the parent.
     /// </summary>
-    public static AgentContract WithParentContext(this AgentContract contract, GrainContext context, string[]? toolGroupOverrides = null)
+    public static AgentContract WithParentContext(this AgentContract contract, GrainContext context)
     {
-        if (context.McpServers is not { Length: > 0 }
-            && context.SubAgents is not { Length: > 0 }
-            && context.ToolGroups is not { Length: > 0 })
-            return contract;
-
-        var toolGroups = toolGroupOverrides is { Length: > 0 }
-            ? toolGroupOverrides
-            : contract.ToolGroups.Length > 0
-                ? contract.ToolGroups
-                : context.ToolGroups.Where(g => !ExcludedChildToolGroups.Contains(g)).ToArray();
+        var toolGroups = contract.ToolGroups.Length > 0
+            ? contract.ToolGroups
+            : context.ToolGroups.Where(g => !ExcludedChildToolGroups.Contains(g)).ToArray();
 
         return new AgentContract
         {

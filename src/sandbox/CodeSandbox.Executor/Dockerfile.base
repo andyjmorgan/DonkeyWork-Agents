@@ -67,8 +67,7 @@ RUN npm install -g \
 
 # Reuse the existing ubuntu user (uid/gid 1000) from the base image.
 # This matches the SeaweedFS filer ownership so files are readable without
-# permission workarounds. VM-level isolation via kata-qemu provides the
-# security boundary.
+# permission workarounds.
 RUN usermod --home /home/sandbox --move-home --login sandbox ubuntu \
     && groupmod --new-name sandbox ubuntu \
     && chown -R sandbox:sandbox /app

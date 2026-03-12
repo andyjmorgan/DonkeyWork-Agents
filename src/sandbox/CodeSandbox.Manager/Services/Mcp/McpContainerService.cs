@@ -75,93 +75,81 @@ public class McpContainerService : IMcpContainerService
                 Phase = createdPod.Status?.Phase ?? "Pending"
             });
 
-            // Wait for pod ready
-            var timeout = TimeSpan.FromSeconds(_config.PodReadyTimeoutSeconds);
-            var deadline = DateTime.UtcNow.Add(timeout);
-            var pollInterval = TimeSpan.FromSeconds(2);
-            var attemptNumber = 0;
+            // Watch for pod readiness using Kubernetes watch API
+            V1Pod? readyPod = null;
+            var eventNumber = 0;
 
-            while (DateTime.UtcNow < deadline)
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_config.PodReadyTimeoutSeconds));
+
+            try
             {
-                attemptNumber++;
+                var listTask = _client.CoreV1.ListNamespacedPodWithHttpMessagesAsync(
+                    _config.TargetNamespace,
+                    fieldSelector: $"metadata.name={podName}",
+                    watch: true,
+                    cancellationToken: timeoutCts.Token);
 
-                try
+                #pragma warning disable CS0618 // WatchAsync is the best available API in KubernetesClient v18
+                await foreach (var (eventType, watchPod) in listTask.WatchAsync<V1Pod, V1PodList>(
+                    cancellationToken: timeoutCts.Token))
+                #pragma warning restore CS0618
                 {
-                    var currentPod = await _client.CoreV1.ReadNamespacedPodAsync(
-                        podName,
-                        _config.TargetNamespace,
-                        cancellationToken: cancellationToken);
+                    eventNumber++;
 
-                    if (IsPodReady(currentPod))
+                    if (eventType == WatchEventType.Deleted)
+                    {
+                        writer.TryWrite(new ContainerFailedEvent
+                        {
+                            PodName = podName,
+                            Reason = "Pod was deleted during startup",
+                            ContainerInfo = MapPodToSandboxInfo(watchPod)
+                        });
+                        return;
+                    }
+
+                    if (eventType == WatchEventType.Error)
+                    {
+                        writer.TryWrite(new ContainerWaitingEvent
+                        {
+                            PodName = podName,
+                            AttemptNumber = eventNumber,
+                            Phase = watchPod.Status?.Phase ?? "Unknown",
+                            Message = "Watch received error event"
+                        });
+                        continue;
+                    }
+
+                    // ADDED or MODIFIED
+                    if (IsPodReady(watchPod))
                     {
                         var elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
+                        _logger.LogInformation("MCP pod {PodName} is ready after {EventCount} watch events", podName, eventNumber);
 
                         writer.TryWrite(new ContainerReadyEvent
                         {
                             PodName = podName,
-                            ContainerInfo = MapPodToSandboxInfo(currentPod),
+                            ContainerInfo = MapPodToSandboxInfo(watchPod),
                             ElapsedSeconds = elapsed
                         });
-
-                        // If command was provided, start the MCP process via gRPC
-                        if (!string.IsNullOrWhiteSpace(request.Command))
-                        {
-                            var commandDisplay = $"{request.Command} {string.Join(" ", request.Arguments)}";
-                            writer.TryWrite(new McpServerStartingEvent
-                            {
-                                PodName = podName,
-                                Message = $"Starting MCP process: {commandDisplay}"
-                            });
-
-                            try
-                            {
-                                var podIp = currentPod.Status?.PodIP
-                                    ?? throw new InvalidOperationException("Pod has no IP");
-
-                                await foreach (var startEvt in StartMcpProcessOnPodGrpcAsync(podIp, request, cancellationToken))
-                                {
-                                    writer.TryWrite(new McpServerStartingEvent
-                                    {
-                                        PodName = podName,
-                                        Message = $"[{startEvt.EventType}] {startEvt.Message}"
-                                    });
-                                }
-
-                                var totalElapsed = (DateTime.UtcNow - startTime).TotalSeconds;
-                                writer.TryWrite(new McpServerStartedEvent
-                                {
-                                    PodName = podName,
-                                    ServerInfo = MapPodToMcpServerInfo(currentPod, commandDisplay, Models.McpProcessStatus.Ready),
-                                    ElapsedSeconds = totalElapsed
-                                });
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Failed to start MCP process in {PodName}", podName);
-                                writer.TryWrite(new McpServerStartFailedEvent
-                                {
-                                    PodName = podName,
-                                    Reason = $"MCP process failed to start: {ex.Message}"
-                                });
-                            }
-                        }
-
-                        return;
+                        readyPod = watchPod;
+                        break;
                     }
 
-                    if (currentPod.Status?.Phase == "Failed")
+                    if (watchPod.Status?.Phase == "Failed")
                     {
                         writer.TryWrite(new ContainerFailedEvent
                         {
                             PodName = podName,
                             Reason = "Pod failed during startup",
-                            ContainerInfo = MapPodToSandboxInfo(currentPod)
+                            ContainerInfo = MapPodToSandboxInfo(watchPod)
                         });
                         return;
                     }
 
-                    var containerStatus = currentPod.Status?.ContainerStatuses?.FirstOrDefault();
-                    string detailedMessage = $"Waiting for pod to be ready (attempt {attemptNumber})";
+                    // Emit waiting event with detailed status
+                    var containerStatus = watchPod.Status?.ContainerStatuses?.FirstOrDefault();
+                    string detailedMessage = $"Waiting for pod to be ready (event {eventNumber})";
 
                     if (containerStatus?.State?.Waiting != null)
                     {
@@ -185,32 +173,69 @@ public class McpContainerService : IMcpContainerService
                     writer.TryWrite(new ContainerWaitingEvent
                     {
                         PodName = podName,
-                        AttemptNumber = attemptNumber,
-                        Phase = currentPod.Status?.Phase ?? "Unknown",
+                        AttemptNumber = eventNumber,
+                        Phase = watchPod.Status?.Phase ?? "Unknown",
                         Message = detailedMessage
                     });
                 }
-                catch (Exception ex)
+
+                // If pod became ready and a command was provided, start the MCP process
+                if (readyPod != null && !string.IsNullOrWhiteSpace(request.Command))
                 {
-                    _logger.LogWarning(ex, "Error checking MCP pod {PodName} status", podName);
-                    writer.TryWrite(new ContainerWaitingEvent
+                    var commandDisplay = $"{request.Command} {string.Join(" ", request.Arguments)}";
+                    writer.TryWrite(new McpServerStartingEvent
                     {
                         PodName = podName,
-                        AttemptNumber = attemptNumber,
-                        Phase = "Unknown",
-                        Message = $"Error checking status: {ex.Message}"
+                        Message = $"Starting MCP process: {commandDisplay}"
                     });
+
+                    try
+                    {
+                        var podIp = readyPod.Status?.PodIP
+                            ?? throw new InvalidOperationException("Pod has no IP");
+
+                        await foreach (var startEvt in StartMcpProcessOnPodGrpcAsync(podIp, request, cancellationToken))
+                        {
+                            writer.TryWrite(new McpServerStartingEvent
+                            {
+                                PodName = podName,
+                                Message = $"[{startEvt.EventType}] {startEvt.Message}"
+                            });
+                        }
+
+                        var totalElapsed = (DateTime.UtcNow - startTime).TotalSeconds;
+                        writer.TryWrite(new McpServerStartedEvent
+                        {
+                            PodName = podName,
+                            ServerInfo = MapPodToMcpServerInfo(readyPod, commandDisplay, Models.McpProcessStatus.Ready),
+                            ElapsedSeconds = totalElapsed
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to start MCP process in {PodName}", podName);
+                        writer.TryWrite(new McpServerStartFailedEvent
+                        {
+                            PodName = podName,
+                            Reason = $"MCP process failed to start: {ex.Message}"
+                        });
+                    }
                 }
 
-                await Task.Delay(pollInterval, cancellationToken);
+                return;
             }
-
-            // Timeout
-            writer.TryWrite(new ContainerFailedEvent
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                PodName = podName,
-                Reason = $"Timeout after {_config.PodReadyTimeoutSeconds}s"
-            });
+                // Timeout
+                _logger.LogWarning("Timeout waiting for MCP pod {PodName} to be ready after {TimeoutSeconds}s",
+                    podName, _config.PodReadyTimeoutSeconds);
+
+                writer.TryWrite(new ContainerFailedEvent
+                {
+                    PodName = podName,
+                    Reason = $"Timeout after {_config.PodReadyTimeoutSeconds}s"
+                });
+            }
         }
         catch (Exception ex)
         {

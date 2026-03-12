@@ -10,7 +10,7 @@ public class SandboxManagerConfig
 
     [Required]
     [RegularExpression(@"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", ErrorMessage = "Invalid runtime class name")]
-    public string RuntimeClassName { get; set; } = "kata-qemu";
+    public string RuntimeClassName { get; set; } = "gvisor";
 
     [Required]
     public ResourceConfig DefaultResourceRequests { get; set; } = new();

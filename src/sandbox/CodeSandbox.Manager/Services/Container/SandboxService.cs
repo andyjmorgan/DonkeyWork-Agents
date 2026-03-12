@@ -93,57 +93,80 @@ public class SandboxService : ISandboxService
                 Phase = createdPod.Status?.Phase ?? "Pending"
             });
 
-            // Always wait for ready
-            var timeout = TimeSpan.FromSeconds(_config.PodReadyTimeoutSeconds);
-            var deadline = DateTime.UtcNow.Add(timeout);
-            var pollInterval = TimeSpan.FromSeconds(2);
-            var attemptNumber = 0;
+            // Watch for pod readiness using Kubernetes watch API
+            var eventNumber = 0;
 
-            while (DateTime.UtcNow < deadline)
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_config.PodReadyTimeoutSeconds));
+
+            try
             {
-                attemptNumber++;
+                var listTask = _client.CoreV1.ListNamespacedPodWithHttpMessagesAsync(
+                    _config.TargetNamespace,
+                    fieldSelector: $"metadata.name={podName}",
+                    watch: true,
+                    cancellationToken: timeoutCts.Token);
 
-                try
+                #pragma warning disable CS0618 // WatchAsync is the best available API in KubernetesClient v18
+                await foreach (var (eventType, watchPod) in listTask.WatchAsync<V1Pod, V1PodList>(
+                    cancellationToken: timeoutCts.Token))
+                #pragma warning restore CS0618
                 {
-                    var currentPod = await _client.CoreV1.ReadNamespacedPodAsync(
-                        podName,
-                        _config.TargetNamespace,
-                        cancellationToken: cancellationToken);
+                    eventNumber++;
 
-                    // Check if pod is ready
-                    if (IsPodReady(currentPod))
+                    if (eventType == WatchEventType.Deleted)
+                    {
+                        writer.TryWrite(new ContainerFailedEvent
+                        {
+                            PodName = podName,
+                            Reason = "Pod was deleted during startup",
+                            ContainerInfo = MapPodToContainerInfo(watchPod)
+                        });
+                        return;
+                    }
+
+                    if (eventType == WatchEventType.Error)
+                    {
+                        writer.TryWrite(new ContainerWaitingEvent
+                        {
+                            PodName = podName,
+                            AttemptNumber = eventNumber,
+                            Phase = watchPod.Status?.Phase ?? "Unknown",
+                            Message = "Watch received error event"
+                        });
+                        continue;
+                    }
+
+                    // ADDED or MODIFIED
+                    if (IsPodReady(watchPod))
                     {
                         var elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
-                        _logger.LogInformation("Pod {PodName} is ready after {AttemptNumber} attempts", podName, attemptNumber);
+                        _logger.LogInformation("Pod {PodName} is ready after {EventCount} watch events", podName, eventNumber);
 
                         writer.TryWrite(new ContainerReadyEvent
                         {
                             PodName = podName,
-                            ContainerInfo = MapPodToContainerInfo(currentPod),
+                            ContainerInfo = MapPodToContainerInfo(watchPod),
                             ElapsedSeconds = elapsed
                         });
-
                         return;
                     }
 
-                    // Check if pod has failed
-                    if (currentPod.Status?.Phase == "Failed")
+                    if (watchPod.Status?.Phase == "Failed")
                     {
                         _logger.LogWarning("Pod {PodName} failed during startup", podName);
-
                         writer.TryWrite(new ContainerFailedEvent
                         {
                             PodName = podName,
                             Reason = "Pod failed during startup",
-                            ContainerInfo = MapPodToContainerInfo(currentPod)
+                            ContainerInfo = MapPodToContainerInfo(watchPod)
                         });
-
                         return;
                     }
 
-                    // Get detailed container status
-                    var containerStatus = currentPod.Status?.ContainerStatuses?.FirstOrDefault();
-                    string detailedMessage = $"Waiting for pod to be ready (attempt {attemptNumber})";
+                    // Emit waiting event with detailed status
+                    var containerStatus = watchPod.Status?.ContainerStatuses?.FirstOrDefault();
+                    string detailedMessage = $"Waiting for pod to be ready (event {eventNumber})";
 
                     if (containerStatus?.State?.Waiting != null)
                     {
@@ -165,58 +188,48 @@ public class SandboxService : ISandboxService
                         detailedMessage = "Container running, waiting for readiness checks...";
                     }
 
-                    // Emit waiting event with detailed status
                     writer.TryWrite(new ContainerWaitingEvent
                     {
                         PodName = podName,
-                        AttemptNumber = attemptNumber,
-                        Phase = currentPod.Status?.Phase ?? "Unknown",
+                        AttemptNumber = eventNumber,
+                        Phase = watchPod.Status?.Phase ?? "Unknown",
                         Message = detailedMessage
+                    });
+                }
+
+                // Watch stream closed without pod becoming ready
+                return;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Timeout — fetch final state and emit failed event
+                _logger.LogWarning("Timeout waiting for pod {PodName} to be ready after {TimeoutSeconds}s",
+                    podName, _config.PodReadyTimeoutSeconds);
+
+                try
+                {
+                    var finalPod = await _client.CoreV1.ReadNamespacedPodAsync(
+                        podName,
+                        _config.TargetNamespace,
+                        cancellationToken: cancellationToken);
+
+                    writer.TryWrite(new ContainerFailedEvent
+                    {
+                        PodName = podName,
+                        Reason = $"Timeout after {_config.PodReadyTimeoutSeconds}s",
+                        ContainerInfo = MapPodToContainerInfo(finalPod)
                     });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error checking pod {PodName} status on attempt {AttemptNumber}", podName, attemptNumber);
-
-                    writer.TryWrite(new ContainerWaitingEvent
+                    _logger.LogError(ex, "Failed to fetch final pod state after timeout");
+                    writer.TryWrite(new ContainerFailedEvent
                     {
                         PodName = podName,
-                        AttemptNumber = attemptNumber,
-                        Phase = "Unknown",
-                        Message = $"Error checking status: {ex.Message}"
+                        Reason = $"Timeout after {_config.PodReadyTimeoutSeconds}s (unable to fetch final state)",
+                        ContainerInfo = null
                     });
                 }
-
-                await Task.Delay(pollInterval, cancellationToken);
-            }
-
-            // Timeout - fetch final state and emit failed event
-            _logger.LogWarning("Timeout waiting for pod {PodName} to be ready after {TimeoutSeconds}s",
-                podName, _config.PodReadyTimeoutSeconds);
-
-            try
-            {
-                var finalPod = await _client.CoreV1.ReadNamespacedPodAsync(
-                    podName,
-                    _config.TargetNamespace,
-                    cancellationToken: cancellationToken);
-
-                writer.TryWrite(new ContainerFailedEvent
-                {
-                    PodName = podName,
-                    Reason = $"Timeout after {_config.PodReadyTimeoutSeconds}s",
-                    ContainerInfo = MapPodToContainerInfo(finalPod)
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to fetch final pod state after timeout");
-                writer.TryWrite(new ContainerFailedEvent
-                {
-                    PodName = podName,
-                    Reason = $"Timeout after {_config.PodReadyTimeoutSeconds}s (unable to fetch final state)",
-                    ContainerInfo = null
-                });
             }
         }
         catch (Exception ex)
