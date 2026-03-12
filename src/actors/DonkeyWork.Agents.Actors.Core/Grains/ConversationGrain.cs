@@ -64,6 +64,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private bool _titleGenerated;
     private AgentContract? _contract;
     private McpToolProvider? _mcpToolProvider;
+    private McpServerReference[] _discoveredMcpServers = [];
     private bool _hasMcpSandbox;
     private SandboxProvisioningHandle? _sandboxHandle;
     private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
@@ -308,8 +309,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         SetupGrainContext();
         EnsureSandboxProvisioning(contract);
 
-        // Populate grain context with contract's MCP servers, sub-agents, and tool groups for swarm tool inheritance
-        _grainContext.McpServers = contract.McpServers;
+        // Populate grain context with sub-agents and tool groups for swarm tool inheritance.
+        // McpServers are set from discovered servers (populated on first activation) to
+        // avoid losing them when the contract doesn't carry MCP references on subsequent turns.
+        _grainContext.McpServers = _discoveredMcpServers;
         _grainContext.SubAgents = contract.SubAgents;
         _grainContext.ToolGroups = contract.ToolGroups;
 
@@ -337,10 +340,11 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                     },
                     ct);
 
-                // Populate grain context with actual connected MCP servers so delegates can inherit them
-                _grainContext.McpServers = httpConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name })
+                // Store discovered MCP servers so they persist across turns for delegate inheritance
+                _discoveredMcpServers = httpConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name })
                     .Concat(stdioConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name }))
                     .ToArray();
+                _grainContext.McpServers = _discoveredMcpServers;
 
                 // Auto-include sandbox tools when MCP servers are connected
                 if (!contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
