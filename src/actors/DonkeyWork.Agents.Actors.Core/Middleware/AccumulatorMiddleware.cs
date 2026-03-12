@@ -92,6 +92,11 @@ internal sealed class AccumulatorMiddleware : IModelMiddleware
                             new InternalWebFetchToolResultBlock(fetchResult.ToolUseId, fetchResult.RawJson)));
                         break;
 
+                    case ModelResponseToolSearchResult toolSearchResult:
+                        orderedBlocks.Add((toolSearchResult.BlockIndex,
+                            new InternalToolSearchResultBlock(toolSearchResult.ToolUseId, toolSearchResult.RawJson)));
+                        break;
+
                     case ModelResponseThinkingContent thinking:
                         if (!thinkingByIndex.TryGetValue(thinking.Index, out var acc))
                         {

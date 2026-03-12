@@ -40,7 +40,7 @@ public sealed class AgentToolRegistry
             _toolsByType.Count);
     }
 
-    internal IReadOnlyList<InternalToolDefinition> GetToolDefinitions(params Type[] toolTypes)
+    internal IReadOnlyList<InternalToolDefinition> GetToolDefinitions(Type[] toolTypes, HashSet<Type>? deferredTypes = null)
     {
         var definitions = new List<InternalToolDefinition>();
 
@@ -48,9 +48,12 @@ public sealed class AgentToolRegistry
         {
             if (_toolsByType.TryGetValue(type, out var descriptors))
             {
+                var shouldDefer = deferredTypes?.Contains(type) == true;
                 foreach (var descriptor in descriptors)
                 {
-                    definitions.Add(descriptor.ToToolDefinition());
+                    var def = descriptor.ToToolDefinition();
+                    def.DeferLoading = shouldDefer;
+                    definitions.Add(def);
                 }
             }
             else

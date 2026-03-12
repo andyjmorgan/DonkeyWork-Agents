@@ -82,6 +82,15 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         [ToolGroupNames.Sandbox] = [typeof(SandboxTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Tool groups whose definitions are sent with defer_loading=true so the model
+    /// discovers them via tool search instead of loading them all into context.
+    /// </summary>
+    private static readonly FrozenSet<string> DeferredToolGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ToolGroupNames.ProjectManagement,
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
     public ConversationGrain(
         ILogger<ConversationGrain> logger,
         GrainContext grainContext,
@@ -369,7 +378,20 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         // Store effective tool types for execution scope (includes dynamically added tools)
         _effectiveToolTypes = effectiveToolTypes;
 
-        var localTools = effectiveToolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(effectiveToolTypes) : null;
+        // Resolve which tool types should use deferred loading
+        var deferredTypes = new HashSet<Type>();
+        foreach (var group in contract.ToolGroups)
+        {
+            if (DeferredToolGroups.Contains(group) && ToolGroupMap.TryGetValue(group, out var groupTypes))
+            {
+                foreach (var t in groupTypes)
+                    deferredTypes.Add(t);
+            }
+        }
+
+        var localTools = effectiveToolTypes.Length > 0
+            ? _toolRegistry.GetToolDefinitions(effectiveToolTypes, deferredTypes.Count > 0 ? deferredTypes : null)
+            : null;
 
         // Combine local + MCP tool definitions
         var mcpTools = _mcpToolProvider?.GetToolDefinitions() ?? [];
@@ -532,6 +554,24 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseUsage usage }:
                 Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests));
+                break;
+
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseServerToolUse serverTool }
+                when serverTool.ToolName.StartsWith("tool_search", StringComparison.OrdinalIgnoreCase):
+            {
+                var query = serverTool.Input?.TryGetProperty("query", out var q) == true ? q.GetString() : null;
+                Emit(new StreamToolUseEvent(key, serverTool.ToolName, serverTool.ToolUseId, serverTool.Input?.GetRawText() ?? "{}")
+                {
+                    DisplayName = query is not null ? $"Searching tools: {query}" : "Searching tools",
+                });
+                break;
+            }
+
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseToolSearchResult toolSearchResult }:
+                Emit(new StreamToolCompleteEvent(key, toolSearchResult.ToolUseId, "tool_search", true, 0)
+                {
+                    DisplayName = "Tool search",
+                });
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseWebSearchResult webSearch }:

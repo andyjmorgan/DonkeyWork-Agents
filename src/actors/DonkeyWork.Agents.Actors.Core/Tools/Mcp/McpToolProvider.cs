@@ -149,6 +149,7 @@ internal sealed class McpToolProvider : IAsyncDisposable
                 DisplayName = tool.ProtocolTool.Title ?? tool.Name,
                 Description = tool.ProtocolTool.Description,
                 InputSchema = tool.ProtocolTool.InputSchema,
+                DeferLoading = true,
             });
         }
 
@@ -359,6 +360,7 @@ internal sealed class McpToolProvider : IAsyncDisposable
                 DisplayName = title ?? name,
                 Description = description,
                 InputSchema = inputSchema,
+                DeferLoading = true,
             });
         }
 

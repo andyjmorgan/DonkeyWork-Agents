@@ -195,6 +195,15 @@ internal sealed class AnthropicProvider : IAiProvider
                     RawJson = JsonSerializer.Serialize(fetchResult)
                 };
             }
+            else if (block.TryPickToolSearchToolResult(out var toolSearchResult))
+            {
+                yield return new ModelResponseToolSearchResult
+                {
+                    BlockIndex = blockIndex,
+                    ToolUseId = toolSearchResult.ToolUseID,
+                    RawJson = JsonSerializer.Serialize(toolSearchResult)
+                };
+            }
 
             blockIndex++;
         }
@@ -280,6 +289,16 @@ internal sealed class AnthropicProvider : IAiProvider
                     {
                         BlockIndex = (int)index,
                         ToolUseId = fetchResult.ToolUseID,
+                        RawJson = rawJson
+                    };
+                }
+                else if (blockStart.ContentBlock.TryPickBetaToolSearchToolResult(out var toolSearchResult))
+                {
+                    var rawJson = JsonSerializer.Serialize(toolSearchResult);
+                    yield return new ModelResponseToolSearchResult
+                    {
+                        BlockIndex = (int)index,
+                        ToolUseId = toolSearchResult.ToolUseID,
                         RawJson = rawJson
                     };
                 }
@@ -543,6 +562,12 @@ internal sealed class AnthropicProvider : IAiProvider
                             Thinking = thinkingBlock.Text,
                             Signature = thinkingBlock.Signature ?? ""
                         });
+                        break;
+
+                    case InternalToolSearchResultBlock toolSearchResult:
+                        var toolSearchDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+                            toolSearchResult.RawJson) ?? new Dictionary<string, JsonElement>();
+                        blocks.Add(BetaToolSearchToolResultBlockParam.FromRawUnchecked(toolSearchDict));
                         break;
 
                     case InternalCitationBlock:

@@ -149,7 +149,7 @@ public class AgentToolRegistryTests
         var registry = new AgentToolRegistry(_logger.Object, typeof(TestToolsA).Assembly);
 
         // Act
-        var definitions = registry.GetToolDefinitions(typeof(TestToolsA));
+        var definitions = registry.GetToolDefinitions([typeof(TestToolsA)]);
 
         // Assert
         Assert.Single(definitions);
@@ -163,7 +163,7 @@ public class AgentToolRegistryTests
         var registry = new AgentToolRegistry(_logger.Object, typeof(TestToolsA).Assembly);
 
         // Act
-        var definitions = registry.GetToolDefinitions(typeof(TestToolsA), typeof(TestToolsB));
+        var definitions = registry.GetToolDefinitions([typeof(TestToolsA), typeof(TestToolsB)]);
 
         // Assert
         Assert.Equal(2, definitions.Count);
@@ -176,7 +176,7 @@ public class AgentToolRegistryTests
         var registry = new AgentToolRegistry(_logger.Object, typeof(TestToolsA).Assembly);
 
         // Act
-        var definitions = registry.GetToolDefinitions(typeof(string));
+        var definitions = registry.GetToolDefinitions([typeof(string)]);
 
         // Assert
         Assert.Empty(definitions);

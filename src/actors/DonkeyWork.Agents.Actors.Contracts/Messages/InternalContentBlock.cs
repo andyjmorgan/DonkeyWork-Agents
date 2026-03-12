@@ -12,6 +12,7 @@ namespace DonkeyWork.Agents.Actors.Contracts.Messages;
 [JsonDerivedType(typeof(InternalWebFetchToolResultBlock), nameof(InternalWebFetchToolResultBlock))]
 [JsonDerivedType(typeof(InternalThinkingBlock), nameof(InternalThinkingBlock))]
 [JsonDerivedType(typeof(InternalCitationBlock), nameof(InternalCitationBlock))]
+[JsonDerivedType(typeof(InternalToolSearchResultBlock), nameof(InternalToolSearchResultBlock))]
 public abstract record InternalContentBlock;
 
 [GenerateSerializer]
@@ -34,3 +35,6 @@ public sealed record InternalThinkingBlock([property: Id(0)] string Text, [prope
 
 [GenerateSerializer]
 public sealed record InternalCitationBlock([property: Id(0)] string Title, [property: Id(1)] string Url, [property: Id(2)] string CitedText) : InternalContentBlock;
+
+[GenerateSerializer]
+public sealed record InternalToolSearchResultBlock([property: Id(0)] string ToolUseId, [property: Id(1)] string RawJson) : InternalContentBlock;

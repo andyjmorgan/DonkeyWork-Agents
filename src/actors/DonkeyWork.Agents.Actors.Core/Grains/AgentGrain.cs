@@ -404,6 +404,24 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests));
                 break;
 
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseServerToolUse serverTool }
+                when serverTool.ToolName.StartsWith("tool_search", StringComparison.OrdinalIgnoreCase):
+            {
+                var query = serverTool.Input?.TryGetProperty("query", out var q) == true ? q.GetString() : null;
+                Emit(new StreamToolUseEvent(key, serverTool.ToolName, serverTool.ToolUseId, serverTool.Input?.GetRawText() ?? "{}")
+                {
+                    DisplayName = query is not null ? $"Searching tools: {query}" : "Searching tools",
+                });
+                break;
+            }
+
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseToolSearchResult toolSearchResult }:
+                Emit(new StreamToolCompleteEvent(key, toolSearchResult.ToolUseId, "tool_search", true, 0)
+                {
+                    DisplayName = "Tool search",
+                });
+                break;
+
             case ModelMiddlewareMessage { ModelMessage: ModelResponseWebSearchResult webSearch }:
                 Emit(new StreamWebSearchEvent(key, webSearch.ToolUseId));
                 EmitWebSearchComplete(key, webSearch);

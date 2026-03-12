@@ -6,4 +6,5 @@ internal class InternalToolDefinition
     public string? DisplayName { get; set; }
     public string? Description { get; set; }
     public object? InputSchema { get; set; }
+    public bool DeferLoading { get; set; }
 }

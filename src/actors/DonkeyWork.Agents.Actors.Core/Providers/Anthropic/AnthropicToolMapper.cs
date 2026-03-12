@@ -15,6 +15,7 @@ internal static class AnthropicToolMapper
             return null;
 
         var result = new List<BetaToolUnion>();
+        var hasDeferredTools = false;
 
         // Map client tools
         if (hasClientTools)
@@ -26,9 +27,22 @@ internal static class AnthropicToolMapper
                 {
                     Name = tool.Name,
                     Description = tool.Description ?? string.Empty,
-                    InputSchema = inputSchema
+                    InputSchema = inputSchema,
+                    DeferLoading = tool.DeferLoading ? true : null,
                 });
+
+                if (tool.DeferLoading)
+                    hasDeferredTools = true;
             }
+        }
+
+        // Add tool search when there are deferred tools
+        if (hasDeferredTools)
+        {
+            result.Insert(0, new BetaToolSearchToolBm25_20251119
+            {
+                Type = "tool_search_tool_bm25_20251119",
+            });
         }
 
         // Append server tools
