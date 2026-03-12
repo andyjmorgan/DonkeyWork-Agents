@@ -167,7 +167,7 @@ const createInitialState = () => {
     orchestrationDescription: '',
     versionId: null,
     isDraft: true,
-    interface: { type: 'ChatInterfaceConfig' } as InterfaceConfig,
+    interface: { type: 'DirectInterfaceConfig' } as InterfaceConfig,
     nodes: [
       {
         id: startId,
@@ -441,7 +441,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         orchestrationDescription,
         versionId: versionId || null,
         isDraft: isDraft ?? true,
-        interface: interfaceConfig ?? { type: 'ChatInterfaceConfig' } as InterfaceConfig,
+        interface: interfaceConfig ?? { type: 'DirectInterfaceConfig' } as InterfaceConfig,
         nodes: enrichedNodes,
         edges: reactFlowData.edges,
         viewport: reactFlowData.viewport,

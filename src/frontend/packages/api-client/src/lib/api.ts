@@ -220,8 +220,7 @@ export interface Orchestration {
 }
 
 // Interface configuration types (polymorphic, 1:1 - each orchestration has exactly one interface)
-// Note: Only Direct and Chat interfaces are currently supported in the playground
-export type InterfaceType = 'DirectInterfaceConfig' | 'ChatInterfaceConfig'
+export type InterfaceType = 'DirectInterfaceConfig'
 
 export interface InterfaceConfigBase {
   type: InterfaceType
@@ -233,11 +232,7 @@ export interface DirectInterfaceConfig extends InterfaceConfigBase {
   type: 'DirectInterfaceConfig'
 }
 
-export interface ChatInterfaceConfig extends InterfaceConfigBase {
-  type: 'ChatInterfaceConfig'
-}
-
-export type InterfaceConfig = DirectInterfaceConfig | ChatInterfaceConfig
+export type InterfaceConfig = DirectInterfaceConfig
 
 // ReactFlow types - using 'any' to maintain compatibility with ReactFlow library types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -286,22 +281,12 @@ export interface CreateOrchestrationResponse {
   createdAt: string
 }
 
-// Chat-enabled orchestration type (for agent selector)
-export interface ChatEnabledOrchestration {
-  id: string
-  name: string
-  description?: string
-}
-
 export const orchestrations = {
   list: () => api.get<Orchestration[]>('/api/v1/orchestrations'),
   create: (data: CreateOrchestrationRequest) => api.post<CreateOrchestrationResponse>('/api/v1/orchestrations', data),
   get: (id: string) => api.get<Orchestration>(`/api/v1/orchestrations/${id}`),
   update: (id: string, data: CreateOrchestrationRequest) => fetchWithAuth(`/api/v1/orchestrations/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.json() as Promise<Orchestration>),
   delete: (id: string) => api.delete(`/api/v1/orchestrations/${id}`),
-
-  // Chat-enabled orchestrations (for agent selector)
-  listChatEnabled: () => api.get<ChatEnabledOrchestration[]>('/api/v1/orchestrations/chat-enabled'),
 
   // Versions
   listVersions: (orchestrationId: string) => api.get<OrchestrationVersion[]>(`/api/v1/orchestrations/${orchestrationId}/versions`),

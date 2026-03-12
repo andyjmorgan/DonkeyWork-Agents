@@ -36,7 +36,6 @@ export function OrchestrationEditorPage() {
   const orchestrationDescription = useEditorStore((state) => state.orchestrationDescription)
   const isDraft = useEditorStore((state) => state.isDraft)
   const versionId = useEditorStore((state) => state.versionId)
-  const interfaceConfig = useEditorStore((state) => state.interface)
   const nodes = useEditorStore((state) => state.nodes)
   const nodeConfigurations = useEditorStore((state) => state.nodeConfigurations)
   const loadOrchestration = useEditorStore((state) => state.loadOrchestration)
@@ -442,7 +441,7 @@ export function OrchestrationEditorPage() {
             <SheetTitle>Test Orchestration</SheetTitle>
           </SheetHeader>
           <div className="mt-6 h-[calc(100vh-8rem)]">
-            {orchestrationId && <TestPanel orchestrationId={orchestrationId} inputSchema={inputSchema} interfaceConfig={interfaceConfig} />}
+            {orchestrationId && <TestPanel orchestrationId={orchestrationId} inputSchema={inputSchema} />}
           </div>
         </SheetContent>
       </Sheet>
