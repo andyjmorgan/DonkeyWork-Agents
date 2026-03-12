@@ -328,6 +328,11 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                     },
                     ct);
 
+                // Populate grain context with actual connected MCP servers so delegates can inherit them
+                _grainContext.McpServers = httpConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name })
+                    .Concat(stdioConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name }))
+                    .ToArray();
+
                 // Auto-include sandbox tools when MCP servers are connected
                 if (!contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
                 {
