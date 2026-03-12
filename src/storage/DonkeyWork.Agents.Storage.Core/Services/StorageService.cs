@@ -43,14 +43,12 @@ public sealed class StorageService : IStorageService
         return await UploadToS3Async(request, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<FileItemV1>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<FileListingResponseV1> ListAsync(string? prefix = null, CancellationToken cancellationToken = default)
     {
         if (UseFilesystem)
-        {
-            return ListFromFilesystem();
-        }
+            return ListFromFilesystem(prefix);
 
-        return await ListFromS3Async(cancellationToken);
+        return await ListFromS3Async(prefix, cancellationToken);
     }
 
     public async Task<FileDownloadResult?> DownloadAsync(string objectKey, CancellationToken cancellationToken = default)
@@ -170,23 +168,40 @@ public sealed class StorageService : IStorageService
         };
     }
 
-    private IReadOnlyList<FileItemV1> ListFromFilesystem()
+    private FileListingResponseV1 ListFromFilesystem(string? prefix)
     {
         var userDir = GetUserDirectory();
+        var targetDir = string.IsNullOrEmpty(prefix)
+            ? userDir
+            : Path.Combine(userDir, prefix);
 
-        if (!Directory.Exists(userDir))
-            return [];
+        // Validate targetDir is still under userDir (path traversal protection)
+        var fullTarget = Path.GetFullPath(targetDir);
+        var fullUserDir = Path.GetFullPath(userDir);
+        if (!fullTarget.StartsWith(fullUserDir, StringComparison.OrdinalIgnoreCase))
+            return new FileListingResponseV1 { Files = [], Folders = [] };
 
-        var dirInfo = new DirectoryInfo(userDir);
-        return dirInfo.GetFiles()
+        if (!Directory.Exists(fullTarget))
+            return new FileListingResponseV1 { Files = [], Folders = [] };
+
+        var dirInfo = new DirectoryInfo(fullTarget);
+
+        var files = dirInfo.GetFiles()
             .Select(f => new FileItemV1
             {
                 FileName = f.Name,
                 SizeBytes = f.Length,
                 LastModified = new DateTimeOffset(f.LastWriteTimeUtc, TimeSpan.Zero)
             })
-            .OrderByDescending(f => f.LastModified)
+            .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        var folders = dirInfo.GetDirectories()
+            .Select(d => d.Name)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new FileListingResponseV1 { Files = files, Folders = folders };
     }
 
     private FileDownloadResult? DownloadFromFilesystem(string objectKey)
@@ -270,20 +285,33 @@ public sealed class StorageService : IStorageService
         };
     }
 
-    private async Task<IReadOnlyList<FileItemV1>> ListFromS3Async(CancellationToken cancellationToken)
+    private async Task<FileListingResponseV1> ListFromS3Async(string? prefix, CancellationToken cancellationToken)
     {
-        var prefix = $"{_identityContext.UserId}/";
-        var objects = await _s3Client.ListObjectsAsync(_options.DefaultBucket, prefix, "/", cancellationToken);
+        var s3Prefix = $"{_identityContext.UserId}/";
+        if (!string.IsNullOrEmpty(prefix))
+            s3Prefix += prefix.TrimEnd('/') + "/";
 
-        return objects
+        var (objects, commonPrefixes) = await _s3Client.ListObjectsAsync(_options.DefaultBucket, s3Prefix, "/", cancellationToken);
+
+        var files = objects
             .Select(o => new FileItemV1
             {
                 FileName = Path.GetFileName(o.Key),
                 SizeBytes = o.SizeBytes,
                 LastModified = o.LastModified
             })
-            .OrderByDescending(f => f.LastModified)
+            .Where(f => !string.IsNullOrEmpty(f.FileName))
+            .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        // Extract folder names from common prefixes (e.g. "{userId}/folder/" -> "folder")
+        var folders = commonPrefixes
+            .Select(p => p[s3Prefix.Length..].TrimEnd('/'))
+            .Where(n => !string.IsNullOrEmpty(n))
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new FileListingResponseV1 { Files = files, Folders = folders };
     }
 
     private async Task<FileDownloadResult?> DownloadFromS3Async(string objectKey, CancellationToken cancellationToken)

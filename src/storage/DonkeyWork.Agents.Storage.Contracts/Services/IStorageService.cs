@@ -10,9 +10,9 @@ public interface IStorageService
     Task<StorageUploadResult> UploadAsync(UploadFileRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists top-level files for the current user.
+    /// Lists files and folders for the current user, optionally within a prefix (subfolder).
     /// </summary>
-    Task<IReadOnlyList<FileItemV1>> ListAsync(CancellationToken cancellationToken = default);
+    Task<FileListingResponseV1> ListAsync(string? prefix = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Downloads a file by object key (relative to user namespace).

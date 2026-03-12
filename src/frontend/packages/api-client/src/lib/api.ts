@@ -1145,6 +1145,11 @@ export interface FileItem {
   lastModified: string
 }
 
+export interface FileListingResponse {
+  files: FileItem[]
+  folders: string[]
+}
+
 export interface StorageUploadResult {
   objectKey: string
   fileName: string
@@ -1152,16 +1157,13 @@ export interface StorageUploadResult {
   sizeBytes: number
 }
 
-export interface GetPublicUrlResponse {
-  url: string
-  expiresAt: string
-}
-
 // Files API
 export const files = {
   // List files
-  list: () =>
-    api.get<FileItem[]>('/api/v1/files'),
+  list: (prefix?: string) => {
+    const params = prefix ? `?prefix=${encodeURIComponent(prefix)}` : ''
+    return api.get<FileListingResponse>(`/api/v1/files${params}`)
+  },
 
   // Upload file (multipart/form-data)
   upload: async (file: File): Promise<StorageUploadResult> => {
@@ -1187,12 +1189,6 @@ export const files = {
   // Delete file
   delete: (fileName: string) =>
     api.delete(`/api/v1/files/${encodeURIComponent(fileName)}`),
-
-  // Get presigned public URL
-  getPublicUrl: (fileName: string, expiryMinutes?: number) => {
-    const params = expiryMinutes ? `?expiryMinutes=${expiryMinutes}` : ''
-    return api.get<GetPublicUrlResponse>(`/api/v1/files/${encodeURIComponent(fileName)}/url${params}`)
-  },
 
   // Download file (returns raw response for streaming)
   download: async (fileName: string): Promise<{ blob: Blob; fileName: string; contentType: string }> => {

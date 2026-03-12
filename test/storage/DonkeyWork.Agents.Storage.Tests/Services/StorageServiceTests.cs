@@ -165,15 +165,16 @@ public class StorageServiceTests : IDisposable
         };
 
         _s3ClientMock.Setup(x => x.ListObjectsAsync("test-bucket", $"{_userId}/", "/", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(objects);
+            .ReturnsAsync((objects, new List<string>()));
 
         // Act
         var result = await service.ListAsync();
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("file1.txt", result[0].FileName);
-        Assert.Equal("file2.png", result[1].FileName);
+        Assert.Equal(2, result.Files.Count);
+        Assert.Equal("file1.txt", result.Files[0].FileName);
+        Assert.Equal("file2.png", result.Files[1].FileName);
+        Assert.Empty(result.Folders);
     }
 
     [Fact]
@@ -182,13 +183,14 @@ public class StorageServiceTests : IDisposable
         // Arrange
         var service = CreateService();
         _s3ClientMock.Setup(x => x.ListObjectsAsync("test-bucket", $"{_userId}/", "/", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<S3ObjectInfo>());
+            .ReturnsAsync((new List<S3ObjectInfo>(), new List<string>()));
 
         // Act
         var result = await service.ListAsync();
 
         // Assert
-        Assert.Empty(result);
+        Assert.Empty(result.Files);
+        Assert.Empty(result.Folders);
     }
 
     #endregion
@@ -528,10 +530,11 @@ public class StorageServiceTests : IDisposable
         var result = await service.ListAsync();
 
         // Assert
-        Assert.Equal(2, result.Count);
-        var fileNames = result.Select(f => f.FileName).OrderBy(n => n).ToList();
+        Assert.Equal(2, result.Files.Count);
+        var fileNames = result.Files.Select(f => f.FileName).OrderBy(n => n).ToList();
         Assert.Contains("file1.txt", fileNames);
         Assert.Contains("file2.png", fileNames);
+        Assert.Empty(result.Folders);
 
         _s3ClientMock.Verify(x => x.ListObjectsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -549,7 +552,8 @@ public class StorageServiceTests : IDisposable
         var result = await service.ListAsync();
 
         // Assert
-        Assert.Empty(result);
+        Assert.Empty(result.Files);
+        Assert.Empty(result.Folders);
     }
 
     [Fact]
@@ -562,7 +566,8 @@ public class StorageServiceTests : IDisposable
         var result = await service.ListAsync();
 
         // Assert
-        Assert.Empty(result);
+        Assert.Empty(result.Files);
+        Assert.Empty(result.Folders);
     }
 
     #endregion

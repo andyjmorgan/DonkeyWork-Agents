@@ -15,9 +15,9 @@ public interface IS3ClientWrapper
     Task DeleteAsync(string bucketName, string objectKey, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists objects in a bucket with the given prefix.
+    /// Lists objects in a bucket with the given prefix, returning both objects and common prefixes (folders).
     /// </summary>
-    Task<List<S3ObjectInfo>> ListObjectsAsync(string bucketName, string prefix, string? delimiter = null, CancellationToken cancellationToken = default);
+    Task<(List<S3ObjectInfo> Objects, List<string> CommonPrefixes)> ListObjectsAsync(string bucketName, string prefix, string? delimiter = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets metadata for a specific object (HeadObject).

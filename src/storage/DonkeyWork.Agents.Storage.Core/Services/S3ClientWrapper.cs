@@ -86,9 +86,10 @@ public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
         await _s3Client.DeleteObjectAsync(request, cancellationToken);
     }
 
-    public async Task<List<S3ObjectInfo>> ListObjectsAsync(string bucketName, string prefix, string? delimiter = null, CancellationToken cancellationToken = default)
+    public async Task<(List<S3ObjectInfo> Objects, List<string> CommonPrefixes)> ListObjectsAsync(string bucketName, string prefix, string? delimiter = null, CancellationToken cancellationToken = default)
     {
         var results = new List<S3ObjectInfo>();
+        var commonPrefixes = new List<string>();
         string? continuationToken = null;
 
         do
@@ -113,10 +114,12 @@ public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
                 });
             }
 
+            commonPrefixes.AddRange(response.CommonPrefixes);
+
             continuationToken = response.IsTruncated ? response.NextContinuationToken : null;
         } while (continuationToken != null);
 
-        return results;
+        return (results, commonPrefixes);
     }
 
     public async Task<S3ObjectMetadata?> GetObjectMetadataAsync(string bucketName, string objectKey, CancellationToken cancellationToken = default)
@@ -146,7 +149,7 @@ public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
 
     public async Task DeleteByPrefixAsync(string bucketName, string prefix, CancellationToken cancellationToken = default)
     {
-        var objects = await ListObjectsAsync(bucketName, prefix, cancellationToken: cancellationToken);
+        var (objects, _) = await ListObjectsAsync(bucketName, prefix, cancellationToken: cancellationToken);
 
         if (objects.Count == 0)
             return;

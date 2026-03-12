@@ -25,15 +25,16 @@ public class FilesController : ControllerBase
     }
 
     /// <summary>
-    /// List all files for the current user.
+    /// List files and folders for the current user.
     /// </summary>
-    /// <response code="200">Returns the list of files.</response>
+    /// <param name="prefix">Optional folder prefix to list contents of a subfolder.</param>
+    /// <response code="200">Returns the listing of files and folders.</response>
     [HttpGet]
-    [ProducesResponseType<List<FileItemV1>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> List()
+    [ProducesResponseType<FileListingResponseV1>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List([FromQuery] string? prefix = null)
     {
-        var files = await _storageService.ListAsync();
-        return Ok(files);
+        var listing = await _storageService.ListAsync(prefix);
+        return Ok(listing);
     }
 
     /// <summary>
