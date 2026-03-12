@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useAgentBuilderStore } from '@/store/agentBuilder'
 import { mcpServers, agentDefinitions, prompts as promptsApi, type McpServerSummary, type AgentDefinitionSummary, type PromptSummary } from '@donkeywork/api-client'
 import { CreatePromptDialog } from './CreatePromptDialog'
+import { McpServerTestDialog } from '@/components/mcp/McpServerTestDialog'
 
 const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
@@ -54,6 +55,7 @@ interface PaletteItem {
   icon: string
   color: string
   isDisabled: boolean
+  mcpServerId?: string
 }
 
 interface ToolGroupDef {
@@ -75,6 +77,7 @@ export function AgentNodePalette() {
   const [agentList, setAgentList] = useState<AgentDefinitionSummary[]>([])
   const [promptList, setPromptList] = useState<PromptSummary[]>([])
   const [createPromptOpen, setCreatePromptOpen] = useState(false)
+  const [testingMcpServer, setTestingMcpServer] = useState<{ id: string; name: string } | null>(null)
 
   const refreshPrompts = useCallback(() => {
     promptsApi.list().then(setPromptList).catch(console.error)
@@ -121,12 +124,18 @@ export function AgentNodePalette() {
         key={item.key}
         draggable={!item.isDisabled}
         onDragStart={(e) => handleDragStart(e, item)}
+        onClick={() => {
+          if (item.mcpServerId) {
+            setTestingMcpServer({ id: item.mcpServerId, name: item.displayName })
+          }
+        }}
         className={cn(
-          'flex cursor-move items-center gap-3 rounded-xl border-2 p-3 transition-all',
+          'flex items-center gap-3 rounded-xl border-2 p-3 transition-all',
+          item.mcpServerId ? 'cursor-pointer' : 'cursor-move',
           colors.border,
           item.isDisabled && 'cursor-not-allowed opacity-40'
         )}
-        title={item.displayName}
+        title={item.mcpServerId ? `Click to preview tools from ${item.displayName}` : item.displayName}
       >
         <div
           className={cn(
@@ -177,6 +186,7 @@ export function AgentNodePalette() {
     icon: 'server',
     color: 'purple',
     isDisabled: isReadOnly || hasMcpServer(server.id),
+    mcpServerId: server.id,
   }))
 
   // Prompt items (from API)
@@ -336,6 +346,15 @@ export function AgentNodePalette() {
         </h3>
         <div className="space-y-2">{renderItem(sandboxItem)}</div>
       </div>
+
+      {testingMcpServer && (
+        <McpServerTestDialog
+          open={!!testingMcpServer}
+          onOpenChange={(open) => { if (!open) setTestingMcpServer(null) }}
+          serverId={testingMcpServer.id}
+          serverName={testingMcpServer.name}
+        />
+      )}
     </div>
   )
 }

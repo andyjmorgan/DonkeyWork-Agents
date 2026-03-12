@@ -1500,6 +1500,21 @@ export interface UpdateMcpServerRequest {
   httpConfiguration?: CreateMcpHttpConfigurationRequest
 }
 
+export interface McpToolInfo {
+  name: string
+  description?: string
+  inputSchema?: object
+}
+
+export interface McpServerTestResult {
+  success: boolean
+  serverName?: string
+  serverVersion?: string
+  elapsedMs: number
+  tools: McpToolInfo[]
+  error?: string
+}
+
 // MCP Servers API
 export const mcpServers = {
   list: () => api.get<McpServerSummary[]>('/api/v1/mcp-servers'),
@@ -1507,6 +1522,7 @@ export const mcpServers = {
   create: (data: CreateMcpServerRequest) => api.post<McpServerDetails>('/api/v1/mcp-servers', data),
   update: (id: string, data: UpdateMcpServerRequest) => api.put<McpServerDetails>(`/api/v1/mcp-servers/${id}`, data),
   delete: (id: string) => api.delete(`/api/v1/mcp-servers/${id}`),
+  test: (id: string) => api.post<McpServerTestResult>(`/api/v1/mcp-servers/${id}/test`, {}),
 }
 
 // Agent Definition Types

@@ -617,6 +617,70 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         return configs;
     }
 
+    public async Task<McpConnectionConfigV1?> GetConnectionConfigByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.McpServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.Id == id && c.TransportType == McpTransportType.Http)
+            .Include(c => c.HttpConfiguration)
+                .ThenInclude(h => h!.HeaderConfigurations)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (entity?.HttpConfiguration is null)
+        {
+            return null;
+        }
+
+        var headers = new Dictionary<string, string>();
+
+        if (entity.HttpConfiguration.AuthType == McpHttpAuthType.OAuth
+            && entity.HttpConfiguration.OAuthTokenId.HasValue)
+        {
+            try
+            {
+                var token = await _oAuthTokenService.GetByIdAsync(
+                    _identityContext.UserId,
+                    entity.HttpConfiguration.OAuthTokenId.Value,
+                    cancellationToken);
+                if (token != null)
+                {
+                    headers["Authorization"] = $"Bearer {token.AccessToken}";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resolve OAuth token for MCP server {Id} ({Name})", entity.Id, entity.Name);
+            }
+        }
+        else if (entity.HttpConfiguration.AuthType == McpHttpAuthType.Header)
+        {
+            foreach (var header in entity.HttpConfiguration.HeaderConfigurations)
+            {
+                try
+                {
+                    var resolvedValue = await ResolveHeaderValueAsync(header, entity.Id, entity.Name, cancellationToken);
+                    if (resolvedValue != null)
+                    {
+                        headers[header.HeaderName] = resolvedValue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve header {HeaderName} for MCP server {Id} ({Name})", header.HeaderName, entity.Id, entity.Name);
+                }
+            }
+        }
+
+        return new McpConnectionConfigV1
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Endpoint = entity.HttpConfiguration.Endpoint,
+            TransportMode = entity.HttpConfiguration.TransportMode,
+            Headers = headers,
+        };
+    }
+
     #region Mapping
 
     private McpServerSummaryV1 MapToSummary(McpServerConfigurationEntity entity)

@@ -18,10 +18,14 @@ namespace DonkeyWork.Agents.Mcp.Api.Controllers;
 public class McpServersController : ControllerBase
 {
     private readonly IMcpServerConfigurationService _mcpServerConfigurationService;
+    private readonly IMcpServerTestService _mcpServerTestService;
 
-    public McpServersController(IMcpServerConfigurationService mcpServerConfigurationService)
+    public McpServersController(
+        IMcpServerConfigurationService mcpServerConfigurationService,
+        IMcpServerTestService mcpServerTestService)
     {
         _mcpServerConfigurationService = mcpServerConfigurationService;
+        _mcpServerTestService = mcpServerTestService;
     }
 
     /// <summary>
@@ -109,5 +113,18 @@ public class McpServersController : ControllerBase
             return NotFound();
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Test connection to an MCP server and discover available tools.
+    /// </summary>
+    /// <param name="id">The MCP server configuration ID.</param>
+    /// <response code="200">Returns the test result (success or failure in body).</response>
+    [HttpPost("{id:guid}/test")]
+    [ProducesResponseType<TestMcpServerResponseV1>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Test(Guid id)
+    {
+        var result = await _mcpServerTestService.TestConnectionAsync(id);
+        return Ok(result);
     }
 }

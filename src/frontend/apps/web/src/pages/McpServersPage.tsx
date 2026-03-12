@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Pencil, Server, Terminal, Globe } from 'lucide-react'
+import { Plus, Trash2, Pencil, Server, Terminal, Globe, Zap } from 'lucide-react'
 import {
   Button,
   Badge,
@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@donkeywork/ui'
 import { McpServerDialog } from '@/components/mcp/McpServerDialog'
+import { McpServerTestDialog } from '@/components/mcp/McpServerTestDialog'
 import { mcpServers, type McpServerSummary, type McpServerDetails } from '@donkeywork/api-client'
 
 export function McpServersPage() {
@@ -19,6 +20,7 @@ export function McpServersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingServer, setEditingServer] = useState<McpServerDetails | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [testingServer, setTestingServer] = useState<{ id: string; name: string } | null>(null)
 
   const loadServers = async () => {
     try {
@@ -165,6 +167,15 @@ export function McpServersPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      {server.transportType === 'Http' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTestingServer({ id: server.id, name: server.name })}
+                        >
+                          <Zap className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -229,6 +240,15 @@ export function McpServersPage() {
                       <TableCell>{formatDate(server.createdAt)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {server.transportType === 'Http' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setTestingServer({ id: server.id, name: server.name })}
+                            >
+                              <Zap className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -261,6 +281,15 @@ export function McpServersPage() {
         onSaved={handleSaved}
         editingServer={editingServer}
       />
+
+      {testingServer && (
+        <McpServerTestDialog
+          open={!!testingServer}
+          onOpenChange={(open) => { if (!open) setTestingServer(null) }}
+          serverId={testingServer.id}
+          serverName={testingServer.name}
+        />
+      )}
     </div>
   )
 }

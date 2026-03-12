@@ -9,6 +9,7 @@ public static class DependencyInjection
     public static IServiceCollection AddMcpApi(this IServiceCollection services)
     {
         services.AddScoped<IMcpServerConfigurationService, McpServerConfigurationService>();
+        services.AddScoped<IMcpServerTestService, McpServerTestService>();
         return services;
     }
 }

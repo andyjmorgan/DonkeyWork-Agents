@@ -52,4 +52,11 @@ public interface IMcpServerConfigurationService
     /// Gets connection-ready configurations for all enabled stdio MCP servers that have ConnectToNavi set.
     /// </summary>
     Task<IReadOnlyList<McpStdioConnectionConfigV1>> GetNaviStdioConfigsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a connection-ready configuration for a specific MCP server by ID,
+    /// with decrypted header values for authentication.
+    /// Returns null if the server is not found or is not an HTTP server.
+    /// </summary>
+    Task<McpConnectionConfigV1?> GetConnectionConfigByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

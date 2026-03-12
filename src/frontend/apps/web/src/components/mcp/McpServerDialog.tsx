@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Terminal, Globe, Eye, EyeOff, KeyRound } from 'lucide-react'
+import { Plus, Trash2, Terminal, Globe, Eye, EyeOff, KeyRound, Zap } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ import {
   type CreateMcpEnvironmentVariableRequest,
   type CreateMcpHttpHeaderConfigurationRequest,
 } from '@donkeywork/api-client'
+import { McpServerTestDialog } from '@/components/mcp/McpServerTestDialog'
 
 const CREDENTIAL_FIELD_TYPES = [
   'ApiKey',
@@ -111,6 +112,7 @@ export function McpServerDialog({
   // Form state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showTestDialog, setShowTestDialog] = useState(false)
 
   const isEditing = !!editingServer
 
@@ -197,6 +199,7 @@ export function McpServerDialog({
     setHeaders([])
     setRevealedHeaders(new Set())
     setError(null)
+    setShowTestDialog(false)
   }
 
   const buildEnvVarsPayload = useCallback((): CreateMcpEnvironmentVariableRequest[] | undefined => {
@@ -761,6 +764,18 @@ export function McpServerDialog({
           </div>
 
           <DialogFooter>
+            {isEditing && transportType === 'Http' && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowTestDialog(true)}
+                disabled={isSubmitting}
+                className="mr-auto"
+              >
+                <Zap className="h-4 w-4 mr-1.5" />
+                Test Connection
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -775,6 +790,15 @@ export function McpServerDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {isEditing && editingServer && showTestDialog && (
+        <McpServerTestDialog
+          open={showTestDialog}
+          onOpenChange={setShowTestDialog}
+          serverId={editingServer.id}
+          serverName={editingServer.name}
+        />
+      )}
     </Dialog>
   )
 }
