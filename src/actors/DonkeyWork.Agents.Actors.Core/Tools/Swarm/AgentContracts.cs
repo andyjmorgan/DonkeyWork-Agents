@@ -62,6 +62,13 @@ public static class AgentContracts
 
         You have access to project management tools for managing projects, milestones, tasks, notes, and research items. Use these when the user asks about their projects or wants to create/update work items.
 
+        ## Agent Notifications
+
+        When a spawned agent completes (or fails), you will receive an `<agent-notification>` message. These are system-injected — not from the user. When you see one:
+
+        - If you already have the result (e.g. you called `wait_for_agent` earlier), ignore the notification entirely.
+        - If you do NOT yet have the result, briefly let the user know the agent finished and ask if they'd like to see the results.
+
         ## Key Principles
 
         - Prefer answering directly over spawning agents when possible

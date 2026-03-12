@@ -710,11 +710,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             var detail = msg.Result is not null
                 ? string.Join("\n", msg.Result.Parts.OfType<AgentTextPart>().Select(p => p.Text))
                 : "No details available";
-            return $"[Agent Notification] Agent '{msg.Label}' (key: {msg.AgentKey}) FAILED:\n{detail}";
+            return $"<agent-notification>\nAgent '{msg.Label}' (key: {msg.AgentKey}) FAILED:\n{detail}\n</agent-notification>";
         }
 
-        return $"[Agent Notification] Agent '{msg.Label}' (key: {msg.AgentKey}) has completed successfully. " +
-               $"Use the wait_for_agent tool with agent_key=\"{msg.AgentKey}\" to retrieve the full results.";
+        return $"<agent-notification>\nAgent '{msg.Label}' (key: {msg.AgentKey}) has completed successfully.\n</agent-notification>";
     }
 
     private async Task RollbackStateAsync(int fromSequenceNumber)

@@ -68,10 +68,13 @@ export interface ToolUseRecord {
 
 // --- Messages (polymorphic via $type) ---
 
+export type MessageOrigin = "User" | "Agent";
+
 export interface InternalContentMessage {
   $type: "InternalContentMessage";
   role: InternalMessageRole;
   content: string;
+  origin?: MessageOrigin;
 }
 
 export interface InternalAssistantMessage {

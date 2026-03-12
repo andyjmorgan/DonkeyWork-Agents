@@ -47,6 +47,8 @@ export function internalToChat(
     switch (msg.$type) {
       case "InternalContentMessage": {
         const cm = msg as InternalContentMessage;
+        // Skip agent-origin messages (e.g. agent completion notifications)
+        if (cm.origin === "Agent") break;
         if (cm.role === "User") {
           result.push({
             id: `msg-${i}`,
