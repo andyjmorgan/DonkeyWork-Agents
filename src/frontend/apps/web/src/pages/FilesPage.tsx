@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@donkeywork/ui'
 import { files, type FileItem } from '@donkeywork/api-client'
+import { FilePreviewPanel } from '../components/files/FilePreviewPanel'
 
 export function FilesPage() {
   const [fileList, setFileList] = useState<FileItem[]>([])
@@ -19,6 +20,7 @@ export function FilesPage() {
   const [deletingName, setDeletingName] = useState<string | null>(null)
   const [downloadingName, setDownloadingName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadFiles = useCallback(async () => {
@@ -259,7 +261,12 @@ export function FilesPage() {
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <File className="h-4 w-4 text-amber-500 shrink-0" />
-                        <span className="text-sm font-medium truncate">{file.fileName}</span>
+                        <button
+                          className="text-sm font-medium truncate text-left hover:text-accent-foreground transition-colors cursor-pointer"
+                          onClick={() => setSelectedFile(file)}
+                        >
+                          {file.fileName}
+                        </button>
                       </div>
                       <div className="text-sm">
                         <span className="text-muted-foreground">Type: </span>
@@ -341,7 +348,12 @@ export function FilesPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <File className="h-4 w-4 text-amber-500 shrink-0" />
-                          <span className="font-medium truncate max-w-[300px]">{file.fileName}</span>
+                          <button
+                            className="font-medium truncate max-w-[300px] text-left hover:text-accent-foreground transition-colors cursor-pointer"
+                            onClick={() => setSelectedFile(file)}
+                          >
+                            {file.fileName}
+                          </button>
                         </div>
                       </TableCell>
                       <TableCell>{getFileTypeLabel(file.fileName)}</TableCell>
@@ -385,6 +397,13 @@ export function FilesPage() {
           </>
         )}
       </section>
+
+      <FilePreviewPanel
+        file={selectedFile}
+        currentPrefix={currentPrefix}
+        open={selectedFile !== null}
+        onClose={() => setSelectedFile(null)}
+      />
     </div>
   )
 }

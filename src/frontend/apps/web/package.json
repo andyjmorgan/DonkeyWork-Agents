@@ -22,6 +22,7 @@
     "@donkeywork/stores": "workspace:*",
     "@donkeywork/ui": "workspace:*",
     "@donkeywork/workspace": "workspace:*",
+    "@iamjariwala/react-doc-viewer": "^1.8.0",
     "@microlink/react-json-view": "^1.27.1",
     "@microsoft/signalr": "^10.0.0",
     "@monaco-editor/react": "^4.7.0",

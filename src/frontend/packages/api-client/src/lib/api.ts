@@ -1212,6 +1212,21 @@ export const files = {
     const blob = await response.blob()
     return { blob, fileName: downloadFileName, contentType }
   },
+
+  // Get presigned URL for a file
+  getUrl: async (key: string): Promise<string> => {
+    const data = await api.get<{ url: string; expiresAt: string }>(`/api/v1/files/${encodeURIComponent(key)}/url`)
+    return data.url
+  },
+
+  // Fetch file content as text (for markdown/text preview)
+  fetchText: async (key: string): Promise<string> => {
+    const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/${encodeURIComponent(key)}/download`)
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+    return response.text()
+  },
 }
 
 // Skill Types
