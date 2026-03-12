@@ -110,6 +110,10 @@ public class SandboxManagerConfig
     /// </summary>
     public ResourceConfig McpDefaultResourceLimits { get; set; } = new() { MemoryMi = 256, CpuMillicores = 500 };
 
+    // Leader election settings
+    [Range(5, 60, ErrorMessage = "Lease duration must be between 5 and 60 seconds")]
+    public int LeaderLeaseDurationSeconds { get; set; } = 15;
+
     // Optional: Direct k8s connection (alternative to kubeconfig)
     public KubernetesConnectionConfig? Connection { get; set; }
 }

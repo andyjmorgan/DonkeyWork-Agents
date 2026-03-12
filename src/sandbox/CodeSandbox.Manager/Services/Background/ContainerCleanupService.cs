@@ -1,16 +1,24 @@
 using CodeSandbox.Manager.Configuration;
 using CodeSandbox.Manager.Services.Container;
 using k8s;
+using k8s.LeaderElection;
+using k8s.LeaderElection.ResourceLock;
 using k8s.Models;
 using Microsoft.Extensions.Options;
 
 namespace CodeSandbox.Manager.Services.Background;
 
+/// <summary>
+/// Background service that uses Kubernetes leader election to ensure only one manager
+/// performs container cleanup at a time.
+/// </summary>
 public class ContainerCleanupService : BackgroundService
 {
     private readonly IKubernetes _client;
     private readonly SandboxManagerConfig _config;
     private readonly ILogger<ContainerCleanupService> _logger;
+    private readonly string _identity;
+    private CancellationTokenSource? _leaderLoopCts;
 
     public ContainerCleanupService(
         IKubernetes client,
@@ -20,25 +28,97 @@ public class ContainerCleanupService : BackgroundService
         _client = client;
         _config = config.Value;
         _logger = logger;
+        _identity = $"{Environment.MachineName}-{Guid.NewGuid().ToString("N")[..8]}";
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation(
-            "Container cleanup service started. Idle timeout: {IdleTimeoutMinutes}m, Check interval: {CheckIntervalMinutes}m",
-            _config.IdleTimeoutMinutes, _config.CleanupCheckIntervalMinutes);
+            "Container cleanup service starting with identity: {Identity}. Idle timeout: {IdleTimeoutMinutes}m, Check interval: {CheckIntervalMinutes}m",
+            _identity, _config.IdleTimeoutMinutes, _config.CleanupCheckIntervalMinutes);
+
+        try
+        {
+            var resourceLock = new LeaseLock(
+                _client,
+                _config.TargetNamespace,
+                "container-cleanup-leader",
+                _identity);
+
+            _logger.LogInformation(
+                "Configuring leader election (LeaseDuration={LeaseDuration}s, RetryPeriod={RetryPeriod}s, RenewDeadline={RenewDeadline}s)",
+                _config.LeaderLeaseDurationSeconds,
+                _config.LeaderLeaseDurationSeconds / 3,
+                _config.LeaderLeaseDurationSeconds * 2 / 3);
+
+            var electionConfig = new LeaderElectionConfig(resourceLock)
+            {
+                LeaseDuration = TimeSpan.FromSeconds(_config.LeaderLeaseDurationSeconds),
+                RetryPeriod = TimeSpan.FromSeconds(_config.LeaderLeaseDurationSeconds / 3),
+                RenewDeadline = TimeSpan.FromSeconds(_config.LeaderLeaseDurationSeconds * 2 / 3),
+            };
+
+            var leaderElector = new LeaderElector(electionConfig);
+
+            leaderElector.OnStartedLeading += () =>
+            {
+                _logger.LogInformation("I am now the LEADER for container cleanup");
+                _leaderLoopCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                _ = Task.Run(() => CleanupLoop(_leaderLoopCts.Token), stoppingToken);
+            };
+
+            leaderElector.OnStoppedLeading += () =>
+            {
+                _logger.LogWarning("Lost leadership for container cleanup");
+                _leaderLoopCts?.Cancel();
+            };
+
+            leaderElector.OnNewLeader += (newLeader) =>
+            {
+                if (newLeader != _identity)
+                {
+                    _logger.LogInformation("New cleanup leader elected: {Leader}", newLeader);
+                }
+            };
+
+            _logger.LogInformation("Starting leader election...");
+            await leaderElector.RunUntilLeadershipLostAsync(stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Container cleanup service stopping gracefully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Container cleanup service encountered an error during leader election");
+            throw;
+        }
+    }
+
+    private async Task CleanupLoop(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Starting cleanup loop (running every {Interval}m)",
+            _config.CleanupCheckIntervalMinutes);
 
         var checkInterval = TimeSpan.FromMinutes(_config.CleanupCheckIntervalMinutes);
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(checkInterval, stoppingToken);
+            try
+            {
+                await Task.Delay(checkInterval, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Cleanup loop cancelled");
+                break;
+            }
 
             try
             {
-                await CleanupContainersAsync(stoppingToken);
+                await CleanupContainersAsync(cancellationToken);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
@@ -48,7 +128,7 @@ public class ContainerCleanupService : BackgroundService
             }
         }
 
-        _logger.LogInformation("Container cleanup service stopped");
+        _logger.LogInformation("Cleanup loop stopped");
     }
 
     private async Task CleanupContainersAsync(CancellationToken cancellationToken)
