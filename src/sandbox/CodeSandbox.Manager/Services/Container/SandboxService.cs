@@ -93,8 +93,12 @@ public class SandboxService : ISandboxService
                 Phase = createdPod.Status?.Phase ?? "Pending"
             });
 
-            // Watch for pod readiness using Kubernetes watch API
+            // Watch for pod readiness using Kubernetes watch API.
+            // Use the created pod's resourceVersion so the watch includes all events
+            // from the point of creation, avoiding a race where the pod becomes ready
+            // before the watch stream is established.
             var eventNumber = 0;
+            var resourceVersion = createdPod.Metadata?.ResourceVersion;
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(_config.PodReadyTimeoutSeconds));
@@ -104,6 +108,7 @@ public class SandboxService : ISandboxService
                 var listTask = _client.CoreV1.ListNamespacedPodWithHttpMessagesAsync(
                     _config.TargetNamespace,
                     fieldSelector: $"metadata.name={podName}",
+                    resourceVersion: resourceVersion,
                     watch: true,
                     cancellationToken: timeoutCts.Token);
 
