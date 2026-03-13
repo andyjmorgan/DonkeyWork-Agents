@@ -23,6 +23,7 @@ using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using Grpc.Core;
+using Grpc.Net.Client;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
@@ -869,38 +870,60 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
                 scopedIdentity?.SetIdentity(_identityContext.UserId);
 
-                var client = scope.ServiceProvider.GetRequiredService<SandboxManagerClient>();
+                SandboxManagerClient client;
+                GrpcChannel? freshChannel = null;
 
-                var podName = await client.FindSandboxAsync(userId, conversationId, CancellationToken.None);
-
-                if (podName is null)
+                if (attempt == 1)
                 {
-                    // Resolve dynamic credential domains for the user
-                    IReadOnlyList<string>? credentialDomains = null;
-                    var credentialMappingService = scope.ServiceProvider.GetService<ISandboxCredentialMappingService>();
-                    if (credentialMappingService is not null)
-                    {
-                        credentialDomains = await credentialMappingService.GetConfiguredDomainsAsync(CancellationToken.None);
-                        _logger.LogInformation(
-                            "Resolved {Count} credential domain(s) for sandbox: [{Domains}]",
-                            credentialDomains?.Count ?? 0,
-                            credentialDomains is not null ? string.Join(", ", credentialDomains) : "none");
-                    }
-                    else
-                    {
-                        _logger.LogWarning("ISandboxCredentialMappingService not registered - no credential domains will be injected");
-                    }
-
-                    Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));
-                    podName = await client.CreateSandboxAsync(userId, conversationId, progress =>
-                    {
-                        Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", progress, null));
-                    }, CancellationToken.None, credentialDomains);
+                    client = scope.ServiceProvider.GetRequiredService<SandboxManagerClient>();
+                }
+                else
+                {
+                    // Create a fresh channel to bypass the singleton's stuck subchannel state
+                    var sandboxOptions = scope.ServiceProvider.GetRequiredService<IOptions<SandboxOptions>>();
+                    freshChannel = GrpcChannel.ForAddress(sandboxOptions.Value.ManagerBaseUrl);
+                    var sandboxLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+                        .CreateLogger<SandboxManagerClient>();
+                    client = new SandboxManagerClient(freshChannel, sandboxLogger);
                 }
 
-                handle.SetResult(podName);
-                Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "ready", "Sandbox ready", podName));
-                return;
+                try
+                {
+                    var podName = await client.FindSandboxAsync(userId, conversationId, CancellationToken.None);
+
+                    if (podName is null)
+                    {
+                        // Resolve dynamic credential domains for the user
+                        IReadOnlyList<string>? credentialDomains = null;
+                        var credentialMappingService = scope.ServiceProvider.GetService<ISandboxCredentialMappingService>();
+                        if (credentialMappingService is not null)
+                        {
+                            credentialDomains = await credentialMappingService.GetConfiguredDomainsAsync(CancellationToken.None);
+                            _logger.LogInformation(
+                                "Resolved {Count} credential domain(s) for sandbox: [{Domains}]",
+                                credentialDomains?.Count ?? 0,
+                                credentialDomains is not null ? string.Join(", ", credentialDomains) : "none");
+                        }
+                        else
+                        {
+                            _logger.LogWarning("ISandboxCredentialMappingService not registered - no credential domains will be injected");
+                        }
+
+                        Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));
+                        podName = await client.CreateSandboxAsync(userId, conversationId, progress =>
+                        {
+                            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", progress, null));
+                        }, CancellationToken.None, credentialDomains);
+                    }
+
+                    handle.SetResult(podName);
+                    Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "ready", "Sandbox ready", podName));
+                    return;
+                }
+                finally
+                {
+                    freshChannel?.Dispose();
+                }
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable && attempt < maxAttempts)
             {
