@@ -271,6 +271,8 @@ export function useAgentTestStream() {
           inputTokens: (data.inputTokens as number) ?? 0,
           outputTokens: (data.outputTokens as number) ?? 0,
           webSearchRequests: (data.webSearchRequests as number) ?? 0,
+          contextWindowLimit: (data.contextWindowLimit as number) ?? 0,
+          maxOutputTokens: (data.maxOutputTokens as number) ?? 0,
         })
         break
 

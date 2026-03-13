@@ -58,7 +58,6 @@ public sealed class TaskAgentTools
     public async Task<ToolResult> CreateTask(
         [Description("The task title")] string title,
         [Description("The task description")] string? description = null,
-        [Description("A brief summary")] string? summary = null,
         [Description("Task status: Pending, InProgress, Completed, Cancelled")] TaskItemStatus? status = null,
         [Description("Task priority: Low, Medium, High, Critical")] TaskItemPriority? priority = null,
         [Description("Sort order")] int sortOrder = 0,
@@ -70,7 +69,6 @@ public sealed class TaskAgentTools
         {
             Title = title,
             Description = description,
-            Summary = summary,
             Status = status ?? TaskItemStatus.Pending,
             Priority = priority ?? TaskItemPriority.Medium,
             SortOrder = sortOrder,
@@ -87,7 +85,6 @@ public sealed class TaskAgentTools
         [Description("The task item ID")] Guid taskItemId,
         [Description("The task title")] string title,
         [Description("The task description")] string? description = null,
-        [Description("A brief summary")] string? summary = null,
         [Description("Task status: Pending, InProgress, Completed, Cancelled")] TaskItemStatus? status = null,
         [Description("Task priority: Low, Medium, High, Critical")] TaskItemPriority? priority = null,
         [Description("Completion notes")] string? completionNotes = null,
@@ -100,7 +97,6 @@ public sealed class TaskAgentTools
         {
             Title = title,
             Description = description,
-            Summary = summary,
             Status = status ?? TaskItemStatus.Pending,
             Priority = priority ?? TaskItemPriority.Medium,
             CompletionNotes = completionNotes,

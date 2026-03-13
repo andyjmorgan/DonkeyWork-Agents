@@ -26,6 +26,7 @@ using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
+using DonkeyWork.Agents.Providers.Contracts.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -50,6 +51,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private readonly IGrainMessageStore _messageStore;
     private readonly IPromptService _promptService;
     private readonly IAgentDefinitionService _agentDefinitionService;
+    private readonly IModelCatalogService _modelCatalogService;
 
     private readonly Channel<ConversationMessage> _queue =
         Channel.CreateUnbounded<ConversationMessage>(new UnboundedChannelOptions { SingleReader = true });
@@ -67,6 +69,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private McpServerReference[] _discoveredMcpServers = [];
     private bool _hasMcpSandbox;
     private SandboxProvisioningHandle? _sandboxHandle;
+    private int _contextWindowLimit;
+    private int _maxOutputTokens;
     private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
     private Type[]? _effectiveToolTypes;
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
@@ -105,7 +109,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
         IPromptService promptService,
-        IAgentDefinitionService agentDefinitionService)
+        IAgentDefinitionService agentDefinitionService,
+        IModelCatalogService modelCatalogService)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -120,6 +125,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _messageStore = messageStore;
         _promptService = promptService;
         _agentDefinitionService = agentDefinitionService;
+        _modelCatalogService = modelCatalogService;
     }
 
     #region IConversationGrain
@@ -318,6 +324,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
         var toolTypes = ResolveToolGroups(contract.ToolGroups);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
+
+        var modelDefinition = _modelCatalogService.GetModelById(modelId);
+        _contextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
+        _maxOutputTokens = modelDefinition?.MaxOutputTokens ?? 0;
 
         // Initialize MCP tools (lazy, once per activation)
         if (_mcpToolProvider is null)
@@ -557,7 +567,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseUsage usage }:
-                Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests));
+                Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests, _contextWindowLimit, _maxOutputTokens));
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseServerToolUse serverTool }

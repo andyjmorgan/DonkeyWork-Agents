@@ -19,7 +19,7 @@ export type ToolUseBox = {
   durationMs?: number;
   webSearchResults?: WebSearchResult[];
 };
-export type UsageBox = { type: "usage"; inputTokens: number; outputTokens: number; webSearchRequests: number };
+export type UsageBox = { type: "usage"; inputTokens: number; outputTokens: number; webSearchRequests: number; contextWindowLimit: number; maxOutputTokens: number };
 export type AgentGroupBox = {
   type: "agent_group";
   agentKey: string;

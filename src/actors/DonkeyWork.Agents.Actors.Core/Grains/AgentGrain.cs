@@ -22,6 +22,7 @@ using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
+using DonkeyWork.Agents.Providers.Contracts.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,6 +43,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
     private readonly IGrainMessageStore _messageStore;
     private readonly IPromptService _promptService;
+    private readonly IModelCatalogService _modelCatalogService;
 
     private List<InternalMessage> _messages = [];
     private int _nextSequenceNumber;
@@ -52,6 +54,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private McpToolProvider? _mcpToolProvider;
     private bool _hasMcpSandbox;
     private SandboxProvisioningHandle? _sandboxHandle;
+    private int _contextWindowLimit;
+    private int _maxOutputTokens;
 
     private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
     {
@@ -78,7 +82,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         IMcpServerConfigurationService mcpServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
-        IPromptService promptService)
+        IPromptService promptService,
+        IModelCatalogService modelCatalogService)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -91,6 +96,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _mcpSandboxManagerClient = mcpSandboxManagerClient;
         _messageStore = messageStore;
         _promptService = promptService;
+        _modelCatalogService = modelCatalogService;
     }
 
     #region IAgentGrain
@@ -186,6 +192,10 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _logger.LogInformation("Resolved {ToolTypeCount} tool types from {GroupCount} groups",
             toolTypes.Length, effectiveToolGroups.Length);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
+
+        var modelDefinition = _modelCatalogService.GetModelById(modelId);
+        _contextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
+        _maxOutputTokens = modelDefinition?.MaxOutputTokens ?? 0;
 
         // Populate grain context with contract's MCP servers, sub-agents, and tool groups for swarm tool inheritance
         _grainContext.McpServers = contract.McpServers;
@@ -401,7 +411,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseUsage usage }:
-                Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests));
+                Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests, _contextWindowLimit, _maxOutputTokens));
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseServerToolUse serverTool }

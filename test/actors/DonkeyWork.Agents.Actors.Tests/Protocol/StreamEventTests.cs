@@ -114,7 +114,7 @@ public class StreamEventTests
             new StreamToolCompleteEvent(TestAgentKey, "id", "tool", true, 50),
             new StreamWebSearchEvent(TestAgentKey, "id", "query"),
             new StreamCitationEvent(TestAgentKey, "title", "url", "text"),
-            new StreamUsageEvent(TestAgentKey, 100, 200, 1),
+            new StreamUsageEvent(TestAgentKey, 100, 200, 1, 200000, 8192),
             new StreamProgressEvent(TestAgentKey, "breadcrumb"),
             new StreamAgentSpawnEvent(TestAgentKey, "child-key", "Research"),
             new StreamAgentCompleteEvent(TestAgentKey),

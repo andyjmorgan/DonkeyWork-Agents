@@ -30,6 +30,7 @@
         <ProjectReference Include="..\..\agentdefinitions\DonkeyWork.Agents.AgentDefinitions.Contracts\DonkeyWork.Agents.AgentDefinitions.Contracts.csproj" />
         <ProjectReference Include="..\..\sandbox\CodeSandbox.Manager.Contracts\CodeSandbox.Manager.Contracts.csproj" />
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+        <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

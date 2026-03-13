@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@donkeywork/ui'
-import { MarkdownEditor, MarkdownViewer } from '@donkeywork/editor'
+import { MarkdownEditor } from '@donkeywork/editor'
 import { tasks, projects, milestones, type Task, type ProjectDetails, type MilestoneDetails, type TaskPriority, type TaskStatus } from '@donkeywork/api-client'
 import type { WorkspaceNavigation } from '../types'
 
@@ -30,14 +30,13 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
   // Form fields
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [summary, setSummary] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('Medium')
   const [status, setStatus] = useState<TaskStatus>('Pending')
   const [dueDate, setDueDate] = useState('')
   const [completionNotes, setCompletionNotes] = useState('')
 
   // Active tab
-  const [activeTab, setActiveTab] = useState('summary')
+  const [activeTab, setActiveTab] = useState('description')
 
   useEffect(() => {
     if (taskId && !isNewTask) {
@@ -54,7 +53,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
       setTask(taskData)
       setTitle(taskData.title)
       setDescription(taskData.description || '')
-      setSummary(taskData.summary || '')
       setPriority(taskData.priority)
       setStatus(taskData.status)
       setDueDate(taskData.dueDate || '')
@@ -88,7 +86,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
         const newTask = await tasks.create({
           title,
           description,
-          summary,
           priority,
           status,
           dueDate: dueDate || undefined,
@@ -98,7 +95,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
         await tasks.update(task.id, {
           title,
           description,
-          summary,
           priority,
           status,
           completionNotes: (status === 'Completed' || status === 'Cancelled') ? completionNotes || undefined : undefined,
@@ -290,55 +286,37 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
         className="text-xl font-semibold border-0 px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
       />
 
-      {/* Description */}
-      <MarkdownEditor
-        content={description}
-        onChange={setDescription}
-        placeholder="Add a description for this task..."
-        className="min-h-[calc(100vh-600px)]"
-      />
-
-      {/* Tabs for Summary and Completion Notes */}
+      {/* Tabs for Description and Completion Notes */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="description">Description</TabsTrigger>
           <TabsTrigger value="completion-notes">
             {isTerminal ? (status === 'Completed' ? 'Completion Notes' : 'Cancellation Reason') : 'Completion Notes'}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="summary" className="mt-4">
-          {summary ? (
-            <div className="rounded-lg border border-border bg-card p-4">
-              <MarkdownViewer content={summary} className="min-h-[100px]" />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                No summary yet
-              </p>
-            </div>
-          )}
+        <TabsContent value="description" className="mt-4">
+          <MarkdownEditor
+            content={description}
+            onChange={setDescription}
+            placeholder="Add a description for this task..."
+            className="min-h-[calc(100vh-500px)]"
+          />
         </TabsContent>
 
         <TabsContent value="completion-notes" className="mt-4">
-          {completionNotes ? (
-            <div className="rounded-lg border border-border bg-card p-4">
-              <MarkdownViewer content={completionNotes} className="min-h-[100px]" />
-              {task?.completedAt && (
-                <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
-                  {status === 'Completed' ? 'Completed' : 'Cancelled'} {new Date(task.completedAt).toLocaleDateString()}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                {isTerminal
-                  ? 'Completion notes are required — add them above to save'
-                  : 'No completion notes yet — will be added when the task is completed'}
-              </p>
-            </div>
+          <MarkdownEditor
+            content={completionNotes}
+            onChange={setCompletionNotes}
+            placeholder={isTerminal
+              ? 'Add completion notes (required to save)...'
+              : 'Add completion notes...'}
+            className="min-h-[calc(100vh-500px)]"
+          />
+          {task?.completedAt && (
+            <p className="text-xs text-muted-foreground mt-2">
+              {status === 'Completed' ? 'Completed' : 'Cancelled'} {new Date(task.completedAt).toLocaleDateString()}
+            </p>
           )}
         </TabsContent>
       </Tabs>

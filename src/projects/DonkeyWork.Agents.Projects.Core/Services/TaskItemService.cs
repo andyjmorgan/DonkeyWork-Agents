@@ -49,7 +49,6 @@ public class TaskItemService : ITaskItemService
             UserId = userId,
             Title = request.Title,
             Description = request.Description,
-            Summary = request.Summary,
             Status = (Persistence.Entities.Projects.TaskItemStatus)(int)request.Status,
             Priority = (Persistence.Entities.Projects.TaskItemPriority)(int)request.Priority,
             DueDate = request.DueDate,
@@ -185,7 +184,6 @@ public class TaskItemService : ITaskItemService
 
         taskItem.Title = request.Title;
         taskItem.Description = request.Description;
-        taskItem.Summary = request.Summary;
         taskItem.Status = newStatus;
         taskItem.Priority = (Persistence.Entities.Projects.TaskItemPriority)(int)request.Priority;
         taskItem.CompletionNotes = request.CompletionNotes;
@@ -308,7 +306,6 @@ public class TaskItemService : ITaskItemService
             Title = taskItem.Title,
             Description = ContentTruncationHelper.ApplyChunking(taskItem.Description, contentOffset, contentLength),
             DescriptionLength = ContentTruncationHelper.GetContentLength(taskItem.Description),
-            Summary = taskItem.Summary,
             Status = (Contracts.Models.TaskItemStatus)(int)taskItem.Status,
             Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
             CompletionNotes = taskItem.CompletionNotes,

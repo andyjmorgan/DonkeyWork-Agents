@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ContentBox, CitationBox } from "@donkeywork/api-client";
@@ -17,6 +17,32 @@ function sanitizeText(text: string): string {
     .replace(ORPHAN_TAGS_RE, "")
     .replace(AGENT_RESULTS_RE, "")
     .replace(PARTIAL_TAG_RE, "");
+}
+
+function UsageChip({ inputTokens, outputTokens, contextWindowLimit, maxOutputTokens }: { inputTokens: number; outputTokens: number; contextWindowLimit: number; maxOutputTokens: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const fmt = (n: number) => n.toLocaleString();
+  const total = inputTokens + outputTokens;
+  const limit = contextWindowLimit || maxOutputTokens;
+
+  return (
+    <div className="my-1">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 font-mono"
+      >
+        <svg className={`w-2.5 h-2.5 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l8 7-8 7z" /></svg>
+        {fmt(total)} {limit > 0 ? `/ ${fmt(limit)}` : ""} tokens
+      </button>
+      {expanded && (
+        <div className="ml-4 mt-0.5 text-[10px] text-muted-foreground font-mono space-y-px">
+          <div>Input:{"  "}{fmt(inputTokens)}{contextWindowLimit > 0 ? ` / ${fmt(contextWindowLimit)}` : ""}</div>
+          <div>Output: {fmt(outputTokens)}{maxOutputTokens > 0 ? ` / ${fmt(maxOutputTokens)}` : ""}</div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isStreaming?: boolean }) {
@@ -183,8 +209,10 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
     case "citation":
       return null;
 
-    case "usage":
-      return null;
+    case "usage": {
+      if (box.inputTokens + box.outputTokens === 0) return null;
+      return <UsageChip inputTokens={box.inputTokens} outputTokens={box.outputTokens} contextWindowLimit={box.contextWindowLimit} maxOutputTokens={box.maxOutputTokens} />;
+    }
 
     case "agent_group":
       return null;

@@ -26,11 +26,6 @@ public class TaskItemEntity : BaseEntity
     public TaskItemPriority Priority { get; set; } = TaskItemPriority.Medium;
 
     /// <summary>
-    /// Summary of the task (markdown supported).
-    /// </summary>
-    public string? Summary { get; set; }
-
-    /// <summary>
     /// Notes on completion (markdown supported).
     /// </summary>
     public string? CompletionNotes { get; set; }

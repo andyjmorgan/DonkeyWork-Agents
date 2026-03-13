@@ -212,7 +212,7 @@ public class EventSerializationTests
             (new StreamWebSearchEvent("a", "id", "query"), AgentJsonContext.Default.StreamWebSearchEvent),
             (new StreamWebSearchCompleteEvent("a", "id", []), AgentJsonContext.Default.StreamWebSearchCompleteEvent),
             (new StreamCitationEvent("a", "title", "url", "text"), AgentJsonContext.Default.StreamCitationEvent),
-            (new StreamUsageEvent("a", 10, 20, 0), AgentJsonContext.Default.StreamUsageEvent),
+            (new StreamUsageEvent("a", 10, 20, 0, 200000, 8192), AgentJsonContext.Default.StreamUsageEvent),
             (new StreamProgressEvent("a", "doing stuff"), AgentJsonContext.Default.StreamProgressEvent),
             (new StreamAgentSpawnEvent("a", "sub-1", "research"), AgentJsonContext.Default.StreamAgentSpawnEvent),
             (new StreamAgentCompleteEvent("a"), AgentJsonContext.Default.StreamAgentCompleteEvent),
