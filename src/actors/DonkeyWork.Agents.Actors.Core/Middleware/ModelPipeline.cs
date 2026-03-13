@@ -7,13 +7,14 @@ public sealed class ModelPipeline
 {
     private readonly IServiceProvider _services;
 
-    // Standard order: Exception -> Tool -> Guardrails -> Accumulator -> Provider
+    // Standard order: Exception -> Tool -> Guardrails -> Accumulator -> UsageTracking -> Provider
     private static readonly Type[] StandardPipeline =
     [
         typeof(ExceptionMiddleware),
         typeof(ToolMiddleware),
         typeof(GuardrailsMiddleware),
         typeof(AccumulatorMiddleware),
+        typeof(UsageTrackingMiddleware),
         typeof(ProviderMiddleware)
     ];
 
