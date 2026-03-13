@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY: 192.168.0.140:8081/repository/docker
+  REGISTRY: 192.168.0.140:5555
   BACKEND_IMAGE: donkeywork-agents/api
   FRONTEND_IMAGE: donkeywork-agents/frontend
   SANDBOX_MANAGER_IMAGE: donkeywork-agents/sandbox-manager
@@ -134,12 +134,12 @@ jobs:
         run: |
           if [ "${{ needs.changes.outputs.sandbox-executor-base }}" == "true" ]; then
             echo "Dockerfile.base changed, building locally..."
-            docker build -t 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+            docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
           else
             echo "Pulling base image from Nexus..."
-            docker pull 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest || {
+            docker pull 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest || {
               echo "Pull failed, building locally as fallback..."
-              docker build -t 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+              docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
             }
           fi
 
@@ -213,6 +213,10 @@ jobs:
         with:
           driver: docker
 
+      - name: Login to Nexus
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -255,6 +259,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker
+
+      - name: Login to Nexus
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
 
       - name: Extract metadata
         id: meta
@@ -309,6 +317,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker
+
+      - name: Login to Nexus
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
 
       - name: Extract metadata
         id: meta
@@ -366,12 +378,12 @@ jobs:
         run: |
           if [ "${{ needs.changes.outputs.sandbox-executor-base }}" == "true" ]; then
             echo "Dockerfile.base changed, building locally..."
-            docker build -t 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+            docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
           else
             echo "Pulling base image from Nexus..."
-            docker pull 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest || {
+            docker pull 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest || {
               echo "Pull failed, building locally as fallback..."
-              docker build -t 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+              docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
             }
           fi
 
@@ -379,6 +391,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker
+
+      - name: Login to Nexus
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
 
       - name: Extract metadata
         id: meta
@@ -406,7 +422,7 @@ jobs:
 
       - name: Push Executor Base Image
         if: github.event_name != 'pull_request' && needs.changes.outputs.sandbox-executor-base == 'true'
-        run: docker push 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest
+        run: docker push 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest
 
   build-sandbox-authproxy:
     name: Build Sandbox AuthProxy Docker Image
@@ -437,6 +453,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker
+
+      - name: Login to Nexus
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
 
       - name: Extract metadata
         id: meta

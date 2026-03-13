@@ -34,7 +34,7 @@ spec:
             claimName: seaweedfs-buckets
       containers:
         - name: api
-          image: 192.168.0.140:8081/repository/docker/donkeywork-agents/api:latest
+          image: 192.168.0.140:5555/donkeywork-agents/api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

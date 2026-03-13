@@ -1,6 +1,6 @@
 # Runtime-only Dockerfile - uses pre-built artifacts from CI
 # Based on the executor base image with Python, Node.js, Git, GH CLI
-FROM 192.168.0.140:8081/repository/docker/donkeywork-agents/codesandbox-executor-base:latest
+FROM 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest
 
 # Allow running on newer/older patch versions
 ENV DOTNET_ROLL_FORWARD=LatestMajor
