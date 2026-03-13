@@ -95,16 +95,6 @@ jobs:
           dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
           --filter "FullyQualifiedName!~CodeSandbox"
 
-      - name: Publish
-        run: dotnet publish src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj -c Release -o ./publish --no-build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-publish
-          path: ./publish
-          retention-days: 1
-
   test-sandbox:
     name: Test Sandbox
     needs: [changes]
@@ -196,17 +186,25 @@ jobs:
       needs.changes.outputs.backend == 'true' &&
       needs.test-backend.result == 'success'
     runs-on: [self-hosted, Linux, X64]
+    env:
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/.dotnet
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
       version: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
         with:
-          name: backend-publish
-          path: ./publish
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Configure NuGet for local proxy
+        run: cp _nuget.config nuget.config
+
+      - name: Publish
+        run: dotnet publish src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj -c Release -o ./publish
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -215,7 +213,11 @@ jobs:
 
       - name: Login to Nexus
         if: github.event_name != 'pull_request'
-        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.NEXUS_USERNAME }}
+          password: ${{ secrets.NEXUS_PASSWORD }}
 
       - name: Extract metadata
         id: meta
@@ -262,7 +264,11 @@ jobs:
 
       - name: Login to Nexus
         if: github.event_name != 'pull_request'
-        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.NEXUS_USERNAME }}
+          password: ${{ secrets.NEXUS_PASSWORD }}
 
       - name: Extract metadata
         id: meta
@@ -320,7 +326,11 @@ jobs:
 
       - name: Login to Nexus
         if: github.event_name != 'pull_request'
-        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.NEXUS_USERNAME }}
+          password: ${{ secrets.NEXUS_PASSWORD }}
 
       - name: Extract metadata
         id: meta
@@ -394,7 +404,11 @@ jobs:
 
       - name: Login to Nexus
         if: github.event_name != 'pull_request'
-        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.NEXUS_USERNAME }}
+          password: ${{ secrets.NEXUS_PASSWORD }}
 
       - name: Extract metadata
         id: meta
@@ -456,7 +470,11 @@ jobs:
 
       - name: Login to Nexus
         if: github.event_name != 'pull_request'
-        run: echo "${{ secrets.NEXUS_PASSWORD }}" | docker login http://${{ env.REGISTRY }} -u ${{ secrets.NEXUS_USERNAME }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.NEXUS_USERNAME }}
+          password: ${{ secrets.NEXUS_PASSWORD }}
 
       - name: Extract metadata
         id: meta
