@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
-using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
@@ -76,10 +75,10 @@ public sealed class SandboxTools
                     ? response
                     : ToolResult.Error(response.Content);
             }
-            catch (RpcException ex) when (attempt < MaxRetries && IsTransient(ex.StatusCode))
+            catch (HttpRequestException ex) when (attempt < MaxRetries && IsTransient(ex.StatusCode))
             {
                 _logger.LogWarning(ex,
-                    "Transient gRPC error on sandbox_exec attempt {Attempt}/{MaxRetries} (status={Status}), retrying",
+                    "Transient HTTP error on sandbox_exec attempt {Attempt}/{MaxRetries} (status={Status}), retrying",
                     attempt + 1, MaxRetries, ex.StatusCode);
                 await Task.Delay(RetryDelays[attempt], ct);
             }
@@ -120,8 +119,8 @@ public sealed class SandboxTools
         return sandboxId;
     }
 
-    private static bool IsTransient(StatusCode status) =>
-        status is StatusCode.Unavailable or StatusCode.Aborted or StatusCode.Internal;
+    private static bool IsTransient(System.Net.HttpStatusCode? status) =>
+        status is System.Net.HttpStatusCode.ServiceUnavailable or System.Net.HttpStatusCode.GatewayTimeout or System.Net.HttpStatusCode.RequestTimeout;
 
     private static string Truncate(string text, int maxLength)
         => text.Length <= maxLength ? text : text[..maxLength] + "...";

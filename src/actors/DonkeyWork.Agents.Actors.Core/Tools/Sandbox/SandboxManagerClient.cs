@@ -1,63 +1,57 @@
+using System.Net.Http.Json;
 using System.Text;
-using CodeSandbox.Manager.Contracts.Grpc;
-using Grpc.Core;
-using Grpc.Net.Client;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 
 /// <summary>
-/// gRPC client for communicating with the CodeSandbox Manager's sandbox endpoints.
+/// HTTP client for communicating with the CodeSandbox Manager's sandbox endpoints.
 /// Handles pod lifecycle (find/create) and command execution.
 /// </summary>
 public sealed class SandboxManagerClient
 {
-    private readonly SandboxManagerService.SandboxManagerServiceClient _client;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+    };
+
+    private readonly HttpClient _httpClient;
     private readonly ILogger<SandboxManagerClient> _logger;
 
-    public SandboxManagerClient(GrpcChannel channel, ILogger<SandboxManagerClient> logger)
+    public SandboxManagerClient(HttpClient httpClient, ILogger<SandboxManagerClient> logger)
     {
-        _client = new SandboxManagerService.SandboxManagerServiceClient(channel);
+        _httpClient = httpClient;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Find an existing sandbox for the given user and conversation.
-    /// Returns the pod name if found, null otherwise.
-    /// </summary>
     public async Task<string?> FindSandboxAsync(string userId, string conversationId, CancellationToken ct)
     {
         _logger.LogDebug("Finding sandbox for UserId={UserId}, ConversationId={ConversationId}", userId, conversationId);
 
-        try
-        {
-            var response = await _client.FindSandboxAsync(
-                new FindSandboxRequest { UserId = userId, ConversationId = conversationId },
-                cancellationToken: ct);
+        var response = await _httpClient.PostAsJsonAsync("/api/sandbox/find",
+            new { userId, conversationId }, JsonOptions, ct);
 
-            if (!response.IsReady)
-            {
-                _logger.LogInformation(
-                    "Found sandbox {PodName} but it is not ready (Phase={Phase}), treating as not found",
-                    response.Name, response.Phase);
-                return null;
-            }
-
-            _logger.LogInformation("Found existing sandbox {PodName} for UserId={UserId}, ConversationId={ConversationId}",
-                response.Name, userId, conversationId);
-            return response.Name;
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            _logger.LogDebug("No existing sandbox found for UserId={UserId}, ConversationId={ConversationId}", userId, conversationId);
+            _logger.LogDebug("No existing sandbox found");
             return null;
         }
+
+        response.EnsureSuccessStatusCode();
+        var info = await response.Content.ReadFromJsonAsync<SandboxInfoDto>(JsonOptions, ct);
+
+        if (info is null || !info.IsReady)
+        {
+            _logger.LogInformation("Found sandbox {PodName} but not ready (Phase={Phase})", info?.Name, info?.Phase);
+            return null;
+        }
+
+        _logger.LogInformation("Found existing sandbox {PodName}", info.Name);
+        return info.Name;
     }
 
-    /// <summary>
-    /// Create a new sandbox for the given user and conversation.
-    /// Streams gRPC creation events and returns the pod name when ready.
-    /// </summary>
     public async Task<string> CreateSandboxAsync(
         string userId,
         string conversationId,
@@ -67,44 +61,47 @@ public sealed class SandboxManagerClient
     {
         _logger.LogInformation("Creating sandbox for UserId={UserId}, ConversationId={ConversationId}", userId, conversationId);
 
-        var request = new CreateSandboxRequest
+        var request = new
         {
-            UserId = userId,
-            ConversationId = conversationId,
+            userId,
+            conversationId,
+            dynamicCredentialDomains = dynamicCredentialDomains as IEnumerable<string>,
         };
 
-        if (dynamicCredentialDomains is { Count: > 0 })
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/sandbox")
         {
-            request.DynamicCredentialDomains.AddRange(dynamicCredentialDomains);
-        }
+            Content = JsonContent.Create(request, options: JsonOptions),
+        };
 
-        using var call = _client.CreateSandbox(request, cancellationToken: ct);
+        var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
 
         string? podName = null;
         string? failReason = null;
 
-        await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
+        await foreach (var evt in ReadSseEventsAsync(response, ct))
         {
-            _logger.LogDebug("Sandbox creation event: Type={EventType}, PodName={PodName}, Message={Message}",
-                evt.EventType, evt.PodName, evt.Message);
+            var eventType = evt.GetProperty("eventType").GetString();
+            var evtPodName = evt.TryGetProperty("podName", out var pn) ? pn.GetString() : null;
 
-            switch (evt.EventType)
+            _logger.LogDebug("Sandbox creation event: Type={EventType}, PodName={PodName}", eventType, evtPodName);
+
+            switch (eventType)
             {
                 case "ContainerCreatedEvent":
                     onProgress?.Invoke("Sandbox pod created, waiting for ready...");
                     break;
-
                 case "ContainerWaitingEvent":
-                    onProgress?.Invoke(evt.Message is { Length: > 0 } ? evt.Message : "Waiting for sandbox...");
+                    var msg = evt.TryGetProperty("message", out var m) ? m.GetString() : null;
+                    onProgress?.Invoke(msg is { Length: > 0 } ? msg : "Waiting for sandbox...");
                     break;
-
                 case "ContainerReadyEvent":
-                    podName = evt.PodName;
-                    _logger.LogInformation("Sandbox ready: {PodName} (elapsed: {Elapsed}s)", podName, evt.ElapsedSeconds);
+                    podName = evtPodName;
+                    var elapsed = evt.TryGetProperty("elapsedSeconds", out var es) ? es.GetDouble() : 0;
+                    _logger.LogInformation("Sandbox ready: {PodName} (elapsed: {Elapsed}s)", podName, elapsed);
                     break;
-
                 case "ContainerFailedEvent":
-                    failReason = evt.Reason is { Length: > 0 } ? evt.Reason : "Unknown failure";
+                    failReason = evt.TryGetProperty("reason", out var r) ? r.GetString() : "Unknown failure";
                     _logger.LogWarning("Sandbox creation failed: {Reason}", failReason);
                     break;
             }
@@ -116,10 +113,6 @@ public sealed class SandboxManagerClient
         throw new InvalidOperationException($"Sandbox creation failed: {failReason ?? "unknown reason"}");
     }
 
-    /// <summary>
-    /// Execute a command in the given sandbox.
-    /// Reads the gRPC stream and returns collected stdout, stderr, exit code, and timeout status.
-    /// </summary>
     public async Task<CommandResult> ExecuteCommandAsync(
         string sandboxId,
         string command,
@@ -129,14 +122,14 @@ public sealed class SandboxManagerClient
         _logger.LogInformation("Executing command in sandbox {SandboxId}: {Command} (timeout={Timeout}s)",
             sandboxId, Truncate(command, 100), timeoutSeconds);
 
-        var request = new ExecuteCommandRequest
+        var request = new { command, timeoutSeconds };
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/sandbox/{sandboxId}/execute")
         {
-            SandboxId = sandboxId,
-            Command = command,
-            TimeoutSeconds = timeoutSeconds,
+            Content = JsonContent.Create(request, options: JsonOptions),
         };
 
-        using var call = _client.ExecuteCommand(request, cancellationToken: ct);
+        var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
 
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
@@ -145,77 +138,109 @@ public sealed class SandboxManagerClient
         var pid = 0;
         var eventCount = 0;
 
-        await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
+        await foreach (var evt in ReadSseEventsAsync(response, ct))
         {
             eventCount++;
+            var eventType = evt.GetProperty("eventType").GetString();
 
-            switch (evt.EventType)
+            switch (eventType)
             {
                 case "output":
-                    if (evt.HasStream && evt.Stream == "stderr")
-                        stderr.AppendLine(evt.Data);
+                    var stream = evt.TryGetProperty("stream", out var s) ? s.GetString() : null;
+                    var data = evt.TryGetProperty("data", out var d) ? d.GetString() : "";
+                    if (stream == "stderr")
+                        stderr.AppendLine(data);
                     else
-                        stdout.AppendLine(evt.Data);
-                    if (evt.Pid > 0)
-                        pid = evt.Pid;
+                        stdout.AppendLine(data);
+                    if (evt.TryGetProperty("pid", out var p) && p.GetInt32() > 0)
+                        pid = p.GetInt32();
                     break;
-
                 case "exit":
-                    if (evt.HasExitCode)
-                        exitCode = evt.ExitCode;
-                    if (evt.Pid > 0)
-                        pid = evt.Pid;
+                    if (evt.TryGetProperty("exitCode", out var ec))
+                        exitCode = ec.GetInt32();
+                    if (evt.TryGetProperty("pid", out var ep) && ep.GetInt32() > 0)
+                        pid = ep.GetInt32();
                     break;
-
                 case "timeout":
                     timedOut = true;
-                    if (evt.HasExitCode)
-                        exitCode = evt.ExitCode;
-                    if (evt.Pid > 0)
-                        pid = evt.Pid;
-                    _logger.LogWarning("Command timed out in sandbox {SandboxId}: PID={Pid}", sandboxId, pid);
-                    break;
-
-                default:
-                    _logger.LogDebug("Unknown event type from sandbox {SandboxId}: {EventType}", sandboxId, evt.EventType);
+                    if (evt.TryGetProperty("exitCode", out var tc))
+                        exitCode = tc.GetInt32();
+                    if (evt.TryGetProperty("pid", out var tp) && tp.GetInt32() > 0)
+                        pid = tp.GetInt32();
                     break;
             }
         }
 
         _logger.LogInformation(
-            "Command completed in sandbox {SandboxId}: PID={Pid}, ExitCode={ExitCode}, TimedOut={TimedOut}, Events={EventCount}, StdoutLen={StdoutLen}, StderrLen={StderrLen}",
-            sandboxId, pid, exitCode, timedOut, eventCount, stdout.Length, stderr.Length);
+            "Command completed: PID={Pid}, ExitCode={ExitCode}, TimedOut={TimedOut}, Events={EventCount}",
+            pid, exitCode, timedOut, eventCount);
 
         return new CommandResult(stdout.ToString(), stderr.ToString(), exitCode, timedOut, pid);
     }
 
-    /// <summary>
-    /// Delete a sandbox by pod name.
-    /// </summary>
     public async Task<bool> DeleteSandboxAsync(string sandboxId, CancellationToken ct)
     {
         _logger.LogInformation("Deleting sandbox {SandboxId}", sandboxId);
 
         try
         {
-            var response = await _client.DeleteSandboxAsync(
-                new DeleteSandboxRequest { PodName = sandboxId },
-                cancellationToken: ct);
+            var response = await _httpClient.DeleteAsync($"/api/sandbox/{sandboxId}", ct);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<DeleteResultDto>(JsonOptions, ct);
 
-            if (response.Success)
+            if (result?.Success == true)
                 _logger.LogInformation("Sandbox {SandboxId} deleted successfully", sandboxId);
             else
-                _logger.LogWarning("Sandbox {SandboxId} deletion returned failure: {Message}", sandboxId, response.Message);
+                _logger.LogWarning("Sandbox {SandboxId} deletion returned failure: {Message}", sandboxId, result?.Message);
 
-            return response.Success;
+            return result?.Success ?? false;
         }
-        catch (RpcException ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "Failed to delete sandbox {SandboxId}: {Status}", sandboxId, ex.StatusCode);
+            _logger.LogWarning(ex, "Failed to delete sandbox {SandboxId}", sandboxId);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Reads SSE events from an HTTP response stream.
+    /// Each "data: {json}" line is parsed as a JsonElement.
+    /// </summary>
+    private static async IAsyncEnumerable<JsonElement> ReadSseEventsAsync(
+        HttpResponseMessage response,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream);
+
+        while (!reader.EndOfStream && !ct.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(ct);
+            if (line is null) break;
+            if (!line.StartsWith("data: ")) continue;
+
+            var json = line["data: ".Length..];
+            if (string.IsNullOrWhiteSpace(json)) continue;
+
+            JsonElement element;
+            try
+            {
+                element = JsonSerializer.Deserialize<JsonElement>(json, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                // Skip malformed events
+                continue;
+            }
+
+            yield return element;
         }
     }
 
     private static string Truncate(string text, int maxLength)
         => text.Length <= maxLength ? text : text[..maxLength] + "...";
+
+    // Client-side DTOs for deserializing Manager responses
+    private sealed record SandboxInfoDto(string Name, string Phase, bool IsReady);
+    private sealed record DeleteResultDto(bool Success, string? Message, string? PodName);
 }

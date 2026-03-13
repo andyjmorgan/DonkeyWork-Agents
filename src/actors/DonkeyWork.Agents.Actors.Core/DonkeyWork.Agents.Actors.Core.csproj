@@ -11,9 +11,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Anthropic" Version="12.5.0" />
-        <PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+        <PackageReference Include="Anthropic" Version="12.8.0" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.4" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.4.0" />
         <PackageReference Include="Microsoft.Orleans.Server" Version="10.0.1" />
         <PackageReference Include="ModelContextProtocol" Version="1.0.0" />
         <PackageReference Include="Serilog" Version="4.2.0" />
@@ -28,7 +28,6 @@
         <ProjectReference Include="..\..\projects\DonkeyWork.Agents.Projects.Contracts\DonkeyWork.Agents.Projects.Contracts.csproj" />
         <ProjectReference Include="..\..\prompts\DonkeyWork.Agents.Prompts.Contracts\DonkeyWork.Agents.Prompts.Contracts.csproj" />
         <ProjectReference Include="..\..\agentdefinitions\DonkeyWork.Agents.AgentDefinitions.Contracts\DonkeyWork.Agents.AgentDefinitions.Contracts.csproj" />
-        <ProjectReference Include="..\..\sandbox\CodeSandbox.Manager.Contracts\CodeSandbox.Manager.Contracts.csproj" />
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
     </ItemGroup>

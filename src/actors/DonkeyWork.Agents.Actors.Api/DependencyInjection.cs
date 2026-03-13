@@ -7,10 +7,8 @@ using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Services;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
-using Grpc.Core;
-using Grpc.Net.Client;
-using Grpc.Net.Client.Configuration;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -92,42 +90,30 @@ public static class DependencyInjection
         var sandboxOptions = configuration.GetSection(SandboxOptions.SectionName).Get<SandboxOptions>();
         if (sandboxOptions is not null)
         {
-            services.AddSingleton(_ => GrpcChannel.ForAddress(sandboxOptions.ManagerBaseUrl, new GrpcChannelOptions
+            services.AddHttpClient<SandboxManagerClient>(client =>
             {
-                ServiceConfig = new ServiceConfig
-                {
-                    MethodConfigs =
-                    {
-                        new MethodConfig
-                        {
-                            Names = { MethodName.Default },
-                            RetryPolicy = new RetryPolicy
-                            {
-                                MaxAttempts = 5,
-                                InitialBackoff = TimeSpan.FromMilliseconds(500),
-                                MaxBackoff = TimeSpan.FromSeconds(5),
-                                BackoffMultiplier = 2,
-                                RetryableStatusCodes = { StatusCode.Unavailable },
-                            },
-                        },
-                    },
-                },
-            }));
+                client.BaseAddress = new Uri(sandboxOptions.ManagerBaseUrl);
+            })
+            .AddStandardResilienceHandler(options =>
+            {
+                options.Retry.MaxRetryAttempts = 5;
+                options.Retry.Delay = TimeSpan.FromSeconds(2);
+                options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+            });
+
+            services.AddHttpClient<McpSandboxManagerClient>(client =>
+            {
+                client.BaseAddress = new Uri(sandboxOptions.ManagerBaseUrl);
+            })
+            .AddStandardResilienceHandler(options =>
+            {
+                options.Retry.MaxRetryAttempts = 5;
+                options.Retry.Delay = TimeSpan.FromSeconds(2);
+                options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+            });
         }
-
-        services.AddTransient<SandboxManagerClient>(sp =>
-        {
-            var channel = sp.GetRequiredService<GrpcChannel>();
-            var logger = sp.GetRequiredService<ILogger<SandboxManagerClient>>();
-            return new SandboxManagerClient(channel, logger);
-        });
-
-        services.AddTransient<McpSandboxManagerClient>(sp =>
-        {
-            var channel = sp.GetRequiredService<GrpcChannel>();
-            var logger = sp.GetRequiredService<ILogger<McpSandboxManagerClient>>();
-            return new McpSandboxManagerClient(channel, logger);
-        });
 
         services.AddHttpClient();
         services.AddSingleton<IGrainMessageStore, GrainMessageStore>();

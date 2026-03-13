@@ -2,29 +2,21 @@ using CodeSandbox.Manager.Configuration;
 using CodeSandbox.Manager.Endpoints;
 using CodeSandbox.Manager.Services.Background;
 using CodeSandbox.Manager.Services.Container;
-using CodeSandbox.Manager.Services.Grpc;
 using CodeSandbox.Manager.Services.Mcp;
 using CodeSandbox.Manager.Services.Terminal;
 using k8s;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Kestrel with dual ports:
-// - 8668: HTTP/2 for gRPC (used by API pods) + gRPC health checks (used by k8s probes)
-// - 8080: HTTP/1.1 for WebSocket terminals
+// Configure Kestrel: HTTP/1.1 on port 8080 for REST + WebSocket
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(8668, listenOptions =>
-    {
-        listenOptions.Protocols = HttpProtocols.Http2;
-    });
     options.ListenAnyIP(8080, listenOptions =>
     {
-        listenOptions.Protocols = HttpProtocols.Http1;
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
     });
 });
 
@@ -87,13 +79,9 @@ builder.Services.AddScoped<ITerminalService, TerminalService>();
 // Register background services
 builder.Services.AddHostedService<ContainerCleanupService>();
 
-// Add gRPC services
-builder.Services.AddGrpc();
-builder.Services.AddGrpcHealthChecks()
-    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
-
 // Add health checks
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
 
 // Add OpenAPI
 builder.Services.AddOpenApi();
@@ -111,8 +99,7 @@ app.UseSerilogRequestLogging(options =>
     options.GetLevel = (httpContext, elapsed, ex) =>
     {
         var path = httpContext.Request.Path.Value ?? "";
-        if (path.Equals("/healthz", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/grpc.health.v1.Health", StringComparison.OrdinalIgnoreCase))
+        if (path.Equals("/healthz", StringComparison.OrdinalIgnoreCase))
         {
             return Serilog.Events.LogEventLevel.Debug;
         }
@@ -136,13 +123,15 @@ app.UseWebSockets(new WebSocketOptions
     KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 
-// Map gRPC services + health check (HTTP/2, port 8668)
-app.MapGrpcService<SandboxManagerGrpcService>();
-app.MapGrpcService<McpManagerGrpcService>();
-app.MapGrpcHealthChecksService();
+// Map health check endpoint
+app.MapHealthChecks("/healthz");
 
-// Map WebSocket terminal endpoint (HTTP/1.1 only — not available via gRPC)
+// Map WebSocket terminal endpoint
 app.MapTerminalEndpoints();
+
+// Map REST endpoints (HTTP/1.1, port 8080)
+app.MapSandboxEndpoints();
+app.MapMcpEndpoints();
 
 Log.Information("Sandbox Manager API started successfully");
 await app.RunAsync();

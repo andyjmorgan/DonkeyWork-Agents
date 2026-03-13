@@ -238,16 +238,8 @@ internal sealed class AnthropicProvider : IAiProvider
         {
             if (streamEvent is null) continue;
 
-            _logger.LogInformation("Stream event type: {EventType}", streamEvent.GetType().Name);
-
             if (streamEvent.TryPickStart(out var messageStart))
             {
-                _logger.LogInformation(
-                    "Stream message_start: Message={HasMessage}, Usage={HasUsage}, InputTokens={InputTokens}",
-                    messageStart.Message is not null,
-                    messageStart.Message?.Usage is not null,
-                    (int)(messageStart.Message?.Usage?.InputTokens ?? 0));
-
                 if (messageStart.Message?.Usage is not null)
                 {
                     var usage = messageStart.Message.Usage;

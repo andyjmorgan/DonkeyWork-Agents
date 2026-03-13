@@ -22,8 +22,6 @@ using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
-using Grpc.Core;
-using Grpc.Net.Client;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
@@ -852,93 +850,53 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
     private async Task ProvisionSandboxInternalAsync(SandboxProvisioningHandle handle)
     {
-        const int maxAttempts = 3;
-        const int retryDelayMs = 3000;
-
         var userId = _identityContext.UserId.ToString();
         var conversationId = _grainContext.ConversationId;
 
-        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        try
         {
-            try
+            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Looking for existing sandbox...", null));
+
+            using var scope = ServiceProvider.CreateScope();
+
+            var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
+            scopedIdentity?.SetIdentity(_identityContext.UserId);
+
+            var client = scope.ServiceProvider.GetRequiredService<SandboxManagerClient>();
+            var podName = await client.FindSandboxAsync(userId, conversationId, CancellationToken.None);
+
+            if (podName is null)
             {
-                Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Looking for existing sandbox...", null));
-
-                using var scope = ServiceProvider.CreateScope();
-
-                // Hydrate the scoped IIdentityContext so DbContext query filters work
-                var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
-                scopedIdentity?.SetIdentity(_identityContext.UserId);
-
-                SandboxManagerClient client;
-                GrpcChannel? freshChannel = null;
-
-                if (attempt == 1)
+                IReadOnlyList<string>? credentialDomains = null;
+                var credentialMappingService = scope.ServiceProvider.GetService<ISandboxCredentialMappingService>();
+                if (credentialMappingService is not null)
                 {
-                    client = scope.ServiceProvider.GetRequiredService<SandboxManagerClient>();
+                    credentialDomains = await credentialMappingService.GetConfiguredDomainsAsync(CancellationToken.None);
+                    _logger.LogInformation(
+                        "Resolved {Count} credential domain(s) for sandbox: [{Domains}]",
+                        credentialDomains?.Count ?? 0,
+                        credentialDomains is not null ? string.Join(", ", credentialDomains) : "none");
                 }
                 else
                 {
-                    // Create a fresh channel to bypass the singleton's stuck subchannel state
-                    var sandboxOptions = scope.ServiceProvider.GetRequiredService<IOptions<SandboxOptions>>();
-                    freshChannel = GrpcChannel.ForAddress(sandboxOptions.Value.ManagerBaseUrl);
-                    var sandboxLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
-                        .CreateLogger<SandboxManagerClient>();
-                    client = new SandboxManagerClient(freshChannel, sandboxLogger);
+                    _logger.LogWarning("ISandboxCredentialMappingService not registered - no credential domains will be injected");
                 }
 
-                try
+                Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));
+                podName = await client.CreateSandboxAsync(userId, conversationId, progress =>
                 {
-                    var podName = await client.FindSandboxAsync(userId, conversationId, CancellationToken.None);
-
-                    if (podName is null)
-                    {
-                        // Resolve dynamic credential domains for the user
-                        IReadOnlyList<string>? credentialDomains = null;
-                        var credentialMappingService = scope.ServiceProvider.GetService<ISandboxCredentialMappingService>();
-                        if (credentialMappingService is not null)
-                        {
-                            credentialDomains = await credentialMappingService.GetConfiguredDomainsAsync(CancellationToken.None);
-                            _logger.LogInformation(
-                                "Resolved {Count} credential domain(s) for sandbox: [{Domains}]",
-                                credentialDomains?.Count ?? 0,
-                                credentialDomains is not null ? string.Join(", ", credentialDomains) : "none");
-                        }
-                        else
-                        {
-                            _logger.LogWarning("ISandboxCredentialMappingService not registered - no credential domains will be injected");
-                        }
-
-                        Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));
-                        podName = await client.CreateSandboxAsync(userId, conversationId, progress =>
-                        {
-                            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", progress, null));
-                        }, CancellationToken.None, credentialDomains);
-                    }
-
-                    handle.SetResult(podName);
-                    Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "ready", "Sandbox ready", podName));
-                    return;
-                }
-                finally
-                {
-                    freshChannel?.Dispose();
-                }
+                    Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", progress, null));
+                }, CancellationToken.None, credentialDomains);
             }
-            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable && attempt < maxAttempts)
-            {
-                _logger.LogWarning(
-                    "Sandbox provisioning attempt {Attempt}/{MaxAttempts} failed for {Key}, retrying in {Delay}ms",
-                    attempt, maxAttempts, _grainContext.GrainKey, retryDelayMs);
-                await Task.Delay(retryDelayMs);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Eager sandbox provisioning failed for {Key}", _grainContext.GrainKey);
-                handle.SetFailed(ex);
-                Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "failed", ex.Message, null));
-                return;
-            }
+
+            handle.SetResult(podName);
+            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "ready", "Sandbox ready", podName));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Eager sandbox provisioning failed for {Key}", _grainContext.GrainKey);
+            handle.SetFailed(ex);
+            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "failed", ex.Message, null));
         }
     }
 
