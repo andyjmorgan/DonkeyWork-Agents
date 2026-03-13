@@ -213,10 +213,9 @@ public sealed class SandboxManagerClient
         using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
 
-        while (!reader.EndOfStream && !ct.IsCancellationRequested)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) is not null && !ct.IsCancellationRequested)
         {
-            var line = await reader.ReadLineAsync(ct);
-            if (line is null) break;
             if (!line.StartsWith("data: ")) continue;
 
             var json = line["data: ".Length..];

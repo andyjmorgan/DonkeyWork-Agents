@@ -99,6 +99,7 @@ public static class DependencyInjection
                 options.Retry.MaxRetryAttempts = 5;
                 options.Retry.Delay = TimeSpan.FromSeconds(2);
                 options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(10);
                 options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
             });
 
@@ -111,6 +112,7 @@ public static class DependencyInjection
                 options.Retry.MaxRetryAttempts = 5;
                 options.Retry.Delay = TimeSpan.FromSeconds(2);
                 options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(10);
                 options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
             });
         }
