@@ -23,7 +23,10 @@ public class SandboxManagerConfig
     public string PodNamePrefix { get; set; } = "sandbox";
 
     [Required]
-    public string DefaultImage { get; set; } = "ghcr.io/andyjmorgan/donkeywork-agents/sandbox-executor:latest";
+    public string DefaultImage { get; set; } = "192.168.0.140:8081/repository/docker/donkeywork-agents/sandbox-executor:latest";
+
+    [RegularExpression(@"^(Always|IfNotPresent|Never)$", ErrorMessage = "ImagePullPolicy must be Always, IfNotPresent, or Never")]
+    public string ImagePullPolicy { get; set; } = "IfNotPresent";
 
     [Range(30, 300, ErrorMessage = "Pod ready timeout must be between 30 and 300 seconds")]
     public int PodReadyTimeoutSeconds { get; set; } = 90;
@@ -40,7 +43,7 @@ public class SandboxManagerConfig
     // Auth proxy sidecar settings
     public bool EnableAuthProxy { get; set; } = false;
 
-    public string AuthProxyImage { get; set; } = "ghcr.io/andyjmorgan/donkeywork-agents/sandbox-authproxy:latest";
+    public string AuthProxyImage { get; set; } = "192.168.0.140:8081/repository/docker/donkeywork-agents/sandbox-authproxy:latest";
 
     public ResourceConfig AuthProxySidecarResourceRequests { get; set; } = new() { MemoryMi = 64, CpuMillicores = 100 };
     public ResourceConfig AuthProxySidecarResourceLimits { get; set; } = new() { MemoryMi = 128, CpuMillicores = 250 };
@@ -80,7 +83,7 @@ public class SandboxManagerConfig
     /// <summary>
     /// Docker image for MCP server pods.
     /// </summary>
-    public string McpServerImage { get; set; } = "ghcr.io/andyjmorgan/donkeywork-agents/sandbox-executor:latest";
+    public string McpServerImage { get; set; } = "192.168.0.140:8081/repository/docker/donkeywork-agents/sandbox-executor:latest";
 
     /// <summary>
     /// Prefix for MCP server pod names (e.g. "mcp-a1b2c3d4").

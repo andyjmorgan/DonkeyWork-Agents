@@ -34,7 +34,7 @@ spec:
             claimName: seaweedfs-buckets
       containers:
         - name: api
-          image: ghcr.io/andyjmorgan/donkeywork-agents/api:latest
+          image: 192.168.0.140:8081/repository/docker/donkeywork-agents/api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -107,7 +107,7 @@ spec:
             - name: Agents__StreamRetention
               value: "1.00:00:00"
             - name: Sandbox__ManagerBaseUrl
-              value: "http://sandbox-manager:8668"
+              value: "http://sandbox-manager:8080"
           resources:
             requests:
               cpu: 100m
