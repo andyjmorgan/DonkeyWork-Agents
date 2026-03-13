@@ -7,7 +7,9 @@ using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Services;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
+using Grpc.Core;
 using Grpc.Net.Client;
+using Grpc.Net.Client.Configuration;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -90,7 +92,27 @@ public static class DependencyInjection
         var sandboxOptions = configuration.GetSection(SandboxOptions.SectionName).Get<SandboxOptions>();
         if (sandboxOptions is not null)
         {
-            services.AddSingleton(_ => GrpcChannel.ForAddress(sandboxOptions.ManagerBaseUrl));
+            services.AddSingleton(_ => GrpcChannel.ForAddress(sandboxOptions.ManagerBaseUrl, new GrpcChannelOptions
+            {
+                ServiceConfig = new ServiceConfig
+                {
+                    MethodConfigs =
+                    {
+                        new MethodConfig
+                        {
+                            Names = { MethodName.Default },
+                            RetryPolicy = new RetryPolicy
+                            {
+                                MaxAttempts = 5,
+                                InitialBackoff = TimeSpan.FromMilliseconds(500),
+                                MaxBackoff = TimeSpan.FromSeconds(5),
+                                BackoffMultiplier = 2,
+                                RetryableStatusCodes = { StatusCode.Unavailable },
+                            },
+                        },
+                    },
+                },
+            }));
         }
 
         services.AddTransient<SandboxManagerClient>(sp =>
