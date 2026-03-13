@@ -482,16 +482,46 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         });
         break;
 
-      case "usage":
-        appendOrCreate(assistantId, agentKey, "", {
-          type: "usage",
-          inputTokens: (data.inputTokens as number) ?? 0,
-          outputTokens: (data.outputTokens as number) ?? 0,
-          webSearchRequests: (data.webSearchRequests as number) ?? 0,
-          contextWindowLimit: (data.contextWindowLimit as number) ?? 0,
-          maxOutputTokens: (data.maxOutputTokens as number) ?? 0,
-        });
+      case "usage": {
+        const inTok = (data.inputTokens as number) ?? 0;
+        const outTok = (data.outputTokens as number) ?? 0;
+        const wsReq = (data.webSearchRequests as number) ?? 0;
+        const ctxLimit = (data.contextWindowLimit as number) ?? 0;
+        const maxOut = (data.maxOutputTokens as number) ?? 0;
+        const usageBox: import("@donkeywork/api-client").UsageBox = {
+          type: "usage", inputTokens: inTok, outputTokens: outTok,
+          webSearchRequests: wsReq, contextWindowLimit: ctxLimit, maxOutputTokens: maxOut,
+        };
+        const mergeUsage = (boxes: ContentBox[]): ContentBox[] => {
+          const idx = boxes.findIndex((b) => b.type === "usage");
+          if (idx >= 0) {
+            const prev = boxes[idx] as import("@donkeywork/api-client").UsageBox;
+            const merged = {
+              ...prev,
+              inputTokens: inTok > 0 ? inTok : prev.inputTokens,
+              outputTokens: prev.outputTokens + outTok,
+              webSearchRequests: prev.webSearchRequests + wsReq,
+              contextWindowLimit: ctxLimit || prev.contextWindowLimit,
+              maxOutputTokens: maxOut || prev.maxOutputTokens,
+            };
+            return [...boxes.slice(0, idx), ...boxes.slice(idx + 1), merged];
+          }
+          return [...boxes, usageBox];
+        };
+        const entry = agentGroupIndexRef.current.get(agentKey);
+        if (entry) {
+          updateBoxes(entry.messageId, (boxes) => {
+            const newBoxes = [...boxes];
+            const host = newBoxes[entry.boxIndex];
+            const updated = updateNestedGroup(host, agentKey, mergeUsage);
+            if (updated) newBoxes[entry.boxIndex] = updated;
+            return newBoxes;
+          });
+        } else {
+          updateBoxes(assistantId, mergeUsage);
+        }
         break;
+      }
 
       case "complete": {
         const completeText = (data.text as string) ?? "";

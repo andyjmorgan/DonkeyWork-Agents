@@ -265,16 +265,34 @@ export function useAgentTestStream() {
         })
         break
 
-      case 'usage':
-        appendOrMerge(agentKey, '', {
-          type: 'usage',
-          inputTokens: (data.inputTokens as number) ?? 0,
-          outputTokens: (data.outputTokens as number) ?? 0,
-          webSearchRequests: (data.webSearchRequests as number) ?? 0,
-          contextWindowLimit: (data.contextWindowLimit as number) ?? 0,
-          maxOutputTokens: (data.maxOutputTokens as number) ?? 0,
+      case 'usage': {
+        const inTok = (data.inputTokens as number) ?? 0
+        const outTok = (data.outputTokens as number) ?? 0
+        const wsReq = (data.webSearchRequests as number) ?? 0
+        const ctxLimit = (data.contextWindowLimit as number) ?? 0
+        const maxOut = (data.maxOutputTokens as number) ?? 0
+        const usageBox: import('@donkeywork/api-client').UsageBox = {
+          type: 'usage', inputTokens: inTok, outputTokens: outTok,
+          webSearchRequests: wsReq, contextWindowLimit: ctxLimit, maxOutputTokens: maxOut,
+        }
+        setBoxes((prev) => {
+          const idx = prev.findIndex((b) => b.type === 'usage')
+          if (idx >= 0) {
+            const p = prev[idx] as import('@donkeywork/api-client').UsageBox
+            const merged = {
+              ...p,
+              inputTokens: inTok > 0 ? inTok : p.inputTokens,
+              outputTokens: p.outputTokens + outTok,
+              webSearchRequests: p.webSearchRequests + wsReq,
+              contextWindowLimit: ctxLimit || p.contextWindowLimit,
+              maxOutputTokens: maxOut || p.maxOutputTokens,
+            }
+            return [...prev.slice(0, idx), ...prev.slice(idx + 1), merged]
+          }
+          return [...prev, usageBox]
         })
         break
+      }
 
       case 'complete':
         setIsStreaming(false)
