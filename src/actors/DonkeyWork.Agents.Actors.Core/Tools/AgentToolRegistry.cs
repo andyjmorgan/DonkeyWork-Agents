@@ -40,7 +40,10 @@ public sealed class AgentToolRegistry
             _toolsByType.Count);
     }
 
-    internal IReadOnlyList<InternalToolDefinition> GetToolDefinitions(Type[] toolTypes, HashSet<Type>? deferredTypes = null)
+    internal IReadOnlyList<InternalToolDefinition> GetToolDefinitions(
+        Type[] toolTypes,
+        HashSet<Type>? deferredTypes = null,
+        HashSet<string>? excludedTools = null)
     {
         var definitions = new List<InternalToolDefinition>();
 
@@ -51,6 +54,9 @@ public sealed class AgentToolRegistry
                 var shouldDefer = deferredTypes?.Contains(type) == true;
                 foreach (var descriptor in descriptors)
                 {
+                    if (excludedTools?.Contains(descriptor.Name) == true)
+                        continue;
+
                     var def = descriptor.ToToolDefinition();
                     def.DeferLoading = shouldDefer;
                     definitions.Add(def);

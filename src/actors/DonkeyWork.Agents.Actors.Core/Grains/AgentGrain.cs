@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using System.Diagnostics;
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
@@ -56,20 +55,6 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private SandboxProvisioningHandle? _sandboxHandle;
     private int _contextWindowLimit;
     private int _maxOutputTokens;
-
-    private static readonly FrozenDictionary<string, Type[]> ToolGroupMap = new Dictionary<string, Type[]>
-    {
-        [ToolGroupNames.SwarmDelegate] = [typeof(SwarmDelegateSpawnTools)],
-        [ToolGroupNames.SwarmManagement] = [typeof(SwarmAgentManagementTools)],
-        [ToolGroupNames.ProjectManagement] = [
-            typeof(ProjectAgentTools),
-            typeof(MilestoneAgentTools),
-            typeof(TaskAgentTools),
-            typeof(NoteAgentTools),
-            typeof(ResearchAgentTools),
-        ],
-        [ToolGroupNames.Sandbox] = [typeof(SandboxTools)],
-    }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public AgentGrain(
         ILogger<AgentGrain> logger,
@@ -261,10 +246,88 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
         }
 
-        var localTools = effectiveToolTypes.Length > 0 ? _toolRegistry.GetToolDefinitions(effectiveToolTypes) : null;
+        // Resolve tool configuration from contract
+        var toolConfig = contract.ToolConfiguration;
+        var globalDefer = toolConfig?.DeferToolLoading ?? true;
 
-        // Combine local + MCP tool definitions
-        var mcpTools = _mcpToolProvider?.GetToolDefinitions() ?? [];
+        // Build deferred types and excluded tools from contract overrides
+        var deferredTypes = new HashSet<Type>();
+        var excludedLocalTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in effectiveToolGroups)
+        {
+            if (!Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
+                continue;
+
+            var groupShouldDefer = globalDefer;
+
+            if (toolConfig?.ToolOverrides is { Length: > 0 })
+            {
+                foreach (var ov in toolConfig.ToolOverrides)
+                {
+                    if (!string.Equals(ov.Source, group, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (!ov.Enabled)
+                    {
+                        excludedLocalTools.Add(ov.ToolName);
+                    }
+                    else if (ov.Deferred.HasValue && ov.Deferred.Value)
+                    {
+                        foreach (var t in groupTypes)
+                            deferredTypes.Add(t);
+                    }
+                }
+            }
+
+            if (groupShouldDefer)
+            {
+                foreach (var t in groupTypes)
+                    deferredTypes.Add(t);
+            }
+        }
+
+        var localTools = effectiveToolTypes.Length > 0
+            ? _toolRegistry.GetToolDefinitions(
+                effectiveToolTypes,
+                deferredTypes.Count > 0 ? deferredTypes : null,
+                excludedLocalTools.Count > 0 ? excludedLocalTools : null)
+            : null;
+
+        // Combine local + MCP tool definitions with per-server config
+        IReadOnlyList<InternalToolDefinition> mcpTools;
+        if (_mcpToolProvider is not null)
+        {
+            Dictionary<string, bool>? mcpPerToolDefer = null;
+            HashSet<string>? excludedMcpTools = null;
+
+            if (toolConfig?.ToolOverrides is { Length: > 0 })
+            {
+                foreach (var ov in toolConfig.ToolOverrides)
+                {
+                    if (effectiveToolGroups.Contains(ov.Source, StringComparer.OrdinalIgnoreCase))
+                        continue;
+
+                    if (!ov.Enabled)
+                    {
+                        excludedMcpTools ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        excludedMcpTools.Add(ov.ToolName);
+                    }
+                    else if (ov.Deferred.HasValue)
+                    {
+                        mcpPerToolDefer ??= new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                        mcpPerToolDefer[ov.ToolName] = ov.Deferred.Value;
+                    }
+                }
+            }
+
+            mcpTools = _mcpToolProvider.GetToolDefinitions(globalDefer, mcpPerToolDefer, excludedMcpTools);
+        }
+        else
+        {
+            mcpTools = [];
+        }
+
         IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0
             ? [.. (localTools ?? []), .. mcpTools]
             : null;
@@ -696,7 +759,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         var types = new List<Type>();
         foreach (var group in toolGroups)
         {
-            if (ToolGroupMap.TryGetValue(group, out var groupTypes))
+            if (Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
                 types.AddRange(groupTypes);
         }
         return types.ToArray();

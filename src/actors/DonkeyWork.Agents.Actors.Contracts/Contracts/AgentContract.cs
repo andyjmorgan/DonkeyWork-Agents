@@ -25,4 +25,5 @@ public sealed class AgentContract
     [Id(17)] public string[] Prompts { get; init; } = [];
     [Id(18)] public SubAgentReference[] SubAgents { get; init; } = [];
     [Id(19)] public ReasoningEffort? ReasoningEffort { get; init; }
+    [Id(20)] public ToolConfig? ToolConfiguration { get; init; }
 }

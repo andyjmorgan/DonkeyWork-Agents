@@ -133,33 +133,60 @@ internal sealed class McpToolProvider : IAsyncDisposable
 
     /// <summary>
     /// Returns tool definitions for all discovered MCP tools (both HTTP and stdio).
+    /// Uses cached definitions with all tools deferred by default.
     /// </summary>
     public IReadOnlyList<InternalToolDefinition> GetToolDefinitions()
     {
         if (_cachedDefinitions is not null)
             return _cachedDefinitions;
 
+        _cachedDefinitions = GetToolDefinitions(defaultDefer: true, perToolDefer: null, excludedTools: null);
+        return _cachedDefinitions;
+    }
+
+    /// <summary>
+    /// Returns tool definitions with configurable deferred loading per tool.
+    /// </summary>
+    public IReadOnlyList<InternalToolDefinition> GetToolDefinitions(
+        bool defaultDefer,
+        Dictionary<string, bool>? perToolDefer,
+        HashSet<string>? excludedTools)
+    {
         var definitions = new List<InternalToolDefinition>(_toolsByName.Count + _stdioTools.Count);
 
         foreach (var (name, tool) in _toolsByName)
         {
+            if (excludedTools?.Contains(name) == true)
+                continue;
+
+            var defer = perToolDefer?.TryGetValue(name, out var d) == true ? d : defaultDefer;
             definitions.Add(new InternalToolDefinition
             {
                 Name = tool.Name,
                 DisplayName = tool.ProtocolTool.Title ?? tool.Name,
                 Description = tool.ProtocolTool.Description,
                 InputSchema = tool.ProtocolTool.InputSchema,
-                DeferLoading = true,
+                DeferLoading = defer,
             });
         }
 
         foreach (var (name, stdioTool) in _stdioTools)
         {
-            definitions.Add(stdioTool.Definition);
+            if (excludedTools?.Contains(name) == true)
+                continue;
+
+            var def = new InternalToolDefinition
+            {
+                Name = stdioTool.Definition.Name,
+                DisplayName = stdioTool.Definition.DisplayName,
+                Description = stdioTool.Definition.Description,
+                InputSchema = stdioTool.Definition.InputSchema,
+                DeferLoading = perToolDefer?.TryGetValue(name, out var d) == true ? d : defaultDefer,
+            };
+            definitions.Add(def);
         }
 
-        _cachedDefinitions = definitions;
-        return _cachedDefinitions;
+        return definitions;
     }
 
     /// <summary>

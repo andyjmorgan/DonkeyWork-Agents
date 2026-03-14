@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
 import { agentNodeTypes } from '@/components/agent-builder/agentNodeTypes'
-import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference } from '@donkeywork/api-client'
+import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference, ToolConfig, ToolOverride } from '@donkeywork/api-client'
 
 export interface AgentNodeConfig {
   type: string
@@ -520,7 +520,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       .filter(Boolean)
     if (promptIds.length > 0) contract.prompts = promptIds
 
-    // MCP Servers — each node is one server, include id + name + description
+    // MCP Servers — each node is one server, include id + name + description + defer setting
     const mcpNodes = nodes.filter((n) => n.data?.nodeType === 'agentMcpServer')
     const mcpRefs: McpServerReference[] = mcpNodes
       .map((n) => {
@@ -531,6 +531,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
           name: (cfg.mcpServerName as string) || '',
         }
         if (cfg.mcpServerDescription) ref.description = cfg.mcpServerDescription as string
+        if (typeof cfg.deferToolLoading === 'boolean') ref.deferToolLoading = cfg.deferToolLoading
         return ref
       })
       .filter((r): r is McpServerReference => r !== null)
@@ -567,6 +568,51 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
     }
 
     if (allToolIds.length > 0) contract.toolGroups = allToolIds
+
+    // Tool Configuration — collect all overrides from MCP and tool group nodes
+    const allToolOverrides: ToolOverride[] = []
+    let hasAnyNonDeferred = false
+
+    for (const mcpNode of mcpNodes) {
+      const cfg = nodeConfigurations[mcpNode.id]
+      if (!cfg?.mcpServerId) continue
+      if ((cfg.deferToolLoading as boolean) === false) hasAnyNonDeferred = true
+
+      const nodeOverrides = (cfg.toolOverrides as Array<{ toolName: string; enabled: boolean; deferred?: boolean }>) || []
+      for (const ov of nodeOverrides) {
+        allToolOverrides.push({
+          source: cfg.mcpServerId as string,
+          toolName: ov.toolName,
+          enabled: ov.enabled,
+          deferred: ov.deferred,
+        })
+      }
+    }
+
+    for (const toolNode of toolNodes) {
+      const cfg = nodeConfigurations[toolNode.id]
+      if (!cfg?.toolGroupId) continue
+      if ((cfg.deferToolLoading as boolean) === false) hasAnyNonDeferred = true
+
+      const nodeOverrides = (cfg.toolOverrides as Array<{ toolName: string; enabled: boolean; deferred?: boolean }>) || []
+      for (const ov of nodeOverrides) {
+        allToolOverrides.push({
+          source: cfg.toolGroupId as string,
+          toolName: ov.toolName,
+          enabled: ov.enabled,
+          deferred: ov.deferred,
+        })
+      }
+    }
+
+    // Set tool configuration if there are any overrides or non-default defer settings
+    if (allToolOverrides.length > 0 || hasAnyNonDeferred) {
+      const toolConfig: ToolConfig = {
+        deferToolLoading: !hasAnyNonDeferred,
+      }
+      if (allToolOverrides.length > 0) toolConfig.toolOverrides = allToolOverrides
+      contract.toolConfiguration = toolConfig
+    }
 
     // Sandbox — present on canvas means enabled
     const sandboxNode = nodes.find((n) => n.data?.nodeType === 'agentSandbox')

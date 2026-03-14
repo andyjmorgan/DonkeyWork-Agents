@@ -1522,6 +1522,11 @@ export const mcpServers = {
   test: (id: string) => api.post<McpServerTestResult>(`/api/v1/mcp-servers/${id}/test`, {}),
 }
 
+// Tool Groups API
+export const toolGroups = {
+  list: () => api.get<ToolGroupDefinition[]>('/api/v1/tool-groups'),
+}
+
 // Agent Definition Types
 export type AgentLifecycle = 'Task' | 'Linger'
 export type AgentType = 'Standard' | 'System'
@@ -1532,11 +1537,36 @@ export interface McpServerReference {
   id: string
   name: string
   description?: string
+  deferToolLoading?: boolean
 }
 
 export interface SubAgentReference {
   id: string
   name: string
+  description?: string
+}
+
+export interface ToolOverride {
+  source: string
+  toolName: string
+  enabled?: boolean
+  deferred?: boolean
+}
+
+export interface ToolConfig {
+  deferToolLoading?: boolean
+  toolOverrides?: ToolOverride[]
+}
+
+export interface ToolGroupDefinition {
+  id: string
+  name: string
+  tools: ToolDefinition[]
+}
+
+export interface ToolDefinition {
+  name: string
+  displayName?: string
   description?: string
 }
 
@@ -1559,6 +1589,7 @@ export interface AgentContractV1 {
   enableSandbox?: boolean
   modelId?: string
   prompts?: string[]
+  toolConfiguration?: ToolConfig
 }
 
 export interface AgentDefinitionSummary {
