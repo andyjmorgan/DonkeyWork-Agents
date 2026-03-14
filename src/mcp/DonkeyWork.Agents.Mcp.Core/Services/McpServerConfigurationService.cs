@@ -429,6 +429,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             {
                 Id = entity.Id,
                 Name = entity.Name,
+                Description = entity.Description,
                 Endpoint = entity.HttpConfiguration.Endpoint,
                 TransportMode = entity.HttpConfiguration.TransportMode,
                 Headers = headers,
@@ -478,6 +479,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             {
                 Id = entity.Id,
                 Name = entity.Name,
+                Description = entity.Description,
                 Command = entity.StdioConfiguration.Command,
                 Arguments = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.Arguments) ?? [],
                 EnvironmentVariables = envVars,
@@ -557,6 +559,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             {
                 Id = entity.Id,
                 Name = entity.Name,
+                Description = entity.Description,
                 Endpoint = entity.HttpConfiguration.Endpoint,
                 TransportMode = entity.HttpConfiguration.TransportMode,
                 Headers = headers,
@@ -606,6 +609,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             {
                 Id = entity.Id,
                 Name = entity.Name,
+                Description = entity.Description,
                 Command = entity.StdioConfiguration.Command,
                 Arguments = JsonSerializer.Deserialize<List<string>>(entity.StdioConfiguration.Arguments) ?? [],
                 EnvironmentVariables = envVars,
@@ -675,6 +679,7 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
         {
             Id = entity.Id,
             Name = entity.Name,
+            Description = entity.Description,
             Endpoint = entity.HttpConfiguration.Endpoint,
             TransportMode = entity.HttpConfiguration.TransportMode,
             Headers = headers,

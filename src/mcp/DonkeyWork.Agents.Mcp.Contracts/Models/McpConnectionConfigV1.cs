@@ -18,6 +18,11 @@ public sealed class McpConnectionConfigV1
     public required string Name { get; init; }
 
     /// <summary>
+    /// Optional description of the MCP server.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// HTTP endpoint URL for the MCP server.
     /// </summary>
     public required string Endpoint { get; init; }

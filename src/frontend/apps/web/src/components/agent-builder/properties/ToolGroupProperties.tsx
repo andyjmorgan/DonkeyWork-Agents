@@ -42,7 +42,7 @@ export function ToolGroupProperties({ nodeId }: ToolGroupPropertiesProps) {
 
   const groupName = (config.toolGroupName as string) || 'Unknown'
   const toolIds = (config.toolIds as string[]) || []
-  const deferToolLoading = (config.deferToolLoading as boolean) ?? true
+  const deferToolLoading = (config.deferToolLoading as boolean) ?? false
   const toolOverrides = (config.toolOverrides as ToolOverrideConfig[]) || []
 
   const handleDeferToggle = (checked: boolean) => {

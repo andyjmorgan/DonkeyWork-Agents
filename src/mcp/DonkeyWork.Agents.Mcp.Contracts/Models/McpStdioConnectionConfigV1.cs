@@ -17,6 +17,11 @@ public sealed class McpStdioConnectionConfigV1
     public required string Name { get; init; }
 
     /// <summary>
+    /// Optional description of the MCP server.
+    /// </summary>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// The command to execute (e.g., "python", "npx", "node").
     /// </summary>
     public required string Command { get; init; }

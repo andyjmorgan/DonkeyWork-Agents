@@ -328,8 +328,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                     ct);
 
                 // Store discovered MCP servers so they persist across turns for delegate inheritance
-                _discoveredMcpServers = httpConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name })
-                    .Concat(stdioConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name }))
+                _discoveredMcpServers = httpConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description })
+                    .Concat(stdioConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description }))
                     .ToArray();
                 _grainContext.McpServers = _discoveredMcpServers;
 
@@ -371,7 +371,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
         // Resolve tool configuration from contract
         var toolConfig = contract.ToolConfiguration;
-        var globalDefer = toolConfig?.DeferToolLoading ?? true;
+        var hasExplicitConfig = toolConfig is not null;
+        var globalDefer = toolConfig?.DeferToolLoading ?? false;
 
         // Build deferred types and excluded tools from contract overrides
         var deferredTypes = new HashSet<Type>();
@@ -382,7 +383,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             if (!Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
                 continue;
 
-            var groupShouldDefer = globalDefer;
+            // When no explicit config, no tool groups defer — only MCP tools defer
+            var groupShouldDefer = hasExplicitConfig ? globalDefer : false;
 
             if (toolConfig?.ToolOverrides is { Length: > 0 })
             {
@@ -419,6 +421,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
         // Combine local + MCP tool definitions with per-server config
         IReadOnlyList<InternalToolDefinition> mcpTools;
+        bool mcpDefer;
         if (_mcpToolProvider is not null)
         {
             Dictionary<string, bool>? mcpPerToolDefer = null;
@@ -445,10 +448,13 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 }
             }
 
-            mcpTools = _mcpToolProvider.GetToolDefinitions(globalDefer, mcpPerToolDefer, excludedMcpTools);
+            // MCP tools default to deferred
+            mcpDefer = hasExplicitConfig ? globalDefer : true;
+            mcpTools = _mcpToolProvider.GetToolDefinitions(mcpDefer, mcpPerToolDefer, excludedMcpTools);
         }
         else
         {
+            mcpDefer = false;
             mcpTools = [];
         }
 
@@ -497,6 +503,9 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             }
             systemPrompt += catalog;
         }
+
+        // Append deferred tools catalog so the model knows to use tool_search
+        systemPrompt += BuildDeferredToolsPrompt(mcpDefer);
 
         var context = new ModelMiddlewareContext
         {
@@ -952,6 +961,27 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 types.AddRange(groupTypes);
         }
         return types.ToArray();
+    }
+
+    private string BuildDeferredToolsPrompt(bool mcpDeferred)
+    {
+        if (!mcpDeferred || _discoveredMcpServers.Length == 0)
+            return string.Empty;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("\n\n## MCP Servers");
+        sb.AppendLine();
+        sb.AppendLine("You have access to the following MCP servers:");
+        sb.AppendLine();
+        foreach (var server in _discoveredMcpServers)
+        {
+            var desc = !string.IsNullOrEmpty(server.Description) ? server.Description : "No description";
+            sb.AppendLine($"- **{server.Name}**: {desc}");
+        }
+        sb.AppendLine();
+        sb.AppendLine("Use tool search should you need these tools.");
+
+        return sb.ToString();
     }
 
     private void Emit(StreamEventBase evt)

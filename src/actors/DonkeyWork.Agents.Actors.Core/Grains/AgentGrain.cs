@@ -248,18 +248,21 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
         // Resolve tool configuration from contract
         var toolConfig = contract.ToolConfiguration;
-        var globalDefer = toolConfig?.DeferToolLoading ?? true;
+        var hasExplicitConfig = toolConfig is not null;
+        var globalDefer = toolConfig?.DeferToolLoading ?? false;
 
         // Build deferred types and excluded tools from contract overrides
         var deferredTypes = new HashSet<Type>();
         var excludedLocalTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var deferredGroupNames = new List<string>();
 
         foreach (var group in effectiveToolGroups)
         {
             if (!Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
                 continue;
 
-            var groupShouldDefer = globalDefer;
+            // When no explicit config, no tool groups defer — only MCP tools defer
+            var groupShouldDefer = hasExplicitConfig ? globalDefer : false;
 
             if (toolConfig?.ToolOverrides is { Length: > 0 })
             {
@@ -284,6 +287,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             {
                 foreach (var t in groupTypes)
                     deferredTypes.Add(t);
+
+                deferredGroupNames.Add(group);
             }
         }
 
@@ -295,6 +300,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             : null;
 
         // Combine local + MCP tool definitions with per-server config
+        // MCP tools default to deferred when no explicit config (backward compat)
+        var mcpDefer = hasExplicitConfig ? globalDefer : true;
         IReadOnlyList<InternalToolDefinition> mcpTools;
         if (_mcpToolProvider is not null)
         {
@@ -321,7 +328,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 }
             }
 
-            mcpTools = _mcpToolProvider.GetToolDefinitions(globalDefer, mcpPerToolDefer, excludedMcpTools);
+            mcpTools = _mcpToolProvider.GetToolDefinitions(mcpDefer, mcpPerToolDefer, excludedMcpTools);
         }
         else
         {
@@ -361,6 +368,9 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         var systemPrompt = hasSandbox
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
+
+        // Append deferred MCP tools catalog so the model knows to use tool_search
+        systemPrompt += BuildDeferredToolsPrompt(mcpDefer, contract.McpServers);
 
         var turnId = Guid.NewGuid();
 
@@ -776,6 +786,27 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         {
             _logger.LogDebug(ex, "Failed to emit event {EventType}", evt.EventType);
         }
+    }
+
+    private static string BuildDeferredToolsPrompt(bool mcpDeferred, McpServerReference[]? mcpServers)
+    {
+        if (!mcpDeferred || mcpServers is not { Length: > 0 })
+            return string.Empty;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("\n\n## MCP Servers");
+        sb.AppendLine();
+        sb.AppendLine("You have access to the following MCP servers:");
+        sb.AppendLine();
+        foreach (var server in mcpServers)
+        {
+            var desc = !string.IsNullOrEmpty(server.Description) ? server.Description : "No description";
+            sb.AppendLine($"- **{server.Name}**: {desc}");
+        }
+        sb.AppendLine();
+        sb.AppendLine("Use tool search should you need these tools.");
+
+        return sb.ToString();
     }
 
     #endregion

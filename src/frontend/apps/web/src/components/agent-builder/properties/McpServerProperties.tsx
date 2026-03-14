@@ -47,7 +47,7 @@ export function McpServerProperties({ nodeId }: McpServerPropertiesProps) {
   if (!config) return null
 
   const serverName = (config.mcpServerName as string) || 'Unknown Server'
-  const deferToolLoading = (config.deferToolLoading as boolean) ?? true
+  const deferToolLoading = (config.deferToolLoading as boolean) ?? false
   const toolOverrides = (config.toolOverrides as ToolOverrideConfig[]) || []
 
   const handleDeferToggle = (checked: boolean) => {
