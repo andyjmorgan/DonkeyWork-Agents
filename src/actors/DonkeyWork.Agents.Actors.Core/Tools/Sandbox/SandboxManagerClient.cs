@@ -138,37 +138,55 @@ public sealed class SandboxManagerClient
         var pid = 0;
         var eventCount = 0;
 
-        await foreach (var evt in ReadSseEventsAsync(response, ct))
-        {
-            eventCount++;
-            var eventType = evt.GetProperty("eventType").GetString();
+        // Local timeout ensures SSE read completes even if Manager stream hangs.
+        // The +30s buffer allows the Manager's gRPC deadline (+15s) and the Executor's
+        // internal timeout to fire first.
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds + 30));
 
-            switch (eventType)
+        try
+        {
+            await foreach (var evt in ReadSseEventsAsync(response, timeoutCts.Token))
             {
-                case "output":
-                    var stream = evt.TryGetProperty("stream", out var s) ? s.GetString() : null;
-                    var data = evt.TryGetProperty("data", out var d) ? d.GetString() : "";
-                    if (stream == "stderr")
-                        stderr.AppendLine(data);
-                    else
-                        stdout.AppendLine(data);
-                    if (evt.TryGetProperty("pid", out var p) && p.GetInt32() > 0)
-                        pid = p.GetInt32();
-                    break;
-                case "exit":
-                    if (evt.TryGetProperty("exitCode", out var ec))
-                        exitCode = ec.GetInt32();
-                    if (evt.TryGetProperty("pid", out var ep) && ep.GetInt32() > 0)
-                        pid = ep.GetInt32();
-                    break;
-                case "timeout":
-                    timedOut = true;
-                    if (evt.TryGetProperty("exitCode", out var tc))
-                        exitCode = tc.GetInt32();
-                    if (evt.TryGetProperty("pid", out var tp) && tp.GetInt32() > 0)
-                        pid = tp.GetInt32();
-                    break;
+                eventCount++;
+                var eventType = evt.GetProperty("eventType").GetString();
+
+                switch (eventType)
+                {
+                    case "output":
+                        var stream = evt.TryGetProperty("stream", out var s) ? s.GetString() : null;
+                        var data = evt.TryGetProperty("data", out var d) ? d.GetString() : "";
+                        if (stream == "stderr")
+                            stderr.AppendLine(data);
+                        else
+                            stdout.AppendLine(data);
+                        if (evt.TryGetProperty("pid", out var p) && p.GetInt32() > 0)
+                            pid = p.GetInt32();
+                        break;
+                    case "exit":
+                        if (evt.TryGetProperty("exitCode", out var ec))
+                            exitCode = ec.GetInt32();
+                        if (evt.TryGetProperty("pid", out var ep) && ep.GetInt32() > 0)
+                            pid = ep.GetInt32();
+                        break;
+                    case "timeout":
+                        timedOut = true;
+                        if (evt.TryGetProperty("exitCode", out var tc))
+                            exitCode = tc.GetInt32();
+                        if (evt.TryGetProperty("pid", out var tp) && tp.GetInt32() > 0)
+                            pid = tp.GetInt32();
+                        break;
+                }
             }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Local timeout fired (not caller cancellation) — treat as timeout
+            _logger.LogWarning(
+                "SSE read timed out after {Timeout}s for sandbox {SandboxId}",
+                timeoutSeconds + 30, sandboxId);
+            timedOut = true;
+            exitCode = -1;
         }
 
         _logger.LogInformation(

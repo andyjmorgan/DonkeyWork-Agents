@@ -111,7 +111,8 @@ public static class SandboxEndpoints
             TimeoutSeconds = request.TimeoutSeconds,
         };
 
-        using var call = client.Execute(grpcRequest, cancellationToken: ct);
+        var deadline = DateTime.UtcNow.AddSeconds(request.TimeoutSeconds + 15);
+        using var call = client.Execute(grpcRequest, deadline: deadline, cancellationToken: ct);
         await foreach (var evt in call.ResponseStream.ReadAllAsync(ct))
         {
             var sseEvent = new Dictionary<string, object?>
