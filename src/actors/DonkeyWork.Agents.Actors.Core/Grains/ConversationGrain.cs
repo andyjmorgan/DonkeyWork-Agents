@@ -383,9 +383,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
             if (!Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
                 continue;
 
-            // When no explicit config, no tool groups defer — only MCP tools defer
-            var groupShouldDefer = hasExplicitConfig ? globalDefer : false;
-
+            // Tool groups never defer from the global setting — only MCP tools do.
+            // Individual tools can still be disabled or deferred via per-tool overrides.
             if (toolConfig?.ToolOverrides is { Length: > 0 })
             {
                 foreach (var ov in toolConfig.ToolOverrides)
@@ -403,12 +402,6 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                             deferredTypes.Add(t);
                     }
                 }
-            }
-
-            if (groupShouldDefer)
-            {
-                foreach (var t in groupTypes)
-                    deferredTypes.Add(t);
             }
         }
 

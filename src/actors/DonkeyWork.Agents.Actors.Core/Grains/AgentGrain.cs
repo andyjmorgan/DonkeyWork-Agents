@@ -254,16 +254,14 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         // Build deferred types and excluded tools from contract overrides
         var deferredTypes = new HashSet<Type>();
         var excludedLocalTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var deferredGroupNames = new List<string>();
 
         foreach (var group in effectiveToolGroups)
         {
             if (!Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
                 continue;
 
-            // When no explicit config, no tool groups defer — only MCP tools defer
-            var groupShouldDefer = hasExplicitConfig ? globalDefer : false;
-
+            // Tool groups never defer from the global setting — only MCP tools do.
+            // Individual tools can still be disabled or deferred via per-tool overrides.
             if (toolConfig?.ToolOverrides is { Length: > 0 })
             {
                 foreach (var ov in toolConfig.ToolOverrides)
@@ -281,14 +279,6 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                             deferredTypes.Add(t);
                     }
                 }
-            }
-
-            if (groupShouldDefer)
-            {
-                foreach (var t in groupTypes)
-                    deferredTypes.Add(t);
-
-                deferredGroupNames.Add(group);
             }
         }
 
