@@ -28,12 +28,11 @@ internal static class AnthropicToolMapper
                     Name = tool.Name,
                     Description = tool.Description ?? string.Empty,
                     InputSchema = inputSchema,
-                    // TODO: restore deferred loading after token usage testing
-                    // DeferLoading = tool.DeferLoading ? true : null,
+                    DeferLoading = tool.DeferLoading ? true : null,
                 });
 
-                // if (tool.DeferLoading)
-                //     hasDeferredTools = true;
+                if (tool.DeferLoading)
+                    hasDeferredTools = true;
             }
         }
 
