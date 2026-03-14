@@ -1,4 +1,5 @@
 # Runtime-only Dockerfile - uses pre-built artifacts from CI
+# Published to 192.168.0.140:5555/donkeywork-agents/sandbox-executor
 # Based on the executor base image with Python, Node.js, Git, GH CLI
 FROM 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest
 

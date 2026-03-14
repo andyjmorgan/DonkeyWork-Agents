@@ -476,7 +476,7 @@ public class SandboxService : ISandboxService
         {
             Name = "workload",
             Image = _config.DefaultImage,
-            ImagePullPolicy = "Always",
+            ImagePullPolicy = _config.ImagePullPolicy,
             Resources = BuildResourceRequirements(request.Resources),
             Stdin = true,
             Tty = true
@@ -751,7 +751,7 @@ public class SandboxService : ISandboxService
         {
             Name = "auth-proxy",
             Image = _config.AuthProxyImage,
-            ImagePullPolicy = "Always",
+            ImagePullPolicy = _config.ImagePullPolicy,
             Ports = new List<V1ContainerPort>
             {
                 new() { ContainerPort = _config.AuthProxyPort },

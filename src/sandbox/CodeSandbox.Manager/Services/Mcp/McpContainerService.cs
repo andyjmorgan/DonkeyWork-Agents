@@ -512,7 +512,7 @@ public class McpContainerService : IMcpContainerService
         {
             Name = "workload",
             Image = _config.McpServerImage,
-            ImagePullPolicy = "Always",
+            ImagePullPolicy = _config.ImagePullPolicy,
             Resources = new V1ResourceRequirements
             {
                 Requests = new Dictionary<string, ResourceQuantity>
