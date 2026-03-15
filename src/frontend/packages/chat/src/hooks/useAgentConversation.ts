@@ -126,23 +126,26 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     }
   }
 
-  function markAgentCompleteInMessage(messageId: string, boxes: ContentBox[], forAgent: string, reason: AgentCompleteReason = "completed"): ContentBox[] {
-    const entry = agentGroupIndexRef.current.get(forAgent);
-    if (entry && entry.messageId === messageId) {
-      return boxes.map((b, i) => {
-        if (i !== entry.boxIndex) return b;
-        const updated = markNestedComplete(b, forAgent, reason);
-        return updated ?? b;
-      });
-    }
-    return boxes;
+  function markCompleteInBoxes(boxes: ContentBox[], forAgent: string, reason: AgentCompleteReason): ContentBox[] {
+    let changed = false;
+    const result = boxes.map((b) => {
+      const updated = markNestedComplete(b, forAgent, reason);
+      if (updated) {
+        changed = true;
+        return updated;
+      }
+      return b;
+    });
+    return changed ? result : boxes;
   }
 
   function markAgentCompleteGlobal(forAgent: string, reason: AgentCompleteReason = "completed") {
-    const entry = agentGroupIndexRef.current.get(forAgent);
-    if (entry) {
-      updateBoxes(entry.messageId, (boxes) => markAgentCompleteInMessage(entry.messageId, boxes, forAgent, reason));
-    }
+    setMessages((prev) =>
+      prev.map((m) => {
+        const newBoxes = markCompleteInBoxes(m.boxes, forAgent, reason);
+        return newBoxes !== m.boxes ? { ...m, boxes: newBoxes } : m;
+      })
+    );
   }
 
   function markNestedComplete(box: ContentBox, forAgent: string, reason: AgentCompleteReason = "completed"): ContentBox | null {
