@@ -1,5 +1,5 @@
 # Build stage — context: src/sandbox/
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy Directory.Packages.props for central package management
@@ -23,7 +23,7 @@ FROM build AS publish
 RUN dotnet publish "CodeSandbox.Executor.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime stage - pre-built base with Python, Node.js, Git, GH CLI
-FROM 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest
+FROM --platform=linux/amd64 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest
 
 COPY --from=publish --chown=sandbox:sandbox /app/publish .
 
