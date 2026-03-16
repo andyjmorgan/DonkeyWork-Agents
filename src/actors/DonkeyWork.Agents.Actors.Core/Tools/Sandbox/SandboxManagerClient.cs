@@ -39,6 +39,17 @@ public sealed class SandboxManagerClient
             return null;
         }
 
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            var allow = response.Headers.Contains("Allow")
+                ? string.Join(", ", response.Headers.GetValues("Allow"))
+                : "(none)";
+            _logger.LogError(
+                "FindSandbox failed: Status={StatusCode}, Allow={Allow}, Body={Body}, RequestUri={Uri}",
+                (int)response.StatusCode, allow, body, response.RequestMessage?.RequestUri);
+        }
+
         response.EnsureSuccessStatusCode();
         var info = await response.Content.ReadFromJsonAsync<SandboxInfoDto>(JsonOptions, ct);
 
@@ -129,6 +140,18 @@ public sealed class SandboxManagerClient
         };
 
         var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(ct);
+            var allow = response.Headers.Contains("Allow")
+                ? string.Join(", ", response.Headers.GetValues("Allow"))
+                : "(none)";
+            _logger.LogError(
+                "ExecuteCommand failed: Status={StatusCode}, Allow={Allow}, Body={Body}, RequestUri={Uri}",
+                (int)response.StatusCode, allow, body, response.RequestMessage?.RequestUri);
+        }
+
         response.EnsureSuccessStatusCode();
 
         var stdout = new StringBuilder();

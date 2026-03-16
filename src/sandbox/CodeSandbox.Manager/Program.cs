@@ -93,6 +93,26 @@ var config = app.Services.GetRequiredService<IOptions<SandboxManagerConfig>>().V
 Log.Information("Configuration loaded: Namespace={Namespace}, RuntimeClass={RuntimeClass}",
     config.TargetNamespace, config.RuntimeClassName);
 
+// Diagnostic: log every request before any other middleware
+app.Use(async (context, next) =>
+{
+    var method = context.Request.Method;
+    var path = context.Request.Path.Value;
+    if (!string.Equals(path, "/healthz", StringComparison.OrdinalIgnoreCase))
+    {
+        Log.Information("DIAG: {Method} {Path} from {RemoteIp}",
+            method, path, context.Connection.RemoteIpAddress);
+    }
+
+    await next();
+
+    if (!string.Equals(path, "/healthz", StringComparison.OrdinalIgnoreCase))
+    {
+        Log.Information("DIAG: {Method} {Path} responded {StatusCode}",
+            method, path, context.Response.StatusCode);
+    }
+});
+
 // Configure HTTP pipeline
 app.UseSerilogRequestLogging(options =>
 {
