@@ -169,8 +169,34 @@ public class SandboxService : ISandboxService
                         return;
                     }
 
+                    // Check if the workload container has terminated (e.g. StartError, CrashLoopBackOff)
+                    // The pod phase may still be "Running" if a sidecar is alive, so we must check
+                    // individual container statuses to detect early failures.
+                    var workloadStatus = watchPod.Status?.ContainerStatuses?
+                        .FirstOrDefault(c => c.Name == "workload");
+
+                    if (workloadStatus?.State?.Terminated != null)
+                    {
+                        var terminated = workloadStatus.State.Terminated;
+                        var reason = terminated.Reason ?? "Unknown";
+                        var exitCode = terminated.ExitCode;
+                        var message = terminated.Message ?? "";
+
+                        _logger.LogWarning(
+                            "Workload container in pod {PodName} terminated during startup: reason={Reason}, exitCode={ExitCode}, message={Message}",
+                            podName, reason, exitCode, message);
+
+                        writer.TryWrite(new ContainerFailedEvent
+                        {
+                            PodName = podName,
+                            Reason = $"Workload container terminated: {reason} (exit code {exitCode}){(string.IsNullOrEmpty(message) ? "" : $" - {message}")}",
+                            ContainerInfo = MapPodToContainerInfo(watchPod)
+                        });
+                        return;
+                    }
+
                     // Emit waiting event with detailed status
-                    var containerStatus = watchPod.Status?.ContainerStatuses?.FirstOrDefault();
+                    var containerStatus = workloadStatus ?? watchPod.Status?.ContainerStatuses?.FirstOrDefault();
                     string detailedMessage = $"Waiting for pod to be ready (event {eventNumber})";
 
                     if (containerStatus?.State?.Waiting != null)
