@@ -489,7 +489,7 @@ public class McpContainerService : IMcpContainerService
 
         var labels = new Dictionary<string, string>
         {
-            ["app"] = "sandbox-manager",
+            ["app"] = "donkeywork-mcp",
             ["managed-by"] = "CodeSandbox-Manager",
             ["container-type"] = "mcp",
             ["user-id"] = request.UserId,

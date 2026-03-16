@@ -484,7 +484,7 @@ public class SandboxService : ISandboxService
 
         var labels = new Dictionary<string, string>
         {
-            ["app"] = "sandbox-manager",
+            ["app"] = "donkeywork-sandbox",
             ["managed-by"] = "CodeSandbox-Manager",
             ["container-type"] = "sandbox",
             ["user-id"] = request.UserId,

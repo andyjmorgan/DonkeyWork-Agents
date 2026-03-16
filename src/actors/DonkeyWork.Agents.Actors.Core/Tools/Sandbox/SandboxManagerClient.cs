@@ -42,8 +42,8 @@ public sealed class SandboxManagerClient
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(ct);
-            var allow = response.Headers.Contains("Allow")
-                ? string.Join(", ", response.Headers.GetValues("Allow"))
+            var allow = response.Content.Headers.Contains("Allow")
+                ? string.Join(", ", response.Content.Headers.GetValues("Allow"))
                 : "(none)";
             _logger.LogError(
                 "FindSandbox failed: Status={StatusCode}, Allow={Allow}, Body={Body}, RequestUri={Uri}",
@@ -144,8 +144,8 @@ public sealed class SandboxManagerClient
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(ct);
-            var allow = response.Headers.Contains("Allow")
-                ? string.Join(", ", response.Headers.GetValues("Allow"))
+            var allow = response.Content.Headers.Contains("Allow")
+                ? string.Join(", ", response.Content.Headers.GetValues("Allow"))
                 : "(none)";
             _logger.LogError(
                 "ExecuteCommand failed: Status={StatusCode}, Allow={Allow}, Body={Body}, RequestUri={Uri}",
