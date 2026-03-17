@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SandboxCredentialsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxCredentialsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage } from '@/pages'
 import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -102,6 +102,7 @@ export default function App() {
             <Route path="/research/:researchId" element={<ResearchEditorPage />} />
             <Route path="/files" element={<FilesPage />} />
             <Route path="/skills" element={<SkillsPage />} />
+            <Route path="/skills/:name" element={<SkillDetailPage />} />
             <Route path="/tasks/:taskId" element={<TaskEditorPage />} />
             <Route path="/api-keys" element={<ApiKeysPage />} />
             <Route path="/credentials" element={<CredentialsPage />} />

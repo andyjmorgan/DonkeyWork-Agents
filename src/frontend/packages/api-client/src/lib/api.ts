@@ -1244,6 +1244,46 @@ export interface SkillFileNode {
   children?: SkillFileNode[]
 }
 
+export interface SkillFileContent {
+  path: string
+  name: string
+  content: string
+  contentType: string
+  size: number
+  lastModified: string
+}
+
+export interface WriteFileRequest {
+  content: string
+}
+
+export interface WriteFileResponse {
+  path: string
+  name: string
+  size: number
+  lastModified: string
+}
+
+export interface RenameRequest {
+  newName: string
+}
+
+export interface RenameResponse {
+  oldPath: string
+  newPath: string
+  newName: string
+}
+
+export interface DuplicateFileResponse {
+  path: string
+  name: string
+}
+
+export interface CreateFolderResponse {
+  path: string
+  name: string
+}
+
 // Skills API
 export const skills = {
   // List skills
@@ -1278,6 +1318,34 @@ export const skills = {
   // Get skill file tree contents
   getContents: (name: string) =>
     api.get<SkillFileNode[]>(`/api/v1/skills/${encodeURIComponent(name)}/contents`),
+
+  // Read a file's content
+  readFile: (name: string, path: string) =>
+    api.get<SkillFileContent>(`/api/v1/skills/${encodeURIComponent(name)}/files/${path}`),
+
+  // Write/update a file's content
+  writeFile: (name: string, path: string, request: WriteFileRequest) =>
+    api.put<WriteFileResponse>(`/api/v1/skills/${encodeURIComponent(name)}/files/${path}`, request),
+
+  // Delete a file
+  deleteFile: (name: string, path: string) =>
+    api.delete(`/api/v1/skills/${encodeURIComponent(name)}/files/${path}`),
+
+  // Rename a file or folder
+  rename: (name: string, path: string, request: RenameRequest) =>
+    api.post<RenameResponse>(`/api/v1/skills/${encodeURIComponent(name)}/rename/${path}`, request),
+
+  // Duplicate a file
+  duplicateFile: (name: string, path: string) =>
+    api.post<DuplicateFileResponse>(`/api/v1/skills/${encodeURIComponent(name)}/duplicate/${path}`, {}),
+
+  // Create a folder
+  createFolder: (name: string, path: string) =>
+    api.post<CreateFolderResponse>(`/api/v1/skills/${encodeURIComponent(name)}/folders/${path}`, {}),
+
+  // Delete a folder
+  deleteFolder: (name: string, path: string) =>
+    api.delete(`/api/v1/skills/${encodeURIComponent(name)}/folders/${path}`),
 }
 
 /**
