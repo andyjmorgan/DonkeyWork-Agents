@@ -74,29 +74,29 @@ export function LoginPage({ onLogin }: { onLogin: (provider: string) => Promise<
               </button>
             </>
           ) : (
-            <div className="flex gap-3">
+            <div className="flex justify-center gap-4">
               <button
                 onClick={() => handleLogin('google')}
-                className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm transition-colors hover:bg-muted cursor-pointer"
+                className="flex items-center justify-center h-12 w-12 rounded-xl border border-border text-foreground transition-colors hover:bg-muted cursor-pointer"
+                title="Sign in with Google"
               >
-                <GoogleIcon className="h-5 w-5" />
-                Google
+                <GoogleIcon className="h-6 w-6" />
               </button>
 
               <button
                 onClick={() => handleLogin('github')}
-                className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm transition-colors hover:bg-muted cursor-pointer"
+                className="flex items-center justify-center h-12 w-12 rounded-xl border border-border text-foreground transition-colors hover:bg-muted cursor-pointer"
+                title="Sign in with GitHub"
               >
-                <Github className="h-5 w-5" />
-                GitHub
+                <Github className="h-6 w-6" />
               </button>
 
               <button
                 onClick={() => handleLogin('microsoft')}
-                className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border text-foreground font-medium text-sm transition-colors hover:bg-muted cursor-pointer"
+                className="flex items-center justify-center h-12 w-12 rounded-xl border border-border text-foreground transition-colors hover:bg-muted cursor-pointer"
+                title="Sign in with Microsoft"
               >
-                <MicrosoftIcon className="h-5 w-5" />
-                Microsoft
+                <MicrosoftIcon className="h-6 w-6" />
               </button>
             </div>
           )}

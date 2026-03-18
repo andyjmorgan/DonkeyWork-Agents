@@ -52,35 +52,35 @@ export function LoginPage() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex justify-center gap-4">
             <Button
-              size="lg"
+              size="icon"
               variant="outline"
-              className="flex-1"
+              className="h-12 w-12 rounded-xl"
               onClick={handleGoogleLogin}
+              title="Sign in with Google"
             >
-              <GoogleIcon className="mr-2 h-5 w-5" />
-              Google
+              <GoogleIcon className="h-6 w-6" />
             </Button>
 
             <Button
-              size="lg"
+              size="icon"
               variant="outline"
-              className="flex-1"
+              className="h-12 w-12 rounded-xl"
               onClick={handleGitHubLogin}
+              title="Sign in with GitHub"
             >
-              <Github className="mr-2 h-5 w-5" />
-              GitHub
+              <Github className="h-6 w-6" />
             </Button>
 
             <Button
-              size="lg"
+              size="icon"
               variant="outline"
-              className="flex-1"
+              className="h-12 w-12 rounded-xl"
               onClick={handleMicrosoftLogin}
+              title="Sign in with Microsoft"
             >
-              <MicrosoftIcon className="mr-2 h-5 w-5" />
-              Microsoft
+              <MicrosoftIcon className="h-6 w-6" />
             </Button>
           </div>
         </div>
