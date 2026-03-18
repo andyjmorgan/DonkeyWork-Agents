@@ -22,9 +22,6 @@ public sealed class CreateTaskItemRequestV1
     [JsonPropertyName("priority")]
     public TaskItemPriority Priority { get; init; } = TaskItemPriority.Medium;
 
-    [JsonPropertyName("dueDate")]
-    public DateTimeOffset? DueDate { get; init; }
-
     [JsonPropertyName("sortOrder")]
     public int SortOrder { get; init; }
 
@@ -59,9 +56,6 @@ public sealed class UpdateTaskItemRequestV1
 
     [JsonPropertyName("completionNotes")]
     public string? CompletionNotes { get; init; }
-
-    [JsonPropertyName("dueDate")]
-    public DateTimeOffset? DueDate { get; init; }
 
     [JsonPropertyName("sortOrder")]
     public int SortOrder { get; init; }
@@ -101,9 +95,6 @@ public sealed class TaskItemV1
 
     [JsonPropertyName("completionNotes")]
     public string? CompletionNotes { get; init; }
-
-    [JsonPropertyName("dueDate")]
-    public DateTimeOffset? DueDate { get; init; }
 
     [JsonPropertyName("completedAt")]
     public DateTimeOffset? CompletedAt { get; init; }

@@ -699,7 +699,6 @@ export function MilestoneDetailPage({ projectId, milestoneId, nav }: { projectId
                     date={task.updatedAt || task.createdAt}
                     status={task.status}
                     priority={task.priority}
-                    dueDate={task.dueDate}
                     onToggleComplete={() => handleToggleTaskStatus(task)}
                     isCompleted={task.status === 'Completed'}
                   />

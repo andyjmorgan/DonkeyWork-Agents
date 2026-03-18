@@ -31,11 +31,6 @@ public class TaskItemEntity : BaseEntity
     public string? CompletionNotes { get; set; }
 
     /// <summary>
-    /// Due date for the task item.
-    /// </summary>
-    public DateTimeOffset? DueDate { get; set; }
-
-    /// <summary>
     /// Date when the task item was completed.
     /// </summary>
     public DateTimeOffset? CompletedAt { get; set; }

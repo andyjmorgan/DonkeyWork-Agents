@@ -118,7 +118,6 @@ export function TasksPage({ nav }: { nav: WorkspaceNavigation }) {
                     date={task.updatedAt || task.createdAt}
                     status={task.status}
                     priority={task.priority}
-                    dueDate={task.dueDate}
                     onToggleComplete={() => handleToggleComplete(task)}
                     isCompleted={false}
                   />
@@ -148,7 +147,6 @@ export function TasksPage({ nav }: { nav: WorkspaceNavigation }) {
                     date={task.updatedAt || task.createdAt}
                     status={task.status}
                     priority={task.priority}
-                    dueDate={task.dueDate}
                     onToggleComplete={() => handleToggleComplete(task)}
                     isCompleted={true}
                   />

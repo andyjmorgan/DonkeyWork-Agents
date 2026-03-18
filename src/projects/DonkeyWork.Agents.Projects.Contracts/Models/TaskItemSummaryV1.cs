@@ -20,25 +20,26 @@ public sealed class TaskItemSummaryV1
     [JsonPropertyName("priority")]
     public TaskItemPriority Priority { get; init; }
 
-    [JsonPropertyName("dueDate")]
-    public DateTimeOffset? DueDate { get; init; }
-
     [JsonPropertyName("descriptionPreview")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? DescriptionPreview { get; init; }
 
     [JsonPropertyName("descriptionLength")]
     public int DescriptionLength { get; init; }
 
     [JsonPropertyName("completedAt")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTimeOffset? CompletedAt { get; init; }
 
     [JsonPropertyName("sortOrder")]
     public int SortOrder { get; init; }
 
     [JsonPropertyName("projectId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Guid? ProjectId { get; init; }
 
     [JsonPropertyName("milestoneId")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Guid? MilestoneId { get; init; }
 
     [JsonPropertyName("tags")]
@@ -48,5 +49,6 @@ public sealed class TaskItemSummaryV1
     public DateTimeOffset CreatedAt { get; init; }
 
     [JsonPropertyName("updatedAt")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTimeOffset? UpdatedAt { get; init; }
 }

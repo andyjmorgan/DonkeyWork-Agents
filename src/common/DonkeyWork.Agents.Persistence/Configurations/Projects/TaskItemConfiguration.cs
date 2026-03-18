@@ -39,9 +39,6 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItemEntity>
         builder.Property(e => e.CompletionNotes)
             .HasColumnName("completion_notes");
 
-        builder.Property(e => e.DueDate)
-            .HasColumnName("due_date");
-
         builder.Property(e => e.CompletedAt)
             .HasColumnName("completed_at");
 
@@ -77,9 +74,6 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItemEntity>
 
         builder.HasIndex(e => e.Priority)
             .HasDatabaseName("ix_tasks_priority");
-
-        builder.HasIndex(e => e.DueDate)
-            .HasDatabaseName("ix_tasks_due_date");
 
         // Relationships
         builder.HasMany(e => e.Tags)

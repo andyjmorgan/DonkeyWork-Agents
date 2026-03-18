@@ -51,7 +51,6 @@ public class TaskItemService : ITaskItemService
             Description = request.Description,
             Status = (Persistence.Entities.Projects.TaskItemStatus)(int)request.Status,
             Priority = (Persistence.Entities.Projects.TaskItemPriority)(int)request.Priority,
-            DueDate = request.DueDate,
             SortOrder = request.SortOrder,
             ProjectId = request.ProjectId,
             MilestoneId = request.MilestoneId,
@@ -187,7 +186,6 @@ public class TaskItemService : ITaskItemService
         taskItem.Status = newStatus;
         taskItem.Priority = (Persistence.Entities.Projects.TaskItemPriority)(int)request.Priority;
         taskItem.CompletionNotes = request.CompletionNotes;
-        taskItem.DueDate = request.DueDate;
         taskItem.SortOrder = request.SortOrder;
         taskItem.ProjectId = request.ProjectId;
         taskItem.MilestoneId = request.MilestoneId;
@@ -309,7 +307,6 @@ public class TaskItemService : ITaskItemService
             Status = (Contracts.Models.TaskItemStatus)(int)taskItem.Status,
             Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
             CompletionNotes = taskItem.CompletionNotes,
-            DueDate = taskItem.DueDate,
             CompletedAt = taskItem.CompletedAt,
             SortOrder = taskItem.SortOrder,
             ProjectId = taskItem.ProjectId,
@@ -330,7 +327,6 @@ public class TaskItemService : ITaskItemService
             Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
             DescriptionPreview = ContentTruncationHelper.TruncateContent(taskItem.Description),
             DescriptionLength = ContentTruncationHelper.GetContentLength(taskItem.Description),
-            DueDate = taskItem.DueDate,
             CompletedAt = taskItem.CompletedAt,
             SortOrder = taskItem.SortOrder,
             ProjectId = taskItem.ProjectId,

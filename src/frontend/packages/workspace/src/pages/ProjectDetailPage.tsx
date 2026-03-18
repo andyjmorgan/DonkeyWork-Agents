@@ -855,7 +855,6 @@ export function ProjectDetailPage({ projectId, nav }: { projectId: string; nav: 
                           date={task.updatedAt || task.createdAt}
                           status={task.status}
                           priority={task.priority}
-                          dueDate={task.dueDate}
                           milestone={milestone ? { id: milestone.id, name: milestone.name } : undefined}
                           onMilestoneClick={(milestoneId) => nav.goToMilestone(projectId, milestoneId)}
                           onToggleComplete={() => handleToggleTaskStatus(task)}
@@ -891,7 +890,6 @@ export function ProjectDetailPage({ projectId, nav }: { projectId: string; nav: 
                           date={task.updatedAt || task.createdAt}
                           status={task.status}
                           priority={task.priority}
-                          dueDate={task.dueDate}
                           milestone={milestone ? { id: milestone.id, name: milestone.name } : undefined}
                           onMilestoneClick={(milestoneId) => nav.goToMilestone(projectId, milestoneId)}
                           onToggleComplete={() => handleToggleTaskStatus(task)}

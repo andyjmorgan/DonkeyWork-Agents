@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Trash2, Loader2, Calendar, CheckSquare, Circle, Clock, CheckCircle2, AlertCircle, Target } from 'lucide-react'
+import { Trash2, Loader2, CheckSquare, Circle, Clock, CheckCircle2, AlertCircle, Target } from 'lucide-react'
 import { Button, Badge } from '@donkeywork/ui'
 import type { TaskStatus, TaskPriority } from '@donkeywork/api-client'
 
@@ -39,8 +39,6 @@ interface ContentCardProps {
   status?: TaskStatus
   /** Task priority */
   priority?: TaskPriority
-  /** Task due date */
-  dueDate?: string
   /** Associated milestone info */
   milestone?: { id: string; name: string }
   /** Handler for milestone click */
@@ -70,7 +68,6 @@ export function ContentCard({
   tags,
   status,
   priority,
-  dueDate,
   milestone,
   onMilestoneClick,
   onToggleComplete,
@@ -82,7 +79,7 @@ export function ContentCard({
 
   return (
     <div
-      className={`group relative rounded-lg border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer h-[330px] flex flex-col ${
+      className={`group relative rounded-lg border bg-card p-4 hover:shadow-md transition-shadow cursor-pointer h-[330px] flex flex-col overflow-hidden ${
         isCompleted ? 'opacity-75 bg-card/50' : ''
       } ${selected ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
       onClick={onClick}
@@ -202,12 +199,6 @@ export function ContentCard({
                 <Target className="h-3 w-3" />
                 <span className="truncate max-w-[100px]">{milestone.name}</span>
               </button>
-            )}
-            {dueDate && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(dueDate).toLocaleDateString()}
-              </span>
             )}
           </div>
         )}

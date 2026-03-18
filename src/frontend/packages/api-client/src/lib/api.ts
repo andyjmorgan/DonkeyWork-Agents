@@ -697,7 +697,6 @@ export interface Task {
   status: TaskStatus
   priority: TaskPriority
   completionNotes?: string
-  dueDate?: string
   completedAt?: string
   sortOrder: number
   projectId?: string
@@ -712,7 +711,6 @@ export interface CreateTaskRequest {
   description?: string
   status?: TaskStatus
   priority?: TaskPriority
-  dueDate?: string
   sortOrder?: number
   projectId?: string
   milestoneId?: string
@@ -725,7 +723,6 @@ export interface UpdateTaskRequest {
   status: TaskStatus
   priority: TaskPriority
   completionNotes?: string
-  dueDate?: string
   sortOrder: number
   projectId?: string
   milestoneId?: string

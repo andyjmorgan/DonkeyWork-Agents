@@ -371,7 +371,6 @@ public class MilestoneService : IMilestoneService
                 Status = (Contracts.Models.TaskItemStatus)(int)t.Status,
                 Priority = (Contracts.Models.TaskItemPriority)(int)t.Priority,
                 CompletionNotes = t.CompletionNotes,
-                DueDate = t.DueDate,
                 CompletedAt = t.CompletedAt,
                 SortOrder = t.SortOrder,
                 ProjectId = t.ProjectId,

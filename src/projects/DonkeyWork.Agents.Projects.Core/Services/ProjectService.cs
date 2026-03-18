@@ -358,7 +358,6 @@ public class ProjectService : IProjectService
             Status = (Contracts.Models.TaskItemStatus)(int)taskItem.Status,
             Priority = (Contracts.Models.TaskItemPriority)(int)taskItem.Priority,
             CompletionNotes = taskItem.CompletionNotes,
-            DueDate = taskItem.DueDate,
             CompletedAt = taskItem.CompletedAt,
             SortOrder = taskItem.SortOrder,
             ProjectId = taskItem.ProjectId,

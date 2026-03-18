@@ -72,7 +72,6 @@ public class TasksTools
         [Description("Optional description of the task (supports markdown and mermaid diagrams)")] string? description,
         [Description("Status: Pending (default), InProgress, Completed, or Cancelled")] TaskItemStatus? status,
         [Description("Priority: Low, Medium (default), High, or Critical")] TaskItemPriority? priority,
-        [Description("Optional due date for the task")] DateTimeOffset? dueDate,
         [Description("Optional project ID - set to associate this task with a project (task becomes project-level)")] Guid? projectId,
         [Description("Optional milestone ID - set to associate this task with a milestone (task becomes milestone-level)")] Guid? milestoneId,
         CancellationToken ct)
@@ -83,7 +82,6 @@ public class TasksTools
             Description = description,
             Status = status ?? TaskItemStatus.Pending,
             Priority = priority ?? TaskItemPriority.Medium,
-            DueDate = dueDate,
             ProjectId = projectId,
             MilestoneId = milestoneId
         };
@@ -107,7 +105,6 @@ public class TasksTools
         [Description("Status: Pending, InProgress, Completed, or Cancelled (omit to keep current)")] TaskItemStatus? status = null,
         [Description("Priority: Low, Medium, High, or Critical (omit to keep current)")] TaskItemPriority? priority = null,
         [Description("Completion notes (set when marking as Completed, omit to keep current)")] string? completionNotes = null,
-        [Description("New due date (omit to keep current)")] DateTimeOffset? dueDate = null,
         [Description("Project ID to associate with (omit to keep current)")] Guid? projectId = null,
         [Description("Milestone ID to associate with (omit to keep current)")] Guid? milestoneId = null,
         CancellationToken ct = default)
@@ -126,7 +123,6 @@ public class TasksTools
             Status = status ?? current.Status,
             Priority = priority ?? current.Priority,
             CompletionNotes = completionNotes ?? current.CompletionNotes,
-            DueDate = dueDate ?? current.DueDate,
             ProjectId = projectId ?? current.ProjectId,
             MilestoneId = milestoneId ?? current.MilestoneId
         };

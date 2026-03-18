@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, CheckSquare, Calendar, Target } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Trash2, ChevronRight, FolderKanban, CheckSquare, Target } from 'lucide-react'
 import {
   Button,
   Input,
@@ -32,7 +32,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('Medium')
   const [status, setStatus] = useState<TaskStatus>('Pending')
-  const [dueDate, setDueDate] = useState('')
   const [completionNotes, setCompletionNotes] = useState('')
 
   // Active tab
@@ -55,7 +54,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
       setDescription(taskData.description || '')
       setPriority(taskData.priority)
       setStatus(taskData.status)
-      setDueDate(taskData.dueDate || '')
       setCompletionNotes(taskData.completionNotes || '')
 
       // Load project if task belongs to one
@@ -88,7 +86,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
           description,
           priority,
           status,
-          dueDate: dueDate || undefined,
         })
         nav.goToTask(newTask.id)
       } else if (task) {
@@ -98,7 +95,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
           priority,
           status,
           completionNotes: (status === 'Completed' || status === 'Cancelled') ? completionNotes || undefined : undefined,
-          dueDate: dueDate || undefined,
           sortOrder: task.sortOrder,
           projectId: task.projectId,
           milestoneId: task.milestoneId,
@@ -265,16 +261,6 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
             </Select>
           </div>
 
-          {/* Due Date */}
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="date"
-              className="w-[150px] h-8"
-              value={dueDate ? new Date(dueDate).toISOString().split('T')[0] : ''}
-              onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value).toISOString() : '')}
-            />
-          </div>
         </div>
       </div>
 
