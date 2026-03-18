@@ -10,6 +10,7 @@ import {
   Badge,
 } from '@donkeywork/ui'
 import { MarkdownViewer } from '@donkeywork/editor'
+import Editor from '@monaco-editor/react'
 import DocViewer, { DocViewerRenderers } from '@iamjariwala/react-doc-viewer'
 import { files, type FileItem } from '@donkeywork/api-client'
 import { JsonViewer } from '../ui/json-viewer'
@@ -22,7 +23,7 @@ interface FilePreviewPanelProps {
   onClose: () => void
 }
 
-type PreviewType = 'markdown' | 'json' | 'text' | 'spreadsheet' | 'document' | 'unsupported'
+type PreviewType = 'markdown' | 'json' | 'text' | 'code' | 'spreadsheet' | 'document' | 'unsupported'
 
 interface SpreadsheetData {
   sheets: string[]
@@ -32,6 +33,10 @@ interface SpreadsheetData {
 const TEXT_EXTENSIONS = ['txt', 'log', 'xml', 'yaml', 'yml']
 const JSON_EXTENSIONS = ['json']
 const MARKDOWN_EXTENSIONS = ['md']
+const CODE_EXTENSIONS = [
+  'js', 'jsx', 'ts', 'tsx', 'py', 'css', 'html', 'sh', 'bash',
+  'cs', 'go', 'rs', 'rb', 'java', 'sql', 'toml',
+]
 const SPREADSHEET_EXTENSIONS = ['xlsx', 'csv']
 const DOCUMENT_EXTENSIONS = [
   'pdf', 'docx',
@@ -47,9 +52,30 @@ function getPreviewType(fileName: string): PreviewType {
   if (MARKDOWN_EXTENSIONS.includes(ext)) return 'markdown'
   if (JSON_EXTENSIONS.includes(ext)) return 'json'
   if (TEXT_EXTENSIONS.includes(ext)) return 'text'
+  if (CODE_EXTENSIONS.includes(ext)) return 'code'
   if (SPREADSHEET_EXTENSIONS.includes(ext)) return 'spreadsheet'
   if (DOCUMENT_EXTENSIONS.includes(ext)) return 'document'
   return 'unsupported'
+}
+
+function getMonacoLanguage(fileName: string): string {
+  const ext = getExtension(fileName)
+  switch (ext) {
+    case 'js': case 'jsx': return 'javascript'
+    case 'ts': case 'tsx': return 'typescript'
+    case 'py': return 'python'
+    case 'css': return 'css'
+    case 'html': return 'html'
+    case 'sh': case 'bash': return 'shell'
+    case 'sql': return 'sql'
+    case 'cs': return 'csharp'
+    case 'go': return 'go'
+    case 'rs': return 'rust'
+    case 'rb': return 'ruby'
+    case 'java': return 'java'
+    case 'toml': return 'ini'
+    default: return 'plaintext'
+  }
 }
 
 function getTypeLabel(fileName: string): string {
@@ -59,6 +85,10 @@ function getTypeLabel(fileName: string): string {
     xml: 'XML', yaml: 'YAML', yml: 'YAML', pdf: 'PDF',
     docx: 'Word', xlsx: 'Excel', pptx: 'PowerPoint', csv: 'CSV',
     png: 'PNG', jpg: 'JPEG', jpeg: 'JPEG', gif: 'GIF', webp: 'WebP',
+    js: 'JavaScript', jsx: 'JavaScript', ts: 'TypeScript', tsx: 'TypeScript',
+    py: 'Python', css: 'CSS', html: 'HTML', sh: 'Shell', bash: 'Shell',
+    cs: 'C#', go: 'Go', rs: 'Rust', rb: 'Ruby', java: 'Java',
+    sql: 'SQL', toml: 'TOML',
   }
   return labels[ext] || ext.toUpperCase() || 'File'
 }
@@ -95,7 +125,7 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
       setActiveSheet('')
 
       try {
-        if (previewType === 'markdown' || previewType === 'json' || previewType === 'text') {
+        if (previewType === 'markdown' || previewType === 'json' || previewType === 'text' || previewType === 'code') {
           const content = await files.fetchText(fileKey)
           setTextContent(content)
         } else if (previewType === 'spreadsheet') {
@@ -189,6 +219,24 @@ export function FilePreviewPanel({ file, currentPrefix, open, onClose }: FilePre
             <pre className="text-sm bg-muted/50 rounded-lg p-4 overflow-auto whitespace-pre-wrap break-words font-mono border">
               {textContent}
             </pre>
+          )}
+
+          {!loading && !error && previewType === 'code' && textContent !== null && file && (
+            <Editor
+              height="calc(100vh - 200px)"
+              language={getMonacoLanguage(file.fileName)}
+              value={textContent}
+              theme="vs-dark"
+              options={{
+                readOnly: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                fontSize: 13,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                padding: { top: 12 },
+              }}
+            />
           )}
 
           {!loading && !error && previewType === 'spreadsheet' && spreadsheet && (
