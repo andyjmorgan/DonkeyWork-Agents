@@ -6,6 +6,13 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 public sealed class SwarmDelegateSpawnTools
 {
+    private readonly SwarmAgentSpawner _spawner;
+
+    public SwarmDelegateSpawnTools(SwarmAgentSpawner spawner)
+    {
+        _spawner = spawner;
+    }
+
     [AgentTool(ToolNames.SpawnDelegate)]
     [Description("Spawn a delegate agent to handle a specific task. The delegate will execute the task and return results. Use this to offload discrete pieces of work that can run independently.")]
     public async Task<ToolResult> SpawnDelegate(
@@ -19,6 +26,6 @@ public sealed class SwarmDelegateSpawnTools
     {
         var contract = AgentContracts.Delegate()
             .WithParentContext(context);
-        return await SwarmAgentSpawner.SpawnAsync(contract, task, label, context, identityContext, ct);
+        return await _spawner.SpawnAsync(contract, task, label, context, identityContext, ct);
     }
 }

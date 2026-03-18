@@ -10,8 +10,10 @@ import { AgentCardGrid, type AgentEntry } from "./AgentCardGrid";
 import { AgentDetailModal } from "./AgentDetailModal";
 import { AgentSidePanel } from "./AgentSidePanel";
 import { McpSidePanel } from "./McpSidePanel";
+import { ExecutionSidePanel } from "./ExecutionSidePanel";
+import { ExecutionDetailModal } from "./ExecutionDetailModal";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "./agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container, History } from "lucide-react";
 
 function extractTextFromBoxes(boxes: ContentBox[]): string {
   return boxes
@@ -190,6 +192,8 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [mcpPanelOpen, setMcpPanelOpen] = useState(false);
+  const [executionPanelOpen, setExecutionPanelOpen] = useState(false);
+  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
 
   const mcpConnectedCount = mcpServerStatuses.filter((s) => s.success).length;
   const mcpHasFailures = mcpServerStatuses.some((s) => !s.success);
@@ -314,7 +318,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setMcpPanelOpen(true); setSidePanelOpen(false); }}
+                onClick={() => { setMcpPanelOpen(true); setSidePanelOpen(false); setExecutionPanelOpen(false); }}
                 className="text-muted-foreground hover:text-foreground gap-1.5"
               >
                 <Plug className="w-4 h-4" />
@@ -328,7 +332,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setSidePanelOpen(true); setMcpPanelOpen(false); }}
+                onClick={() => { setSidePanelOpen(true); setMcpPanelOpen(false); setExecutionPanelOpen(false); }}
                 className="text-muted-foreground hover:text-foreground gap-1.5"
               >
                 <PanelRightOpen className="w-4 h-4" />
@@ -336,6 +340,16 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
                 {agentActiveCount > 0 && (
                   <span className="flex h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
                 )}
+              </Button>
+            )}
+            {conversationId && !executionPanelOpen && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setExecutionPanelOpen(true); setSidePanelOpen(false); setMcpPanelOpen(false); }}
+                className="text-muted-foreground hover:text-foreground gap-1.5"
+              >
+                <History className="w-4 h-4" />
               </Button>
             )}
             <Button
@@ -454,6 +468,20 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
         servers={mcpServerStatuses}
         isOpen={mcpPanelOpen}
         onToggle={() => setMcpPanelOpen((v) => !v)}
+      />
+      {conversationId && (
+        <ExecutionSidePanel
+          conversationId={conversationId}
+          isOpen={executionPanelOpen}
+          onToggle={() => setExecutionPanelOpen((v) => !v)}
+          onExecutionClick={(id) => setSelectedExecutionId(id)}
+        />
+      )}
+
+      <ExecutionDetailModal
+        executionId={selectedExecutionId}
+        open={!!selectedExecutionId}
+        onOpenChange={(open) => { if (!open) setSelectedExecutionId(null); }}
       />
 
       {modalProps && (

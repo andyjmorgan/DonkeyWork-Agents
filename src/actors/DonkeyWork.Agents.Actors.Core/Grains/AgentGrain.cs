@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
@@ -43,6 +44,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private readonly IGrainMessageStore _messageStore;
     private readonly IPromptService _promptService;
     private readonly IModelCatalogService _modelCatalogService;
+    private readonly IAgentExecutionRepository _executionRepository;
 
     private List<InternalMessage> _messages = [];
     private int _nextSequenceNumber;
@@ -55,6 +57,10 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private SandboxProvisioningHandle? _sandboxHandle;
     private int _contextWindowLimit;
     private int _maxOutputTokens;
+    private Guid _executionId;
+    private int _totalInputTokens;
+    private int _totalOutputTokens;
+    private DateTimeOffset _executionStartedAt;
 
     public AgentGrain(
         ILogger<AgentGrain> logger,
@@ -68,7 +74,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
         IPromptService promptService,
-        IModelCatalogService modelCatalogService)
+        IModelCatalogService modelCatalogService,
+        IAgentExecutionRepository executionRepository)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -82,6 +89,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _messageStore = messageStore;
         _promptService = promptService;
         _modelCatalogService = modelCatalogService;
+        _executionRepository = executionRepository;
     }
 
     #region IAgentGrain
@@ -94,20 +102,25 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
         SetupGrainContext(observer);
 
+        // Read executionId set by the spawner via RequestContext
+        var executionIdStr = RequestContext.Get(GrainCallContextKeys.ExecutionId) as string;
+        if (Guid.TryParse(executionIdStr, out var execId))
+            _executionId = execId;
+        _executionStartedAt = DateTimeOffset.UtcNow;
+        _totalInputTokens = 0;
+        _totalOutputTokens = 0;
+
         var messages = BuildInitialMessages(contract, input);
 
-        if (contract.PersistMessages)
+        var userMsg = new InternalContentMessage
         {
-            var userMsg = new InternalContentMessage
-            {
-                Role = InternalMessageRole.User,
-                Content = input,
-                Origin = MessageOrigin.User,
-            };
-            _messages.Add(userMsg);
-            await _messageStore.AppendMessageAsync(
-                _grainContext.GrainKey, _identityContext.UserId, userMsg, _nextSequenceNumber++);
-        }
+            Role = InternalMessageRole.User,
+            Content = input,
+            Origin = MessageOrigin.User,
+        };
+        _messages.Add(userMsg);
+        await _messageStore.AppendMessageAsync(
+            _grainContext.GrainKey, _identityContext.UserId, userMsg, _nextSequenceNumber++);
 
         var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
         _cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
@@ -393,15 +406,13 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             ToolExecutor = this,
             CancellationToken = ct,
             TurnId = turnId,
-            PersistMessage = contract.PersistMessages
-                ? async msg =>
-                {
-                    msg.TurnId = turnId;
-                    _messages.Add(msg);
-                    await _messageStore.AppendMessageAsync(
-                        _grainContext.GrainKey, _identityContext.UserId, msg, _nextSequenceNumber++, ct);
-                }
-                : null,
+            PersistMessage = async msg =>
+            {
+                msg.TurnId = turnId;
+                _messages.Add(msg);
+                await _messageStore.AppendMessageAsync(
+                    _grainContext.GrainKey, _identityContext.UserId, msg, _nextSequenceNumber++, ct);
+            },
         };
 
         await foreach (var msg in _pipeline.ExecuteAsync(context))
@@ -474,6 +485,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseUsage usage }:
+                _totalInputTokens += usage.InputTokens;
+                _totalOutputTokens += usage.OutputTokens;
                 Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests, _contextWindowLimit, _maxOutputTokens));
                 break;
 
@@ -609,7 +622,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     {
         var messages = new List<InternalMessage>();
 
-        if (contract.PersistMessages && _messages.Count > 0)
+        if (_messages.Count > 0)
         {
             messages.AddRange(_messages);
         }
@@ -660,6 +673,29 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         var reason = isError
             ? (_explicitCancel ? AgentCompleteReason.Cancelled : AgentCompleteReason.Failed)
             : AgentCompleteReason.Completed;
+
+        // Update execution audit trail
+        if (_executionId != Guid.Empty)
+        {
+            var status = reason switch
+            {
+                AgentCompleteReason.Completed => "Completed",
+                AgentCompleteReason.Cancelled => "Cancelled",
+                _ => "Failed",
+            };
+            var durationMs = (long)(DateTimeOffset.UtcNow - _executionStartedAt).TotalMilliseconds;
+            var outputJson = result != AgentResult.Empty
+                ? JsonSerializer.Serialize(result)
+                : null;
+            var errorMsg = isError && !_explicitCancel
+                ? result.Parts.OfType<AgentTextPart>().FirstOrDefault()?.Text
+                : null;
+
+            await _executionRepository.UpdateCompletionAsync(
+                _executionId, _identityContext.UserId, status, outputJson, errorMsg,
+                durationMs, _totalInputTokens, _totalOutputTokens);
+        }
+
         Emit(new StreamAgentCompleteEvent(_grainContext.GrainKey) { Reason = reason });
 
         if (contract.Lifecycle == AgentLifecycle.Task)

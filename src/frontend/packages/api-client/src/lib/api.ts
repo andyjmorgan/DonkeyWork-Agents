@@ -1069,6 +1069,23 @@ export interface ResponseEndEvent extends ConversationStreamEvent {
   message: ConversationMessage
 }
 
+// Agent Executions API
+import type { AgentExecutionSummary, AgentExecutionDetail } from '../types/agent-executions'
+import type { InternalMessage } from '../types/internal-messages'
+
+export interface GetAgentExecutionMessagesResponse {
+  messages: InternalMessage[]
+}
+
+export const agentExecutions = {
+  listByConversation: (conversationId: string) =>
+    api.get<AgentExecutionSummary[]>(`/api/v1/agent-executions?conversationId=${conversationId}`),
+  get: (id: string) =>
+    api.get<AgentExecutionDetail>(`/api/v1/agent-executions/${id}`),
+  getMessages: (id: string) =>
+    api.get<GetAgentExecutionMessagesResponse>(`/api/v1/agent-executions/${id}/messages`),
+}
+
 // Conversations API
 export const conversations = {
   // List conversations (paginated, newest first)

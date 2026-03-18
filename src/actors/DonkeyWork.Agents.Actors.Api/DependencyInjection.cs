@@ -119,6 +119,8 @@ public static class DependencyInjection
 
         services.AddHttpClient();
         services.AddSingleton<IGrainMessageStore, GrainMessageStore>();
+        services.AddSingleton<IAgentExecutionRepository, AgentExecutionRepository>();
+        services.AddScoped<IAgentExecutionService, AgentExecutionService>();
         services.AddActorsCore();
 
         return services;

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Channels;
+using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
@@ -51,6 +52,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private readonly IPromptService _promptService;
     private readonly IAgentDefinitionService _agentDefinitionService;
     private readonly IModelCatalogService _modelCatalogService;
+    private readonly IAgentExecutionRepository _executionRepository;
 
     private readonly Channel<ConversationMessage> _queue =
         Channel.CreateUnbounded<ConversationMessage>(new UnboundedChannelOptions { SingleReader = true });
@@ -72,6 +74,10 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     private int _maxOutputTokens;
     private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
     private Type[]? _effectiveToolTypes;
+    private Guid _executionId;
+    private int _totalInputTokens;
+    private int _totalOutputTokens;
+    private DateTimeOffset _activatedAt;
 
     public ConversationGrain(
         ILogger<ConversationGrain> logger,
@@ -87,7 +93,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         IGrainMessageStore messageStore,
         IPromptService promptService,
         IAgentDefinitionService agentDefinitionService,
-        IModelCatalogService modelCatalogService)
+        IModelCatalogService modelCatalogService,
+        IAgentExecutionRepository executionRepository)
     {
         _logger = logger;
         _grainContext = grainContext;
@@ -103,6 +110,7 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _promptService = promptService;
         _agentDefinitionService = agentDefinitionService;
         _modelCatalogService = modelCatalogService;
+        _executionRepository = executionRepository;
     }
 
     #region IConversationGrain
@@ -221,6 +229,24 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
 
                 var contract = ResolveContract();
                 _contract = contract;
+
+                // Create execution record once per activation
+                if (_executionId == Guid.Empty)
+                {
+                    var contractJson = System.Text.Json.JsonSerializer.Serialize(contract);
+                    var conversationId = Guid.Parse(_grainContext.ConversationId);
+                    _executionId = await _executionRepository.CreateAsync(
+                        _identityContext.UserId,
+                        conversationId,
+                        "conversation",
+                        "Navi",
+                        _grainContext.GrainKey,
+                        null,
+                        contractJson,
+                        null,
+                        contract.ModelId);
+                    _activatedAt = DateTimeOffset.UtcNow;
+                }
 
                 var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
@@ -612,6 +638,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseUsage usage }:
+                _totalInputTokens += usage.InputTokens;
+                _totalOutputTokens += usage.OutputTokens;
                 Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests, _contextWindowLimit, _maxOutputTokens));
                 break;
 
@@ -744,6 +772,17 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         var sw = Stopwatch.StartNew();
+
+        // Record execution completion for the conversation agent
+        if (_executionId != Guid.Empty)
+        {
+            var grainKey = this.GetPrimaryKeyString();
+            var userId = AgentKeys.ExtractUserId(grainKey);
+            var durationMs = (long)(DateTimeOffset.UtcNow - _activatedAt).TotalMilliseconds;
+            await _executionRepository.UpdateCompletionAsync(
+                _executionId, userId, "Completed", null, null,
+                durationMs, _totalInputTokens, _totalOutputTokens, cancellationToken);
+        }
 
         _sandboxHandle = null;
 

@@ -4,13 +4,32 @@ using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
-internal static class SwarmAgentSpawner
+public sealed class SwarmAgentSpawner
 {
-    public static async Task<ToolResult> SpawnAsync(
+    private static readonly JsonSerializerOptions ContractJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        AllowOutOfOrderMetadataProperties = true,
+    };
+
+    private readonly IAgentExecutionRepository _executionRepository;
+    private readonly ILogger<SwarmAgentSpawner> _logger;
+
+    public SwarmAgentSpawner(
+        IAgentExecutionRepository executionRepository,
+        ILogger<SwarmAgentSpawner> logger)
+    {
+        _executionRepository = executionRepository;
+        _logger = logger;
+    }
+
+    public async Task<ToolResult> SpawnAsync(
         AgentContract contract,
         string query,
         string label,
@@ -45,10 +64,26 @@ internal static class SwarmAgentSpawner
             }
         }
 
+        // Create execution record before spawning
+        var contractJson = JsonSerializer.Serialize(contract, ContractJsonOptions);
+        var executionId = await _executionRepository.CreateAsync(
+            identityContext.UserId,
+            conversationId,
+            contract.AgentType,
+            label,
+            agentKey,
+            context.GrainKey,
+            contractJson,
+            query,
+            contract.ModelId,
+            ct);
+
         // Propagate caller context so the sub-agent's interceptor can hydrate
         // GrainContext and IIdentityContext without relying solely on key parsing.
         RequestContext.Set(GrainCallContextKeys.UserId, identityContext.UserId.ToString());
         RequestContext.Set(GrainCallContextKeys.ConversationId, context.ConversationId);
+        if (executionId != Guid.Empty)
+            RequestContext.Set(GrainCallContextKeys.ExecutionId, executionId.ToString());
 
         // Get the agent grain and fire-and-forget the execution
         var grain = context.GrainFactory.GetGrain<IAgentGrain>(agentKey);

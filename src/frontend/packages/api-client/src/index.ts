@@ -1,5 +1,6 @@
 export * from './lib/api'
 export { fetchWithAuth } from './lib/fetchWithAuth'
 export * from './types/agent-chat'
+export * from './types/agent-executions'
 export * from './types/notifications'
 export * from './types/internal-messages'

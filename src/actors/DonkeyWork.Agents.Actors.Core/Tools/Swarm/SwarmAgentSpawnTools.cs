@@ -11,6 +11,7 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 public sealed class SwarmAgentSpawnTools
 {
     private readonly IAgentDefinitionService _agentDefinitionService;
+    private readonly SwarmAgentSpawner _spawner;
 
     private static readonly JsonSerializerOptions ContractJsonOptions = new()
     {
@@ -19,9 +20,12 @@ public sealed class SwarmAgentSpawnTools
         AllowOutOfOrderMetadataProperties = true,
     };
 
-    public SwarmAgentSpawnTools(IAgentDefinitionService agentDefinitionService)
+    public SwarmAgentSpawnTools(
+        IAgentDefinitionService agentDefinitionService,
+        SwarmAgentSpawner spawner)
     {
         _agentDefinitionService = agentDefinitionService;
+        _spawner = spawner;
     }
 
     [AgentTool(ToolNames.SpawnAgent)]
@@ -82,6 +86,6 @@ public sealed class SwarmAgentSpawnTools
 
         contract = contract.WithParentContext(context);
 
-        return await SwarmAgentSpawner.SpawnAsync(contract, task, label, context, identityContext, ct);
+        return await _spawner.SpawnAsync(contract, task, label, context, identityContext, ct);
     }
 }

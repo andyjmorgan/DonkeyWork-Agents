@@ -3,6 +3,7 @@ using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Providers;
 using DonkeyWork.Agents.Actors.Core.Services;
 using DonkeyWork.Agents.Actors.Core.Tools;
+using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +19,7 @@ public static class DependencyInjection
         services.AddSingleton<IToolGroupService, ToolGroupService>();
         services.AddTransient<ModelPipeline>();
         services.AddScoped<GrainContext>();
+        services.AddSingleton<SwarmAgentSpawner>();
 
         return services;
     }
