@@ -23,6 +23,19 @@ RUN apt-get update && apt-get install -y \
     qpdf \
     tesseract-ocr \
     libreoffice \
+    # Essential CLI tools
+    tree \
+    jq \
+    ffmpeg \
+    imagemagick \
+    wget \
+    # High-value CLI tools
+    ripgrep \
+    fd-find \
+    bat \
+    # Medium CLI tools
+    fzf \
+    htop \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -31,6 +44,14 @@ RUN apt-get update && apt-get install -y \
        | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
     && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
+
+# Install CLI tools not in apt (yq, eza, delta, dust, jless, tokei, httpie)
+RUN curl -fsSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_$(dpkg --print-architecture)" -o /usr/local/bin/yq \
+    && chmod +x /usr/local/bin/yq
+
+# Symlink Debian-renamed binaries to expected names
+RUN ln -sf /usr/bin/batcat /usr/local/bin/bat 2>/dev/null || true \
+    && ln -sf /usr/bin/fdfind /usr/local/bin/fd 2>/dev/null || true
 
 # Install Python packages (common + skill dependencies)
 # Allow runtime pip installs inside ephemeral sandbox containers (PEP 668)
