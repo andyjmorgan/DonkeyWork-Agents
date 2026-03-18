@@ -213,12 +213,12 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
   return (
     <div className="space-y-6">
       {/* Breadcrumb Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => nav.goToResearchList()}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => nav.goToResearchList()}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+          <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground min-w-0">
             <button
               onClick={() => nav.goToResearchList()}
               className="flex items-center gap-1.5 hover:text-foreground transition-colors"
@@ -229,13 +229,16 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
             <ChevronRight className="h-4 w-4 shrink-0" />
             <span className="flex items-center gap-1.5 text-foreground font-medium min-w-0">
               <Search className="h-4 w-4 shrink-0 text-cyan-500" />
-              <span className="truncate max-w-[100px] sm:max-w-[150px] md:max-w-[250px]">
+              <span className="truncate max-w-[150px] md:max-w-[250px]">
                 {isNewResearch ? 'New Research' : researchData?.title}
               </span>
             </span>
           </div>
+          <span className="sm:hidden text-sm font-medium truncate min-w-0">
+            {isNewResearch ? 'New Research' : researchData?.title}
+          </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {!isNewResearch && (
             <Button
               variant="ghost"
@@ -251,15 +254,15 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
             disabled={isSaving || !title.trim()}
           >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            <Save className="h-4 w-4 mr-2" />
-            {isNewResearch ? 'Create' : 'Save'}
+            <Save className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{isNewResearch ? 'Create' : 'Save'}</span>
           </Button>
         </div>
       </div>
 
       {/* Research Details Card */}
       <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           {/* Status */}
           <div className="flex items-center gap-2">
             <Label className="text-sm text-muted-foreground">Status:</Label>
