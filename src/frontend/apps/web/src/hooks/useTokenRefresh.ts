@@ -25,7 +25,7 @@ export function useTokenRefresh() {
       if (!refreshed) {
         // Refresh failed - log the user out
         state.logout()
-        window.location.href = '/login'
+        window.location.href = '/api/v1/auth/logout'
       }
     } else if (state.shouldRefreshToken()) {
       // Proactively refresh before expiry
@@ -33,7 +33,7 @@ export function useTokenRefresh() {
       if (!refreshed) {
         // Refresh failed - log the user out
         state.logout()
-        window.location.href = '/login'
+        window.location.href = '/api/v1/auth/logout'
       }
     }
   }, [])

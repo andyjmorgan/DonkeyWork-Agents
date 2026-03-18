@@ -282,6 +282,30 @@ public class AuthController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Logs the user out by ending the Keycloak session.
+    /// Redirects to the Keycloak end-session endpoint which clears the SSO cookie,
+    /// then redirects back to the frontend login page.
+    /// </summary>
+    /// <returns>Redirect to Keycloak logout endpoint.</returns>
+    /// <response code="302">Redirects to Keycloak logout, then back to frontend login.</response>
+    [HttpGet("logout")]
+    [ProducesResponseType(StatusCodes.Status302Found)]
+    public IActionResult Logout()
+    {
+        var frontendBaseUrl = !string.IsNullOrEmpty(_keycloakOptions.FrontendUrl)
+            ? _keycloakOptions.FrontendUrl.TrimEnd('/')
+            : $"{Request.Scheme}://{Request.Host}";
+
+        var postLogoutRedirectUri = $"{frontendBaseUrl}/login";
+
+        var logoutUrl = $"{_keycloakOptions.Authority}/protocol/openid-connect/logout?" +
+            $"client_id={Uri.EscapeDataString(EffectiveClientId)}" +
+            $"&post_logout_redirect_uri={Uri.EscapeDataString(postLogoutRedirectUri)}";
+
+        return Redirect(logoutUrl);
+    }
+
     private static string GenerateCodeVerifier()
     {
         var bytes = new byte[32];

@@ -24,7 +24,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    window.location.href = '/api/v1/auth/logout'
   }
 
   const getInitials = (name?: string, email?: string) => {
