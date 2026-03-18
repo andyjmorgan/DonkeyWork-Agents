@@ -62,8 +62,11 @@ public class OAuthProviderConfigsController : ControllerBase
                     new() { Name = "email", Description = "View your email address", IsRequired = true, IsDefault = true },
                     new() { Name = "https://www.googleapis.com/auth/gmail.readonly", Description = "Read your Gmail messages", IsRequired = false, IsDefault = true },
                     new() { Name = "https://www.googleapis.com/auth/gmail.send", Description = "Send emails on your behalf", IsRequired = false, IsDefault = false },
+                    new() { Name = "https://www.googleapis.com/auth/gmail.modify", Description = "Read, compose and send emails from your Gmail account", IsRequired = false, IsDefault = false },
+                    new() { Name = "https://www.googleapis.com/auth/drive", Description = "See, edit, create and delete all of your Google Drive files", IsRequired = false, IsDefault = false },
                     new() { Name = "https://www.googleapis.com/auth/drive.file", Description = "Access files you open or create with this app", IsRequired = false, IsDefault = true },
                     new() { Name = "https://www.googleapis.com/auth/drive.readonly", Description = "View all your Google Drive files", IsRequired = false, IsDefault = false },
+                    new() { Name = "https://www.googleapis.com/auth/userinfo.email", Description = "See your primary Google Account email address", IsRequired = false, IsDefault = false },
                     new() { Name = "https://www.googleapis.com/auth/calendar.readonly", Description = "View your calendar events", IsRequired = false, IsDefault = false },
                     new() { Name = "https://www.googleapis.com/auth/calendar.events", Description = "Manage your calendar events", IsRequired = false, IsDefault = false },
                 ]

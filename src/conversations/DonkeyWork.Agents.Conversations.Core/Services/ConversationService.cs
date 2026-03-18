@@ -197,6 +197,33 @@ public class ConversationService : IConversationService
         return true;
     }
 
+    public async Task<int> BulkDeleteAsync(BulkDeleteConversationsRequestV1 request, CancellationToken cancellationToken = default)
+    {
+        var conversations = await _dbContext.Conversations
+            .Where(c => request.Ids.Contains(c.Id))
+            .ToListAsync(cancellationToken);
+
+        if (conversations.Count == 0)
+        {
+            return 0;
+        }
+
+        // Delete associated images from S3 for each conversation
+        foreach (var conversation in conversations)
+        {
+            await _storageService.DeleteByPrefixAsync(
+                $"conversations/{conversation.Id}",
+                cancellationToken);
+        }
+
+        _dbContext.Conversations.RemoveRange(conversations);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Bulk deleted {Count} conversations", conversations.Count);
+
+        return conversations.Count;
+    }
+
     public async Task<ConversationMessageV1?> SendMessageAsync(Guid conversationId, SendMessageRequestV1 request, CancellationToken cancellationToken = default)
     {
         var userId = _identityContext.UserId;

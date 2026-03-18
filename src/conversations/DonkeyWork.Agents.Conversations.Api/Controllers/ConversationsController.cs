@@ -137,6 +137,22 @@ public class ConversationsController : ControllerBase
     }
 
     /// <summary>
+    /// Bulk delete conversations and all their messages.
+    /// </summary>
+    /// <param name="request">The bulk delete request containing conversation IDs.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <response code="200">Returns the number of deleted conversations.</response>
+    /// <response code="400">Invalid request.</response>
+    [HttpPost("bulk-delete")]
+    [ProducesResponseType<BulkDeleteConversationsResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteConversationsRequestV1 request, CancellationToken cancellationToken)
+    {
+        var deletedCount = await _conversationService.BulkDeleteAsync(request, cancellationToken);
+        return Ok(new BulkDeleteConversationsResponseV1 { DeletedCount = deletedCount });
+    }
+
+    /// <summary>
     /// Send a message in a conversation.
     /// Saves the user message and returns it. Conversation execution is handled via WebSocket.
     /// </summary>

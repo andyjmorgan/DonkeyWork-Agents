@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MessageSquare, Trash2, ExternalLink, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   Button,
+  Checkbox,
   Table,
   TableBody,
   TableCell,
@@ -33,6 +34,8 @@ export function ConversationsPage() {
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const loadConversations = async (offset = 0) => {
     setLoading(true)
@@ -49,11 +52,35 @@ export function ConversationsPage() {
 
   useEffect(() => {
     loadConversations(page * PAGE_SIZE)
+    setSelected(new Set())
   }, [page])
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
   const canGoBack = page > 0
   const canGoForward = page < totalPages - 1
+
+  const allSelected = items.length > 0 && selected.size === items.length
+  const someSelected = selected.size > 0 && selected.size < items.length
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(items.map(c => c.id)))
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   const handleOpen = (id: string) => {
     navigate(`/agent-chat/${id}`)
@@ -70,10 +97,35 @@ export function ConversationsPage() {
       await conversations.delete(id)
       setItems(prev => prev.filter(c => c.id !== id))
       setTotalCount(prev => prev - 1)
+      setSelected(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
     } catch (error) {
       console.error('Failed to delete conversation:', error)
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const count = selected.size
+    if (count === 0) return
+    if (!confirm(`Are you sure you want to delete ${count} conversation${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setBulkDeleting(true)
+      await conversations.bulkDelete(Array.from(selected))
+      setItems(prev => prev.filter(c => !selected.has(c.id)))
+      setTotalCount(prev => prev - count)
+      setSelected(new Set())
+    } catch (error) {
+      console.error('Failed to bulk delete conversations:', error)
+    } finally {
+      setBulkDeleting(false)
     }
   }
 
@@ -87,12 +139,44 @@ export function ConversationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Conversations</h1>
-        <p className="text-muted-foreground">
-          Browse and manage all your chat conversations
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Conversations</h1>
+          <p className="text-muted-foreground">
+            Browse and manage all your chat conversations
+          </p>
+        </div>
       </div>
+
+      {/* Bulk actions bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-2">
+          <span className="text-sm font-medium">
+            {selected.size} selected
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleting}
+          >
+            {bulkDeleting ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <Trash2 className="mr-1 h-3 w-3" />
+            )}
+            Delete selected
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelected(new Set())}
+            disabled={bulkDeleting}
+          >
+            Clear selection
+          </Button>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center">
@@ -118,21 +202,29 @@ export function ConversationsPage() {
                 onClick={() => handleOpen(conv.id)}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">{conv.title}</div>
-                    {conv.orchestrationName && (
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <Checkbox
+                      checked={selected.has(conv.id)}
+                      onCheckedChange={() => toggleSelect(conv.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-0.5"
+                    />
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">{conv.title}</div>
+                      {conv.orchestrationName && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Orchestration: </span>
+                          <span>{conv.orchestrationName}</span>
+                        </div>
+                      )}
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Orchestration: </span>
-                        <span>{conv.orchestrationName}</span>
+                        <span className="text-muted-foreground">Messages: </span>
+                        <span>{conv.messageCount}</span>
                       </div>
-                    )}
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Messages: </span>
-                      <span>{conv.messageCount}</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Updated: </span>
-                      <span>{timeAgo(conv.updatedAt ?? conv.createdAt)}</span>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Updated: </span>
+                        <span>{timeAgo(conv.updatedAt ?? conv.createdAt)}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -168,6 +260,17 @@ export function ConversationsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) {
+                          (el as unknown as HTMLButtonElement).dataset.state = someSelected ? 'indeterminate' : allSelected ? 'checked' : 'unchecked'
+                        }
+                      }}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Orchestration</TableHead>
                   <TableHead>Messages</TableHead>
@@ -182,7 +285,15 @@ export function ConversationsPage() {
                     key={conv.id}
                     className="cursor-pointer"
                     onClick={() => handleOpen(conv.id)}
+                    data-state={selected.has(conv.id) ? 'selected' : undefined}
                   >
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.has(conv.id)}
+                        onCheckedChange={() => toggleSelect(conv.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium max-w-[300px] truncate">
                       {conv.title}
                     </TableCell>

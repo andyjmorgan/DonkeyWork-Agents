@@ -51,6 +51,14 @@ public interface IConversationService
     Task<bool> DeleteAsync(Guid conversationId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Bulk deletes conversations and all their messages.
+    /// </summary>
+    /// <param name="request">The bulk delete request containing conversation IDs.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of conversations deleted.</returns>
+    Task<int> BulkDeleteAsync(BulkDeleteConversationsRequestV1 request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Sends a message to a conversation (non-streaming).
     /// Saves the user message, executes the orchestration, and saves the assistant response.
     /// </summary>

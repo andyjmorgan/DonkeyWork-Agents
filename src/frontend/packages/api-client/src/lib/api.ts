@@ -1115,6 +1115,10 @@ export const conversations = {
   delete: (id: string) =>
     api.delete(`/api/v1/conversations/${id}`),
 
+  // Bulk delete conversations
+  bulkDelete: (ids: string[]) =>
+    api.post<{ deletedCount: number }>('/api/v1/conversations/bulk-delete', { ids }),
+
   // Send message (returns created user message - streaming happens via SSE)
   sendMessage: (conversationId: string, content: ContentPart[]) =>
     api.post<ConversationMessage>(`/api/v1/conversations/${conversationId}/messages`, { content }),
