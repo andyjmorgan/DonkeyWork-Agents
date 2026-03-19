@@ -35,6 +35,9 @@ public static class DependencyInjection
         // Sandbox credential mappings
         services.AddScoped<ISandboxCredentialMappingService, SandboxCredentialMappingService>();
 
+        // Sandbox custom variables
+        services.AddScoped<ISandboxCustomVariableService, SandboxCustomVariableService>();
+
         // Background services
         services.AddHostedService<OAuthTokenRefreshWorker>();
 

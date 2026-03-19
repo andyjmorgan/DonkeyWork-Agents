@@ -1451,6 +1451,37 @@ export const sandboxCredentialMappings = {
     api.get<CredentialFieldsResponse>(`/api/v1/sandbox-credential-mappings/credential-fields?credentialId=${credentialId}&credentialType=${credentialType}`),
 }
 
+// Sandbox Custom Variable Types
+export interface SandboxCustomVariable {
+  id: string
+  key: string
+  value: string
+  isSecret: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface CreateSandboxCustomVariableRequest {
+  key: string
+  value: string
+  isSecret: boolean
+}
+
+export interface UpdateSandboxCustomVariableRequest {
+  value?: string
+  isSecret?: boolean
+}
+
+export const sandboxCustomVariables = {
+  list: () => api.get<SandboxCustomVariable[]>('/api/v1/sandbox-custom-variables'),
+  get: (id: string) => api.get<SandboxCustomVariable>(`/api/v1/sandbox-custom-variables/${id}`),
+  create: (data: CreateSandboxCustomVariableRequest) =>
+    api.post<SandboxCustomVariable>('/api/v1/sandbox-custom-variables', data),
+  update: (id: string, data: UpdateSandboxCustomVariableRequest) =>
+    api.put<SandboxCustomVariable>(`/api/v1/sandbox-custom-variables/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/sandbox-custom-variables/${id}`),
+}
+
 // MCP Server Configuration Types
 export type McpTransportType = 'Stdio' | 'Http'
 export type McpHttpTransportMode = 'AutoDetect' | 'Sse' | 'StreamableHttp'

@@ -57,7 +57,7 @@ const navigationGroups: NavGroup[] = [
       { name: 'Prompts', href: '/prompts', icon: File, iconColor: 'text-emerald-500' },
       { name: 'MCP Servers', href: '/mcp-servers', icon: Server, iconColor: 'text-teal-500' },
       { name: 'Skills', href: '/skills', icon: Zap, iconColor: 'text-violet-500' },
-      { name: 'Sandbox Credentials', href: '/sandbox-credentials', icon: Server, iconColor: 'text-orange-500' },
+      { name: 'Sandbox Settings', href: '/sandbox-settings', icon: Server, iconColor: 'text-orange-500' },
     ],
   },
   {

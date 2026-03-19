@@ -36,6 +36,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<OAuthProviderConfigEntity> OAuthProviderConfigs => Set<OAuthProviderConfigEntity>();
     public DbSet<OAuthStateEntity> OAuthStates => Set<OAuthStateEntity>();
     public DbSet<SandboxCredentialMappingEntity> SandboxCredentialMappings => Set<SandboxCredentialMappingEntity>();
+    public DbSet<SandboxCustomVariableEntity> SandboxCustomVariables => Set<SandboxCustomVariableEntity>();
 
     // Orchestrations module
     public DbSet<OrchestrationEntity> Orchestrations => Set<OrchestrationEntity>();

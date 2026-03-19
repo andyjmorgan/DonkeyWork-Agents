@@ -9,9 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from '@donkeywork/ui'
-import { CreateSandboxCredentialMappingDialog } from '@/components/sandbox-credentials/CreateSandboxCredentialMappingDialog'
-import { EditSandboxCredentialMappingDialog } from '@/components/sandbox-credentials/EditSandboxCredentialMappingDialog'
-import { SandboxProviderCard } from '@/components/sandbox-credentials/SandboxProviderCard'
+import { CreateSandboxCredentialMappingDialog } from '@/components/sandbox-settings/CreateSandboxCredentialMappingDialog'
+import { EditSandboxCredentialMappingDialog } from '@/components/sandbox-settings/EditSandboxCredentialMappingDialog'
+import { SandboxProviderCard } from '@/components/sandbox-settings/SandboxProviderCard'
+import { CustomVariablesSection } from '@/components/sandbox-settings/CustomVariablesSection'
 import { sandboxCredentialMappings, type SandboxCredentialMapping, type SandboxProviderStatus } from '@donkeywork/api-client'
 
 const fieldTypeLabels: Record<string, string> = {
@@ -31,7 +32,7 @@ const credentialTypeLabels: Record<string, string> = {
   OAuthToken: 'OAuth Token',
 }
 
-export function SandboxCredentialsPage() {
+export function SandboxSettingsPage() {
   const [mappings, setMappings] = useState<SandboxCredentialMapping[]>([])
   const [providerStatuses, setProviderStatuses] = useState<SandboxProviderStatus[]>([])
   const [loading, setLoading] = useState(true)
@@ -104,9 +105,9 @@ export function SandboxCredentialsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Sandbox Credentials</h1>
+          <h1 className="text-2xl font-bold">Sandbox Settings</h1>
           <p className="text-muted-foreground">
-            Map domains to credentials for sandbox code execution
+            Configure credentials and environment variables for sandbox code execution
           </p>
         </div>
       </div>
@@ -255,6 +256,8 @@ export function SandboxCredentialsPage() {
           </>
         )}
       </section>
+
+      <CustomVariablesSection />
 
       <CreateSandboxCredentialMappingDialog
         open={isCreateDialogOpen}
