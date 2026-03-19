@@ -50,6 +50,30 @@ public static class SandboxProviderTemplateRegistry
                 },
             ],
         },
+        new SandboxProviderTemplate
+        {
+            Provider = OAuthProvider.Google,
+            DisplayName = "Google APIs",
+            Mappings =
+            [
+                new SandboxProviderMappingTemplate
+                {
+                    BaseDomain = "www.googleapis.com",
+                    HeaderName = "Authorization",
+                    HeaderValueFormat = HeaderValueFormat.Raw,
+                    HeaderValuePrefix = "Bearer ",
+                    CredentialFieldType = CredentialFieldType.AccessToken,
+                },
+                new SandboxProviderMappingTemplate
+                {
+                    BaseDomain = "oauth2.googleapis.com",
+                    HeaderName = "Authorization",
+                    HeaderValueFormat = HeaderValueFormat.Raw,
+                    HeaderValuePrefix = "Bearer ",
+                    CredentialFieldType = CredentialFieldType.AccessToken,
+                },
+            ],
+        },
     ];
 
     /// <summary>

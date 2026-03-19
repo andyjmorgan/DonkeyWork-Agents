@@ -47,9 +47,48 @@ public class SandboxProviderTemplateRegistryTests
     [Fact]
     public void GetTemplate_UnknownProvider_ReturnsNull()
     {
-        var template = SandboxProviderTemplateRegistry.GetTemplate(OAuthProvider.Google);
+        var template = SandboxProviderTemplateRegistry.GetTemplate(OAuthProvider.Custom);
 
         Assert.Null(template);
+    }
+
+    #endregion
+
+    #region GetTemplate Google Tests
+
+    [Fact]
+    public void GetTemplate_Google_ReturnsTwoMappings()
+    {
+        var template = SandboxProviderTemplateRegistry.GetTemplate(OAuthProvider.Google);
+
+        Assert.NotNull(template);
+        Assert.Equal(OAuthProvider.Google, template.Provider);
+        Assert.Equal("Google APIs", template.DisplayName);
+        Assert.Equal(2, template.Mappings.Count);
+    }
+
+    [Fact]
+    public void GetTemplate_Google_HasGoogleApisDomainWithRawFormat()
+    {
+        var template = SandboxProviderTemplateRegistry.GetTemplate(OAuthProvider.Google)!;
+        var apiMapping = template.Mappings.First(m => m.BaseDomain == "www.googleapis.com");
+
+        Assert.Equal("Authorization", apiMapping.HeaderName);
+        Assert.Equal(HeaderValueFormat.Raw, apiMapping.HeaderValueFormat);
+        Assert.Equal("Bearer ", apiMapping.HeaderValuePrefix);
+        Assert.Equal(CredentialFieldType.AccessToken, apiMapping.CredentialFieldType);
+    }
+
+    [Fact]
+    public void GetTemplate_Google_HasOAuth2DomainWithRawFormat()
+    {
+        var template = SandboxProviderTemplateRegistry.GetTemplate(OAuthProvider.Google)!;
+        var oauthMapping = template.Mappings.First(m => m.BaseDomain == "oauth2.googleapis.com");
+
+        Assert.Equal("Authorization", oauthMapping.HeaderName);
+        Assert.Equal(HeaderValueFormat.Raw, oauthMapping.HeaderValueFormat);
+        Assert.Equal("Bearer ", oauthMapping.HeaderValuePrefix);
+        Assert.Equal(CredentialFieldType.AccessToken, oauthMapping.CredentialFieldType);
     }
 
     #endregion
@@ -91,6 +130,7 @@ public class SandboxProviderTemplateRegistryTests
         Assert.NotEmpty(templates);
         Assert.Contains(templates, t => t.Provider == OAuthProvider.GitHub);
         Assert.Contains(templates, t => t.Provider == OAuthProvider.Microsoft);
+        Assert.Contains(templates, t => t.Provider == OAuthProvider.Google);
     }
 
     #endregion
