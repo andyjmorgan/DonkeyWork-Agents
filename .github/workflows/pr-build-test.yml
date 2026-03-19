@@ -67,14 +67,9 @@ jobs:
         run: dotnet build DonkeyWork.Agents.sln -c Release --no-restore
 
       - name: Test
-        run: dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory ./test-results
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: backend-test-results
-          path: ./test-results/*.trx
+        run: |
+          dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal \
+            --filter "FullyQualifiedName!~CodeSandbox"
 
   sandbox-build-test:
     name: Sandbox Build & Test
@@ -102,14 +97,9 @@ jobs:
         run: dotnet build DonkeyWork.Agents.sln -c Release --no-restore
 
       - name: Test
-        run: dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal --logger "trx;LogFileName=sandbox-test-results.trx" --results-directory ./test-results
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: sandbox-test-results
-          path: ./test-results/*.trx
+        run: |
+          dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal \
+            --filter "FullyQualifiedName~CodeSandbox"
 
   frontend-build-test:
     name: Frontend Build & Test

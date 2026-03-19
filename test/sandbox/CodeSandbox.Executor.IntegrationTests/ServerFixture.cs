@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -17,19 +16,16 @@ public class ServerFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        if (!await ImageExistsAsync("codesandbox-executor:test"))
-        {
-            var solutionDir = GetSolutionDirectory();
-            var sandboxDir = new CommonDirectoryPath(Path.Combine(solutionDir.DirectoryPath, "src", "sandbox"));
-            var imageFuture = new ImageFromDockerfileBuilder()
-                .WithDockerfileDirectory(sandboxDir, string.Empty)
-                .WithDockerfile("CodeSandbox.Executor/Dockerfile")
-                .WithName("codesandbox-executor:test")
-                .WithCleanUp(true)
-                .Build();
+        var solutionDir = GetSolutionDirectory();
+        var sandboxDir = new CommonDirectoryPath(Path.Combine(solutionDir.DirectoryPath, "src", "sandbox"));
+        var imageFuture = new ImageFromDockerfileBuilder()
+            .WithDockerfileDirectory(sandboxDir, string.Empty)
+            .WithDockerfile("CodeSandbox.Executor/Dockerfile")
+            .WithName("codesandbox-executor:test")
+            .WithCleanUp(true)
+            .Build();
 
-            await imageFuture.CreateAsync();
-        }
+        await imageFuture.CreateAsync();
 
         _container = new ContainerBuilder()
             .WithImage("codesandbox-executor:test")
@@ -93,32 +89,6 @@ public class ServerFixture : IAsyncLifetime
         {
             await _container.StopAsync();
             await _container.DisposeAsync();
-        }
-    }
-
-    private static async Task<bool> ImageExistsAsync(string imageName)
-    {
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "docker",
-                    Arguments = $"image inspect {imageName}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-            process.Start();
-            await process.WaitForExitAsync();
-            return process.ExitCode == 0;
-        }
-        catch
-        {
-            return false;
         }
     }
 
