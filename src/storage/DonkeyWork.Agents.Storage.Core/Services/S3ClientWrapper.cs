@@ -9,6 +9,7 @@ namespace DonkeyWork.Agents.Storage.Core.Services;
 
 public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
 {
+    private static readonly HttpClient FallbackHttpClient = new();
     private readonly IAmazonS3 _s3Client;
 
     public S3ClientWrapper(IOptions<StorageOptions> options)
@@ -73,6 +74,27 @@ public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
         {
             return null;
         }
+        catch (ArgumentOutOfRangeException)
+        {
+            // SeaweedFS returns non-standard ETags that the AWS SDK cannot parse as hex.
+            // Fall back to direct HTTP download via presigned URL.
+            return await DownloadViaPresignedUrlAsync(bucketName, objectKey, cancellationToken);
+        }
+    }
+
+    private async Task<Stream?> DownloadViaPresignedUrlAsync(string bucketName, string objectKey, CancellationToken cancellationToken)
+    {
+        var url = GetPreSignedUrl(bucketName, objectKey, TimeSpan.FromMinutes(5));
+        var response = await FallbackHttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            response.Dispose();
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStreamAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(string bucketName, string objectKey, CancellationToken cancellationToken = default)
