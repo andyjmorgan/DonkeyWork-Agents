@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Trash2, Upload, Loader2, Zap, Plus, X } from 'lucide-react'
+import { Trash2, Upload, Loader2, Zap, Plus, X, Download } from 'lucide-react'
 import {
   Button,
   Table,
@@ -18,6 +18,7 @@ export function SkillsPage() {
   const [deletingName, setDeletingName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [downloadingName, setDownloadingName] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadSkills = async () => {
@@ -50,6 +51,18 @@ export function SkillsPage() {
       alert('Failed to delete skill')
     } finally {
       setDeletingName(null)
+    }
+  }
+
+  const handleDownload = async (name: string) => {
+    try {
+      setDownloadingName(name)
+      await skills.download(name)
+    } catch (err) {
+      console.error('Failed to download skill:', err)
+      alert('Failed to download skill')
+    } finally {
+      setDownloadingName(null)
     }
   }
 
@@ -173,6 +186,19 @@ export function SkillsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleDownload(skill.name)}
+                        disabled={downloadingName === skill.name}
+                        title="Download"
+                      >
+                        {downloadingName === skill.name ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(skill.name)}
                         disabled={deletingName === skill.name}
                       >
@@ -195,7 +221,7 @@ export function SkillsPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Created</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                    <TableHead className="w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -215,6 +241,19 @@ export function SkillsPage() {
                       <TableCell>{formatDate(skill.createdAt)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownload(skill.name)}
+                            disabled={downloadingName === skill.name}
+                            title="Download"
+                          >
+                            {downloadingName === skill.name ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

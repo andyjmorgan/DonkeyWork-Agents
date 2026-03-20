@@ -1364,6 +1364,25 @@ export const skills = {
   // Delete a folder
   deleteFolder: (name: string, path: string) =>
     api.delete(`/api/v1/skills/${encodeURIComponent(name)}/folders/${path}`),
+
+  // Download skill as zip
+  download: async (name: string): Promise<void> => {
+    const response = await baseFetchWithAuth(
+      `${getPlatformConfig().apiBaseUrl}/api/v1/skills/${encodeURIComponent(name)}/download`
+    )
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`)
+    }
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${name}.zip`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  },
 }
 
 /**

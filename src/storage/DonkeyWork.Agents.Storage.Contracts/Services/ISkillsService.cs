@@ -15,4 +15,5 @@ public interface ISkillsService
     Task<DuplicateFileResponseV1?> DuplicateFileAsync(string skillName, string relativePath, CancellationToken ct = default);
     Task<CreateFolderResponseV1?> CreateFolderAsync(string skillName, string relativePath, CancellationToken ct = default);
     Task<bool> DeleteFolderAsync(string skillName, string relativePath, CancellationToken ct = default);
+    Task<Stream?> DownloadAsync(string skillName, CancellationToken ct = default);
 }

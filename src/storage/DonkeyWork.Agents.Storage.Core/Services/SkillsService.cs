@@ -389,6 +389,32 @@ public sealed partial class SkillsService : ISkillsService
         return Task.FromResult(true);
     }
 
+    public Task<Stream?> DownloadAsync(string skillName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(skillName) ||
+            skillName.Contains('/') || skillName.Contains('\\') || skillName.Contains(".."))
+            return Task.FromResult<Stream?>(null);
+
+        var userDir = GetUserSkillsDirectory();
+        var skillDir = Path.Combine(userDir, skillName);
+        var canonicalUserDir = Path.GetFullPath(userDir + Path.DirectorySeparatorChar);
+        var canonicalSkillDir = Path.GetFullPath(skillDir + Path.DirectorySeparatorChar);
+
+        if (!canonicalSkillDir.StartsWith(canonicalUserDir, StringComparison.Ordinal))
+            return Task.FromResult<Stream?>(null);
+
+        if (!Directory.Exists(skillDir))
+            return Task.FromResult<Stream?>(null);
+
+        var memoryStream = new MemoryStream();
+        ZipFile.CreateFromDirectory(skillDir, memoryStream, CompressionLevel.Optimal, includeBaseDirectory: true);
+        memoryStream.Position = 0;
+
+        _logger.LogInformation("Downloaded skill '{SkillName}' for user {UserId}", skillName, _identityContext.UserId);
+
+        return Task.FromResult<Stream?>(memoryStream);
+    }
+
     private static IReadOnlyList<SkillFileNodeV1> BuildTree(DirectoryInfo dir)
     {
         var nodes = new List<SkillFileNodeV1>();

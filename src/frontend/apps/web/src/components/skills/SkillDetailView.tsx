@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { skills, type SkillFileNode, type WriteFileRequest } from '@donkeywork/api-client'
 import { Button } from '@donkeywork/ui'
-import { ArrowLeft, FileText } from 'lucide-react'
+import { ArrowLeft, FileText, Download, Loader2 } from 'lucide-react'
 import { SkillFileTree } from './SkillFileTree'
 import { SkillFileEditor } from './SkillFileEditor'
 import { SkillRenameDialog } from './SkillRenameDialog'
@@ -27,6 +27,7 @@ export function SkillDetailView({ name }: SkillDetailViewProps) {
 
   // New item dialog state
   const [newItemTarget, setNewItemTarget] = useState<{ parentPath: string; mode: 'file' | 'folder' } | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   const isDirty = editedContent !== null && editedContent !== fileContent
 
@@ -168,7 +169,29 @@ export function SkillDetailView({ name }: SkillDetailViewProps) {
             Back
           </Button>
         </Link>
-        <h1 className="text-xl font-bold">{name}</h1>
+        <h1 className="text-xl font-bold flex-1">{name}</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={downloading}
+          onClick={async () => {
+            try {
+              setDownloading(true)
+              await skills.download(name)
+            } catch (err) {
+              console.error('Failed to download skill:', err)
+            } finally {
+              setDownloading(false)
+            }
+          }}
+        >
+          {downloading ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-1" />
+          )}
+          Download
+        </Button>
       </div>
 
       <div className="flex flex-1 border border-border rounded-lg overflow-hidden min-h-0">

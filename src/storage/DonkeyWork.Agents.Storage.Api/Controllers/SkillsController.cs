@@ -63,6 +63,21 @@ public class SkillsController : ControllerBase
     }
 
     /// <summary>
+    /// Download a skill as a zip archive.
+    /// </summary>
+    [HttpGet("{name}/download")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Download(string name)
+    {
+        var stream = await _skillsService.DownloadAsync(name);
+        if (stream is null)
+            return NotFound();
+
+        return File(stream, "application/zip", $"{name}.zip");
+    }
+
+    /// <summary>
     /// Delete a skill by name.
     /// </summary>
     [HttpDelete("{name}")]
