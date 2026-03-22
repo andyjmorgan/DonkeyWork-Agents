@@ -9,8 +9,7 @@ public static class AgentContracts
     public static AgentContract Conversation() => new()
     {
         SystemPrompt = [ConversationSystemPrompt],
-        ToolGroups = [ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox],
-        AllowDelegation = true,
+        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 5 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },
         MaxTokens = 20_000,
