@@ -1,4 +1,5 @@
 import { PulseDots } from "./PulseDots";
+import { AgentIcon } from "./AgentIcon";
 import type { ContentBox, AgentCompleteReason } from "@donkeywork/api-client";
 import { Check, X, Ban, AlertTriangle } from "lucide-react";
 
@@ -30,6 +31,8 @@ function countChildAgents(boxes: ContentBox[]): { total: number; completed: numb
 export function AgentCard({
   agentType,
   label,
+  icon,
+  displayName,
   isComplete,
   completeReason,
   boxes,
@@ -38,6 +41,8 @@ export function AgentCard({
 }: {
   agentType: string;
   label?: string;
+  icon?: string;
+  displayName?: string;
   isComplete: boolean;
   completeReason?: AgentCompleteReason;
   boxes: ContentBox[];
@@ -53,6 +58,7 @@ export function AgentCard({
   if (citationCount > 0) badges.push(`${citationCount} citation${citationCount > 1 ? "s" : ""}`);
 
   const color = getAgentColor(agentType);
+  const title = displayName ?? agentType;
 
   return (
     <button
@@ -60,20 +66,23 @@ export function AgentCard({
       onClick={onClick}
       className={`flex items-center justify-between gap-2 rounded-xl border ${color.border} ${color.bg} px-3 py-2.5 text-left transition-all hover:shadow-lg ${color.glow} cursor-pointer`}
     >
-      <div className="flex flex-col gap-1 min-w-0">
-        <span className={`rounded-md ${color.bg} ${color.text} px-2 py-0.5 text-[10px] uppercase tracking-wider font-semibold w-fit`}>
-          {agentType}
-        </span>
-        {label && (
-          <span className="text-xs text-muted-foreground truncate">
-            {label}
+      <div className="flex items-center gap-2 min-w-0">
+        <AgentIcon icon={icon} className="w-5 h-5 shrink-0" fallbackClassName={color.text} />
+        <div className="flex flex-col gap-1 min-w-0">
+          <span className={`text-xs font-semibold ${color.text} truncate`}>
+            {title}
           </span>
-        )}
-        {badges.length > 0 && (
-          <span className="text-[10px] text-muted-foreground truncate">
-            {badges.join(" \u00b7 ")}
-          </span>
-        )}
+          {label && label !== title && (
+            <span className="text-[10px] text-muted-foreground truncate">
+              {label}
+            </span>
+          )}
+          {badges.length > 0 && (
+            <span className="text-[10px] text-muted-foreground truncate">
+              {badges.join(" \u00b7 ")}
+            </span>
+          )}
+        </div>
       </div>
       <div className="shrink-0 flex items-center gap-2">
         {childTotal > 0 && !isComplete && (

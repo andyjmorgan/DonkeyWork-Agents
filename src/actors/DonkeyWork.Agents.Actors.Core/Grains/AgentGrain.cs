@@ -199,6 +199,8 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         _grainContext.McpServers = contract.McpServers;
         _grainContext.SubAgents = contract.SubAgents;
         _grainContext.ToolGroups = effectiveToolGroups;
+        _grainContext.Icon = contract.Icon;
+        _grainContext.DisplayName = contract.DisplayName;
 
         // Initialize MCP tools (lazy, once per activation)
         // Only connect to MCP servers specified in the contract's McpServers list
@@ -255,6 +257,15 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentSpawnTools)];
 
             // Also include swarm management tools so the agent can wait for / cancel spawned agents
+            if (!effectiveToolTypes.Contains(typeof(SwarmAgentManagementTools)))
+                effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
+        }
+
+        // Include delegate spawn tools when explicitly allowed
+        if (contract.AllowDelegation && !effectiveToolTypes.Contains(typeof(SwarmDelegateSpawnTools)))
+        {
+            effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmDelegateSpawnTools)];
+
             if (!effectiveToolTypes.Contains(typeof(SwarmAgentManagementTools)))
                 effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
         }

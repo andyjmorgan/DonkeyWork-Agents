@@ -58,11 +58,21 @@ export function AgentCardGrid({
           ? entry.box.subAgent!.label
           : entry.box.label;
 
+        const icon = entry.kind === "tool_use"
+          ? entry.box.subAgent!.icon
+          : entry.box.icon;
+
+        const displayName = entry.kind === "tool_use"
+          ? entry.box.subAgent!.displayName
+          : entry.box.displayName;
+
         return (
           <AgentCard
             key={entry.kind === "tool_use" ? entry.box.toolUseId : `ag-${i}`}
             agentType={agentType}
             label={label}
+            icon={icon}
+            displayName={displayName}
             isComplete={isComplete}
             completeReason={completeReason}
             boxes={innerBoxes}

@@ -30,6 +30,7 @@ interface AgentBuilderState {
   timeoutSeconds: number
   persistMessages: boolean
   connectToNavi: boolean
+  allowDelegation: boolean
 
   // ReactFlow state
   nodes: Node[]
@@ -53,6 +54,7 @@ interface AgentBuilderState {
     timeoutSeconds?: number
     persistMessages?: boolean
     connectToNavi?: boolean
+    allowDelegation?: boolean
   }) => void
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
@@ -104,6 +106,7 @@ function createInitialState() {
     timeoutSeconds: 300,
     persistMessages: false,
     connectToNavi: false,
+    allowDelegation: false,
     nodes: [createModelNode(modelId)] as Node[],
     edges: [] as Edge[],
     viewport: { x: 0, y: 0, zoom: 1 },
@@ -449,6 +452,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       timeoutSeconds: (contract.timeoutSeconds as number) || 300,
       persistMessages: (contract.persistMessages as boolean) ?? false,
       connectToNavi: (details.connectToNavi as boolean) ?? false,
+      allowDelegation: (contract.allowDelegation as boolean) ?? false,
     }
 
     if (details.reactFlowData && details.nodeConfigurations) {
@@ -490,6 +494,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       lingerSeconds: state.lingerSeconds,
       timeoutSeconds: state.timeoutSeconds,
       persistMessages: state.persistMessages,
+      allowDelegation: state.allowDelegation,
     }
 
     // Model node config
@@ -558,14 +563,6 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
     const allToolIds = toolNodes.flatMap(
       (n) => (nodeConfigurations[n.id]?.toolIds as string[]) || []
     )
-
-    // Auto-include swarm tools when sub-agents are connected
-    if (subAgentRefs.length > 0) {
-      const swarmTools = ['swarm_delegate', 'swarm_management']
-      for (const tool of swarmTools) {
-        if (!allToolIds.includes(tool)) allToolIds.push(tool)
-      }
-    }
 
     if (allToolIds.length > 0) contract.toolGroups = allToolIds
 

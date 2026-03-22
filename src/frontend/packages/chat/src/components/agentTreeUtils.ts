@@ -4,6 +4,8 @@ export type SidePanelAgent = {
   agentKey: string;
   agentType: string;
   label: string;
+  icon?: string;
+  displayName?: string;
   isComplete: boolean;
   completeReason?: AgentCompleteReason;
   boxes: ContentBox[];
@@ -30,7 +32,9 @@ export function extractAgentTree(messages: ChatMessage[]): SidePanelAgent[] {
         nodes.push({
           agentKey: key,
           agentType: box.subAgent.agentType,
-          label: box.displayName ?? box.toolName,
+          label: box.subAgent.displayName ?? box.displayName ?? box.toolName,
+          icon: box.subAgent.icon,
+          displayName: box.subAgent.displayName,
           isComplete: !!box.subAgent.isComplete || !!box.isComplete,
           completeReason: box.completeReason ?? box.subAgent.completeReason,
           boxes: box.subAgent.boxes,
@@ -47,7 +51,9 @@ export function extractAgentTree(messages: ChatMessage[]): SidePanelAgent[] {
         nodes.push({
           agentKey: key,
           agentType: box.agentType,
-          label: box.label ?? box.agentType,
+          label: box.displayName ?? box.label ?? box.agentType,
+          icon: box.icon,
+          displayName: box.displayName,
           isComplete: !!box.isComplete,
           completeReason: box.completeReason,
           boxes: box.boxes,

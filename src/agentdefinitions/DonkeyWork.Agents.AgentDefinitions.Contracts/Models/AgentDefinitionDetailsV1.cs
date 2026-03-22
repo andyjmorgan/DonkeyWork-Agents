@@ -12,6 +12,7 @@ public class AgentDefinitionDetailsV1
     public JsonElement Contract { get; set; }
     public JsonElement? ReactFlowData { get; set; }
     public JsonElement? NodeConfigurations { get; set; }
+    public string? Icon { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 }

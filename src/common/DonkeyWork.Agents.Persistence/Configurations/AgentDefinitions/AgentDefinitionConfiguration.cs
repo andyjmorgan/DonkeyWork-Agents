@@ -61,6 +61,9 @@ public class AgentDefinitionConfiguration : IEntityTypeConfiguration<AgentDefini
             .HasColumnName("connect_to_navi")
             .HasDefaultValue(false);
 
+        builder.Property(e => e.Icon)
+            .HasColumnName("icon");
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();

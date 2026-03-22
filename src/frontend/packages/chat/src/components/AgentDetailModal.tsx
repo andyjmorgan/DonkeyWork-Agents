@@ -10,6 +10,7 @@ import {
 import { BoxList } from "./BoxRenderer";
 import { PulseDots, ActivityIndicator } from "./PulseDots";
 import { AgentCard } from "./AgentCard";
+import { AgentIcon } from "./AgentIcon";
 import type { ContentBox } from "@donkeywork/api-client";
 import { Check, Square, Loader2 } from "lucide-react";
 
@@ -17,6 +18,8 @@ type NestedAgent = {
   agentType: string;
   agentKey: string;
   label?: string;
+  icon?: string;
+  displayName?: string;
   boxes: ContentBox[];
   isComplete: boolean;
 };
@@ -27,6 +30,8 @@ function extractNestedAgent(box: ContentBox): NestedAgent | null {
       agentType: box.subAgent.agentType,
       agentKey: box.subAgent.agentKey,
       label: box.subAgent.label,
+      icon: box.subAgent.icon,
+      displayName: box.subAgent.displayName,
       boxes: box.subAgent.boxes,
       isComplete: !!box.subAgent.isComplete || !!box.isComplete,
     };
@@ -36,6 +41,8 @@ function extractNestedAgent(box: ContentBox): NestedAgent | null {
       agentType: box.agentType,
       agentKey: box.agentKey,
       label: box.label,
+      icon: box.icon,
+      displayName: box.displayName,
       boxes: box.boxes,
       isComplete: !!box.isComplete,
     };
@@ -49,6 +56,8 @@ export function AgentDetailModal({
   agentType,
   agentKey,
   label,
+  icon,
+  displayName,
   boxes,
   isComplete,
   isStreaming,
@@ -60,6 +69,8 @@ export function AgentDetailModal({
   agentType: string;
   agentKey: string;
   label?: string;
+  icon?: string;
+  displayName?: string;
   boxes: ContentBox[];
   isComplete: boolean;
   isStreaming: boolean;
@@ -71,6 +82,7 @@ export function AgentDetailModal({
   const [isFetching, setIsFetching] = useState(false);
   const fetchedKeyRef = useRef<string | null>(null);
   const isActive = isStreaming && !isComplete;
+  const title = displayName ?? agentType;
 
   useEffect(() => {
     if (open) {
@@ -118,8 +130,9 @@ export function AgentDetailModal({
         <DialogContent className="sm:max-w-6xl max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden bg-card border-border">
           <DialogHeader className="px-6 pt-6 pb-3 border-b border-border">
             <DialogTitle className="flex items-center gap-3">
-              <span className="rounded-lg bg-cyan-500/10 text-cyan-400 px-2.5 py-1 text-xs uppercase tracking-wider font-semibold border border-cyan-500/20">
-                {agentType}
+              <AgentIcon icon={icon} className="w-5 h-5 shrink-0" fallbackClassName="text-cyan-400" />
+              <span className="text-sm font-semibold text-foreground">
+                {title}
               </span>
               {isActive && <ActivityIndicator />}
               {isComplete && (
@@ -136,7 +149,7 @@ export function AgentDetailModal({
                 </button>
               )}
             </DialogTitle>
-            {label && (
+            {label && label !== title && (
               <DialogDescription className="text-sm text-muted-foreground mt-1 truncate">
                 {label}
               </DialogDescription>
@@ -163,6 +176,8 @@ export function AgentDetailModal({
                           <div className="my-1">
                             <AgentCard
                               agentType={nested.agentType}
+                              icon={nested.icon}
+                              displayName={nested.displayName}
                               isComplete={nested.isComplete}
                               boxes={nested.boxes}
                               onClick={() => setSelectedChild(nested)}
@@ -197,6 +212,8 @@ export function AgentDetailModal({
           agentType={refreshedChild.agentType}
           agentKey={refreshedChild.agentKey}
           label={refreshedChild.label}
+          icon={refreshedChild.icon}
+          displayName={refreshedChild.displayName}
           boxes={refreshedChild.boxes}
           isComplete={refreshedChild.isComplete}
           isStreaming={isStreaming}

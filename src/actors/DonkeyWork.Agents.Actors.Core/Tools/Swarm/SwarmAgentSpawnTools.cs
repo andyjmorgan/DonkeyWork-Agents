@@ -82,6 +82,9 @@ public sealed class SwarmAgentSpawnTools
             Prompts = contract.Prompts,
             SubAgents = contract.SubAgents,
             ReasoningEffort = contract.ReasoningEffort,
+            DisplayName = definition.Name,
+            Icon = definition.Icon,
+            AllowDelegation = contract.AllowDelegation,
         };
 
         contract = contract.WithParentContext(context);

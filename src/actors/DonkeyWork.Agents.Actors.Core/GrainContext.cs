@@ -18,6 +18,8 @@ public class GrainContext
     public McpServerReference[] McpServers { get; set; } = [];
     public SubAgentReference[] SubAgents { get; set; } = [];
     public string[] ToolGroups { get; set; } = [];
+    public string? Icon { get; set; }
+    public string? DisplayName { get; set; }
 
     public void ReportProgress(string breadcrumb) => ProgressCallback?.Invoke(breadcrumb);
 }

@@ -13,6 +13,7 @@ export function AgentSettingsProperties() {
   const timeoutSeconds = useAgentBuilderStore((s) => s.timeoutSeconds)
   const persistMessages = useAgentBuilderStore((s) => s.persistMessages)
   const connectToNavi = useAgentBuilderStore((s) => s.connectToNavi)
+  const allowDelegation = useAgentBuilderStore((s) => s.allowDelegation)
   const setAgentSettings = useAgentBuilderStore((s) => s.setAgentSettings)
   const isReadOnly = useAgentBuilderStore((s) => s.isReadOnly)
 
@@ -92,6 +93,19 @@ export function AgentSettingsProperties() {
         <Switch
           checked={connectToNavi}
           onCheckedChange={(v) => setAgentSettings({ connectToNavi: v })}
+          disabled={isReadOnly}
+        />
+      </div>
+
+      {/* Allow Delegation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Label>Allow Delegation</Label>
+          <p className="text-xs text-muted-foreground">Let this agent spawn lightweight delegates for ad-hoc tasks</p>
+        </div>
+        <Switch
+          checked={allowDelegation}
+          onCheckedChange={(v) => setAgentSettings({ allowDelegation: v })}
           disabled={isReadOnly}
         />
       </div>

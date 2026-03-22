@@ -36,6 +36,40 @@ internal static class AgentContractExtensions
         Prompts = contract.Prompts,
         SubAgents = contract.SubAgents,
         ReasoningEffort = contract.ReasoningEffort,
+        DisplayName = contract.DisplayName,
+        Icon = contract.Icon,
+        AllowDelegation = contract.AllowDelegation,
+    };
+
+    /// <summary>
+    /// Creates a copy of the contract with the specified icon and display name.
+    /// Only overrides if the provided values are non-null.
+    /// </summary>
+    public static AgentContract WithIcon(this AgentContract contract, string? icon, string? displayName) => new()
+    {
+        SystemPrompt = contract.SystemPrompt,
+        ToolGroups = contract.ToolGroups,
+        MaxTokens = contract.MaxTokens,
+        ThinkingBudgetTokens = contract.ThinkingBudgetTokens,
+        Stream = contract.Stream,
+        WebSearch = contract.WebSearch,
+        WebFetch = contract.WebFetch,
+        PersistMessages = contract.PersistMessages,
+        Lifecycle = contract.Lifecycle,
+        LingerSeconds = contract.LingerSeconds,
+        AgentType = contract.AgentType,
+        KeyPrefix = contract.KeyPrefix,
+        TimeoutSeconds = contract.TimeoutSeconds,
+        McpServers = contract.McpServers,
+        EnableSandbox = contract.EnableSandbox,
+        SandboxPodName = contract.SandboxPodName,
+        ModelId = contract.ModelId,
+        Prompts = contract.Prompts,
+        SubAgents = contract.SubAgents,
+        ReasoningEffort = contract.ReasoningEffort,
+        DisplayName = displayName ?? contract.DisplayName,
+        Icon = icon ?? contract.Icon,
+        AllowDelegation = contract.AllowDelegation,
     };
 
     /// <summary>
@@ -72,6 +106,9 @@ internal static class AgentContractExtensions
             Prompts = contract.Prompts,
             SubAgents = context.SubAgents,
             ReasoningEffort = contract.ReasoningEffort,
+            DisplayName = contract.DisplayName,
+            Icon = contract.Icon,
+            AllowDelegation = contract.AllowDelegation,
         };
     }
 }

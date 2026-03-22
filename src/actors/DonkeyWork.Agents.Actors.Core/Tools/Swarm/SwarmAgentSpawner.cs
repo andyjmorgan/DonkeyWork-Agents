@@ -53,6 +53,8 @@ public sealed class SwarmAgentSpawner
             contract.AgentType)
         {
             Label = label,
+            Icon = contract.Icon,
+            DisplayName = contract.DisplayName,
         });
 
         // If the parent has a sandbox ready, pass the pod name so the child reuses it

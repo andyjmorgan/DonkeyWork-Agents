@@ -26,4 +26,7 @@ public sealed class AgentContract
     [Id(18)] public SubAgentReference[] SubAgents { get; init; } = [];
     [Id(19)] public ReasoningEffort? ReasoningEffort { get; init; }
     [Id(20)] public ToolConfig? ToolConfiguration { get; init; }
+    [Id(21)] public string? DisplayName { get; init; }
+    [Id(22)] public string? Icon { get; init; }
+    [Id(23)] public bool AllowDelegation { get; init; }
 }

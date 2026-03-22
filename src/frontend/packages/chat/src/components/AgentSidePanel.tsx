@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { PulseDots } from "./PulseDots";
+import { AgentIcon } from "./AgentIcon";
 import { ScrollArea } from "@donkeywork/ui";
 import type { ChatMessage } from "@donkeywork/api-client";
 import type { SidePanelAgent } from "./agentTreeUtils";
@@ -34,6 +35,7 @@ function AgentTreeNode({
   const citationCount = agent.boxes.filter((b) => b.type === "citation").length;
   const hasChildren = agent.children.length > 0;
   const isCollapsed = collapsed.has(agent.agentKey);
+  const title = agent.displayName ?? agent.agentType;
 
   const stats: string[] = [];
   if (searchCount > 0) stats.push(`${searchCount} search${searchCount > 1 ? "es" : ""}`);
@@ -64,8 +66,10 @@ function AgentTreeNode({
           onClick={() => onClick(agent)}
           className={`flex-1 min-w-0 flex items-center gap-2 rounded-lg border ${color.border} ${color.bg} px-2 py-1.5 text-left transition-all hover:brightness-125 cursor-pointer`}
         >
-          <div className="shrink-0">
-            {agent.isComplete ? (
+          <div className="shrink-0 flex items-center">
+            {agent.icon ? (
+              <AgentIcon icon={agent.icon} className="w-3.5 h-3.5" fallbackClassName={color.text} />
+            ) : agent.isComplete ? (
               agent.completeReason === "cancelled" ? (
                 <Ban className="w-3 h-3 text-red-400" strokeWidth={2.5} />
               ) : agent.completeReason === "failed" ? (
@@ -79,10 +83,10 @@ function AgentTreeNode({
           </div>
 
           <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className={`text-[10px] uppercase tracking-wider font-semibold ${color.text} truncate`}>
-              {agent.agentType}
+            <span className={`text-[10px] font-semibold ${color.text} truncate`}>
+              {title}
             </span>
-            {agent.label && agent.label !== agent.agentType && (
+            {agent.label && agent.label !== title && (
               <span className="text-[10px] text-muted-foreground truncate">
                 {agent.label}
               </span>
@@ -93,6 +97,22 @@ function AgentTreeNode({
               </span>
             )}
           </div>
+
+          {agent.icon && (
+            <div className="shrink-0">
+              {agent.isComplete ? (
+                agent.completeReason === "cancelled" ? (
+                  <Ban className="w-3 h-3 text-red-400" strokeWidth={2.5} />
+                ) : agent.completeReason === "failed" ? (
+                  <AlertTriangle className="w-3 h-3 text-amber-400" strokeWidth={2.5} />
+                ) : (
+                  <Check className="w-3 h-3 text-emerald-400" strokeWidth={2.5} />
+                )
+              ) : (
+                <PulseDots color={color.dotBg} size="w-1 h-1" />
+              )}
+            </div>
+          )}
 
           {hasChildren && (
             <span className="shrink-0 text-[10px] text-muted-foreground">

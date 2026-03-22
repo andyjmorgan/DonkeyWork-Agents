@@ -61,6 +61,7 @@ public class AgentDefinitionService : IAgentDefinitionService
             UserId = _identityContext.UserId,
             Name = request.Name,
             Description = request.Description,
+            Icon = request.Icon,
             IsSystem = false,
             Contract = defaultContract,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -91,6 +92,9 @@ public class AgentDefinitionService : IAgentDefinitionService
 
         if (request.ConnectToNavi is not null)
             entity.ConnectToNavi = request.ConnectToNavi.Value;
+
+        if (request.Icon is not null)
+            entity.Icon = request.Icon;
 
         if (request.Contract is not null)
             entity.Contract = JsonDocument.Parse(request.Contract.Value.GetRawText());
@@ -141,6 +145,7 @@ public class AgentDefinitionService : IAgentDefinitionService
             Id = e.Id,
             Name = e.Name,
             Description = e.Description,
+            Icon = e.Icon,
             Contract = e.Contract.RootElement.Clone(),
         }).ToList();
     }
@@ -154,6 +159,7 @@ public class AgentDefinitionService : IAgentDefinitionService
             Description = entity.Description,
             IsSystem = entity.IsSystem,
             ConnectToNavi = entity.ConnectToNavi,
+            Icon = entity.Icon,
             CreatedAt = entity.CreatedAt,
         };
     }
@@ -167,6 +173,7 @@ public class AgentDefinitionService : IAgentDefinitionService
             Description = entity.Description,
             IsSystem = entity.IsSystem,
             ConnectToNavi = entity.ConnectToNavi,
+            Icon = entity.Icon,
             Contract = entity.Contract.RootElement.Clone(),
             ReactFlowData = entity.ReactFlowData?.RootElement.Clone(),
             NodeConfigurations = entity.NodeConfigurations?.RootElement.Clone(),

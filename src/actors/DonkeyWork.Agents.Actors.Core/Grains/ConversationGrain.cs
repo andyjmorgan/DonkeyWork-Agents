@@ -324,6 +324,8 @@ public sealed class ConversationGrain : Grain, IConversationGrain, IToolExecutor
         _grainContext.McpServers = _discoveredMcpServers;
         _grainContext.SubAgents = contract.SubAgents;
         _grainContext.ToolGroups = contract.ToolGroups;
+        _grainContext.Icon = contract.Icon;
+        _grainContext.DisplayName = contract.DisplayName;
 
         var toolTypes = ResolveToolGroups(contract.ToolGroups);
         var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;

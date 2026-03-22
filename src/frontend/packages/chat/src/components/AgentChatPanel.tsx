@@ -115,7 +115,7 @@ function MessageBubble({
   );
 }
 
-type ModalData = { agentType: string; agentKey: string; label?: string; boxes: ContentBox[]; isComplete: boolean };
+type ModalData = { agentType: string; agentKey: string; label?: string; icon?: string; displayName?: string; boxes: ContentBox[]; isComplete: boolean };
 
 function findAgentInBoxes(
   boxes: ContentBox[],
@@ -129,6 +129,8 @@ function findAgentInBoxes(
           agentType: box.subAgent.agentType,
           agentKey: box.subAgent.agentKey,
           label: box.subAgent.label,
+          icon: box.subAgent.icon,
+          displayName: box.subAgent.displayName,
           boxes: box.subAgent.boxes,
           isComplete: !!box.isComplete,
         };
@@ -139,6 +141,8 @@ function findAgentInBoxes(
             agentType: box.subAgent.agentType,
             agentKey: box.subAgent.agentKey,
             label: box.subAgent.label,
+            icon: box.subAgent.icon,
+            displayName: box.subAgent.displayName,
             boxes: box.subAgent.boxes,
             isComplete: !!box.subAgent.isComplete || !!box.isComplete,
           };
@@ -152,6 +156,8 @@ function findAgentInBoxes(
           agentType: box.agentType,
           agentKey: box.agentKey,
           label: box.label,
+          icon: box.icon,
+          displayName: box.displayName,
           boxes: box.boxes,
           isComplete: !!box.isComplete,
         };
@@ -213,7 +219,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     messageId: string;
     toolUseId?: string;
     agentKey?: string;
-    direct?: { agentType: string; agentKey: string; label?: string; boxes: ContentBox[]; isComplete: boolean };
+    direct?: ModalData;
   } | null>(null);
 
   useEffect(() => {
@@ -247,19 +253,15 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
         agentType: agent.agentType,
         agentKey: agent.agentKey,
         label: agent.label,
+        icon: agent.icon,
+        displayName: agent.displayName,
         boxes: agent.boxes,
         isComplete: agent.isComplete,
       },
     });
   };
 
-  let modalProps: {
-    agentType: string;
-    agentKey: string;
-    label?: string;
-    boxes: ContentBox[];
-    isComplete: boolean;
-  } | null = null;
+  let modalProps: ModalData | null = null;
 
   if (selectedAgent) {
     if (selectedAgent.direct) {
@@ -491,6 +493,8 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
           agentType={modalProps.agentType}
           agentKey={modalProps.agentKey}
           label={modalProps.label}
+          icon={modalProps.icon}
+          displayName={modalProps.displayName}
           boxes={modalProps.boxes}
           isComplete={modalProps.isComplete}
           isStreaming={isProcessing}

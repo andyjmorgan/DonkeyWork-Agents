@@ -11,4 +11,5 @@ public class AgentDefinitionEntity : BaseEntity
     public JsonDocument? ReactFlowData { get; set; }
     public JsonDocument? NodeConfigurations { get; set; }
     public bool ConnectToNavi { get; set; }
+    public string? Icon { get; set; }
 }

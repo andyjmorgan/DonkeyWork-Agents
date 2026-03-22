@@ -9,7 +9,8 @@ public static class AgentContracts
     public static AgentContract Conversation() => new()
     {
         SystemPrompt = [ConversationSystemPrompt],
-        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox],
+        ToolGroups = [ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox],
+        AllowDelegation = true,
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 5 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },
         MaxTokens = 20_000,
@@ -19,6 +20,8 @@ public static class AgentContracts
         Lifecycle = AgentLifecycle.Linger,
         LingerSeconds = 1800,
         PersistMessages = true,
+        DisplayName = "Navi",
+        Icon = "bot",
     };
 
     [AgentContractDefinition(AgentTypes.Delegate)]
@@ -34,6 +37,8 @@ public static class AgentContracts
         KeyPrefix = AgentKeys.DelegatePrefix,
         Lifecycle = AgentLifecycle.Task,
         TimeoutSeconds = 300,
+        DisplayName = "Navi",
+        Icon = "bot",
     };
 
     private const string ConversationSystemPrompt =

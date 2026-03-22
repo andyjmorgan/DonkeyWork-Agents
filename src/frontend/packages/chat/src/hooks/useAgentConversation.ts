@@ -343,6 +343,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         const spawnedKey = (data.spawnedAgentKey as string) ?? "";
         const agentType = (data.agentType as string) ?? "";
         const label = (data.label as string) || undefined;
+        const icon = (data.icon as string) || undefined;
+        const displayName = (data.displayName as string) || undefined;
         const parentEntry = agentGroupIndexRef.current.get(agentKey);
         const targetMessageId = parentEntry?.messageId ?? assistantId;
 
@@ -364,7 +366,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
                 if (b.type === "tool_use" && !b.subAgent) {
                   innerBoxes[i] = {
                     ...b,
-                    subAgent: { type: "agent_group", agentKey: spawnedKey, agentType, label, boxes: [] },
+                    subAgent: { type: "agent_group", agentKey: spawnedKey, agentType, label, icon, displayName, boxes: [] },
                   };
                   attached = true;
                   break;
@@ -376,6 +378,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
                   agentKey: spawnedKey,
                   agentType,
                   label,
+                  icon,
+                  displayName,
                   boxes: [],
                 });
               }
@@ -407,6 +411,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
             agentKey: spawnedKey,
             agentType,
             label,
+            icon,
+            displayName,
             boxes: [],
           }];
         });

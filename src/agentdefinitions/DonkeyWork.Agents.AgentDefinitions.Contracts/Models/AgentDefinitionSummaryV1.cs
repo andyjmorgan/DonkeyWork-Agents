@@ -7,5 +7,6 @@ public class AgentDefinitionSummaryV1
     public string? Description { get; set; }
     public bool IsSystem { get; set; }
     public bool ConnectToNavi { get; set; }
+    public string? Icon { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }

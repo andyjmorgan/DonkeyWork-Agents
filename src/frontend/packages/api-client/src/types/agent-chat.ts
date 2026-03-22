@@ -25,6 +25,8 @@ export type AgentGroupBox = {
   agentKey: string;
   agentType: string;
   label?: string;
+  icon?: string;
+  displayName?: string;
   boxes: ContentBox[];
   isComplete?: boolean;
   completeReason?: AgentCompleteReason;
