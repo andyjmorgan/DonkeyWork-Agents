@@ -21,6 +21,7 @@ interface AgentBuilderState {
   agentId: string | null
   agentName: string
   agentDescription: string
+  agentIcon: string
   isReadOnly: boolean
   isSystem: boolean
 
@@ -47,7 +48,7 @@ interface AgentBuilderState {
   showingAgentSettings: boolean
 
   // Actions
-  setAgentMetadata: (name: string, description: string) => void
+  setAgentMetadata: (name: string, description: string, icon?: string) => void
   setAgentSettings: (settings: {
     lifecycle?: 'Task' | 'Linger'
     lingerSeconds?: number
@@ -99,6 +100,7 @@ function createInitialState() {
     agentId: null,
     agentName: 'Untitled Agent',
     agentDescription: '',
+    agentIcon: '',
     isReadOnly: false,
     isSystem: false,
     lifecycle: 'Task' as const,
@@ -137,8 +139,8 @@ function getTargetHandle(nodeType: string): string {
 export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
   ...createInitialState(),
 
-  setAgentMetadata: (name, description) => {
-    set({ agentName: name, agentDescription: description })
+  setAgentMetadata: (name, description, icon) => {
+    set({ agentName: name, agentDescription: description, ...(icon !== undefined ? { agentIcon: icon } : {}) })
   },
 
   setAgentSettings: (settings) => {
@@ -460,6 +462,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         agentId: details.id,
         agentName: details.name,
         agentDescription: details.description || '',
+        agentIcon: details.icon || '',
         isReadOnly: details.isSystem,
         isSystem: details.isSystem,
         ...agentSettings,
@@ -478,6 +481,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         agentId: details.id,
         agentName: details.name,
         agentDescription: details.description || '',
+        agentIcon: details.icon || '',
         isReadOnly: details.isSystem,
         isSystem: details.isSystem,
         ...agentSettings,
@@ -650,6 +654,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
     await agentDefinitions.update(state.agentId, {
       name: state.agentName,
       description: state.agentDescription,
+      icon: state.agentIcon || undefined,
       connectToNavi: state.connectToNavi,
       contract: state.serializeToContract(),
       reactFlowData: {
