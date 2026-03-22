@@ -74,6 +74,10 @@ public static class AgentContracts
         - If you already have the result (e.g. you called `wait_for_agent` earlier), ignore the notification entirely.
         - If you do NOT yet have the result, briefly let the user know the agent finished and ask if they'd like to see the results.
 
+        ## Handling Timeouts
+
+        If `wait_for_agent` or `wait_for_any` returns a timeout status, the agent may still be running. Always retry at least once with a longer timeout before giving up. Only cancel the agent if the second wait also times out.
+
         ## Key Principles
 
         - Prefer answering directly over spawning agents when possible

@@ -11,8 +11,8 @@ public sealed class SwarmAgentManagementTools
     [AgentTool("wait_for_any")]
     [Description("Wait for any spawned agent to complete and return its result. Returns the first agent that finishes. Use this when you have multiple agents running and want to process results as they arrive.")]
     public async Task<ToolResult> WaitForAny(
-        [Description("Maximum seconds to wait before timing out. Defaults to 120.")]
-        int timeout_seconds = 120,
+        [Description("Maximum seconds to wait before timing out. Defaults to 300.")]
+        int timeout_seconds = 300,
         GrainContext? context = null,
         IIdentityContext? identityContext = null,
         CancellationToken ct = default)
@@ -44,8 +44,8 @@ public sealed class SwarmAgentManagementTools
     public async Task<ToolResult> WaitForAgent(
         [Description("The agent key of the agent to wait for")]
         string agent_key,
-        [Description("Maximum seconds to wait before timing out. Defaults to 120.")]
-        int timeout_seconds = 120,
+        [Description("Maximum seconds to wait before timing out. Defaults to 300.")]
+        int timeout_seconds = 300,
         GrainContext? context = null,
         IIdentityContext? identityContext = null,
         CancellationToken ct = default)
