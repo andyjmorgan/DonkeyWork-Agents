@@ -234,8 +234,9 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                     },
                     ct);
 
-                // Auto-include sandbox tools when MCP servers are connected
-                if (!effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
+                // Provision sandbox for MCP servers only if sandbox is already enabled on the contract
+                if (contract.EnableSandbox
+                    && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
                 {
                     _hasMcpSandbox = true;
                     _sandboxHandle = new SandboxProvisioningHandle();
