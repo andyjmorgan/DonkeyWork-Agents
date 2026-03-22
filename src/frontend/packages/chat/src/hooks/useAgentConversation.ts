@@ -398,7 +398,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
             if (b.type === "tool_use" && !b.subAgent) {
               newBoxes[i] = {
                 ...b,
-                subAgent: { type: "agent_group", agentKey: spawnedKey, agentType, label, boxes: [] },
+                subAgent: { type: "agent_group", agentKey: spawnedKey, agentType, label, icon, displayName, boxes: [] },
               };
               agentGroupIndexRef.current.set(spawnedKey, { messageId: targetMessageId, boxIndex: i });
               return newBoxes;
