@@ -21,6 +21,7 @@ interface AgentBuilderState {
   agentId: string | null
   agentName: string
   agentDescription: string
+  agentDisplayName: string
   agentIcon: string
   isReadOnly: boolean
   isSystem: boolean
@@ -48,7 +49,7 @@ interface AgentBuilderState {
   showingAgentSettings: boolean
 
   // Actions
-  setAgentMetadata: (name: string, description: string, icon?: string) => void
+  setAgentMetadata: (name: string, description: string, displayName?: string, icon?: string) => void
   setAgentSettings: (settings: {
     lifecycle?: 'Task' | 'Linger'
     lingerSeconds?: number
@@ -100,6 +101,7 @@ function createInitialState() {
     agentId: null,
     agentName: 'Untitled Agent',
     agentDescription: '',
+    agentDisplayName: '',
     agentIcon: '',
     isReadOnly: false,
     isSystem: false,
@@ -139,8 +141,13 @@ function getTargetHandle(nodeType: string): string {
 export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
   ...createInitialState(),
 
-  setAgentMetadata: (name, description, icon) => {
-    set({ agentName: name, agentDescription: description, ...(icon !== undefined ? { agentIcon: icon } : {}) })
+  setAgentMetadata: (name, description, displayName, icon) => {
+    set({
+      agentName: name,
+      agentDescription: description,
+      ...(displayName !== undefined ? { agentDisplayName: displayName } : {}),
+      ...(icon !== undefined ? { agentIcon: icon } : {}),
+    })
   },
 
   setAgentSettings: (settings) => {
@@ -462,6 +469,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         agentId: details.id,
         agentName: details.name,
         agentDescription: details.description || '',
+        agentDisplayName: (contract.displayName as string) || '',
         agentIcon: details.icon || '',
         isReadOnly: details.isSystem,
         isSystem: details.isSystem,
@@ -481,6 +489,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         agentId: details.id,
         agentName: details.name,
         agentDescription: details.description || '',
+        agentDisplayName: (contract.displayName as string) || '',
         agentIcon: details.icon || '',
         isReadOnly: details.isSystem,
         isSystem: details.isSystem,
@@ -499,6 +508,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       timeoutSeconds: state.timeoutSeconds,
       persistMessages: state.persistMessages,
       allowDelegation: state.allowDelegation,
+      displayName: state.agentDisplayName || undefined,
     }
 
     // Model node config

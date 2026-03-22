@@ -1727,6 +1727,7 @@ export interface AgentContractV1 {
   prompts?: string[]
   toolConfiguration?: ToolConfig
   allowDelegation?: boolean
+  displayName?: string
 }
 
 export interface AgentDefinitionSummary {

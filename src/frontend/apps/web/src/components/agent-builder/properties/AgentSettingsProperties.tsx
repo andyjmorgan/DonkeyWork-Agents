@@ -8,10 +8,6 @@ import {
 } from '@donkeywork/ui'
 
 export function AgentSettingsProperties() {
-  const agentIcon = useAgentBuilderStore((s) => s.agentIcon)
-  const setAgentMetadata = useAgentBuilderStore((s) => s.setAgentMetadata)
-  const agentName = useAgentBuilderStore((s) => s.agentName)
-  const agentDescription = useAgentBuilderStore((s) => s.agentDescription)
   const lifecycle = useAgentBuilderStore((s) => s.lifecycle)
   const lingerSeconds = useAgentBuilderStore((s) => s.lingerSeconds)
   const timeoutSeconds = useAgentBuilderStore((s) => s.timeoutSeconds)
@@ -23,21 +19,6 @@ export function AgentSettingsProperties() {
 
   return (
     <div className="space-y-6">
-      {/* Icon */}
-      <div className="space-y-2">
-        <Label htmlFor="agent-icon">Icon</Label>
-        <Input
-          id="agent-icon"
-          value={agentIcon}
-          onChange={(e) => setAgentMetadata(agentName, agentDescription, e.target.value)}
-          placeholder="lucide icon name or image URL"
-          disabled={isReadOnly}
-        />
-        <p className="text-xs text-muted-foreground">
-          A lucide icon name (e.g. "brain", "search") or an image URL (png, svg, ico)
-        </p>
-      </div>
-
       {/* Lifecycle */}
       <div className="space-y-2">
         <Label>Lifecycle</Label>

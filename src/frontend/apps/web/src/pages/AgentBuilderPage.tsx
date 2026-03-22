@@ -18,6 +18,8 @@ export function AgentBuilderPage() {
   const agentId = useAgentBuilderStore((s) => s.agentId)
   const agentName = useAgentBuilderStore((s) => s.agentName)
   const agentDescription = useAgentBuilderStore((s) => s.agentDescription)
+  const agentDisplayName = useAgentBuilderStore((s) => s.agentDisplayName)
+  const agentIcon = useAgentBuilderStore((s) => s.agentIcon)
   const isReadOnly = useAgentBuilderStore((s) => s.isReadOnly)
   const isSystem = useAgentBuilderStore((s) => s.isSystem)
   const loadAgent = useAgentBuilderStore((s) => s.loadAgent)
@@ -69,11 +71,11 @@ export function AgentBuilderPage() {
   }, [agentId, save])
 
   const handleMetadataSave = useCallback(
-    async (name: string, description: string) => {
-      setAgentMetadata(name, description)
+    async (name: string, description: string, displayName: string, icon: string) => {
+      setAgentMetadata(name, description, displayName, icon)
       if (agentId) {
         try {
-          await agentDefinitions.update(agentId, { name, description })
+          await agentDefinitions.update(agentId, { name, description, icon: icon || undefined })
         } catch (error) {
           console.error('Failed to update metadata:', error)
         }
@@ -175,6 +177,8 @@ export function AgentBuilderPage() {
         onOpenChange={setIsMetadataDialogOpen}
         name={agentName}
         description={agentDescription}
+        displayName={agentDisplayName}
+        icon={agentIcon}
         onSave={handleMetadataSave}
       />
 
