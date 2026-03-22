@@ -84,6 +84,11 @@ internal static class AgentContractExtensions
             ? contract.ToolGroups
             : context.ToolGroups.Where(g => !ExcludedChildToolGroups.Contains(g)).ToArray();
 
+        // Keep the agent's own sub-agents if defined; otherwise inherit from parent.
+        var subAgents = contract.SubAgents.Length > 0
+            ? contract.SubAgents
+            : context.SubAgents;
+
         return new AgentContract
         {
             SystemPrompt = contract.SystemPrompt,
@@ -104,7 +109,7 @@ internal static class AgentContractExtensions
             SandboxPodName = contract.SandboxPodName,
             ModelId = contract.ModelId,
             Prompts = contract.Prompts,
-            SubAgents = context.SubAgents,
+            SubAgents = subAgents,
             ReasoningEffort = contract.ReasoningEffort,
             DisplayName = contract.DisplayName,
             Icon = contract.Icon,
