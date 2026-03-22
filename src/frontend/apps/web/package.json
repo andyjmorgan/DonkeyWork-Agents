@@ -62,7 +62,7 @@
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
     "lowlight": "^3.3.0",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^0.577.0",
     "marked": "^17.0.1",
     "mermaid": "^11.12.2",
     "react": "^19.2.0",

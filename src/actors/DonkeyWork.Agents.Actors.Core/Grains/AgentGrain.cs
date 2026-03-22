@@ -252,6 +252,11 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             : toolTypes;
 
         // Auto-include agent spawn tools when the contract has sub-agents configured
+        _logger.LogInformation(
+            "SubAgents check: Count={SubAgentCount}, Names=[{SubAgentNames}]",
+            contract.SubAgents.Length,
+            string.Join(", ", contract.SubAgents.Select(s => s.Name)));
+
         if (contract.SubAgents is { Length: > 0 }
             && !effectiveToolTypes.Contains(typeof(SwarmAgentSpawnTools)))
         {
