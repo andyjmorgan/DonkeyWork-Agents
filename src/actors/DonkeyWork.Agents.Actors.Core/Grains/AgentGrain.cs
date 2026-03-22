@@ -54,6 +54,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     private IAgentResponseObserver? _observer;
     private McpToolProvider? _mcpToolProvider;
     private bool _hasMcpSandbox;
+    private Type[]? _effectiveToolTypes;
     private SandboxProvisioningHandle? _sandboxHandle;
     private int _contextWindowLimit;
     private int _maxOutputTokens;
@@ -312,6 +313,9 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             }
         }
 
+        // Store effective tool types for scope checking during tool execution
+        _effectiveToolTypes = effectiveToolTypes;
+
         var localTools = effectiveToolTypes.Length > 0
             ? _toolRegistry.GetToolDefinitions(
                 effectiveToolTypes,
@@ -457,8 +461,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     {
         if (_toolRegistry.HasTool(toolName))
         {
-            var toolTypes = _contract is not null ? ResolveToolGroups(_contract.ToolGroups) : null;
-            var result = await _toolRegistry.ExecuteAsync(toolName, arguments, _grainContext, _identityContext, ServiceProvider, ct, toolTypes);
+            var result = await _toolRegistry.ExecuteAsync(toolName, arguments, _grainContext, _identityContext, ServiceProvider, ct, _effectiveToolTypes);
             return new ToolExecutionResult(result.Content, result.IsError);
         }
 
