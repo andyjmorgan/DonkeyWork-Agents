@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
@@ -8,7 +7,6 @@ using DonkeyWork.Agents.Actors.Contracts.Messages;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
-using DonkeyWork.Agents.Actors.Core.Middleware.Messages;
 using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Providers;
 using DonkeyWork.Agents.Actors.Core.Providers.Responses;
@@ -23,46 +21,14 @@ using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
 using DonkeyWork.Agents.Providers.Contracts.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace DonkeyWork.Agents.Actors.Core.Grains;
 
 [CollectionAgeLimit(Minutes = 25)]
-public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
+public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 {
-    private readonly ILogger<AgentGrain> _logger;
-    private readonly GrainContext _grainContext;
-    private readonly IIdentityContext _identityContext;
-    private readonly ModelPipeline _pipeline;
-    private readonly AgentToolRegistry _toolRegistry;
-    private readonly AnthropicOptions _anthropicOptions;
-    private readonly IExternalApiKeyService _apiKeyService;
-    private readonly IMcpServerConfigurationService _mcpServerConfigService;
-    private readonly McpSandboxManagerClient _mcpSandboxManagerClient;
-    private readonly IGrainMessageStore _messageStore;
-    private readonly IPromptService _promptService;
-    private readonly IModelCatalogService _modelCatalogService;
-    private readonly IAgentExecutionRepository _executionRepository;
-
-    private List<InternalMessage> _messages = [];
-    private int _nextSequenceNumber;
-    private AgentContract? _contract;
-    private CancellationTokenSource? _cts;
-    private bool _explicitCancel;
-    private IAgentResponseObserver? _observer;
-    private McpToolProvider? _mcpToolProvider;
-    private bool _hasMcpSandbox;
-    private Type[]? _effectiveToolTypes;
-    private SandboxProvisioningHandle? _sandboxHandle;
-    private int _contextWindowLimit;
-    private int _maxOutputTokens;
-    private Guid _executionId;
-    private int _totalInputTokens;
-    private int _totalOutputTokens;
-    private DateTimeOffset _executionStartedAt;
-
     public AgentGrain(
         ILogger<AgentGrain> logger,
         GrainContext grainContext,
@@ -77,39 +43,138 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         IPromptService promptService,
         IModelCatalogService modelCatalogService,
         IAgentExecutionRepository executionRepository)
+        : base(
+            logger,
+            grainContext,
+            identityContext,
+            pipeline,
+            toolRegistry,
+            anthropicOptions.Value,
+            apiKeyService,
+            mcpServerConfigService,
+            mcpSandboxManagerClient,
+            messageStore,
+            promptService,
+            modelCatalogService,
+            executionRepository)
     {
-        _logger = logger;
-        _grainContext = grainContext;
-        _identityContext = identityContext;
-        _pipeline = pipeline;
-        _toolRegistry = toolRegistry;
-        _anthropicOptions = anthropicOptions.Value;
-        _apiKeyService = apiKeyService;
-        _mcpServerConfigService = mcpServerConfigService;
-        _mcpSandboxManagerClient = mcpSandboxManagerClient;
-        _messageStore = messageStore;
-        _promptService = promptService;
-        _modelCatalogService = modelCatalogService;
-        _executionRepository = executionRepository;
     }
+
+    #region Abstract Method Implementations
+
+    protected override McpServerReference[] GetMcpServerReferences(AgentContract contract)
+    {
+        return contract.McpServers;
+    }
+
+    protected override async Task InitializeMcpToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
+    {
+        if (McpToolProvider is not null || contract.McpServers is not { Length: > 0 })
+            return;
+
+        var allowedIds = new HashSet<Guid>(
+            contract.McpServers
+                .Select(s => Guid.TryParse(s.Id, out var id) ? id : (Guid?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value));
+
+        var httpConfigs = (await McpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
+            .Where(c => allowedIds.Contains(c.Id))
+            .ToList();
+        var stdioConfigs = (await McpServerConfigService.GetEnabledStdioConfigsAsync(ct))
+            .Where(c => allowedIds.Contains(c.Id))
+            .ToList();
+
+        if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
+        {
+            McpToolProvider = new McpToolProvider();
+            await McpToolProvider.InitializeAsync(
+                httpConfigs,
+                stdioConfigs,
+                McpSandboxManagerClient,
+                IdentityContext.UserId.ToString(),
+                Logger,
+                (name, success, ms, toolCount, error) =>
+                {
+                    Emit(new StreamMcpServerStatusEvent(GrainContext.GrainKey, name, success, ms, toolCount, error));
+                },
+                ct);
+
+            // Provision sandbox for MCP servers only if sandbox is already enabled on the contract
+            if (contract.EnableSandbox
+                && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
+            {
+                HasMcpSandbox = true;
+                SandboxHandle = new SandboxProvisioningHandle();
+                GrainContext.SandboxHandle = SandboxHandle;
+                _ = ProvisionSandboxInternalAsync(SandboxHandle);
+            }
+        }
+    }
+
+    protected override Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
+    {
+        if (contract.SubAgents is not { Length: > 0 })
+            return Task.FromResult<string?>(null);
+
+        var catalog = $"\n\n## Sub-Agents\n\nAvailable via `{ToolNames.SpawnAgent}` (use agent name):\n";
+        foreach (var sa in contract.SubAgents)
+        {
+            var desc = !string.IsNullOrEmpty(sa.Description) ? sa.Description : "No description";
+            catalog += $"- **{sa.Name}**: {desc}\n";
+        }
+
+        return Task.FromResult<string?>(catalog);
+    }
+
+    protected override McpServerReference[]? GetDeferredToolsServers(AgentContract contract)
+    {
+        return contract.McpServers;
+    }
+
+    protected override Type[] GetAdditionalSwarmToolTypes(AgentContract contract, Type[] currentTypes)
+    {
+        var result = currentTypes;
+
+        if (contract.SubAgents is { Length: > 0 }
+            && !result.Contains(typeof(SwarmAgentSpawnTools)))
+        {
+            result = [..result, typeof(SwarmAgentSpawnTools)];
+
+            if (!result.Contains(typeof(SwarmAgentManagementTools)))
+                result = [..result, typeof(SwarmAgentManagementTools)];
+        }
+
+        if (contract.AllowDelegation && !result.Contains(typeof(SwarmDelegateSpawnTools)))
+        {
+            result = [..result, typeof(SwarmDelegateSpawnTools)];
+
+            if (!result.Contains(typeof(SwarmAgentManagementTools)))
+                result = [..result, typeof(SwarmAgentManagementTools)];
+        }
+
+        return result;
+    }
+
+    #endregion
 
     #region IAgentGrain
 
     public async Task<AgentResult> RunAsync(AgentContract contract, string input, IAgentResponseObserver? observer)
     {
-        _contract = contract;
-        _observer = observer;
-        _explicitCancel = false;
+        Contract = contract;
+        Observer = observer;
+        ExplicitCancel = false;
 
-        SetupGrainContext(observer);
+        SetupGrainContext();
 
         // Read executionId set by the spawner via RequestContext
         var executionIdStr = RequestContext.Get(GrainCallContextKeys.ExecutionId) as string;
         if (Guid.TryParse(executionIdStr, out var execId))
-            _executionId = execId;
-        _executionStartedAt = DateTimeOffset.UtcNow;
-        _totalInputTokens = 0;
-        _totalOutputTokens = 0;
+            ExecutionId = execId;
+        ExecutionStartedAt = DateTimeOffset.UtcNow;
+        TotalInputTokens = 0;
+        TotalOutputTokens = 0;
 
         var messages = BuildInitialMessages(contract, input);
 
@@ -119,30 +184,30 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             Content = input,
             Origin = MessageOrigin.User,
         };
-        _messages.Add(userMsg);
-        await _messageStore.AppendMessageAsync(
-            _grainContext.GrainKey, _identityContext.UserId, userMsg, _nextSequenceNumber++);
+        Messages.Add(userMsg);
+        await MessageStore.AppendMessageAsync(
+            GrainContext.GrainKey, IdentityContext.UserId, userMsg, NextSequenceNumber++);
 
         var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
-        _cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+        Cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
 
         AgentResult result = AgentResult.Empty;
         bool isError = false;
 
         try
         {
-            result = await RunPipelineAsync(contract, messages, _cts.Token);
+            result = await RunPipelineAsync(contract, messages, Cts.Token);
         }
         catch (OperationCanceledException)
         {
-            var reason = _explicitCancel ? "cancelled by user" : "timed out";
-            _logger.LogWarning("Agent {Key} {Reason}", _grainContext.GrainKey, reason);
+            var reason = ExplicitCancel ? "cancelled by user" : "timed out";
+            Logger.LogWarning("Agent {Key} {Reason}", GrainContext.GrainKey, reason);
             result = AgentResult.FromText($"Agent {reason}.");
             isError = true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Agent {Key} failed", _grainContext.GrainKey);
+            Logger.LogError(ex, "Agent {Key} failed", GrainContext.GrainKey);
             result = AgentResult.FromText($"Agent error: {ex.Message}");
             isError = true;
         }
@@ -156,14 +221,14 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     public Task CancelAsync()
     {
-        _explicitCancel = true;
-        _cts?.Cancel();
+        ExplicitCancel = true;
+        Cts?.Cancel();
         return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
     {
-        return Task.FromResult<IReadOnlyList<InternalMessage>>(_messages);
+        return Task.FromResult<IReadOnlyList<InternalMessage>>(Messages);
     }
 
     #endregion
@@ -181,101 +246,43 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             ? [..contract.ToolGroups, ToolGroupNames.Sandbox]
             : contract.ToolGroups;
 
-        _logger.LogInformation(
+        Logger.LogInformation(
             "Contract: EnableSandbox={EnableSandbox}, ToolGroups=[{ToolGroups}], EffectiveToolGroups=[{EffectiveToolGroups}]",
             contract.EnableSandbox, string.Join(", ", contract.ToolGroups), string.Join(", ", effectiveToolGroups));
 
         EnsureSandboxProvisioning(contract);
 
         var toolTypes = ResolveToolGroups(effectiveToolGroups);
-        _logger.LogInformation("Resolved {ToolTypeCount} tool types from {GroupCount} groups",
+        Logger.LogInformation("Resolved {ToolTypeCount} tool types from {GroupCount} groups",
             toolTypes.Length, effectiveToolGroups.Length);
-        var modelId = contract.ModelId ?? _anthropicOptions.DefaultModelId;
+        var modelId = contract.ModelId ?? AnthropicOptions.DefaultModelId;
 
-        var modelDefinition = _modelCatalogService.GetModelById(modelId);
-        _contextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
-        _maxOutputTokens = modelDefinition?.MaxOutputTokens ?? 0;
+        var modelDefinition = ModelCatalogService.GetModelById(modelId);
+        ContextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
+        MaxOutputTokens = modelDefinition?.MaxOutputTokens ?? 0;
 
         // Populate grain context with contract's MCP servers, sub-agents, and tool groups for swarm tool inheritance
-        _grainContext.McpServers = contract.McpServers;
-        _grainContext.SubAgents = contract.SubAgents;
-        _grainContext.ToolGroups = effectiveToolGroups;
-        _grainContext.Icon = contract.Icon;
-        _grainContext.DisplayName = contract.DisplayName;
+        GrainContext.McpServers = contract.McpServers;
+        GrainContext.SubAgents = contract.SubAgents;
+        GrainContext.ToolGroups = effectiveToolGroups;
+        GrainContext.Icon = contract.Icon;
+        GrainContext.DisplayName = contract.DisplayName;
 
         // Initialize MCP tools (lazy, once per activation)
-        // Only connect to MCP servers specified in the contract's McpServers list
-        if (_mcpToolProvider is null && contract.McpServers is { Length: > 0 })
-        {
-            var allowedIds = new HashSet<Guid>(
-                contract.McpServers
-                    .Select(s => Guid.TryParse(s.Id, out var id) ? id : (Guid?)null)
-                    .Where(id => id.HasValue)
-                    .Select(id => id!.Value));
-
-            var httpConfigs = (await _mcpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
-                .Where(c => allowedIds.Contains(c.Id))
-                .ToList();
-            var stdioConfigs = (await _mcpServerConfigService.GetEnabledStdioConfigsAsync(ct))
-                .Where(c => allowedIds.Contains(c.Id))
-                .ToList();
-
-            if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
-            {
-                _mcpToolProvider = new McpToolProvider();
-                await _mcpToolProvider.InitializeAsync(
-                    httpConfigs,
-                    stdioConfigs,
-                    _mcpSandboxManagerClient,
-                    _identityContext.UserId.ToString(),
-                    _logger,
-                    (name, success, ms, toolCount, error) =>
-                    {
-                        Emit(new StreamMcpServerStatusEvent(_grainContext.GrainKey, name, success, ms, toolCount, error));
-                    },
-                    ct);
-
-                // Provision sandbox for MCP servers only if sandbox is already enabled on the contract
-                if (contract.EnableSandbox
-                    && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
-                {
-                    _hasMcpSandbox = true;
-                    _sandboxHandle = new SandboxProvisioningHandle();
-                    _grainContext.SandboxHandle = _sandboxHandle;
-                    _ = ProvisionSandboxInternalAsync(_sandboxHandle);
-                }
-            }
-        }
+        await InitializeMcpToolsAsync(contract, effectiveToolGroups, ct);
 
         // Include sandbox tools if MCP servers triggered auto-sandbox
-        var effectiveToolTypes = _hasMcpSandbox && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
+        var effectiveToolTypes = HasMcpSandbox && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
             ? [..toolTypes, typeof(SandboxTools)]
             : toolTypes;
 
         // Auto-include agent spawn tools when the contract has sub-agents configured
-        _logger.LogInformation(
+        Logger.LogInformation(
             "SubAgents check: Count={SubAgentCount}, Names=[{SubAgentNames}]",
             contract.SubAgents.Length,
             string.Join(", ", contract.SubAgents.Select(s => s.Name)));
 
-        if (contract.SubAgents is { Length: > 0 }
-            && !effectiveToolTypes.Contains(typeof(SwarmAgentSpawnTools)))
-        {
-            effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentSpawnTools)];
-
-            // Also include swarm management tools so the agent can wait for / cancel spawned agents
-            if (!effectiveToolTypes.Contains(typeof(SwarmAgentManagementTools)))
-                effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
-        }
-
-        // Include delegate spawn tools when explicitly allowed
-        if (contract.AllowDelegation && !effectiveToolTypes.Contains(typeof(SwarmDelegateSpawnTools)))
-        {
-            effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmDelegateSpawnTools)];
-
-            if (!effectiveToolTypes.Contains(typeof(SwarmAgentManagementTools)))
-                effectiveToolTypes = [..effectiveToolTypes, typeof(SwarmAgentManagementTools)];
-        }
+        effectiveToolTypes = GetAdditionalSwarmToolTypes(contract, effectiveToolTypes);
 
         // Resolve tool configuration from contract
         var toolConfig = contract.ToolConfiguration;
@@ -314,10 +321,10 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         }
 
         // Store effective tool types for scope checking during tool execution
-        _effectiveToolTypes = effectiveToolTypes;
+        EffectiveToolTypes = effectiveToolTypes;
 
         var localTools = effectiveToolTypes.Length > 0
-            ? _toolRegistry.GetToolDefinitions(
+            ? ToolRegistry.GetToolDefinitions(
                 effectiveToolTypes,
                 deferredTypes.Count > 0 ? deferredTypes : null,
                 excludedLocalTools.Count > 0 ? excludedLocalTools : null)
@@ -327,7 +334,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         // MCP tools default to deferred when no explicit config (backward compat)
         var mcpDefer = hasExplicitConfig ? globalDefer : true;
         IReadOnlyList<InternalToolDefinition> mcpTools;
-        if (_mcpToolProvider is not null)
+        if (McpToolProvider is not null)
         {
             Dictionary<string, bool>? mcpPerToolDefer = null;
             HashSet<string>? excludedMcpTools = null;
@@ -352,7 +359,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 }
             }
 
-            mcpTools = _mcpToolProvider.GetToolDefinitions(mcpDefer, mcpPerToolDefer, excludedMcpTools);
+            mcpTools = McpToolProvider.GetToolDefinitions(mcpDefer, mcpPerToolDefer, excludedMcpTools);
         }
         else
         {
@@ -363,7 +370,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             ? [.. (localTools ?? []), .. mcpTools]
             : null;
 
-        var apiKey = await _apiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct);
+        var apiKey = await ApiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct);
 
         if (string.IsNullOrEmpty(apiKey))
             throw new InvalidOperationException("No Anthropic API key configured. Add one in Settings > API Keys.");
@@ -375,7 +382,7 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         {
             if (Guid.TryParse(promptIdStr, out var promptGuid))
             {
-                var prompt = await _promptService.GetByIdAsync(promptGuid, ct);
+                var prompt = await PromptService.GetByIdAsync(promptGuid, ct);
                 if (prompt is not null)
                     promptParts.Add(prompt.Content);
             }
@@ -388,22 +395,15 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
         // Append sandbox documentation when sandbox tools are in scope
         var hasSandbox = contract.EnableSandbox
                          || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
-                         || _hasMcpSandbox;
+                         || HasMcpSandbox;
         var systemPrompt = hasSandbox
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
 
         // Append sub-agent catalog so the model knows which agents it can spawn
-        if (contract.SubAgents is { Length: > 0 })
-        {
-            var catalog = $"\n\n## Sub-Agents\n\nAvailable via `{ToolNames.SpawnAgent}` (use agent name):\n";
-            foreach (var sa in contract.SubAgents)
-            {
-                var desc = !string.IsNullOrEmpty(sa.Description) ? sa.Description : "No description";
-                catalog += $"- **{sa.Name}**: {desc}\n";
-            }
-            systemPrompt += catalog;
-        }
+        var agentCatalog = await GetAgentCatalogPromptAsync(contract, ct);
+        if (agentCatalog is not null)
+            systemPrompt += agentCatalog;
 
         // Append deferred MCP tools catalog so the model knows to use tool_search
         systemPrompt += BuildDeferredToolsPrompt(mcpDefer, contract.McpServers);
@@ -442,13 +442,13 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             PersistMessage = async msg =>
             {
                 msg.TurnId = turnId;
-                _messages.Add(msg);
-                await _messageStore.AppendMessageAsync(
-                    _grainContext.GrainKey, _identityContext.UserId, msg, _nextSequenceNumber++, ct);
+                Messages.Add(msg);
+                await MessageStore.AppendMessageAsync(
+                    GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++, ct);
             },
         };
 
-        await foreach (var msg in _pipeline.ExecuteAsync(context))
+        await foreach (var msg in Pipeline.ExecuteAsync(context))
         {
             ct.ThrowIfCancellationRequested();
             EmitStreamEvent(msg);
@@ -461,202 +461,15 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
 
     #endregion
 
-    #region IToolExecutor
-
-    Task<ToolExecutionResult> IToolExecutor.ExecuteAsync(string toolName, JsonElement arguments, CancellationToken ct)
-    {
-        return ExecuteToolInternalAsync(toolName, arguments, ct);
-    }
-
-    private async Task<ToolExecutionResult> ExecuteToolInternalAsync(
-        string toolName, JsonElement arguments, CancellationToken ct)
-    {
-        if (_toolRegistry.HasTool(toolName))
-        {
-            var result = await _toolRegistry.ExecuteAsync(toolName, arguments, _grainContext, _identityContext, ServiceProvider, ct, _effectiveToolTypes);
-            return new ToolExecutionResult(result.Content, result.IsError);
-        }
-
-        if (_mcpToolProvider?.HasTool(toolName) == true)
-        {
-            var result = await _mcpToolProvider.ExecuteAsync(toolName, arguments, ct);
-            return new ToolExecutionResult(result.Content, result.IsError);
-        }
-
-        return new ToolExecutionResult($"Unknown tool: {toolName}", IsError: true);
-    }
-
-    #endregion
-
-    #region Event Emission
-
-    private void EmitStreamEvent(BaseMiddlewareMessage msg)
-    {
-        var key = _grainContext.GrainKey;
-
-        switch (msg)
-        {
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseTextContent text }:
-                Emit(new StreamMessageEvent(key, text.Content));
-                break;
-
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseThinkingContent thinking }
-                when !string.IsNullOrEmpty(thinking.Content):
-                Emit(new StreamThinkingEvent(key, thinking.Content));
-                break;
-
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseToolCall toolCall }:
-                Emit(new StreamToolUseEvent(key, toolCall.ToolName, toolCall.ToolUseId, toolCall.Input.GetRawText())
-                {
-                    DisplayName = _toolRegistry.GetDisplayName(toolCall.ToolName) ?? _mcpToolProvider?.GetDisplayName(toolCall.ToolName),
-                });
-                break;
-
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseCitationContent citation }:
-                Emit(new StreamCitationEvent(key, citation.Title, citation.Url, citation.CitedText));
-                break;
-
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseUsage usage }:
-                _totalInputTokens += usage.InputTokens;
-                _totalOutputTokens += usage.OutputTokens;
-                Emit(new StreamUsageEvent(key, usage.InputTokens, usage.OutputTokens, usage.WebSearchRequests, _contextWindowLimit, _maxOutputTokens));
-                break;
-
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseServerToolUse serverTool }
-                when serverTool.ToolName.StartsWith("tool_search", StringComparison.OrdinalIgnoreCase):
-            {
-                var query = serverTool.Input?.TryGetProperty("query", out var q) == true ? q.GetString() : null;
-                Emit(new StreamToolUseEvent(key, serverTool.ToolName, serverTool.ToolUseId, serverTool.Input?.GetRawText() ?? "{}")
-                {
-                    DisplayName = query is not null ? $"Searching tools: {query}" : "Searching tools",
-                });
-                break;
-            }
-
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseToolSearchResult toolSearchResult }:
-                Emit(new StreamToolCompleteEvent(key, toolSearchResult.ToolUseId, "tool_search", true, 0)
-                {
-                    DisplayName = "Tool search",
-                });
-                break;
-
-            case ModelMiddlewareMessage { ModelMessage: ModelResponseWebSearchResult webSearch }:
-                Emit(new StreamWebSearchEvent(key, webSearch.ToolUseId));
-                EmitWebSearchComplete(key, webSearch);
-                break;
-
-            case ToolResponseMessage toolResponse:
-                Emit(new StreamToolResultEvent(
-                    key, toolResponse.ToolCallId, toolResponse.ToolName,
-                    toolResponse.Response, toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
-                {
-                    DisplayName = _toolRegistry.GetDisplayName(toolResponse.ToolName) ?? _mcpToolProvider?.GetDisplayName(toolResponse.ToolName),
-                });
-                Emit(new StreamToolCompleteEvent(
-                    key, toolResponse.ToolCallId, toolResponse.ToolName,
-                    toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
-                {
-                    DisplayName = _toolRegistry.GetDisplayName(toolResponse.ToolName) ?? _mcpToolProvider?.GetDisplayName(toolResponse.ToolName),
-                });
-                break;
-
-            case ErrorMessage error:
-                Emit(new StreamErrorEvent(key, error.ErrorText));
-                break;
-        }
-    }
-
-    private void EmitWebSearchComplete(string key, ModelResponseWebSearchResult webSearch)
-    {
-        try
-        {
-            var entries = new List<WebSearchResultEntry>();
-            var doc = JsonDocument.Parse(webSearch.RawJson);
-            if (doc.RootElement.TryGetProperty("results", out var results) &&
-                results.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in results.EnumerateArray())
-                {
-                    var title = item.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
-                    var url = item.TryGetProperty("url", out var u) ? u.GetString() ?? "" : "";
-                    entries.Add(new WebSearchResultEntry(title, url));
-                }
-            }
-            Emit(new StreamWebSearchCompleteEvent(key, webSearch.ToolUseId, entries));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to parse web search results");
-        }
-    }
-
-    #endregion
-
-    #region Lifecycle
-
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
-    {
-        // Extract userId from the grain key because IIdentityContext is not yet
-        // hydrated during activation (the GrainContextInterceptor only runs on
-        // incoming grain calls, which happen after activation).
-        var grainKey = this.GetPrimaryKeyString();
-        var userId = AgentKeys.ExtractUserId(grainKey);
-
-        var (messages, nextSeq) = await _messageStore.LoadMessagesAsync(
-            grainKey, userId, cancellationToken);
-
-        _messages = messages;
-        _nextSequenceNumber = nextSeq;
-
-        _logger.LogInformation(
-            "Grain activated {GrainType} {GrainKey} (messages: {MessageCount})",
-            nameof(AgentGrain), grainKey, _messages.Count);
-
-        await base.OnActivateAsync(cancellationToken);
-    }
-
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
-    {
-        var sw = Stopwatch.StartNew();
-
-        _sandboxHandle = null;
-
-        if (_mcpToolProvider is not null)
-        {
-            await _mcpToolProvider.DisposeAsync();
-            _mcpToolProvider = null;
-        }
-
-        await base.OnDeactivateAsync(reason, cancellationToken);
-        sw.Stop();
-
-        _logger.LogInformation(
-            "Grain deactivated {GrainType} {GrainKey} (reason: {Reason}, cleanup: {CleanupMs}ms)",
-            nameof(AgentGrain), this.GetPrimaryKeyString(),
-            reason.ReasonCode, sw.ElapsedMilliseconds);
-    }
-
-    #endregion
-
     #region Helpers
-
-    private void SetupGrainContext(IAgentResponseObserver? observer)
-    {
-        _grainContext.Observer = observer;
-        _grainContext.GrainFactory = GrainFactory;
-        _grainContext.Logger = _logger;
-        _grainContext.UserId = _identityContext.UserId.ToString();
-        _grainContext.ProgressCallback = breadcrumb =>
-            Emit(new StreamProgressEvent(_grainContext.GrainKey, breadcrumb));
-    }
 
     private List<InternalMessage> BuildInitialMessages(AgentContract contract, string input)
     {
         var messages = new List<InternalMessage>();
 
-        if (_messages.Count > 0)
+        if (Messages.Count > 0)
         {
-            messages.AddRange(_messages);
+            messages.AddRange(Messages);
         }
 
         messages.Add(new InternalContentMessage
@@ -692,22 +505,22 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
     {
         try
         {
-            var conversationId = Guid.Parse(_grainContext.ConversationId);
-            var registryKey = AgentKeys.Conversation(_identityContext.UserId, conversationId);
+            var conversationId = Guid.Parse(GrainContext.ConversationId);
+            var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
             var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
-            await registry.ReportCompletionAsync(_grainContext.GrainKey, result, isError);
+            await registry.ReportCompletionAsync(GrainContext.GrainKey, result, isError);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to report completion to registry");
+            Logger.LogError(ex, "Failed to report completion to registry");
         }
 
         var reason = isError
-            ? (_explicitCancel ? AgentCompleteReason.Cancelled : AgentCompleteReason.Failed)
+            ? (ExplicitCancel ? AgentCompleteReason.Cancelled : AgentCompleteReason.Failed)
             : AgentCompleteReason.Completed;
 
         // Update execution audit trail
-        if (_executionId != Guid.Empty)
+        if (ExecutionId != Guid.Empty)
         {
             var status = reason switch
             {
@@ -715,135 +528,25 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
                 AgentCompleteReason.Cancelled => "Cancelled",
                 _ => "Failed",
             };
-            var durationMs = (long)(DateTimeOffset.UtcNow - _executionStartedAt).TotalMilliseconds;
+            var durationMs = (long)(DateTimeOffset.UtcNow - ExecutionStartedAt).TotalMilliseconds;
             var outputJson = result != AgentResult.Empty
                 ? JsonSerializer.Serialize(result)
                 : null;
-            var errorMsg = isError && !_explicitCancel
+            var errorMsg = isError && !ExplicitCancel
                 ? result.Parts.OfType<AgentTextPart>().FirstOrDefault()?.Text
                 : null;
 
-            await _executionRepository.UpdateCompletionAsync(
-                _executionId, _identityContext.UserId, status, outputJson, errorMsg,
-                durationMs, _totalInputTokens, _totalOutputTokens);
+            await ExecutionRepository.UpdateCompletionAsync(
+                ExecutionId, IdentityContext.UserId, status, outputJson, errorMsg,
+                durationMs, TotalInputTokens, TotalOutputTokens);
         }
 
-        Emit(new StreamAgentCompleteEvent(_grainContext.GrainKey) { Reason = reason });
+        Emit(new StreamAgentCompleteEvent(GrainContext.GrainKey) { Reason = reason });
 
         if (contract.Lifecycle == AgentLifecycle.Task)
             DeactivateOnIdle();
         else if (contract.Lifecycle == AgentLifecycle.Linger)
             DelayDeactivation(TimeSpan.FromSeconds(contract.LingerSeconds));
-    }
-
-    private void EnsureSandboxProvisioning(AgentContract contract)
-    {
-        var hasSandbox = contract.EnableSandbox
-                         || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase);
-        if (!hasSandbox) return;
-
-        // If the parent already provisioned a sandbox, reuse it directly
-        if (_sandboxHandle is null && !string.IsNullOrEmpty(contract.SandboxPodName))
-        {
-            _logger.LogInformation("Reusing parent sandbox pod {PodName}", contract.SandboxPodName);
-            _sandboxHandle = new SandboxProvisioningHandle();
-            _sandboxHandle.SetResult(contract.SandboxPodName);
-            _grainContext.SandboxHandle = _sandboxHandle;
-            return;
-        }
-
-        if (_sandboxHandle is null)
-        {
-            _sandboxHandle = new SandboxProvisioningHandle();
-            _grainContext.SandboxHandle = _sandboxHandle;
-            _ = ProvisionSandboxInternalAsync(_sandboxHandle);
-        }
-        else if (_sandboxHandle.Failed)
-        {
-            _sandboxHandle.PrepareRetry();
-            _grainContext.SandboxHandle = _sandboxHandle;
-            _ = ProvisionSandboxInternalAsync(_sandboxHandle);
-        }
-        else
-        {
-            _grainContext.SandboxHandle = _sandboxHandle;
-        }
-    }
-
-    private async Task ProvisionSandboxInternalAsync(SandboxProvisioningHandle handle)
-    {
-        var userId = _identityContext.UserId.ToString();
-        var conversationId = _grainContext.ConversationId;
-
-        try
-        {
-            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Looking for existing sandbox...", null));
-
-            using var scope = ServiceProvider.CreateScope();
-
-            var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
-            scopedIdentity?.SetIdentity(_identityContext.UserId);
-
-            var client = scope.ServiceProvider.GetRequiredService<SandboxManagerClient>();
-            var podName = await client.FindSandboxAsync(userId, conversationId, CancellationToken.None);
-
-            if (podName is null)
-            {
-                IReadOnlyList<string>? credentialDomains = null;
-                var credentialMappingService = scope.ServiceProvider.GetService<ISandboxCredentialMappingService>();
-                if (credentialMappingService is not null)
-                {
-                    credentialDomains = await credentialMappingService.GetConfiguredDomainsAsync(CancellationToken.None);
-                    _logger.LogInformation(
-                        "Resolved {Count} credential domain(s) for sandbox: [{Domains}]",
-                        credentialDomains?.Count ?? 0,
-                        credentialDomains is not null ? string.Join(", ", credentialDomains) : "none");
-                }
-                else
-                {
-                    _logger.LogWarning("ISandboxCredentialMappingService not registered - no credential domains will be injected");
-                }
-
-                Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", "Creating sandbox...", null));
-                podName = await client.CreateSandboxAsync(userId, conversationId, progress =>
-                {
-                    Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "provisioning", progress, null));
-                }, CancellationToken.None, credentialDomains);
-            }
-
-            handle.SetResult(podName);
-            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "ready", "Sandbox ready", podName));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Eager sandbox provisioning failed for {Key}", _grainContext.GrainKey);
-            handle.SetFailed(ex);
-            Emit(new StreamSandboxStatusEvent(_grainContext.GrainKey, "failed", ex.Message, null));
-        }
-    }
-
-    private static Type[] ResolveToolGroups(string[] toolGroups)
-    {
-        var types = new List<Type>();
-        foreach (var group in toolGroups)
-        {
-            if (Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
-                types.AddRange(groupTypes);
-        }
-        return types.ToArray();
-    }
-
-
-    private void Emit(StreamEventBase evt)
-    {
-        try
-        {
-            _observer?.OnEvent(evt);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Failed to emit event {EventType}", evt.EventType);
-        }
     }
 
     private static string BuildDeferredToolsPrompt(bool mcpDeferred, McpServerReference[]? mcpServers)
