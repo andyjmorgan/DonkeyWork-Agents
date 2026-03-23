@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 
@@ -41,12 +42,43 @@ public sealed class SwarmAgentSpawnTools
         IIdentityContext identityContext,
         CancellationToken ct)
     {
-        var naviAgents = await _agentDefinitionService.GetNaviConnectedAsync(ct);
-        var definition = naviAgents.FirstOrDefault(a =>
-            string.Equals(a.Name, agent_name, StringComparison.OrdinalIgnoreCase));
+        // First check sub-agents on the current contract (looked up by name, fetched by ID)
+        var subAgentRef = context.SubAgents.FirstOrDefault(s =>
+            string.Equals(s.Name, agent_name, StringComparison.OrdinalIgnoreCase));
 
+        NaviAgentDefinitionV1? definition = null;
+
+        if (subAgentRef is not null && Guid.TryParse(subAgentRef.Id, out var subAgentId))
+        {
+            var details = await _agentDefinitionService.GetByIdAsync(subAgentId, ct);
+            if (details is not null)
+            {
+                definition = new NaviAgentDefinitionV1
+                {
+                    Id = details.Id,
+                    Name = details.Name,
+                    Description = details.Description,
+                    Icon = details.Icon,
+                    Contract = details.Contract,
+                };
+            }
+        }
+
+        // Fall back to Navi-connected agents
         if (definition is null)
-            return ToolResult.Error($"Agent '{agent_name}' not found. Available agents: {string.Join(", ", naviAgents.Select(a => a.Name))}");
+        {
+            var naviAgents = await _agentDefinitionService.GetNaviConnectedAsync(ct);
+            definition = naviAgents.FirstOrDefault(a =>
+                string.Equals(a.Name, agent_name, StringComparison.OrdinalIgnoreCase));
+
+            if (definition is null)
+            {
+                var available = context.SubAgents.Select(s => s.Name)
+                    .Concat(naviAgents.Select(a => a.Name))
+                    .Distinct(StringComparer.OrdinalIgnoreCase);
+                return ToolResult.Error($"Agent '{agent_name}' not found. Available agents: {string.Join(", ", available)}");
+            }
+        }
 
         AgentContract contract;
         try
