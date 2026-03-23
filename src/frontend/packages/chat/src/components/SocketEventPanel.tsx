@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ScrollArea } from "@donkeywork/ui";
-import { PanelRightClose, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { PanelRightClose, Trash2, ChevronDown, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import type { SocketEvent } from "../hooks/useAgentConversation";
 
 const EVENT_COLORS: Record<string, string> = {
@@ -113,6 +113,7 @@ export function SocketEventPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [wide, setWide] = useState(false);
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
@@ -124,7 +125,7 @@ export function SocketEventPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="w-80 shrink-0 flex flex-col border-l border-border bg-card/50">
+    <div className={`${wide ? "w-[600px]" : "w-80"} shrink-0 flex flex-col border-l border-border bg-card/50 transition-all`}>
       <div className="flex items-center justify-between px-3 py-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-foreground">Socket Events</span>
@@ -139,6 +140,13 @@ export function SocketEventPanel({
             }`}
           >
             auto
+          </button>
+          <button
+            type="button"
+            onClick={() => setWide(!wide)}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            {wide ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
           <button
             type="button"
