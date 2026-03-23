@@ -9,11 +9,13 @@ using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Middleware.Messages;
 using DonkeyWork.Agents.Actors.Core.Options;
+using DonkeyWork.Agents.Actors.Core.Providers;
 using DonkeyWork.Agents.Actors.Core.Providers.Responses;
 using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
+using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
@@ -313,6 +315,264 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         {
             Logger.LogDebug(ex, "Failed to parse web search results");
         }
+    }
+
+    #endregion
+
+    #region Pipeline Execution
+
+    /// <summary>
+    /// Executes a single turn of the AI pipeline. Contains all shared logic for
+    /// computing effective tools, initializing MCP, resolving tool configuration,
+    /// building the system prompt, and running the middleware pipeline.
+    /// </summary>
+    /// <param name="contract">The agent contract defining model, tools, and prompts.</param>
+    /// <param name="messages">The message list to pass to the pipeline context.</param>
+    /// <param name="persistMessage">Callback invoked for each message the pipeline persists. TurnId is set before invocation.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <param name="turnId">Optional turn ID. If null, a new one is generated.</param>
+    /// <returns>A tuple of the final assistant message (if any) and the messages list from the context.</returns>
+    protected async Task<(InternalAssistantMessage? AssistantMessage, List<InternalMessage> Messages)> ExecuteTurnAsync(
+        AgentContract contract,
+        List<InternalMessage> messages,
+        Func<InternalMessage, Task> persistMessage,
+        CancellationToken ct,
+        Guid? turnId = null)
+    {
+        // Ensure ToolGroupNames.Sandbox is in tool groups when EnableSandbox is set
+        var effectiveToolGroups = contract.EnableSandbox
+            && !contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
+            ? [..contract.ToolGroups, ToolGroupNames.Sandbox]
+            : contract.ToolGroups;
+
+        Logger.LogInformation(
+            "Contract: EnableSandbox={EnableSandbox}, ToolGroups=[{ToolGroups}], EffectiveToolGroups=[{EffectiveToolGroups}]",
+            contract.EnableSandbox, string.Join(", ", contract.ToolGroups), string.Join(", ", effectiveToolGroups));
+
+        SetupGrainContext();
+        EnsureSandboxProvisioning(contract);
+
+        var toolTypes = ResolveToolGroups(effectiveToolGroups);
+        Logger.LogInformation("Resolved {ToolTypeCount} tool types from {GroupCount} groups",
+            toolTypes.Length, effectiveToolGroups.Length);
+        var modelId = contract.ModelId ?? AnthropicOptions.DefaultModelId;
+
+        var modelDefinition = ModelCatalogService.GetModelById(modelId);
+        ContextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
+        MaxOutputTokens = modelDefinition?.MaxOutputTokens ?? 0;
+
+        // Populate grain context with MCP servers, sub-agents, and tool groups for swarm tool inheritance
+        GrainContext.McpServers = GetMcpServerReferences(contract);
+        GrainContext.SubAgents = contract.SubAgents;
+        GrainContext.ToolGroups = effectiveToolGroups;
+        GrainContext.Icon = contract.Icon;
+        GrainContext.DisplayName = contract.DisplayName;
+
+        // Initialize MCP tools (lazy, once per activation)
+        await InitializeMcpToolsAsync(contract, effectiveToolGroups, ct);
+
+        // Include sandbox tools if MCP servers triggered auto-sandbox
+        var effectiveToolTypes = HasMcpSandbox && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
+            ? [..toolTypes, typeof(SandboxTools)]
+            : toolTypes;
+
+        // Resolve agent catalog early so subclasses can lazily load data needed by GetAdditionalSwarmToolTypes
+        var agentCatalog = await GetAgentCatalogPromptAsync(contract, ct);
+
+        // Auto-include swarm tool types
+        effectiveToolTypes = GetAdditionalSwarmToolTypes(contract, effectiveToolTypes);
+
+        // Resolve tool configuration from contract
+        var toolConfig = contract.ToolConfiguration;
+        var hasExplicitConfig = toolConfig is not null;
+        var globalDefer = toolConfig?.DeferToolLoading ?? false;
+
+        // Build deferred types and excluded tools from contract overrides
+        var deferredTypes = new HashSet<Type>();
+        var excludedLocalTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in effectiveToolGroups)
+        {
+            if (!Tools.ToolGroupMap.Groups.TryGetValue(group, out var groupTypes))
+                continue;
+
+            // Tool groups never defer from the global setting — only MCP tools do.
+            // Individual tools can still be disabled or deferred via per-tool overrides.
+            if (toolConfig?.ToolOverrides is { Length: > 0 })
+            {
+                foreach (var ov in toolConfig.ToolOverrides)
+                {
+                    if (!string.Equals(ov.Source, group, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (!ov.Enabled)
+                    {
+                        excludedLocalTools.Add(ov.ToolName);
+                    }
+                    else if (ov.Deferred.HasValue && ov.Deferred.Value)
+                    {
+                        foreach (var t in groupTypes)
+                            deferredTypes.Add(t);
+                    }
+                }
+            }
+        }
+
+        // Store effective tool types for scope checking during tool execution
+        EffectiveToolTypes = effectiveToolTypes;
+
+        var localTools = effectiveToolTypes.Length > 0
+            ? ToolRegistry.GetToolDefinitions(
+                effectiveToolTypes,
+                deferredTypes.Count > 0 ? deferredTypes : null,
+                excludedLocalTools.Count > 0 ? excludedLocalTools : null)
+            : null;
+
+        // Combine local + MCP tool definitions with per-server config
+        // MCP tools default to deferred when no explicit config (backward compat)
+        var mcpDefer = hasExplicitConfig ? globalDefer : true;
+        IReadOnlyList<InternalToolDefinition> mcpTools;
+        if (McpToolProvider is not null)
+        {
+            Dictionary<string, bool>? mcpPerToolDefer = null;
+            HashSet<string>? excludedMcpTools = null;
+
+            if (toolConfig?.ToolOverrides is { Length: > 0 })
+            {
+                foreach (var ov in toolConfig.ToolOverrides)
+                {
+                    if (effectiveToolGroups.Contains(ov.Source, StringComparer.OrdinalIgnoreCase))
+                        continue;
+
+                    if (!ov.Enabled)
+                    {
+                        excludedMcpTools ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        excludedMcpTools.Add(ov.ToolName);
+                    }
+                    else if (ov.Deferred.HasValue)
+                    {
+                        mcpPerToolDefer ??= new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+                        mcpPerToolDefer[ov.ToolName] = ov.Deferred.Value;
+                    }
+                }
+            }
+
+            mcpTools = McpToolProvider.GetToolDefinitions(mcpDefer, mcpPerToolDefer, excludedMcpTools);
+        }
+        else
+        {
+            mcpTools = [];
+        }
+
+        IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0
+            ? [.. (localTools ?? []), .. mcpTools]
+            : null;
+
+        var apiKey = await ApiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct);
+
+        if (string.IsNullOrEmpty(apiKey))
+            throw new InvalidOperationException("No Anthropic API key configured. Add one in Settings > API Keys.");
+
+        // Collect all prompt parts: library prompts first, then contract system prompts
+        var promptParts = new List<string>();
+
+        foreach (var promptIdStr in contract.Prompts)
+        {
+            if (Guid.TryParse(promptIdStr, out var promptGuid))
+            {
+                var prompt = await PromptService.GetByIdAsync(promptGuid, ct);
+                if (prompt is not null)
+                    promptParts.Add(prompt.Content);
+            }
+        }
+
+        promptParts.AddRange(contract.SystemPrompt.Where(s => !string.IsNullOrEmpty(s)));
+
+        var combinedPrompt = string.Join("\n\n", promptParts);
+
+        // Append sandbox documentation when sandbox tools are in scope
+        var hasSandbox = contract.EnableSandbox
+                         || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
+                         || HasMcpSandbox;
+        var systemPrompt = hasSandbox
+            ? combinedPrompt + SandboxTools.SystemPromptFragment
+            : combinedPrompt;
+
+        // Append agent catalog so the model knows which agents it can spawn
+        if (agentCatalog is not null)
+            systemPrompt += agentCatalog;
+
+        // Append deferred MCP tools catalog so the model knows to use tool_search
+        var deferredToolsServers = GetDeferredToolsServers(contract);
+        systemPrompt += BuildDeferredToolsPrompt(mcpDefer, deferredToolsServers);
+
+        var effectiveTurnId = turnId ?? Guid.NewGuid();
+
+        var context = new ModelMiddlewareContext
+        {
+            Messages = messages,
+            SystemPrompt = systemPrompt,
+            Tools = tools,
+            ProviderOptions = new ProviderOptions
+            {
+                ApiKey = apiKey,
+                ModelId = modelId,
+                MaxTokens = contract.MaxTokens,
+                ThinkingBudgetTokens = contract.ReasoningEffort is null
+                    ? (contract.ThinkingBudgetTokens > 0 ? contract.ThinkingBudgetTokens : null)
+                    : null,
+                ReasoningEffort = contract.ReasoningEffort,
+                WebSearch = new WebSearchOptions
+                {
+                    Enabled = contract.WebSearch.Enabled,
+                    MaxUses = contract.WebSearch.MaxUses > 0 ? contract.WebSearch.MaxUses : null,
+                },
+                WebFetch = new WebFetchOptions
+                {
+                    Enabled = contract.WebFetch.Enabled,
+                    MaxUses = contract.WebFetch.MaxUses > 0 ? contract.WebFetch.MaxUses : null,
+                },
+                Stream = contract.Stream,
+            },
+            ToolExecutor = this,
+            CancellationToken = ct,
+            TurnId = effectiveTurnId,
+            PersistMessage = async msg =>
+            {
+                msg.TurnId = effectiveTurnId;
+                await persistMessage(msg);
+            },
+        };
+
+        await foreach (var msg in Pipeline.ExecuteAsync(context))
+        {
+            ct.ThrowIfCancellationRequested();
+            EmitStreamEvent(msg);
+        }
+
+        var assistantMsg = context.Messages.OfType<InternalAssistantMessage>().LastOrDefault();
+        return (assistantMsg, context.Messages);
+    }
+
+    protected static string BuildDeferredToolsPrompt(bool mcpDeferred, McpServerReference[]? mcpServers)
+    {
+        if (!mcpDeferred || mcpServers is not { Length: > 0 })
+            return string.Empty;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("\n\n## MCP Servers");
+        sb.AppendLine();
+        sb.AppendLine("You have access to the following MCP servers:");
+        sb.AppendLine();
+        foreach (var server in mcpServers)
+        {
+            var desc = !string.IsNullOrEmpty(server.Description) ? server.Description : "No description";
+            sb.AppendLine($"- **{server.Name}**: {desc}");
+        }
+        sb.AppendLine();
+        sb.AppendLine("Use tool search should you need these tools.");
+
+        return sb.ToString();
     }
 
     #endregion
