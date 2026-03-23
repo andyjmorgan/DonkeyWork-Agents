@@ -612,6 +612,30 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             Emit(new StreamProgressEvent(GrainContext.GrainKey, breadcrumb));
     }
 
+    /// <summary>
+    /// Rolls back in-memory and persisted messages to the given sequence number.
+    /// Used to undo partial writes when a turn is cancelled or fails.
+    /// </summary>
+    protected async Task RollbackStateAsync(int fromSequenceNumber)
+    {
+        var messagesToKeep = fromSequenceNumber;
+        if (Messages.Count > messagesToKeep)
+        {
+            Messages.RemoveRange(messagesToKeep, Messages.Count - messagesToKeep);
+        }
+        NextSequenceNumber = fromSequenceNumber;
+
+        try
+        {
+            await MessageStore.RollbackFromAsync(
+                GrainContext.GrainKey, IdentityContext.UserId, fromSequenceNumber);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to rollback persisted messages for {Key}", GrainContext.GrainKey);
+        }
+    }
+
     protected void EnsureSandboxProvisioning(AgentContract contract)
     {
         var hasSandbox = contract.EnableSandbox

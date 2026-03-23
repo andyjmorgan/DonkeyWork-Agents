@@ -500,28 +500,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         return $"<agent-notification>\nAgent '{msg.Label}' (key: {msg.AgentKey}) has completed successfully.\n</agent-notification>";
     }
 
-    private async Task RollbackStateAsync(int fromSequenceNumber)
-    {
-        // Trim in-memory messages
-        var messagesToKeep = fromSequenceNumber;
-        if (Messages.Count > messagesToKeep)
-        {
-            Messages.RemoveRange(messagesToKeep, Messages.Count - messagesToKeep);
-        }
-        NextSequenceNumber = fromSequenceNumber;
-
-        // Trim persisted messages
-        try
-        {
-            await MessageStore.RollbackFromAsync(
-                GrainContext.GrainKey, IdentityContext.UserId, fromSequenceNumber);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to rollback persisted messages for {Key}", GrainContext.GrainKey);
-        }
-    }
-
     private void DrainPendingMessages()
     {
         while (_queue.Reader.TryRead(out _))
