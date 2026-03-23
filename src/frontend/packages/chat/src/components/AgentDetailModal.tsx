@@ -29,7 +29,7 @@ function extractNestedAgent(box: ContentBox): NestedAgent | null {
     return {
       agentType: box.subAgent.agentType,
       agentKey: box.subAgent.agentKey,
-      label: box.subAgent.label,
+      label: box.subAgent.displayName ?? box.subAgent.label ?? box.displayName,
       icon: box.subAgent.icon,
       displayName: box.subAgent.displayName,
       boxes: box.subAgent.boxes,
@@ -40,7 +40,7 @@ function extractNestedAgent(box: ContentBox): NestedAgent | null {
     return {
       agentType: box.agentType,
       agentKey: box.agentKey,
-      label: box.label,
+      label: box.displayName ?? box.label ?? box.agentType,
       icon: box.icon,
       displayName: box.displayName,
       boxes: box.boxes,
@@ -176,6 +176,7 @@ export function AgentDetailModal({
                           <div className="my-1">
                             <AgentCard
                               agentType={nested.agentType}
+                              label={nested.label}
                               icon={nested.icon}
                               displayName={nested.displayName}
                               isComplete={nested.isComplete}
