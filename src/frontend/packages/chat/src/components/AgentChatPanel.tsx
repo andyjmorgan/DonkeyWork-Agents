@@ -11,9 +11,10 @@ import { AgentDetailModal } from "./AgentDetailModal";
 import { AgentSidePanel } from "./AgentSidePanel";
 import { McpSidePanel } from "./McpSidePanel";
 import { ExecutionSidePanel } from "./ExecutionSidePanel";
+import { SocketEventPanel } from "./SocketEventPanel";
 import { ExecutionDetailModal } from "./ExecutionDetailModal";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "./agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container, History } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container, History, Radio } from "lucide-react";
 
 function extractTextFromBoxes(boxes: ContentBox[]): string {
   return boxes
@@ -189,6 +190,8 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     isReconnecting,
     mcpServerStatuses,
     sandboxStatus,
+    socketEvents,
+    clearSocketEvents,
   } = useAgentConversation(initialConversationId, { onConversationCreated, onReset });
 
   const swarmKey = conversationId ? `swarm:${conversationId}` : null;
@@ -199,6 +202,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [mcpPanelOpen, setMcpPanelOpen] = useState(false);
   const [executionPanelOpen, setExecutionPanelOpen] = useState(false);
+  const [socketPanelOpen, setSocketPanelOpen] = useState(false);
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
 
   const mcpConnectedCount = mcpServerStatuses.filter((s) => s.success).length;
@@ -348,10 +352,20 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setExecutionPanelOpen(true); setSidePanelOpen(false); setMcpPanelOpen(false); }}
+                onClick={() => { setExecutionPanelOpen(true); setSidePanelOpen(false); setMcpPanelOpen(false); setSocketPanelOpen(false); }}
                 className="text-muted-foreground hover:text-foreground gap-1.5"
               >
                 <History className="w-4 h-4" />
+              </Button>
+            )}
+            {!socketPanelOpen && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSocketPanelOpen(true); setSidePanelOpen(false); setMcpPanelOpen(false); setExecutionPanelOpen(false); }}
+                className="text-muted-foreground hover:text-foreground gap-1.5"
+              >
+                <Radio className="w-4 h-4" />
               </Button>
             )}
             <Button
@@ -479,6 +493,12 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
           onExecutionClick={(id) => setSelectedExecutionId(id)}
         />
       )}
+      <SocketEventPanel
+        events={socketEvents}
+        isOpen={socketPanelOpen}
+        onToggle={() => setSocketPanelOpen((v) => !v)}
+        onClear={clearSocketEvents}
+      />
 
       <ExecutionDetailModal
         executionId={selectedExecutionId}

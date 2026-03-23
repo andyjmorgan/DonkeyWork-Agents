@@ -17,6 +17,15 @@ import type { InternalMessage, GetStateResponse, TrackedAgent } from "@donkeywor
 
 type AgentGroupEntry = { messageId: string; boxIndex: number };
 
+export type SocketEvent = {
+  id: number;
+  timestamp: number;
+  eventType: string;
+  agentKey: string;
+  data: Record<string, unknown>;
+  debug?: string;
+};
+
 export interface UseAgentConversationOptions {
   onConversationCreated?: (conversationId: string) => void
   onReset?: () => void
@@ -31,6 +40,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [mcpServerStatuses, setMcpServerStatuses] = useState<McpServerStatus[]>([]);
   const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
+  const [socketEvents, setSocketEvents] = useState<SocketEvent[]>([]);
+  const socketEventIdRef = useRef(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const nextIdRef = useRef(1);
@@ -196,6 +207,21 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     const agentKey = (data.agentKey as string) ?? "";
     let assistantId = currentAssistantIdRef.current;
 
+    // Capture socket event for debug panel
+    const socketEventId = ++socketEventIdRef.current;
+    let debugInfo: string | undefined;
+    if (eventType === "agent_spawn") {
+      const parentEntry = agentGroupIndexRef.current.get(agentKey);
+      debugInfo = parentEntry
+        ? `parent found at boxIndex=${parentEntry.boxIndex}`
+        : `no parent entry for ${agentKey.slice(-12)}`;
+    }
+    setSocketEvents((prev) => {
+      const evt: SocketEvent = { id: socketEventId, timestamp: Date.now(), eventType, agentKey, data, debug: debugInfo };
+      const next = [...prev, evt];
+      return next.length > 500 ? next.slice(-500) : next;
+    });
+
     if (eventType === "turn_start") {
       const newId = crypto.randomUUID();
       currentAssistantIdRef.current = newId;
@@ -359,6 +385,19 @@ export function useAgentConversation(initialConversationId?: string, options?: U
               return null;
             };
             const innerBoxes = getInner();
+
+            // Update debug info with nesting details
+            setSocketEvents((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.id === socketEventId) {
+                const hostType = host?.type ?? "undefined";
+                const hasSubAgent = host?.type === "tool_use" && !!(host as any).subAgent;
+                const innerCount = innerBoxes?.length ?? 0;
+                const innerTypes = innerBoxes?.map(b => (b as any).toolName ?? b.type).join(", ") ?? "null";
+                return [...prev.slice(0, -1), { ...last, debug: `${last.debug} | host=${hostType} hasSubAgent=${hasSubAgent} innerBoxes=${innerCount} [${innerTypes}]` }];
+              }
+              return prev;
+            });
             if (innerBoxes) {
               let attached = false;
               for (let i = innerBoxes.length - 1; i >= 0; i--) {
@@ -872,9 +911,11 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     isReconnecting,
     mcpServerStatuses,
     sandboxStatus,
+    socketEvents,
     sendMessage,
     sendRpc,
     cancel,
     resetConversation,
+    clearSocketEvents: () => setSocketEvents([]),
   };
 }
