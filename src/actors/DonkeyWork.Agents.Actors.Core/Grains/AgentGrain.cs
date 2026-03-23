@@ -393,6 +393,18 @@ public sealed class AgentGrain : Grain, IAgentGrain, IToolExecutor
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
 
+        // Append sub-agent catalog so the model knows which agents it can spawn
+        if (contract.SubAgents is { Length: > 0 })
+        {
+            var catalog = $"\n\n## Sub-Agents\n\nAvailable via `{ToolNames.SpawnAgent}` (use agent name):\n";
+            foreach (var sa in contract.SubAgents)
+            {
+                var desc = !string.IsNullOrEmpty(sa.Description) ? sa.Description : "No description";
+                catalog += $"- **{sa.Name}**: {desc}\n";
+            }
+            systemPrompt += catalog;
+        }
+
         // Append deferred MCP tools catalog so the model knows to use tool_search
         systemPrompt += BuildDeferredToolsPrompt(mcpDefer, contract.McpServers);
 
