@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useMemo, useCallback, type FormEvent } from "react";
+import { useActiveConversationsStore } from "@donkeywork/stores";
 import { Button, ScrollArea } from '@donkeywork/ui'
 import { useAgentConversation } from "../hooks/useAgentConversation";
 import { internalToChat } from "./MessageRenderer";
@@ -193,6 +194,13 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     socketEvents,
     clearSocketEvents,
   } = useAgentConversation(initialConversationId, { onConversationCreated, onReset });
+
+  const setCurrentConversation = useActiveConversationsStore((s) => s.setCurrentConversation);
+
+  useEffect(() => {
+    setCurrentConversation(conversationId ?? null);
+    return () => setCurrentConversation(null);
+  }, [conversationId, setCurrentConversation]);
 
   const swarmKey = conversationId ? `swarm:${conversationId}` : null;
 

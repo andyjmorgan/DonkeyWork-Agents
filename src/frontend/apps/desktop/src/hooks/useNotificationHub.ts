@@ -6,7 +6,7 @@ import {
   HttpTransportType,
   LogLevel,
 } from '@microsoft/signalr'
-import { useAuthStore } from '@donkeywork/stores'
+import { useAuthStore, useActiveConversationsStore } from '@donkeywork/stores'
 import type { WorkspaceNotification } from '@donkeywork/api-client'
 import {
   isPermissionGranted,
@@ -105,9 +105,10 @@ export function useNotificationHub() {
           notification.entityId
         )
 
-        // Always send native notification for completed agent runs
+        // Send native notification for completed agent runs (unless user is viewing that conversation)
         if (notification.type === 'ConversationAgentCompleted') {
-          if (permissionRef.current) {
+          const isViewing = useActiveConversationsStore.getState().currentConversationId === notification.entityId
+          if (!isViewing && permissionRef.current) {
             sendNotification({
               title: notification.title,
               body: notification.message,

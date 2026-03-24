@@ -44,13 +44,16 @@ export function NotificationListener() {
 
       if (notification.type === 'ConversationAgentCompleted') {
         removeActiveConversation(notification.entityId)
-        toast.success(notification.title, {
-          description: notification.message,
-          action: {
-            label: 'View',
-            onClick: () => navigate(`/agent-chat/${notification.entityId}`),
-          },
-        })
+        const isViewingConversation = useActiveConversationsStore.getState().currentConversationId === notification.entityId
+        if (!isViewingConversation) {
+          toast.success(notification.title, {
+            description: notification.message,
+            action: {
+              label: 'View',
+              onClick: () => navigate(`/agent-chat/${notification.entityId}`),
+            },
+          })
+        }
         return
       }
 
