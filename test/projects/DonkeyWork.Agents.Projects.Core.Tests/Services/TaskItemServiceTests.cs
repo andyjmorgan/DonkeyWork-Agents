@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
 using DonkeyWork.Agents.Persistence;
@@ -216,22 +217,24 @@ public class TaskItemServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.ListAsync();
+        var results = await _service.ListAsync(new PaginationRequest());
 
         // Assert
         Assert.NotNull(results);
-        Assert.Equal(3, results.Count);
+        Assert.Equal(3, results.Items.Count);
+        Assert.Equal(3, results.TotalCount);
     }
 
     [Fact]
     public async Task ListAsync_WithNoTaskItems_ReturnsEmptyList()
     {
         // Act
-        var results = await _service.ListAsync();
+        var results = await _service.ListAsync(new PaginationRequest());
 
         // Assert
         Assert.NotNull(results);
-        Assert.Empty(results);
+        Assert.Empty(results.Items);
+        Assert.Equal(0, results.TotalCount);
     }
 
     #endregion
@@ -465,13 +468,13 @@ public class TaskItemServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.ListAsync();
+        var results = await _service.ListAsync(new PaginationRequest());
 
         // Assert
-        Assert.Single(results);
-        var summary = results[0];
+        Assert.Single(results.Items);
+        var summary = results.Items[0];
         Assert.NotNull(summary.DescriptionPreview);
-        Assert.Equal(503, summary.DescriptionPreview.Length); // 500 + "..."
+        Assert.Equal(63, summary.DescriptionPreview.Length); // 60 + "..."
         Assert.EndsWith("...", summary.DescriptionPreview);
         Assert.Equal(1000, summary.DescriptionLength);
     }
@@ -487,11 +490,11 @@ public class TaskItemServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.ListAsync();
+        var results = await _service.ListAsync(new PaginationRequest());
 
         // Assert
-        Assert.Single(results);
-        var summary = results[0];
+        Assert.Single(results.Items);
+        var summary = results.Items[0];
         Assert.Equal(shortDescription, summary.DescriptionPreview);
         Assert.Equal(shortDescription.Length, summary.DescriptionLength);
     }
@@ -506,11 +509,11 @@ public class TaskItemServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var results = await _service.ListAsync();
+        var results = await _service.ListAsync(new PaginationRequest());
 
         // Assert
-        Assert.Single(results);
-        var summary = results[0];
+        Assert.Single(results.Items);
+        var summary = results.Items[0];
         Assert.Null(summary.DescriptionPreview);
         Assert.Equal(0, summary.DescriptionLength);
     }

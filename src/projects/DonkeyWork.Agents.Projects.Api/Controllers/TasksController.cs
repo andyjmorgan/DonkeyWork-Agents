@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -71,14 +72,16 @@ public class TasksController : ControllerBase
     }
 
     /// <summary>
-    /// List all tasks for the current user.
+    /// List all tasks for the current user with optional filtering and pagination.
     /// </summary>
-    /// <response code="200">Returns the list of tasks.</response>
+    /// <param name="pagination">Pagination parameters.</param>
+    /// <param name="filter">Optional filter parameters.</param>
+    /// <response code="200">Returns the paginated list of tasks.</response>
     [HttpGet]
-    [ProducesResponseType<IReadOnlyList<TaskItemV1>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> List()
+    [ProducesResponseType<PaginatedResponse<TaskItemSummaryV1>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List([FromQuery] PaginationRequest pagination, [FromQuery] TaskItemFilterRequestV1 filter)
     {
-        var tasks = await _taskItemService.ListAsync();
+        var tasks = await _taskItemService.ListAsync(pagination, filter);
         return Ok(tasks);
     }
 

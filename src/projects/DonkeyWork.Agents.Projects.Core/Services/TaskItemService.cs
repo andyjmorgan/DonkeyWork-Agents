@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Notifications.Contracts.Enums;
 using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
@@ -118,42 +119,105 @@ public class TaskItemService : ITaskItemService
         return taskItems.Select(MapToSummaryDto).ToList();
     }
 
-    public async Task<IReadOnlyList<TaskItemSummaryV1>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<PaginatedResponse<TaskItemSummaryV1>> ListAsync(PaginationRequest pagination, TaskItemFilterRequestV1? filter = null, CancellationToken cancellationToken = default)
     {
-        var taskItems = await _dbContext.TaskItems
+        var query = _dbContext.TaskItems
             .AsNoTracking()
             .Include(t => t.Tags)
+            .AsQueryable();
+
+        query = ApplyFilters(query, filter);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var taskItems = await query
             .OrderBy(t => t.SortOrder)
             .ThenByDescending(t => t.CreatedAt)
+            .Skip(pagination.Offset)
+            .Take(pagination.GetLimit())
             .ToListAsync(cancellationToken);
 
-        return taskItems.Select(MapToSummaryDto).ToList();
+        return new PaginatedResponse<TaskItemSummaryV1>
+        {
+            Items = taskItems.Select(MapToSummaryDto).ToList(),
+            Offset = pagination.Offset,
+            Limit = pagination.GetLimit(),
+            TotalCount = totalCount
+        };
     }
 
-    public async Task<IReadOnlyList<TaskItemSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedResponse<TaskItemSummaryV1>> GetByProjectIdAsync(Guid projectId, PaginationRequest pagination, TaskItemFilterRequestV1? filter = null, CancellationToken cancellationToken = default)
     {
-        var taskItems = await _dbContext.TaskItems
+        var query = _dbContext.TaskItems
             .AsNoTracking()
             .Include(t => t.Tags)
-            .Where(t => t.ProjectId == projectId)
+            .Where(t => t.ProjectId == projectId);
+
+        query = ApplyFilters(query, filter);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var taskItems = await query
             .OrderBy(t => t.SortOrder)
             .ThenByDescending(t => t.CreatedAt)
+            .Skip(pagination.Offset)
+            .Take(pagination.GetLimit())
             .ToListAsync(cancellationToken);
 
-        return taskItems.Select(MapToSummaryDto).ToList();
+        return new PaginatedResponse<TaskItemSummaryV1>
+        {
+            Items = taskItems.Select(MapToSummaryDto).ToList(),
+            Offset = pagination.Offset,
+            Limit = pagination.GetLimit(),
+            TotalCount = totalCount
+        };
     }
 
-    public async Task<IReadOnlyList<TaskItemSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default)
+    public async Task<PaginatedResponse<TaskItemSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, PaginationRequest pagination, TaskItemFilterRequestV1? filter = null, CancellationToken cancellationToken = default)
     {
-        var taskItems = await _dbContext.TaskItems
+        var query = _dbContext.TaskItems
             .AsNoTracking()
             .Include(t => t.Tags)
-            .Where(t => t.MilestoneId == milestoneId)
+            .Where(t => t.MilestoneId == milestoneId);
+
+        query = ApplyFilters(query, filter);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var taskItems = await query
             .OrderBy(t => t.SortOrder)
             .ThenByDescending(t => t.CreatedAt)
+            .Skip(pagination.Offset)
+            .Take(pagination.GetLimit())
             .ToListAsync(cancellationToken);
 
-        return taskItems.Select(MapToSummaryDto).ToList();
+        return new PaginatedResponse<TaskItemSummaryV1>
+        {
+            Items = taskItems.Select(MapToSummaryDto).ToList(),
+            Offset = pagination.Offset,
+            Limit = pagination.GetLimit(),
+            TotalCount = totalCount
+        };
+    }
+
+    private static IQueryable<TaskItemEntity> ApplyFilters(IQueryable<TaskItemEntity> query, TaskItemFilterRequestV1? filter)
+    {
+        if (filter == null)
+            return query;
+
+        if (filter.Status.HasValue)
+        {
+            var entityStatus = (Persistence.Entities.Projects.TaskItemStatus)(int)filter.Status.Value;
+            query = query.Where(t => t.Status == entityStatus);
+        }
+
+        if (filter.Priority.HasValue)
+        {
+            var entityPriority = (Persistence.Entities.Projects.TaskItemPriority)(int)filter.Priority.Value;
+            query = query.Where(t => t.Priority == entityPriority);
+        }
+
+        return query;
     }
 
     public async Task<TaskItemV1?> UpdateAsync(Guid taskItemId, UpdateTaskItemRequestV1 request, CancellationToken cancellationToken = default)

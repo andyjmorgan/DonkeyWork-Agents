@@ -8,7 +8,7 @@ public static class ContentTruncationHelper
     /// <summary>
     /// Default maximum length for content previews in summary responses.
     /// </summary>
-    public const int DefaultPreviewLength = 500;
+    public const int DefaultPreviewLength = 60;
 
     /// <summary>
     /// Truncates content to the specified maximum length, appending "..." if truncated.

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 
@@ -15,9 +16,16 @@ public sealed class TaskAgentTools
 
     [AgentTool("tasks_list", DisplayName = "List Tasks")]
     [Description("List all task items for the current user.")]
-    public async Task<ToolResult> ListTasks(CancellationToken ct = default)
+    public async Task<ToolResult> ListTasks(
+        [Description("Optional status filter: Pending, InProgress, Completed, Cancelled")] TaskItemStatus? status = null,
+        [Description("Optional priority filter: Low, Medium, High, Critical")] TaskItemPriority? priority = null,
+        [Description("Optional pagination offset (default: 0)")] int? offset = null,
+        [Description("Optional pagination limit (default: 50, max: 100)")] int? limit = null,
+        CancellationToken ct = default)
     {
-        var tasks = await _taskItemService.ListAsync(ct);
+        var pagination = new PaginationRequest { Offset = offset ?? 0, Limit = limit ?? 50 };
+        var filter = new TaskItemFilterRequestV1 { Status = status, Priority = priority };
+        var tasks = await _taskItemService.ListAsync(pagination, filter, ct);
         return ToolResult.Json(tasks);
     }
 
@@ -25,9 +33,15 @@ public sealed class TaskAgentTools
     [Description("List all task items for a project.")]
     public async Task<ToolResult> ListTasksByProject(
         [Description("The project ID")] Guid projectId,
+        [Description("Optional status filter: Pending, InProgress, Completed, Cancelled")] TaskItemStatus? status = null,
+        [Description("Optional priority filter: Low, Medium, High, Critical")] TaskItemPriority? priority = null,
+        [Description("Optional pagination offset (default: 0)")] int? offset = null,
+        [Description("Optional pagination limit (default: 50, max: 100)")] int? limit = null,
         CancellationToken ct = default)
     {
-        var tasks = await _taskItemService.GetByProjectIdAsync(projectId, ct);
+        var pagination = new PaginationRequest { Offset = offset ?? 0, Limit = limit ?? 50 };
+        var filter = new TaskItemFilterRequestV1 { Status = status, Priority = priority };
+        var tasks = await _taskItemService.GetByProjectIdAsync(projectId, pagination, filter, ct);
         return ToolResult.Json(tasks);
     }
 
@@ -35,9 +49,15 @@ public sealed class TaskAgentTools
     [Description("List all task items for a milestone.")]
     public async Task<ToolResult> ListTasksByMilestone(
         [Description("The milestone ID")] Guid milestoneId,
+        [Description("Optional status filter: Pending, InProgress, Completed, Cancelled")] TaskItemStatus? status = null,
+        [Description("Optional priority filter: Low, Medium, High, Critical")] TaskItemPriority? priority = null,
+        [Description("Optional pagination offset (default: 0)")] int? offset = null,
+        [Description("Optional pagination limit (default: 50, max: 100)")] int? limit = null,
         CancellationToken ct = default)
     {
-        var tasks = await _taskItemService.GetByMilestoneIdAsync(milestoneId, ct);
+        var pagination = new PaginationRequest { Offset = offset ?? 0, Limit = limit ?? 50 };
+        var filter = new TaskItemFilterRequestV1 { Status = status, Priority = priority };
+        var tasks = await _taskItemService.GetByMilestoneIdAsync(milestoneId, pagination, filter, ct);
         return ToolResult.Json(tasks);
     }
 

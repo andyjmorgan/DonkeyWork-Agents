@@ -1,4 +1,5 @@
 using System.Net;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Integration.Tests.Base;
 using DonkeyWork.Agents.Integration.Tests.Helpers;
 using DonkeyWork.Agents.Integration.Tests.Infrastructure.Authentication;
@@ -123,22 +124,24 @@ public class TasksControllerTests : ControllerIntegrationTestBase
         await PostAsync<TaskItemV1>(BaseUrl, TestDataBuilder.CreateTaskItemRequest("Task 3"));
 
         // Act
-        var taskItems = await GetAsync<List<TaskItemV1>>(BaseUrl);
+        var response = await GetAsync<PaginatedResponse<TaskItemSummaryV1>>(BaseUrl);
 
         // Assert
-        Assert.NotNull(taskItems);
-        Assert.Equal(3, taskItems.Count);
+        Assert.NotNull(response);
+        Assert.Equal(3, response.TotalCount);
+        Assert.Equal(3, response.Items.Count);
     }
 
     [Fact]
     public async Task List_WithNoTaskItems_ReturnsEmptyList()
     {
         // Act
-        var taskItems = await GetAsync<List<TaskItemV1>>(BaseUrl);
+        var response = await GetAsync<PaginatedResponse<TaskItemSummaryV1>>(BaseUrl);
 
         // Assert
-        Assert.NotNull(taskItems);
-        Assert.Empty(taskItems);
+        Assert.NotNull(response);
+        Assert.Equal(0, response.TotalCount);
+        Assert.Empty(response.Items);
     }
 
     [Fact]
@@ -310,12 +313,13 @@ public class TasksControllerTests : ControllerIntegrationTestBase
         await PostAsync<TaskItemV1>(BaseUrl, TestDataBuilder.CreateTaskItemRequest("User2 Task"));
 
         // Act - List as user 2
-        var taskItems = await GetAsync<List<TaskItemV1>>(BaseUrl);
+        var response = await GetAsync<PaginatedResponse<TaskItemSummaryV1>>(BaseUrl);
 
         // Assert
-        Assert.NotNull(taskItems);
-        Assert.Single(taskItems);
-        Assert.Equal("User2 Task", taskItems[0].Title);
+        Assert.NotNull(response);
+        Assert.Equal(1, response.TotalCount);
+        Assert.Single(response.Items);
+        Assert.Equal("User2 Task", response.Items[0].Title);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 
 namespace DonkeyWork.Agents.Projects.Contracts.Services;
@@ -25,22 +26,22 @@ public interface ITaskItemService
     Task<IReadOnlyList<TaskItemSummaryV1>> GetStandaloneAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists all task items for the current user.
+    /// Lists all task items for the current user with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<TaskItemSummaryV1>> ListAsync(CancellationToken cancellationToken = default);
+    Task<PaginatedResponse<TaskItemSummaryV1>> ListAsync(PaginationRequest pagination, TaskItemFilterRequestV1? filter = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists all task items for a project.
+    /// Lists all task items for a project with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<TaskItemSummaryV1>> GetByProjectIdAsync(Guid projectId, CancellationToken cancellationToken = default);
+    Task<PaginatedResponse<TaskItemSummaryV1>> GetByProjectIdAsync(Guid projectId, PaginationRequest pagination, TaskItemFilterRequestV1? filter = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists all task items for a milestone.
+    /// Lists all task items for a milestone with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use GetByIdAsync for full details.
     /// </summary>
-    Task<IReadOnlyList<TaskItemSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, CancellationToken cancellationToken = default);
+    Task<PaginatedResponse<TaskItemSummaryV1>> GetByMilestoneIdAsync(Guid milestoneId, PaginationRequest pagination, TaskItemFilterRequestV1? filter = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates a task item.

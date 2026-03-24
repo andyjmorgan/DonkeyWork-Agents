@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Mcp.Contracts;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
@@ -24,19 +25,26 @@ public class TasksTools
     }
 
     /// <summary>
-    /// Lists all tasks for the current user.
+    /// Lists all tasks for the current user with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
     [McpServerTool(Name = "tasks_list")]
     [McpTool(
         Name = "tasks_list",
         Title = "List Tasks",
-        Description = "List all tasks for the current user. Tasks can be standalone, or optionally associated with a project or milestone. Returns summary models - use tasks_get for full task details including description.",
+        Description = "List all tasks for the current user with optional filtering and pagination. Tasks can be standalone, or optionally associated with a project or milestone. Returns summary models - use tasks_get for full task details including description.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TaskItemSummaryV1>> ListTasks(CancellationToken ct)
+    public async Task<PaginatedResponse<TaskItemSummaryV1>> ListTasks(
+        [Description("Optional status filter: Pending, InProgress, Completed, or Cancelled")] TaskItemStatus? status = null,
+        [Description("Optional priority filter: Low, Medium, High, or Critical")] TaskItemPriority? priority = null,
+        [Description("Optional pagination offset (default: 0)")] int? offset = null,
+        [Description("Optional pagination limit (default: 50, max: 100)")] int? limit = null,
+        CancellationToken ct = default)
     {
-        return await _taskItemService.ListAsync(ct);
+        var pagination = new PaginationRequest { Offset = offset ?? 0, Limit = limit ?? 50 };
+        var filter = new TaskItemFilterRequestV1 { Status = status, Priority = priority };
+        return await _taskItemService.ListAsync(pagination, filter, ct);
     }
 
     /// <summary>
@@ -155,38 +163,50 @@ public class TasksTools
     }
 
     /// <summary>
-    /// Lists all tasks for a specific project.
+    /// Lists all tasks for a specific project with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
     [McpServerTool(Name = "tasks_list_by_project")]
     [McpTool(
         Name = "tasks_list_by_project",
         Title = "List Tasks by Project",
-        Description = "List all tasks directly associated with a specific project (project-level tasks only). Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those. Returns summary models - use tasks_get for full task details.",
+        Description = "List all tasks directly associated with a specific project (project-level tasks only) with optional filtering and pagination. Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those. Returns summary models - use tasks_get for full task details.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TaskItemSummaryV1>> ListTasksByProject(
+    public async Task<PaginatedResponse<TaskItemSummaryV1>> ListTasksByProject(
         [Description("The unique identifier of the project")] Guid projectId,
-        CancellationToken ct)
+        [Description("Optional status filter: Pending, InProgress, Completed, or Cancelled")] TaskItemStatus? status = null,
+        [Description("Optional priority filter: Low, Medium, High, or Critical")] TaskItemPriority? priority = null,
+        [Description("Optional pagination offset (default: 0)")] int? offset = null,
+        [Description("Optional pagination limit (default: 50, max: 100)")] int? limit = null,
+        CancellationToken ct = default)
     {
-        return await _taskItemService.GetByProjectIdAsync(projectId, ct);
+        var pagination = new PaginationRequest { Offset = offset ?? 0, Limit = limit ?? 50 };
+        var filter = new TaskItemFilterRequestV1 { Status = status, Priority = priority };
+        return await _taskItemService.GetByProjectIdAsync(projectId, pagination, filter, ct);
     }
 
     /// <summary>
-    /// Lists all tasks for a specific milestone.
+    /// Lists all tasks for a specific milestone with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
     [McpServerTool(Name = "tasks_list_by_milestone")]
     [McpTool(
         Name = "tasks_list_by_milestone",
         Title = "List Tasks by Milestone",
-        Description = "List all tasks associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use tasks_get for full task details.",
+        Description = "List all tasks associated with a specific milestone with optional filtering and pagination. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use tasks_get for full task details.",
         Icon = "list",
         ReadOnlyHint = true)]
-    public async Task<IReadOnlyList<TaskItemSummaryV1>> ListTasksByMilestone(
+    public async Task<PaginatedResponse<TaskItemSummaryV1>> ListTasksByMilestone(
         [Description("The unique identifier of the milestone")] Guid milestoneId,
-        CancellationToken ct)
+        [Description("Optional status filter: Pending, InProgress, Completed, or Cancelled")] TaskItemStatus? status = null,
+        [Description("Optional priority filter: Low, Medium, High, or Critical")] TaskItemPriority? priority = null,
+        [Description("Optional pagination offset (default: 0)")] int? offset = null,
+        [Description("Optional pagination limit (default: 50, max: 100)")] int? limit = null,
+        CancellationToken ct = default)
     {
-        return await _taskItemService.GetByMilestoneIdAsync(milestoneId, ct);
+        var pagination = new PaginationRequest { Offset = offset ?? 0, Limit = limit ?? 50 };
+        var filter = new TaskItemFilterRequestV1 { Status = status, Priority = priority };
+        return await _taskItemService.GetByMilestoneIdAsync(milestoneId, pagination, filter, ct);
     }
 }

@@ -464,7 +464,7 @@ public class MilestoneServiceTests : IDisposable
         Assert.Single(results);
         var summary = results[0];
         Assert.NotNull(summary.ContentPreview);
-        Assert.Equal(503, summary.ContentPreview.Length); // 500 + "..."
+        Assert.Equal(63, summary.ContentPreview.Length); // 60 + "..."
         Assert.EndsWith("...", summary.ContentPreview);
         Assert.Equal(1000, summary.ContentLength);
     }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Projects.Contracts.Models;
 using DonkeyWork.Agents.Projects.Contracts.Services;
 using Moq;
@@ -23,11 +24,17 @@ public class TaskAgentToolsTests
     public async Task ListTasks_ReturnsJsonResult()
     {
         // Arrange
-        var tasks = new List<TaskItemSummaryV1>
+        var tasks = new PaginatedResponse<TaskItemSummaryV1>
         {
-            new() { Id = Guid.NewGuid(), Title = "Task 1" },
+            Items = new List<TaskItemSummaryV1>
+            {
+                new() { Id = Guid.NewGuid(), Title = "Task 1" },
+            },
+            Offset = 0,
+            Limit = 50,
+            TotalCount = 1
         };
-        _taskItemService.Setup(x => x.ListAsync(It.IsAny<CancellationToken>()))
+        _taskItemService.Setup(x => x.ListAsync(It.IsAny<PaginationRequest>(), It.IsAny<TaskItemFilterRequestV1>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(tasks);
 
         // Act
@@ -35,9 +42,6 @@ public class TaskAgentToolsTests
 
         // Assert
         Assert.False(result.IsError);
-        var deserialized = JsonSerializer.Deserialize<List<JsonElement>>(result.Content);
-        Assert.NotNull(deserialized);
-        Assert.Single(deserialized);
     }
 
     #endregion
@@ -49,15 +53,15 @@ public class TaskAgentToolsTests
     {
         // Arrange
         var projectId = Guid.NewGuid();
-        _taskItemService.Setup(x => x.GetByProjectIdAsync(projectId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TaskItemSummaryV1>());
+        _taskItemService.Setup(x => x.GetByProjectIdAsync(projectId, It.IsAny<PaginationRequest>(), It.IsAny<TaskItemFilterRequestV1>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaginatedResponse<TaskItemSummaryV1> { Items = [], Offset = 0, Limit = 50, TotalCount = 0 });
 
         // Act
         var result = await _tools.ListTasksByProject(projectId);
 
         // Assert
         Assert.False(result.IsError);
-        _taskItemService.Verify(x => x.GetByProjectIdAsync(projectId, It.IsAny<CancellationToken>()), Times.Once);
+        _taskItemService.Verify(x => x.GetByProjectIdAsync(projectId, It.IsAny<PaginationRequest>(), It.IsAny<TaskItemFilterRequestV1>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
@@ -69,15 +73,15 @@ public class TaskAgentToolsTests
     {
         // Arrange
         var milestoneId = Guid.NewGuid();
-        _taskItemService.Setup(x => x.GetByMilestoneIdAsync(milestoneId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TaskItemSummaryV1>());
+        _taskItemService.Setup(x => x.GetByMilestoneIdAsync(milestoneId, It.IsAny<PaginationRequest>(), It.IsAny<TaskItemFilterRequestV1>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaginatedResponse<TaskItemSummaryV1> { Items = [], Offset = 0, Limit = 50, TotalCount = 0 });
 
         // Act
         var result = await _tools.ListTasksByMilestone(milestoneId);
 
         // Assert
         Assert.False(result.IsError);
-        _taskItemService.Verify(x => x.GetByMilestoneIdAsync(milestoneId, It.IsAny<CancellationToken>()), Times.Once);
+        _taskItemService.Verify(x => x.GetByMilestoneIdAsync(milestoneId, It.IsAny<PaginationRequest>(), It.IsAny<TaskItemFilterRequestV1>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion
