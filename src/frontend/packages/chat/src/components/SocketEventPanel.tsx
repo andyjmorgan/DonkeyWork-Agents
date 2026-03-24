@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { ScrollArea } from "@donkeywork/ui";
-import { PanelRightClose, Trash2, ChevronDown, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import { PanelRightClose, Trash2, ChevronDown, ChevronRight, Maximize2, Minimize2, Download } from "lucide-react";
 import type { SocketEvent } from "../hooks/useAgentConversation";
 
 const EVENT_COLORS: Record<string, string> = {
@@ -147,6 +147,22 @@ export function SocketEventPanel({
             className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             {wide ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const blob = new Blob([JSON.stringify(events, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `socket-events-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            title="Export events as JSON"
+          >
+            <Download className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
