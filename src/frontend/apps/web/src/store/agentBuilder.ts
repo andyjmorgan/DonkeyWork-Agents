@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
 import { agentNodeTypes } from '@/components/agent-builder/agentNodeTypes'
-import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference, ToolConfig, ToolOverride } from '@donkeywork/api-client'
+import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference, ToolConfig, ToolOverride, ContextManagementConfigV1 } from '@donkeywork/api-client'
 
 export interface AgentNodeConfig {
   type: string
@@ -123,6 +123,7 @@ function createInitialState() {
         stream: true,
         webSearch: false,
         webFetch: false,
+        contextManagement: { compactionEnabled: false, compactionTriggerTokens: 150000 },
       },
     } as Record<string, AgentNodeConfig>,
     selectedNodeId: null,
@@ -528,6 +529,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
           webFetch: typeof cfg.webFetch === 'object'
             ? cfg.webFetch as { enabled: boolean; maxUses: number }
             : { enabled: !!cfg.webFetch, maxUses: 5 },
+          contextManagement: cfg.contextManagement as ContextManagementConfigV1 | undefined,
         }
       }
     }

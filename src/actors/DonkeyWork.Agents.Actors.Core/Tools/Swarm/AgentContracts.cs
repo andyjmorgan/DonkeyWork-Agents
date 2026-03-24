@@ -21,6 +21,11 @@ public static class AgentContracts
         PersistMessages = true,
         DisplayName = "Navi",
         Icon = "bot",
+        ContextManagement = new ContextManagementConfig
+        {
+            CompactionEnabled = true,
+            CompactionTriggerTokens = 150_000,
+        },
     };
 
     [AgentContractDefinition(AgentTypes.Delegate)]

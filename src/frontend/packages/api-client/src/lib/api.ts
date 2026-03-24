@@ -1706,6 +1706,16 @@ export interface ToolDefinition {
   description?: string
 }
 
+export interface ContextManagementConfigV1 {
+  compactionEnabled?: boolean
+  compactionTriggerTokens?: number
+  clearToolResultsEnabled?: boolean
+  clearToolResultsTriggerTokens?: number
+  clearToolResultsKeep?: number
+  clearThinkingEnabled?: boolean
+  clearThinkingKeepTurns?: number
+}
+
 export interface AgentContractV1 {
   systemPrompt?: string[]
   toolGroups?: string[]
@@ -1728,6 +1738,7 @@ export interface AgentContractV1 {
   toolConfiguration?: ToolConfig
   allowDelegation?: boolean
   displayName?: string
+  contextManagement?: ContextManagementConfigV1
 }
 
 export interface AgentDefinitionSummary {

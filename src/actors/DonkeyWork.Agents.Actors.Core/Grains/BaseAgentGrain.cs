@@ -538,8 +538,14 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 },
                 ContextManagement = new ContextManagementOptions
                 {
-                    CompactionEnabled = modelDefinition?.Supports.Compaction ?? false,
-                    CompactionTriggerTokens = 150_000,
+                    CompactionEnabled = contract.ContextManagement.CompactionEnabled
+                                        && (modelDefinition?.Supports.Compaction ?? false),
+                    CompactionTriggerTokens = contract.ContextManagement.CompactionTriggerTokens,
+                    ClearToolResultsEnabled = contract.ContextManagement.ClearToolResultsEnabled,
+                    ClearToolResultsTriggerTokens = contract.ContextManagement.ClearToolResultsTriggerTokens,
+                    ClearToolResultsKeep = contract.ContextManagement.ClearToolResultsKeep,
+                    ClearThinkingEnabled = contract.ContextManagement.ClearThinkingEnabled,
+                    ClearThinkingKeepTurns = contract.ContextManagement.ClearThinkingKeepTurns,
                 },
                 Stream = contract.Stream,
             },

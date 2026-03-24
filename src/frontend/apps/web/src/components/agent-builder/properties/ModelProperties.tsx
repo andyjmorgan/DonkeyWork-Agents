@@ -48,6 +48,9 @@ export function ModelProperties({ nodeId }: ModelPropertiesProps) {
   const webFetchConfig = config.webFetch as { enabled: boolean; maxUses: number } | boolean | undefined
   const webFetch = typeof webFetchConfig === 'object' ? webFetchConfig?.enabled ?? false : !!webFetchConfig
   const webFetchMaxUses = typeof webFetchConfig === 'object' ? webFetchConfig?.maxUses ?? 5 : 5
+  const ctxMgmt = config.contextManagement as { compactionEnabled?: boolean; compactionTriggerTokens?: number } | undefined
+  const compactionEnabled = ctxMgmt?.compactionEnabled ?? false
+  const compactionTriggerTokens = ctxMgmt?.compactionTriggerTokens ?? 150000
 
   // Group models by provider
   const grouped = allModels.reduce(
@@ -201,6 +204,37 @@ export function ModelProperties({ nodeId }: ModelPropertiesProps) {
               min={1}
               max={20}
               step={1}
+              disabled={isReadOnly}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Context Compaction */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>Context Compaction</Label>
+            <p className="text-xs text-muted-foreground">Auto-summarize old context to prevent window exhaustion</p>
+          </div>
+          <Switch
+            checked={compactionEnabled}
+            onCheckedChange={(v) => update('contextManagement', { ...ctxMgmt, compactionEnabled: v, compactionTriggerTokens: compactionTriggerTokens })}
+            disabled={isReadOnly}
+          />
+        </div>
+        {compactionEnabled && (
+          <div className="space-y-2 pl-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Trigger threshold (tokens)</Label>
+              <span className="text-xs font-medium tabular-nums">{(compactionTriggerTokens / 1000).toFixed(0)}k</span>
+            </div>
+            <Slider
+              value={[compactionTriggerTokens]}
+              onValueChange={([v]) => update('contextManagement', { ...ctxMgmt, compactionEnabled: true, compactionTriggerTokens: v })}
+              min={50000}
+              max={500000}
+              step={10000}
               disabled={isReadOnly}
             />
           </div>

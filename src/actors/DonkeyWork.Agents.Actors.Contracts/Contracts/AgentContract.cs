@@ -29,4 +29,5 @@ public sealed class AgentContract
     [Id(21)] public string? DisplayName { get; init; }
     [Id(22)] public string? Icon { get; init; }
     [Id(23)] public bool AllowDelegation { get; init; }
+    [Id(24)] public ContextManagementConfig ContextManagement { get; init; } = new();
 }
