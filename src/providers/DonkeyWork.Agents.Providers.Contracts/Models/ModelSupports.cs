@@ -30,4 +30,7 @@ public sealed class ModelSupports
 
     [JsonPropertyName("streaming")]
     public bool Streaming { get; init; }
+
+    [JsonPropertyName("compaction")]
+    public bool Compaction { get; init; }
 }

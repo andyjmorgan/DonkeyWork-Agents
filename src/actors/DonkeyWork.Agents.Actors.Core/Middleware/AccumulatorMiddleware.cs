@@ -111,6 +111,11 @@ internal sealed class AccumulatorMiddleware : IModelMiddleware
                             acc.Signature = thinking.Signature;
                         break;
 
+                    case ModelResponseCompactionContent compaction:
+                        orderedBlocks.Add((compaction.BlockIndex,
+                            new InternalCompactionBlock(compaction.Summary)));
+                        break;
+
                     case ModelResponseCitationContent citation:
                         orderedBlocks.Add((-1, new InternalCitationBlock(citation.Title, citation.Url, citation.CitedText)));
                         break;

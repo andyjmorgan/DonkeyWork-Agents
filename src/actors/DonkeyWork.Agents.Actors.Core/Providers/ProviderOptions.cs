@@ -24,4 +24,5 @@ internal record ProviderOptions
     public WebSearchOptions WebSearch { get; init; } = new();
     public WebFetchOptions WebFetch { get; init; } = new();
     public bool Stream { get; init; } = true;
+    public ContextManagementOptions ContextManagement { get; init; } = new();
 }

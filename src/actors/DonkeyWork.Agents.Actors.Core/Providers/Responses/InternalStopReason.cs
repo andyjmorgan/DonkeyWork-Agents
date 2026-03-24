@@ -9,5 +9,6 @@ internal enum InternalStopReason
     ContentFilter,
     SafetyStop,
     Recitation,
-    Cancelled
+    Cancelled,
+    Compaction
 }

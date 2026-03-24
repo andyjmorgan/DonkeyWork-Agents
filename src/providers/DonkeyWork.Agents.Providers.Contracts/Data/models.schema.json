@@ -111,7 +111,8 @@
         "prompt_caching",
         "reasoning",
         "image_output",
-        "streaming"
+        "streaming",
+        "compaction"
       ],
       "properties": {
         "vision": {
@@ -149,6 +150,10 @@
         "streaming": {
           "type": "boolean",
           "description": "Supports streaming responses"
+        },
+        "compaction": {
+          "type": "boolean",
+          "description": "Supports server-side auto compaction"
         }
       },
       "additionalProperties": false

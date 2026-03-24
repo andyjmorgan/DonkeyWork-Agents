@@ -18,7 +18,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": false,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput"]
     },
@@ -40,7 +41,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": false,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput"]
     },
@@ -62,7 +64,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": false,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput"]
     },
@@ -84,7 +87,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": false,
-        "streaming": true
+        "streaming": true,
+        "compaction": true
       },
       "client_types": ["MultimodalInput"],
       "config_overrides": {
@@ -110,7 +114,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": false,
-        "streaming": true
+        "streaming": true,
+        "compaction": true
       },
       "client_types": ["MultimodalInput"],
       "config_overrides": {
@@ -136,7 +141,8 @@
         "prompt_caching": true,
         "reasoning": false,
         "image_output": false,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput"],
       "config_overrides": {
@@ -162,7 +168,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": true,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
     },
@@ -184,7 +191,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": true,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
     },
@@ -206,7 +214,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": true,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
     },
@@ -228,7 +237,8 @@
         "prompt_caching": true,
         "reasoning": true,
         "image_output": true,
-        "streaming": true
+        "streaming": true,
+        "compaction": false
       },
       "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
     }

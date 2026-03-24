@@ -28,7 +28,13 @@ internal sealed class AnthropicProvider : IAiProvider
         ProviderOptions options,
         CancellationToken ct = default)
     {
-        _httpClient.DefaultRequestHeaders.Add("anthropic-beta", "interleaved-thinking-2025-05-14,web-fetch-2025-09-10");
+        var betaHeader = "interleaved-thinking-2025-05-14,web-fetch-2025-09-10";
+        var ctx = options.ContextManagement;
+        if (ctx.CompactionEnabled)
+            betaHeader += ",compact-2026-01-12";
+        if (ctx.ClearToolResultsEnabled || ctx.ClearThinkingEnabled)
+            betaHeader += ",context-management-2025-06-27";
+        _httpClient.DefaultRequestHeaders.Add("anthropic-beta", betaHeader);
         var client = new AnthropicClient { ApiKey = options.ApiKey, HttpClient = _httpClient };
         var messageParams = MapMessages(messages);
         var mappedTools = AnthropicToolMapper.MapTools(tools, options);
@@ -75,6 +81,8 @@ internal sealed class AnthropicProvider : IAiProvider
             thinking = new BetaThinkingConfigDisabled();
         }
 
+        BetaContextManagementConfig? contextManagement = BuildContextManagement(ctx);
+
         var parameters = new MessageCreateParams
         {
             Model = options.ModelId,
@@ -85,6 +93,7 @@ internal sealed class AnthropicProvider : IAiProvider
             Tools = mappedTools!,
             Thinking = thinking!,
             OutputConfig = outputConfig!,
+            ContextManagement = contextManagement!,
         };
 
         return options.Stream
@@ -204,6 +213,14 @@ internal sealed class AnthropicProvider : IAiProvider
                     RawJson = JsonSerializer.Serialize(toolSearchResult)
                 };
             }
+            else if (block.TryPickCompaction(out var compactionBlock))
+            {
+                yield return new ModelResponseCompactionContent
+                {
+                    BlockIndex = blockIndex,
+                    Summary = compactionBlock.Content
+                };
+            }
 
             blockIndex++;
         }
@@ -310,6 +327,14 @@ internal sealed class AnthropicProvider : IAiProvider
                         Content = thinkingStart.Thinking ?? ""
                     };
                 }
+                else if (blockStart.ContentBlock.TryPickBetaCompaction(out var compactionStart))
+                {
+                    yield return new ModelResponseCompactionContent
+                    {
+                        BlockIndex = (int)index,
+                        Summary = compactionStart.Content
+                    };
+                }
             }
             else if (streamEvent.TryPickContentBlockDelta(out var blockDelta))
             {
@@ -366,6 +391,10 @@ internal sealed class AnthropicProvider : IAiProvider
                         Content = "",
                         Signature = signatureDelta.Signature ?? ""
                     };
+                }
+                else if (blockDelta.Delta.TryPickCompaction(out _))
+                {
+                    // Compaction content arrives complete in content_block_start; deltas are no-ops
                 }
             }
             else if (streamEvent.TryPickContentBlockStop(out var blockStop))
@@ -455,9 +484,45 @@ internal sealed class AnthropicProvider : IAiProvider
             return InternalStopReason.ToolUse;
         if (reason.Contains("max_tokens", StringComparison.OrdinalIgnoreCase))
             return InternalStopReason.MaxTokens;
+        if (reason.Contains("compaction", StringComparison.OrdinalIgnoreCase))
+            return InternalStopReason.Compaction;
         if (reason.Contains("end_turn", StringComparison.OrdinalIgnoreCase))
             return InternalStopReason.EndTurn;
         return InternalStopReason.EndTurn;
+    }
+
+    private static BetaContextManagementConfig? BuildContextManagement(ContextManagementOptions ctx)
+    {
+        var edits = new List<Edit>();
+
+        if (ctx.CompactionEnabled)
+        {
+            edits.Add(new BetaCompact20260112Edit
+            {
+                Trigger = new BetaInputTokensTrigger(ctx.CompactionTriggerTokens)
+            });
+        }
+
+        if (ctx.ClearToolResultsEnabled)
+        {
+            edits.Add(new BetaClearToolUses20250919Edit
+            {
+                Trigger = new BetaInputTokensTrigger(ctx.ClearToolResultsTriggerTokens),
+                Keep = new BetaToolUsesKeep(ctx.ClearToolResultsKeep)
+            });
+        }
+
+        if (ctx.ClearThinkingEnabled)
+        {
+            edits.Add(new BetaClearThinking20251015Edit
+            {
+                Keep = new BetaThinkingTurns(ctx.ClearThinkingKeepTurns)
+            });
+        }
+
+        return edits.Count > 0
+            ? new BetaContextManagementConfig { Edits = edits }
+            : null;
     }
 
     internal static BetaMessageParam[] MapMessages(IReadOnlyList<InternalMessage> messages)
@@ -568,6 +633,13 @@ internal sealed class AnthropicProvider : IAiProvider
                         var toolSearchDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
                             toolSearchResult.RawJson) ?? new Dictionary<string, JsonElement>();
                         blocks.Add(BetaToolSearchToolResultBlockParam.FromRawUnchecked(toolSearchDict));
+                        break;
+
+                    case InternalCompactionBlock compaction:
+                        blocks.Add(new BetaCompactionBlockParam
+                        {
+                            Content = compaction.Summary
+                        });
                         break;
 
                     case InternalCitationBlock:

@@ -307,6 +307,139 @@ public class AccumulatorMiddlewareTests
 
     #endregion
 
+    #region Compaction Accumulation Tests
+
+    [Fact]
+    public async Task ExecuteAsync_WithCompactionContent_CreatesCompactionBlock()
+    {
+        // Arrange
+        var context = CreateContext();
+        var messages = new BaseMiddlewareMessage[]
+        {
+            ModelMsg(new ModelResponseCompactionContent
+            {
+                BlockIndex = 0,
+                Summary = "Summary of previous conversation about building a web scraper."
+            }),
+        };
+
+        // Act
+        await ConsumeAll(_middleware.ExecuteAsync(context, NextThatYields(messages)));
+
+        // Assert
+        var assistant = Assert.Single(context.Messages.OfType<InternalAssistantMessage>());
+        var compaction = Assert.Single(assistant.ContentBlocks.OfType<InternalCompactionBlock>());
+        Assert.Equal("Summary of previous conversation about building a web scraper.", compaction.Summary);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithNullCompactionSummary_CreatesCompactionBlockWithNull()
+    {
+        // Arrange
+        var context = CreateContext();
+        var messages = new BaseMiddlewareMessage[]
+        {
+            ModelMsg(new ModelResponseCompactionContent
+            {
+                BlockIndex = 0,
+                Summary = null
+            }),
+        };
+
+        // Act
+        await ConsumeAll(_middleware.ExecuteAsync(context, NextThatYields(messages)));
+
+        // Assert
+        var assistant = Assert.Single(context.Messages.OfType<InternalAssistantMessage>());
+        var compaction = Assert.Single(assistant.ContentBlocks.OfType<InternalCompactionBlock>());
+        Assert.Null(compaction.Summary);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithCompactionAndText_PreservesBlockOrder()
+    {
+        // Arrange
+        var context = CreateContext();
+        var messages = new BaseMiddlewareMessage[]
+        {
+            ModelMsg(new ModelResponseCompactionContent
+            {
+                BlockIndex = 0,
+                Summary = "Prior context summary"
+            }),
+            ModelMsg(new ModelResponseTextContent { Content = "Continuing from where we left off.", BlockIndex = 1 }),
+        };
+
+        // Act
+        await ConsumeAll(_middleware.ExecuteAsync(context, NextThatYields(messages)));
+
+        // Assert
+        var assistant = Assert.Single(context.Messages.OfType<InternalAssistantMessage>());
+        Assert.Equal(2, assistant.ContentBlocks.Count);
+        Assert.IsType<InternalCompactionBlock>(assistant.ContentBlocks[0]);
+        Assert.IsType<InternalTextBlock>(assistant.ContentBlocks[1]);
+        Assert.Equal("Prior context summary", ((InternalCompactionBlock)assistant.ContentBlocks[0]).Summary);
+        Assert.Equal("Continuing from where we left off.", ((InternalTextBlock)assistant.ContentBlocks[1]).Text);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithCompactionContent_PassesThroughForStreaming()
+    {
+        // Arrange
+        var context = CreateContext();
+        var compactionMsg = ModelMsg(new ModelResponseCompactionContent
+        {
+            BlockIndex = 0,
+            Summary = "Summary"
+        });
+
+        // Act
+        var output = new List<BaseMiddlewareMessage>();
+        await foreach (var m in _middleware.ExecuteAsync(context, NextThatYields(compactionMsg)))
+        {
+            output.Add(m);
+        }
+
+        // Assert - compaction message should be passed through for real-time streaming
+        Assert.Single(output);
+        Assert.Same(compactionMsg, output[0]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithCompactionContent_PersistsInAssistantMessage()
+    {
+        // Arrange
+        InternalMessage? persistedMessage = null;
+        var context = CreateContext();
+        context.TurnId = Guid.NewGuid();
+        context.PersistMessage = msg =>
+        {
+            persistedMessage = msg;
+            return Task.CompletedTask;
+        };
+        var messages = new BaseMiddlewareMessage[]
+        {
+            ModelMsg(new ModelResponseCompactionContent
+            {
+                BlockIndex = 0,
+                Summary = "Compacted context"
+            }),
+            ModelMsg(new ModelResponseTextContent { Content = "Response text", BlockIndex = 1 }),
+        };
+
+        // Act
+        await ConsumeAll(_middleware.ExecuteAsync(context, NextThatYields(messages)));
+
+        // Assert
+        Assert.NotNull(persistedMessage);
+        var assistant = Assert.IsType<InternalAssistantMessage>(persistedMessage);
+        Assert.Equal(2, assistant.ContentBlocks.Count);
+        Assert.IsType<InternalCompactionBlock>(assistant.ContentBlocks[0]);
+        Assert.Equal(context.TurnId, assistant.TurnId);
+    }
+
+    #endregion
+
     #region Helpers
 
     private static ModelMiddlewareContext CreateContext()

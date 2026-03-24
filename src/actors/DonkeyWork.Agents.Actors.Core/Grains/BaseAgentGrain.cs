@@ -267,6 +267,10 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 });
                 break;
 
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseCompactionContent compaction }:
+                Emit(new StreamCompactionEvent(key, compaction.Summary));
+                break;
+
             case ModelMiddlewareMessage { ModelMessage: ModelResponseWebSearchResult webSearch }:
                 Emit(new StreamWebSearchEvent(key, webSearch.ToolUseId));
                 EmitWebSearchComplete(key, webSearch);
@@ -531,6 +535,11 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 {
                     Enabled = contract.WebFetch.Enabled,
                     MaxUses = contract.WebFetch.MaxUses > 0 ? contract.WebFetch.MaxUses : null,
+                },
+                ContextManagement = new ContextManagementOptions
+                {
+                    CompactionEnabled = modelDefinition?.Supports.Compaction ?? false,
+                    CompactionTriggerTokens = 150_000,
                 },
                 Stream = contract.Stream,
             },
