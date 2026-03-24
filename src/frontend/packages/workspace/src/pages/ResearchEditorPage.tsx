@@ -35,20 +35,6 @@ import {
 } from '@donkeywork/api-client'
 import type { WorkspaceNavigation } from '../types'
 
-const statusVariants: Record<ResearchStatus, 'pending' | 'inProgress' | 'success' | 'destructive'> = {
-  NotStarted: 'pending',
-  InProgress: 'inProgress',
-  Completed: 'success',
-  Cancelled: 'destructive',
-}
-
-const statusLabels: Record<ResearchStatus, string> = {
-  NotStarted: 'Not Started',
-  InProgress: 'In Progress',
-  Completed: 'Completed',
-  Cancelled: 'Cancelled',
-}
-
 export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: string; isNew?: boolean; nav: WorkspaceNavigation }) {
   const isNewResearch = isNew ?? false
 
