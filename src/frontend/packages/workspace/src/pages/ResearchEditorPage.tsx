@@ -11,7 +11,6 @@ import {
   StickyNote,
   X,
   Plus,
-  ChevronDown,
 } from 'lucide-react'
 import {
   Button,
@@ -22,9 +21,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@donkeywork/ui'
 import { MarkdownEditor } from '@donkeywork/editor'
 import {
@@ -51,7 +51,7 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
   const [newTagName, setNewTagName] = useState('')
 
   // Notes section
-  const [notesOpen, setNotesOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('research')
 
   useEffect(() => {
     if (researchId && !isNewResearch) {
@@ -255,54 +255,61 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
         </div>
       </div>
 
-      {/* Plan / Body section */}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Search className="h-4 w-4 text-cyan-500" />
-          <span className="font-medium">Investigation</span>
-        </div>
-        <MarkdownEditor
-          content={plan}
-          onChange={setPlan}
-          placeholder="What is being researched? Write the details, findings, and analysis here..."
-        />
-      </div>
+      {/* Tabs: Research content + Notes */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="research" className="gap-1.5">
+            <Search className="h-3.5 w-3.5" />
+            Research
+          </TabsTrigger>
+          {!isNewResearch && (
+            <TabsTrigger value="notes" className="gap-1.5">
+              <StickyNote className="h-3.5 w-3.5" />
+              Notes{noteCount > 0 && ` (${noteCount})`}
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-      {/* Result section — visually distinct */}
-      {showResultSection && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4 text-emerald-500" />
-            <span className="font-medium">Result</span>
-            {status === 'Completed' && (
-              <Badge variant="success" className="text-xs py-0.5">Completed</Badge>
-            )}
-          </div>
-          <div className="border-l-2 border-emerald-500/40 pl-4 bg-emerald-500/[0.03] rounded-r-2xl py-3 pr-3">
+        <TabsContent value="research" className="mt-4 space-y-4">
+          {/* Investigation / Body */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Search className="h-4 w-4 text-cyan-500" />
+              <span className="font-medium">Investigation</span>
+            </div>
             <MarkdownEditor
-              content={result}
-              onChange={setResult}
-              placeholder="What was the outcome? Summarize the findings..."
+              content={plan}
+              onChange={setPlan}
+              placeholder="What is being researched? Write the details, findings, and analysis here..."
             />
           </div>
-        </div>
-      )}
 
-      {/* Notes section — collapsible */}
-      {!isNewResearch && (
-        <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
-          <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full py-2">
-            <ChevronDown className={`h-4 w-4 transition-transform ${notesOpen ? '' : '-rotate-90'}`} />
-            <StickyNote className="h-4 w-4 text-blue-500" />
-            <span className="font-medium">Notes</span>
-            {noteCount > 0 && (
-              <span className="text-xs text-muted-foreground">({noteCount})</span>
-            )}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="pt-2 space-y-2">
-              {noteCount > 0 ? (
-                researchData!.notes.map((note) => (
+          {/* Result — visually distinct */}
+          {showResultSection && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <FileText className="h-4 w-4 text-emerald-500" />
+                <span className="font-medium">Result</span>
+                {status === 'Completed' && (
+                  <Badge variant="success" className="text-xs py-0.5">Completed</Badge>
+                )}
+              </div>
+              <div className="border-l-2 border-emerald-500/40 pl-4 bg-emerald-500/[0.03] rounded-r-2xl py-3 pr-3">
+                <MarkdownEditor
+                  content={result}
+                  onChange={setResult}
+                  placeholder="What was the outcome? Summarize the findings..."
+                />
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {!isNewResearch && (
+          <TabsContent value="notes" className="mt-4">
+            {noteCount > 0 ? (
+              <div className="space-y-2">
+                {researchData!.notes.map((note) => (
                   <div
                     key={note.id}
                     className="rounded-xl border border-border bg-card p-3 hover:border-accent/30 hover:shadow-sm transition-all cursor-pointer"
@@ -318,16 +325,17 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
                       </p>
                     )}
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground italic pl-6">
-                  No notes attached to this research yet.
-                </p>
-              )}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border p-6 text-center">
+                <StickyNote className="h-6 w-6 text-muted-foreground" />
+                <p className="mt-2 text-xs text-muted-foreground">No notes yet</p>
+              </div>
+            )}
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   )
 }
