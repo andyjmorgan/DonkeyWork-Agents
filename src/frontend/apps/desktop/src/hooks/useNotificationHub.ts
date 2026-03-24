@@ -105,6 +105,22 @@ export function useNotificationHub() {
           notification.entityId
         )
 
+        // Always send native notification for completed agent runs
+        if (notification.type === 'ConversationAgentCompleted') {
+          if (permissionRef.current) {
+            sendNotification({
+              title: notification.title,
+              body: notification.message,
+            })
+          }
+          return
+        }
+
+        // Skip activity tracking notifications silently
+        if (notification.type === 'ConversationAgentStarted') {
+          return
+        }
+
         if (permissionRef.current) {
           sendNotification({
             title: notification.title,

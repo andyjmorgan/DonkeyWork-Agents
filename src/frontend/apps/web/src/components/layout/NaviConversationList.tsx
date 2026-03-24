@@ -4,6 +4,7 @@ import { conversations } from '@donkeywork/api-client'
 import type { ConversationSummary } from '@donkeywork/api-client'
 import { MessageSquare, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useActiveConversationsStore } from '@donkeywork/stores'
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -21,6 +22,7 @@ export function NaviConversationList({ onNavigate }: { onNavigate?: () => void }
   const [items, setItems] = useState<ConversationSummary[]>([])
   const location = useLocation()
   const navigate = useNavigate()
+  const activeIds = useActiveConversationsStore((s) => s.activeIds)
 
   useEffect(() => {
     let cancelled = false
@@ -46,33 +48,49 @@ export function NaviConversationList({ onNavigate }: { onNavigate?: () => void }
 
   return (
     <div className="mt-1 space-y-0.5">
-      {items.map((conv) => (
-        <NavLink
-          key={conv.id}
-          to={`/agent-chat/${conv.id}`}
-          onClick={onNavigate}
-          className={({ isActive }: { isActive: boolean }) =>
-            cn(
-              'flex items-center gap-2.5 rounded-md px-3 py-1.5 pl-9 text-xs transition-colors group',
-              isActive
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-            )
-          }
-        >
-          <MessageSquare className="h-3 w-3 shrink-0 text-cyan-500/60" />
-          <span className="truncate flex-1">{conv.title}</span>
-          <span className="text-[10px] text-sidebar-foreground/40 shrink-0 group-hover:hidden">
-            {timeAgo(conv.updatedAt ?? conv.createdAt)}
-          </span>
-          <button
-            onClick={(e) => handleDelete(e, conv)}
-            className="hidden group-hover:flex items-center justify-center shrink-0 rounded p-0.5 text-sidebar-foreground/40 hover:text-red-400 transition-colors cursor-pointer"
+      {items.map((conv) => {
+        const isProcessing = activeIds.has(conv.id)
+
+        return (
+          <NavLink
+            key={conv.id}
+            to={`/agent-chat/${conv.id}`}
+            onClick={onNavigate}
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                'flex items-center gap-2.5 rounded-md px-3 py-1.5 pl-9 text-xs transition-colors group',
+                isActive
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              )
+            }
           >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </NavLink>
-      ))}
+            <span className="relative shrink-0">
+              <MessageSquare className={cn(
+                'h-3 w-3',
+                isProcessing ? 'text-cyan-400' : 'text-cyan-500/60'
+              )} />
+              {isProcessing && (
+                <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              )}
+            </span>
+            <span className="truncate flex-1">{conv.title}</span>
+            <span className="text-[10px] text-sidebar-foreground/40 shrink-0 group-hover:hidden">
+              {isProcessing ? (
+                <span className="text-cyan-400 animate-pulse">working</span>
+              ) : (
+                timeAgo(conv.updatedAt ?? conv.createdAt)
+              )}
+            </span>
+            <button
+              onClick={(e) => handleDelete(e, conv)}
+              className="hidden group-hover:flex items-center justify-center shrink-0 rounded p-0.5 text-sidebar-foreground/40 hover:text-red-400 transition-colors cursor-pointer"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </NavLink>
+        )
+      })}
     </div>
   )
 }

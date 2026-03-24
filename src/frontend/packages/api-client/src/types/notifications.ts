@@ -23,6 +23,9 @@ export type NotificationType =
   | 'NoteCreated'
   | 'NoteUpdated'
   | 'NoteDeleted'
+  // Conversation notifications
+  | 'ConversationAgentStarted'
+  | 'ConversationAgentCompleted'
 
 /**
  * Notification payload received from SignalR hub.

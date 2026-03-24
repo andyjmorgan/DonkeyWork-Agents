@@ -19,6 +19,9 @@ using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
+using DonkeyWork.Agents.Notifications.Contracts.Enums;
+using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
+using DonkeyWork.Agents.Notifications.Contracts.Models;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
 using DonkeyWork.Agents.Providers.Contracts.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -362,6 +365,11 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 Emit(new StreamTurnStartEvent(GrainContext.GrainKey, source, preview));
                 EmitQueueStatus();
 
+                await SendAgentNotificationAsync(
+                    NotificationType.ConversationAgentStarted,
+                    "Agent Active",
+                    contract.DisplayName ?? "Navi");
+
                 try
                 {
                     await RunPipelineAsync(contract, turnId, ct);
@@ -388,6 +396,11 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                     _currentTurnCts.Dispose();
                     _currentTurnCts = null;
                 }
+
+                await SendAgentNotificationAsync(
+                    NotificationType.ConversationAgentCompleted,
+                    "Agent Complete",
+                    contract.DisplayName ?? "Navi");
 
                 Emit(new StreamTurnEndEvent(GrainContext.GrainKey));
                 EmitQueueStatus();
@@ -564,6 +577,28 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         await metadataService.TouchTimestampAsync(
             Guid.Parse(GrainContext.ConversationId),
             IdentityContext.UserId);
+    }
+
+    private async Task SendAgentNotificationAsync(NotificationType type, string title, string message)
+    {
+        try
+        {
+            using var scope = ServiceProvider.CreateScope();
+            var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+            await notificationService.SendToUserAsync(
+                IdentityContext.UserId,
+                new WorkspaceNotification
+                {
+                    Type = type,
+                    Title = title,
+                    Message = message,
+                    EntityId = Guid.Parse(GrainContext.ConversationId),
+                });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to send {NotificationType} notification", type);
+        }
     }
 
     #endregion

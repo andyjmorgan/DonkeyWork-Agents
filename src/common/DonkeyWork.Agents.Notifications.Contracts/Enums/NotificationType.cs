@@ -26,5 +26,9 @@ public enum NotificationType
     // Note notifications
     NoteCreated,
     NoteUpdated,
-    NoteDeleted
+    NoteDeleted,
+
+    // Conversation agent notifications
+    ConversationAgentStarted,
+    ConversationAgentCompleted
 }
