@@ -127,13 +127,40 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         return newBoxes;
       });
     } else {
-      updateBoxes(fallbackMessageId, (boxes) => {
-        const last = boxes[boxes.length - 1];
-        if (last?.type === boxType && appender) {
-          return [...boxes.slice(0, -1), appender(last)];
-        }
-        return [...boxes, newBox];
-      });
+      // No index entry yet — scan all messages for a nested agent_group matching this agentKey.
+      // This handles race conditions where agent events arrive before the spawn event is processed.
+      let found = false;
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (found) return m;
+          const newBoxes = [...m.boxes];
+          for (let i = 0; i < newBoxes.length; i++) {
+            const updated = updateNestedGroup(newBoxes[i], agentKey, (inner) => {
+              const last = inner[inner.length - 1];
+              if (last?.type === boxType && appender) {
+                return [...inner.slice(0, -1), appender(last)];
+              }
+              return [...inner, newBox];
+            });
+            if (updated) {
+              found = true;
+              agentGroupIndexRef.current.set(agentKey, { messageId: m.id, boxIndex: i });
+              newBoxes[i] = updated;
+              return { ...m, boxes: newBoxes };
+            }
+          }
+          return m;
+        })
+      );
+      if (!found) {
+        updateBoxes(fallbackMessageId, (boxes) => {
+          const last = boxes[boxes.length - 1];
+          if (last?.type === boxType && appender) {
+            return [...boxes.slice(0, -1), appender(last)];
+          }
+          return [...boxes, newBox];
+        });
+      }
     }
   }
 
