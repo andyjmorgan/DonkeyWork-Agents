@@ -289,7 +289,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     <div className="flex flex-col flex-1 min-w-0">
       {/* Header */}
       <div className="flex-none">
-        <div className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center justify-between px-3 py-3 md:px-6 md:py-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600">
               <Bubbles className="w-4 h-4 text-white" />
@@ -298,17 +298,17 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
             {isConnected && (
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] text-muted-foreground">Connected</span>
+                <span className="hidden md:inline text-[10px] text-muted-foreground">Connected</span>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 md:gap-1">
             {sandboxStatus && (
               <div
-                className="flex items-center gap-1.5 px-2 py-1 text-muted-foreground"
+                className="flex items-center gap-1 md:gap-1.5 px-1 md:px-2 py-1 text-muted-foreground"
                 title={sandboxStatus.podName ?? sandboxStatus.message ?? sandboxStatus.status}
               >
-                <Container className="w-4 h-4" />
+                <Container className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 {sandboxStatus.status === "provisioning" && (
                   <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
                 )}
@@ -325,9 +325,9 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
                 variant="ghost"
                 size="sm"
                 onClick={() => { setMcpPanelOpen(true); setSidePanelOpen(false); setExecutionPanelOpen(false); }}
-                className="text-muted-foreground hover:text-foreground gap-1.5"
+                className="text-muted-foreground hover:text-foreground gap-1 md:gap-1.5 px-2 md:px-3"
               >
-                <Plug className="w-4 h-4" />
+                <Plug className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 <span className="text-xs">{mcpConnectedCount}</span>
                 {mcpHasFailures && (
                   <span className="flex h-1.5 w-1.5 rounded-full bg-amber-400" />
@@ -339,9 +339,9 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
                 variant="ghost"
                 size="sm"
                 onClick={() => { setSidePanelOpen(true); setMcpPanelOpen(false); setExecutionPanelOpen(false); }}
-                className="text-muted-foreground hover:text-foreground gap-1.5"
+                className="text-muted-foreground hover:text-foreground gap-1 md:gap-1.5 px-2 md:px-3"
               >
-                <PanelRightOpen className="w-4 h-4" />
+                <PanelRightOpen className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 <span className="text-xs">{agentTotal}</span>
                 {agentActiveCount > 0 && (
                   <span className="flex h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -353,9 +353,9 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
                 variant="ghost"
                 size="sm"
                 onClick={() => { setExecutionPanelOpen(true); setSidePanelOpen(false); setMcpPanelOpen(false); setSocketPanelOpen(false); }}
-                className="text-muted-foreground hover:text-foreground gap-1.5"
+                className="text-muted-foreground hover:text-foreground px-2 md:px-3"
               >
-                <History className="w-4 h-4" />
+                <History className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </Button>
             )}
             {!socketPanelOpen && (
@@ -363,19 +363,19 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
                 variant="ghost"
                 size="sm"
                 onClick={() => { setSocketPanelOpen(true); setSidePanelOpen(false); setMcpPanelOpen(false); setExecutionPanelOpen(false); }}
-                className="text-muted-foreground hover:text-foreground gap-1.5"
+                className="text-muted-foreground hover:text-foreground px-2 md:px-3"
               >
-                <Radio className="w-4 h-4" />
+                <Radio className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </Button>
             )}
             <Button
               variant="ghost"
               size="sm"
               onClick={resetConversation}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground px-2 md:px-3"
             >
-              <RefreshCw className="w-4 h-4 mr-1.5" />
-              New Chat
+              <RefreshCw className="w-3.5 h-3.5 md:w-4 md:h-4 md:mr-1.5" />
+              <span className="hidden md:inline">New Chat</span>
             </Button>
           </div>
         </div>
