@@ -183,6 +183,9 @@ export function AgentNodePalette() {
     },
   ]
 
+  const sortByName = (a: PaletteItem, b: PaletteItem) =>
+    a.displayName.localeCompare(b.displayName)
+
   // MCP Server items (from API)
   const mcpItems: PaletteItem[] = serverList.map((server) => ({
     key: `mcp-${server.id}`,
@@ -200,7 +203,7 @@ export function AgentNodePalette() {
     color: 'purple',
     isDisabled: isReadOnly || hasMcpServer(server.id),
     mcpServerId: server.id,
-  }))
+  })).sort(sortByName)
 
   // Prompt items (from API)
   const promptItems: PaletteItem[] = promptList.map((prompt) => ({
@@ -218,7 +221,7 @@ export function AgentNodePalette() {
     icon: 'file-text',
     color: 'emerald',
     isDisabled: isReadOnly || hasPrompt(prompt.id),
-  }))
+  })).sort(sortByName)
 
   // Tool Group items
   const toolGroupItems: PaletteItem[] = toolGroupDefinitions.map((tg) => ({
@@ -257,7 +260,7 @@ export function AgentNodePalette() {
       icon: 'bot',
       color: 'rose',
       isDisabled: isReadOnly || hasSubAgent(agent.id),
-    }))
+    })).sort(sortByName)
 
   // A2A Server items (from API)
   const a2aItems: PaletteItem[] = a2aServerList.map((server) => ({
@@ -266,7 +269,7 @@ export function AgentNodePalette() {
       nodeType: 'agentA2aServer',
       displayName: server.name,
       icon: 'bot',
-      color: 'rose',
+      color: 'cyan',
       canDelete: true,
       a2aServerId: server.id,
       a2aServerName: server.name,
@@ -274,9 +277,9 @@ export function AgentNodePalette() {
     },
     displayName: server.name,
     icon: 'bot',
-    color: 'rose',
+    color: 'cyan',
     isDisabled: isReadOnly || hasA2aServer(server.id),
-  }))
+  })).sort(sortByName)
 
   // Sandbox item
   const sandboxItem: PaletteItem = {

@@ -64,7 +64,7 @@ export const agentNodeTypes: Record<string, AgentNodeTypeInfo> = {
     type: 'agentA2aServer',
     displayName: 'A2A Server',
     icon: 'bot',
-    color: 'rose',
+    color: 'cyan',
     canDelete: true,
     targetHandle: 'agents',
   },
