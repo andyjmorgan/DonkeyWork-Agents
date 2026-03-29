@@ -52,6 +52,11 @@ const colorClasses: Record<string, { border: string; iconContainer: string; icon
     iconContainer: 'bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-500/25',
     iconColor: 'text-white',
   },
+  orange: {
+    border: 'border-orange-500/30 bg-orange-500/5 hover:border-orange-500/50 hover:bg-orange-500/10',
+    iconContainer: 'bg-gradient-to-br from-orange-500 to-red-600 shadow-lg shadow-orange-500/25',
+    iconColor: 'text-white',
+  },
 }
 
 interface PaletteItem {
@@ -269,7 +274,7 @@ export function AgentNodePalette() {
       nodeType: 'agentA2aServer',
       displayName: server.name,
       icon: 'bot',
-      color: 'cyan',
+      color: 'orange',
       canDelete: true,
       a2aServerId: server.id,
       a2aServerName: server.name,
@@ -277,7 +282,7 @@ export function AgentNodePalette() {
     },
     displayName: server.name,
     icon: 'bot',
-    color: 'cyan',
+    color: 'orange',
     isDisabled: isReadOnly || hasA2aServer(server.id),
   })).sort(sortByName)
 
