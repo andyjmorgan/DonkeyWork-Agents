@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text;
 using DonkeyWork.Agents.A2a.Contracts.Models;
 using DonkeyWork.Agents.A2a.Contracts.Services;
-using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
@@ -97,27 +96,14 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
         return entity == null ? null : MapToDetails(entity);
     }
 
-    public async Task<PaginatedResponse<A2aServerSummaryV1>> ListAsync(PaginationRequest pagination, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<A2aServerSummaryV1>> ListAsync(CancellationToken cancellationToken = default)
     {
-        var limit = pagination.GetLimit();
-
-        var query = _dbContext.A2aServerConfigurations.AsNoTracking();
-
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var entities = await query
+        var entities = await _dbContext.A2aServerConfigurations
+            .AsNoTracking()
             .OrderByDescending(c => c.CreatedAt)
-            .Skip(pagination.Offset)
-            .Take(limit)
             .ToListAsync(cancellationToken);
 
-        return new PaginatedResponse<A2aServerSummaryV1>
-        {
-            Items = entities.Select(MapToSummary).ToList(),
-            Offset = pagination.Offset,
-            Limit = limit,
-            TotalCount = totalCount
-        };
+        return entities.Select(MapToSummary).ToList();
     }
 
     public async Task<A2aServerDetailsV1?> UpdateAsync(Guid id, UpdateA2aServerRequestV1 request, CancellationToken cancellationToken = default)

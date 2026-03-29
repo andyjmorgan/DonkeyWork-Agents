@@ -1,7 +1,6 @@
 using Asp.Versioning;
 using DonkeyWork.Agents.A2a.Contracts.Models;
 using DonkeyWork.Agents.A2a.Contracts.Services;
-using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -68,10 +67,10 @@ public class A2aServersController : ControllerBase
     /// </summary>
     /// <response code="200">Returns the list of A2A server configurations.</response>
     [HttpGet]
-    [ProducesResponseType<PaginatedResponse<A2aServerSummaryV1>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> List([FromQuery] PaginationRequest pagination)
+    [ProducesResponseType<IReadOnlyList<A2aServerSummaryV1>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List()
     {
-        var configs = await _a2aServerConfigurationService.ListAsync(pagination);
+        var configs = await _a2aServerConfigurationService.ListAsync();
         return Ok(configs);
     }
 
