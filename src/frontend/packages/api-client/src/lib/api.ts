@@ -1713,6 +1713,14 @@ export interface A2aAgentCardCapabilities {
   pushNotifications: boolean
 }
 
+export interface A2aSecurityScheme {
+  type?: string
+  in?: string
+  name?: string
+  scheme?: string
+  description?: string
+}
+
 export interface A2aAgentCard {
   name: string
   description: string
@@ -1722,6 +1730,8 @@ export interface A2aAgentCard {
   capabilities?: A2aAgentCardCapabilities
   defaultInputModes?: string[]
   defaultOutputModes?: string[]
+  securitySchemes?: Record<string, A2aSecurityScheme>
+  security?: Record<string, string[]>[]
 }
 
 export interface A2aServerTestResult {
@@ -1739,6 +1749,7 @@ export const a2aServers = {
   update: (id: string, data: UpdateA2aServerRequest) => api.put<A2aServerDetails>(`/api/v1/a2a-servers/${id}`, data),
   delete: (id: string) => api.delete(`/api/v1/a2a-servers/${id}`),
   test: (id: string) => api.post<A2aServerTestResult>(`/api/v1/a2a-servers/${id}/test`, {}),
+  discover: (address: string) => api.post<A2aServerTestResult>(`/api/v1/a2a-servers/discover`, { address }),
 }
 
 // Tool Groups API

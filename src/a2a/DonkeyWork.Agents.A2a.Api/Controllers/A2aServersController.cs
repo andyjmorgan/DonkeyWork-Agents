@@ -117,6 +117,21 @@ public class A2aServersController : ControllerBase
     }
 
     /// <summary>
+    /// Discover an A2A server by fetching its agent card. No auth headers are sent.
+    /// </summary>
+    [HttpPost("discover")]
+    [ProducesResponseType<TestA2aServerResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Discover([FromBody] DiscoverA2aServerRequestV1 request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Address))
+            return BadRequest("Address is required.");
+
+        var result = await _a2aServerTestService.DiscoverAsync(request.Address);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Test connection to an A2A server and retrieve the agent card.
     /// </summary>
     /// <param name="id">The A2A server configuration ID.</param>

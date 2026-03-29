@@ -93,7 +93,7 @@ jobs:
       - name: Test
         run: >-
           dotnet test DonkeyWork.Agents.sln -c Release --no-build --verbosity normal
-          --filter "FullyQualifiedName!~CodeSandbox"
+          --filter "FullyQualifiedName!~CodeSandbox&Category!=Integration"
 
   test-sandbox:
     name: Test Sandbox

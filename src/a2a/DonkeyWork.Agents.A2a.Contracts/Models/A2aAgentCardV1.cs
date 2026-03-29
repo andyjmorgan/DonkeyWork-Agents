@@ -27,4 +27,10 @@ public sealed class A2aAgentCardV1
 
     [JsonPropertyName("defaultOutputModes")]
     public List<string>? DefaultOutputModes { get; init; }
+
+    [JsonPropertyName("securitySchemes")]
+    public Dictionary<string, A2aSecuritySchemeV1>? SecuritySchemes { get; init; }
+
+    [JsonPropertyName("security")]
+    public List<Dictionary<string, List<string>>>? Security { get; init; }
 }

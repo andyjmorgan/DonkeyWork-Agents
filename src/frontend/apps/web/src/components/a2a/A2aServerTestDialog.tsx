@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, CheckCircle2, XCircle, RotateCw, Clock, Sparkles, Tag } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, RotateCw, Clock, Sparkles, Tag, Shield } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -141,6 +141,24 @@ export function A2aServerTestDialog({
                       <span>{result.agentCard.defaultOutputModes.join(', ')}</span>
                     </div>
                   )}
+                </div>
+              )}
+
+              {result.agentCard.securitySchemes && Object.keys(result.agentCard.securitySchemes).length > 0 && (
+                <div className="text-sm">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-muted-foreground">Authentication</span>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {Object.entries(result.agentCard.securitySchemes).map(([key, scheme]) => (
+                      <Badge key={key} variant="outline" className="text-xs">
+                        {scheme.type === 'apiKey' && scheme.name
+                          ? `${scheme.name} (${scheme.in || 'header'})`
+                          : scheme.type || key}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
 

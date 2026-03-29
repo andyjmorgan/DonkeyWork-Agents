@@ -48,7 +48,10 @@ public class A2aServerTestService : IA2aServerTestService
             var client = _httpClientFactory.CreateClient();
             client.Timeout = TestTimeout;
 
-            var agentCardUrl = $"{config.Address.TrimEnd('/')}/.well-known/agent-card.json";
+            var baseAddress = config.Address.TrimEnd('/');
+            if (baseAddress.EndsWith("/a2a", StringComparison.OrdinalIgnoreCase))
+                baseAddress = baseAddress[..^4];
+            var agentCardUrl = $"{baseAddress}/.well-known/agent-card.json";
 
             using var request = new HttpRequestMessage(HttpMethod.Get, agentCardUrl);
             foreach (var header in config.Headers)
@@ -94,6 +97,63 @@ public class A2aServerTestService : IA2aServerTestService
                 "Test connection to A2A server '{ServerName}' at {Address} failed after {ElapsedMs}ms",
                 config.Name, config.Address, sw.ElapsedMilliseconds);
 
+            return new TestA2aServerResponseV1
+            {
+                Success = false,
+                ElapsedMs = sw.ElapsedMilliseconds,
+                Error = ex.Message,
+            };
+        }
+    }
+
+    public async Task<TestA2aServerResponseV1> DiscoverAsync(string address, CancellationToken cancellationToken = default)
+    {
+        var sw = Stopwatch.StartNew();
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TestTimeout);
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TestTimeout;
+
+            var baseAddress = address.TrimEnd('/');
+            if (baseAddress.EndsWith("/a2a", StringComparison.OrdinalIgnoreCase))
+                baseAddress = baseAddress[..^4];
+            var agentCardUrl = $"{baseAddress}/.well-known/agent-card.json";
+
+            using var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, agentCardUrl), timeoutCts.Token);
+            response.EnsureSuccessStatusCode();
+
+            var agentCard = await response.Content.ReadFromJsonAsync<A2aAgentCardV1>(timeoutCts.Token);
+            sw.Stop();
+
+            _logger.LogInformation(
+                "Discovered A2A agent at {Address} in {ElapsedMs}ms",
+                address, sw.ElapsedMilliseconds);
+
+            return new TestA2aServerResponseV1
+            {
+                Success = true,
+                ElapsedMs = sw.ElapsedMilliseconds,
+                AgentCard = agentCard,
+            };
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            sw.Stop();
+            return new TestA2aServerResponseV1
+            {
+                Success = false,
+                ElapsedMs = sw.ElapsedMilliseconds,
+                Error = "Connection timed out after 30 seconds.",
+            };
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _logger.LogError(ex, "Failed to discover A2A agent at {Address}", address);
             return new TestA2aServerResponseV1
             {
                 Success = false,
