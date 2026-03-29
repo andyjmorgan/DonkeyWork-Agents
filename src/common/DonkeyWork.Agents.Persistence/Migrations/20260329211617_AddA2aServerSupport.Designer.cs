@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DonkeyWork.Agents.Persistence.Migrations
 {
     [DbContext(typeof(AgentsDbContext))]
-    [Migration("20260329201118_AddA2aServerSupport")]
+    [Migration("20260329211617_AddA2aServerSupport")]
     partial class AddA2aServerSupport
     {
         /// <inheritdoc />
@@ -74,7 +74,8 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_a2a_server_configurations");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_a2a_server_configurations_user_id");
@@ -1008,8 +1009,7 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
-                    b.HasKey("Id")
-                        .HasName("PK_server_configurations");
+                    b.HasKey("Id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_mcp_server_configurations_user_id");

@@ -71,7 +71,8 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("pk_a2a_server_configurations");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_a2a_server_configurations_user_id");
@@ -1005,8 +1006,7 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
-                    b.HasKey("Id")
-                        .HasName("PK_server_configurations");
+                    b.HasKey("Id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_mcp_server_configurations_user_id");

@@ -48,7 +48,7 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_a2a_header_configurations", x => x.id);
+                    table.PrimaryKey("PK_header_configurations", x => x.id);
                     table.CheckConstraint("ck_a2a_header_value_or_credential", "(header_value_encrypted IS NOT NULL AND credential_id IS NULL AND credential_field_type IS NULL) OR (header_value_encrypted IS NULL AND credential_id IS NOT NULL AND credential_field_type IS NOT NULL)");
                     table.ForeignKey(
                         name: "FK_header_configurations_server_configurations_a2a_server_conf~",
