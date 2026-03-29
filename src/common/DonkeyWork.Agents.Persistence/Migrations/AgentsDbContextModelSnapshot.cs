@@ -1006,7 +1006,7 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
-                        .HasName("PK_server_configurations1");
+                        .HasName("PK_server_configurations");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_mcp_server_configurations_user_id");

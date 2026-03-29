@@ -10,7 +10,8 @@ public class A2aServerConfigurationConfiguration : IEntityTypeConfiguration<A2aS
     {
         builder.ToTable("server_configurations", "a2a");
 
-        builder.HasKey(e => e.Id);
+        builder.HasKey(e => e.Id)
+            .HasName("pk_a2a_server_configurations");
 
         builder.Property(e => e.Id)
             .HasColumnName("id")

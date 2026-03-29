@@ -11,19 +11,8 @@ namespace DonkeyWork.Agents.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_server_configurations",
-                schema: "mcp",
-                table: "server_configurations");
-
             migrationBuilder.EnsureSchema(
                 name: "a2a");
-
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_server_configurations1",
-                schema: "mcp",
-                table: "server_configurations",
-                column: "id");
 
             migrationBuilder.CreateTable(
                 name: "server_configurations",
@@ -42,7 +31,7 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_server_configurations", x => x.id);
+                    table.PrimaryKey("pk_a2a_server_configurations", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -59,7 +48,7 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_header_configurations", x => x.id);
+                    table.PrimaryKey("pk_a2a_header_configurations", x => x.id);
                     table.CheckConstraint("ck_a2a_header_value_or_credential", "(header_value_encrypted IS NOT NULL AND credential_id IS NULL AND credential_field_type IS NULL) OR (header_value_encrypted IS NULL AND credential_id IS NOT NULL AND credential_field_type IS NOT NULL)");
                     table.ForeignKey(
                         name: "FK_header_configurations_server_configurations_a2a_server_conf~",
@@ -113,17 +102,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
             migrationBuilder.DropTable(
                 name: "server_configurations",
                 schema: "a2a");
-
-            migrationBuilder.DropPrimaryKey(
-                name: "PK_server_configurations1",
-                schema: "mcp",
-                table: "server_configurations");
-
-            migrationBuilder.AddPrimaryKey(
-                name: "PK_server_configurations",
-                schema: "mcp",
-                table: "server_configurations",
-                column: "id");
         }
     }
 }
