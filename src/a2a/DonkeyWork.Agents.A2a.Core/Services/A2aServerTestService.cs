@@ -48,7 +48,7 @@ public class A2aServerTestService : IA2aServerTestService
             var client = _httpClientFactory.CreateClient();
             client.Timeout = TestTimeout;
 
-            var agentCardUrl = $"{config.Address.TrimEnd('/')}/.well-known/agent.json";
+            var agentCardUrl = $"{config.Address.TrimEnd('/')}/.well-known/agent-card.json";
 
             using var request = new HttpRequestMessage(HttpMethod.Get, agentCardUrl);
             foreach (var header in config.Headers)
