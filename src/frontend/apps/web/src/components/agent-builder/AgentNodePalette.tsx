@@ -265,16 +265,16 @@ export function AgentNodePalette() {
     dragData: {
       nodeType: 'agentA2aServer',
       displayName: server.name,
-      icon: 'globe',
-      color: 'teal',
+      icon: 'bot',
+      color: 'rose',
       canDelete: true,
       a2aServerId: server.id,
       a2aServerName: server.name,
       a2aServerDescription: server.description,
     },
     displayName: server.name,
-    icon: 'globe',
-    color: 'teal',
+    icon: 'bot',
+    color: 'rose',
     isDisabled: isReadOnly || hasA2aServer(server.id),
   }))
 
