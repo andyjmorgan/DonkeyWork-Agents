@@ -1,4 +1,34 @@
-Project is a Modular monolith.
+## Project Overview
+
+DonkeyWork-Agents is the backend for the DonkeyWork iOS application. It is a .NET 10 modular monolith that provides AI agent orchestration, workflow execution, project management, credential storage, and real-time streaming.
+
+The system has two distinct AI execution paradigms:
+
+1. **Orchestration Engine** — Deterministic DAG workflows (ReactFlow graphs) executed node-by-node with Scriban template variable resolution (`{{ Input.field }}`, `{{ Steps.previousNode.result }}`)
+2. **Orleans Actor System** — Long-running agentic conversation loops with dynamic tool execution (sandbox, project management, MCP, web search) and sub-agent spawning via a Swarm tool group
+
+Both share a common LLM provider abstraction via right-to-left middleware pipelines (Exception → Tool → Guardrails → Accumulator → UsageTracking → Provider).
+
+### Client Communication
+
+| Mechanism | Purpose | Endpoint |
+|-----------|---------|----------|
+| REST API | CRUD operations, auth, file management | `/api/v1/{resource}` |
+| SSE | Orchestration execution streaming | `Accept: text/event-stream` on execution endpoints |
+| WebSocket | Actor conversations (JSON-RPC protocol) | `/api/v1/conversations/{id}/ws` |
+| SignalR | Push notifications | `/hubs/notifications` (JWT via `access_token` query param) |
+
+### Key iOS Client Integration Notes
+
+- **JSON format**: camelCase throughout. Polymorphic types use `$type` discriminator with `nameof()` values (e.g., `TextContentPart`, not `text`)
+- **Pagination**: `offset`/`limit` params → `PaginatedResponse<T>` with `items`, `totalCount`
+- **Auth flow**: Keycloak PKCE OAuth → callback returns tokens in URL fragment → Bearer header for all calls → `POST /auth/refresh` for renewal
+- **Streaming**: SSE requires `Accept: text/event-stream` header; reconnect via `GET /executions/{id}/stream?offset={n}`
+- **WebSocket**: JSON-RPC protocol — send `message()`, receive `onEvent()` notifications
+- **Image upload**: Multipart form-data to `POST /conversations/{id}/upload`
+- **File downloads**: Presigned URLs via `GET /files/{name}/url?expiryMinutes={n}` — good for iOS image caching
+- **Content parts**: iOS must handle polymorphic `ContentPart` types — Text, Image, ToolUse, ToolResult (and thinking/citation in actor streams)
+- **Error responses**: Not unified across modules — varies between `{ "error": "..." }` and `{ "message": "..." }`
 
 ## Prerequisites
 
@@ -150,6 +180,55 @@ src/
 │   └── DonkeyWork.Agents.{Module}.Api/        # Controllers, DI registration
 ```
 
+## Modules and API Surface
+
+| Module | Purpose | Key Endpoints |
+|--------|---------|---------------|
+| **identity** | Keycloak OAuth2 PKCE, token refresh, user info | `GET /auth/login`, `POST /auth/refresh`, `GET /me` |
+| **projects** | Projects, milestones, tasks, notes, research | CRUD on `/projects`, `/tasks`, `/notes`, `/research` |
+| **orchestrations** | Workflow CRUD, draft/publish versioning, execution, streaming | CRUD on `/orchestrations`, `/orchestrations/{id}/execute`, `/orchestrations/{id}/chat` |
+| **conversations** | Chat sessions, messages, image upload, bulk delete | CRUD on `/conversations`, `POST /conversations/{id}/messages` |
+| **credentials** | User API keys, external API keys, OAuth tokens, sandbox mappings | CRUD on `/apikeys`, `/credentials`, `/oauth/tokens` |
+| **storage** | File upload/download, presigned URLs, skill packages | CRUD on `/files`, `/skills` |
+| **prompts** | Reusable prompt templates | CRUD on `/prompts` |
+| **providers** | LLM model catalog and config schemas | `GET /models`, `GET /models/{id}/config-schema` |
+| **agentdefinitions** | Pre-defined agent blueprints with ReactFlow graphs | CRUD on `/agent-definitions` |
+| **mcp** | MCP server config (stdio/HTTP), connection testing | CRUD on `/mcp-servers`, `POST /mcp-servers/{id}/test` |
+| **actors** | Orleans-based agent execution, audit trail | `GET /agent-executions`, WebSocket at `/conversations/{id}/ws` |
+
+### Orchestration Execution Endpoints (Most Complex)
+
+- `POST /orchestrations/{id}/execute` — Execute published version (supports SSE streaming via `Accept: text/event-stream`)
+- `POST /orchestrations/{id}/test` — Execute draft version
+- `POST /orchestrations/{id}/chat` — Chat mode execution with conversation context
+- `POST /orchestrations/{id}/test-chat` — Test chat mode on draft
+- `GET /orchestrations/executions/{executionId}` — Get execution status
+- `GET /orchestrations/executions/{executionId}/stream?offset={n}` — Reconnect to execution stream
+- `GET /orchestrations/executions/{executionId}/logs` — Get execution logs
+- `GET /orchestrations/executions/{executionId}/nodes` — Get node execution trace
+
+### Streaming Event Types
+
+**Orchestration events** (NATS JetStream → SSE):
+`ExecutionStarted` → `NodeStarted` → `TokenDelta` → `ContentPartStarted/Ended` → `NodeCompleted` → `ExecutionCompleted`
+
+**Actor events** (Grain observers → SSE/WebSocket):
+`StreamMessage`, `StreamToolUse`, `StreamToolResult`, `StreamThinking`, `StreamUsage`, `StreamComplete`, `StreamError`, `StreamCitation`, `StreamWebSearch`, `StreamMcpServerStatus`, `StreamCompaction`, `StreamCancelled`
+
+### Orleans Actor Grain Patterns
+
+- `IConversationGrain` — Long-lived, reentrant, 35min collection age. Key: `conv:{userId}:{conversationId}`
+- `IAgentGrain` — Single-execution sub-agent, 25min collection age. Key: `agent:{conversationId}:{agentId}`
+- `IAgentRegistryGrain` — Per-conversation tracker of spawned agents
+
+Processing loop: message queue → hydrate tools → ModelPipeline → tool calls (parallel, max 25 concurrent, max 25 iterations) → persist → emit events.
+
+### LLM Provider Details
+
+Primary provider is **Anthropic** with beta headers: `interleaved-thinking`, `web-fetch`, `compact`, `context-management`. Handles text blocks, tool use, thinking blocks (with signature), server tools (web search/fetch), compaction, and citations.
+
+Model catalog is an embedded `models.json` resource with per-model metadata (token limits, costs, capability flags). Exposed via `GET /models`.
+
 ## Module Layers
 
 - **Common.Contracts** => shared enums (e.g., LlmProvider, OAuthProvider), base interfaces (IEntity, IAuditable).
@@ -186,6 +265,20 @@ All databases use PostgreSQL with support for pgcrypto and pgvector extensions.
 - Encrypted columns: use `bytea` column type
 - No soft delete - use hard deletes
 - Global query filter on `BaseEntity.UserId` for user isolation (use `IgnoreQueryFilters()` to bypass)
+
+### Database Schemas
+
+| Schema | Key Entities | Notes |
+|--------|-------------|-------|
+| `credentials` | ExternalApiKeyEntity, OAuthTokenEntity, OAuthProviderConfigEntity, OAuthStateEntity, SandboxCredentialMappingEntity, SandboxCustomVariableEntity | pgcrypto column-level encryption for secrets |
+| `projects` | ProjectEntity → MilestoneEntity → TaskItemEntity/NoteEntity, tag entities, file references | Full hierarchy with cascading deletes |
+| `orchestrations` | OrchestrationEntity → VersionEntity → ExecutionEntity → NodeExecutionEntity, LogEntity, CredentialMappingEntity | Draft/published versioning; ReactFlow data + node configs as JSONB |
+| `conversations` | ConversationEntity → ConversationMessageEntity | Polymorphic ContentPart (Text, Image, ToolUse, ToolResult) as JSONB |
+| `actors` | GrainMessageEntity, AgentExecutionEntity | Grain key: `conv:{userId}:{conversationId}`; token usage tracking |
+| `mcp` | McpServerConfigurationEntity + Stdio/Http transport configs + headers + env vars, McpToolInvocationLogEntity | Credential references; tool invocation audit log (system-level, not user-scoped) |
+| `agent_definitions` | AgentDefinitionEntity, PromptEntity | Contract + ReactFlow data as JSONB |
+| `research` | ResearchEntity, ResearchTagEntity | Status: NotStarted/InProgress/Completed/Cancelled |
+| `system` | DataProtectionKey | ASP.NET Core data protection (not user-scoped, int PK) |
 
 ## EF Core Migrations
 

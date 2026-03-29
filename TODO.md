@@ -2,7 +2,37 @@
 
 ## Tasks
 
-*No open tasks*
+### Expression Engine Phase 4 — Execution Infrastructure
+
+**Priority:** Medium
+
+The expression engine (Scriban-based) has core infrastructure complete (44 tests passing), but cannot yet be used in workflow execution. See `EXPRESSION_ENGINE_STATUS.md` for full details.
+
+**Missing components:**
+1. **Action Executor/Dispatcher** — Service to discover and execute `[ActionProvider]` classes via assembly scanning
+2. **Action Node Executor** — `INodeExecutor` implementation for action nodes in the orchestration engine
+3. **Dynamic Context Building** — Helper to convert `ExecutionContext` → Scriban context (`steps`, `input`, `execution_id`, `user_id`)
+4. **Action Provider Registration** — DI registration of `[ActionProvider]` classes
+5. **Expression Variables UI** (optional) — Frontend variable picker, autocomplete, syntax validation
+
+**Blocked by this:** Cannot execute action nodes in workflows or reference previous step outputs in expressions (`{{ Steps.step1.result }}`).
+
+### Inconsistent API Error Response Schema
+
+**Priority:** Low
+
+Error responses vary across modules:
+- Some return `{ "error": "message" }`
+- Others return `{ "message": "message" }`
+- Validation errors have no standardized format
+
+Consider adopting RFC 7807 Problem Details or a unified error envelope for iOS client consistency.
+
+### Guardrails Middleware is a Stub
+
+**Priority:** Low
+
+`GuardrailsMiddleware` in both the orchestrations and actors middleware pipelines is a pass-through with no actual guardrail logic. This is a placeholder for future content safety/filtering.
 
 ---
 
