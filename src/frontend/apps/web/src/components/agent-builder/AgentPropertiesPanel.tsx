@@ -6,6 +6,7 @@ import { McpServerProperties } from './properties/McpServerProperties'
 import { ToolGroupProperties } from './properties/ToolGroupProperties'
 import { SandboxProperties } from './properties/SandboxProperties'
 import { SubAgentProperties } from './properties/SubAgentProperties'
+import { A2aServerProperties } from './properties/A2aServerProperties'
 import { AgentSettingsProperties } from './properties/AgentSettingsProperties'
 import {
   Sheet,
@@ -88,6 +89,8 @@ export function AgentPropertiesPanel() {
         return 'Sandbox Properties'
       case 'agentSubAgent':
         return `Sub-Agent: ${(selectedConfig?.subAgentName as string) || 'Unknown'}`
+      case 'agentA2aServer':
+        return `A2A Server: ${(selectedConfig?.a2aServerName as string) || 'Unknown'}`
       default:
         return 'Node Properties'
     }
@@ -114,6 +117,8 @@ export function AgentPropertiesPanel() {
         return <SandboxProperties />
       case 'agentSubAgent':
         return <SubAgentProperties nodeId={selectedNodeId} />
+      case 'agentA2aServer':
+        return <A2aServerProperties nodeId={selectedNodeId} />
       default:
         return <div className="p-4 text-sm text-muted-foreground">Unknown node type</div>
     }

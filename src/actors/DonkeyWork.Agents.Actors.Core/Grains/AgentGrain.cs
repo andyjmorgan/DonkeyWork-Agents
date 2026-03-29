@@ -9,9 +9,11 @@ using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Tools;
+using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
+using DonkeyWork.Agents.A2a.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
@@ -34,6 +36,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         IOptions<AnthropicOptions> anthropicOptions,
         IExternalApiKeyService apiKeyService,
         IMcpServerConfigurationService mcpServerConfigService,
+        IA2aServerConfigurationService a2aServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
         IPromptService promptService,
@@ -48,6 +51,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             anthropicOptions.Value,
             apiKeyService,
             mcpServerConfigService,
+            a2aServerConfigService,
             mcpSandboxManagerClient,
             messageStore,
             promptService,
@@ -106,6 +110,27 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
                 _ = ProvisionSandboxInternalAsync(SandboxHandle);
             }
         }
+    }
+
+    protected override A2aServerReference[] GetA2aServerReferences(AgentContract contract)
+    {
+        return contract.A2aServers;
+    }
+
+    protected override async Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
+    {
+        if (A2aToolProvider is not null || contract.A2aServers is not { Length: > 0 })
+            return;
+
+        var allowedIds = contract.A2aServers.Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allConfigs = await A2aServerConfigService.GetEnabledConnectionConfigsAsync(ct);
+        var configs = allConfigs.Where(c => allowedIds.Contains(c.Id.ToString())).ToList();
+
+        if (configs.Count == 0)
+            return;
+
+        A2aToolProvider = new A2aToolProvider();
+        await A2aToolProvider.InitializeAsync(configs, Logger, ct);
     }
 
     protected override Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)

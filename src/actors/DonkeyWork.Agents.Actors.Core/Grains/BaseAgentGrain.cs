@@ -12,9 +12,11 @@ using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Providers;
 using DonkeyWork.Agents.Actors.Core.Providers.Responses;
 using DonkeyWork.Agents.Actors.Core.Tools;
+using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
+using DonkeyWork.Agents.A2a.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
@@ -36,6 +38,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     protected readonly AnthropicOptions AnthropicOptions;
     protected readonly IExternalApiKeyService ApiKeyService;
     protected readonly IMcpServerConfigurationService McpServerConfigService;
+    protected readonly IA2aServerConfigurationService A2aServerConfigService;
     protected readonly McpSandboxManagerClient McpSandboxManagerClient;
     protected readonly IGrainMessageStore MessageStore;
     protected readonly IPromptService PromptService;
@@ -49,6 +52,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     protected bool ExplicitCancel;
     protected IAgentResponseObserver? Observer;
     private protected McpToolProvider? McpToolProvider;
+    private protected A2aToolProvider? A2aToolProvider;
     protected bool HasMcpSandbox;
     protected Type[]? EffectiveToolTypes;
     protected SandboxProvisioningHandle? SandboxHandle;
@@ -68,6 +72,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         AnthropicOptions anthropicOptions,
         IExternalApiKeyService apiKeyService,
         IMcpServerConfigurationService mcpServerConfigService,
+        IA2aServerConfigurationService a2aServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
         IPromptService promptService,
@@ -82,6 +87,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         AnthropicOptions = anthropicOptions;
         ApiKeyService = apiKeyService;
         McpServerConfigService = mcpServerConfigService;
+        A2aServerConfigService = a2aServerConfigService;
         McpSandboxManagerClient = mcpSandboxManagerClient;
         MessageStore = messageStore;
         PromptService = promptService;
@@ -101,6 +107,17 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     /// Initializes MCP tools for this grain. Called once per activation when MCP servers are present.
     /// </summary>
     protected abstract Task InitializeMcpToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct);
+
+    /// <summary>
+    /// Returns the A2A server references for the given contract.
+    /// AgentGrain uses contract.A2aServers; ConversationGrain discovers them from Navi config.
+    /// </summary>
+    protected abstract A2aServerReference[] GetA2aServerReferences(AgentContract contract);
+
+    /// <summary>
+    /// Initializes A2A tools for this grain. Called once per activation when A2A servers are present.
+    /// </summary>
+    protected abstract Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct);
 
     /// <summary>
     /// Returns the agent catalog prompt fragment (e.g., sub-agents or Navi-connected agents).
@@ -177,6 +194,12 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             McpToolProvider = null;
         }
 
+        if (A2aToolProvider is not null)
+        {
+            await A2aToolProvider.DisposeAsync();
+            A2aToolProvider = null;
+        }
+
         await base.OnDeactivateAsync(reason, cancellationToken);
         sw.Stop();
 
@@ -210,6 +233,12 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             return new ToolExecutionResult(result.Content, result.IsError);
         }
 
+        if (A2aToolProvider?.HasTool(toolName) == true)
+        {
+            var result = await A2aToolProvider.ExecuteAsync(toolName, arguments, ct);
+            return new ToolExecutionResult(result.Content, result.IsError);
+        }
+
         return new ToolExecutionResult($"Unknown tool: {toolName}", IsError: true);
     }
 
@@ -235,7 +264,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             case ModelMiddlewareMessage { ModelMessage: ModelResponseToolCall toolCall }:
                 Emit(new StreamToolUseEvent(key, toolCall.ToolName, toolCall.ToolUseId, toolCall.Input.GetRawText())
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolCall.ToolName) ?? McpToolProvider?.GetDisplayName(toolCall.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolCall.ToolName) ?? McpToolProvider?.GetDisplayName(toolCall.ToolName) ?? A2aToolProvider?.GetDisplayName(toolCall.ToolName),
                 });
                 break;
 
@@ -281,13 +310,13 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                     key, toolResponse.ToolCallId, toolResponse.ToolName,
                     toolResponse.Response, toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName),
                 });
                 Emit(new StreamToolCompleteEvent(
                     key, toolResponse.ToolCallId, toolResponse.ToolName,
                     toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName),
                 });
                 break;
 
@@ -367,6 +396,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         // Populate grain context with MCP servers, sub-agents, and tool groups for swarm tool inheritance
         GrainContext.McpServers = GetMcpServerReferences(contract);
+        GrainContext.A2aServers = GetA2aServerReferences(contract);
         GrainContext.SubAgents = contract.SubAgents;
         GrainContext.ToolGroups = effectiveToolGroups;
         GrainContext.Icon = contract.Icon;
@@ -374,6 +404,9 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         // Initialize MCP tools (lazy, once per activation)
         await InitializeMcpToolsAsync(contract, effectiveToolGroups, ct);
+
+        // Initialize A2A tools (lazy, once per activation)
+        await InitializeA2aToolsAsync(contract, effectiveToolGroups, ct);
 
         // Include sandbox tools if MCP servers triggered auto-sandbox
         var effectiveToolTypes = HasMcpSandbox && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
@@ -468,8 +501,10 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             mcpTools = [];
         }
 
-        IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0
-            ? [.. (localTools ?? []), .. mcpTools]
+        var a2aTools = A2aToolProvider?.GetToolDefinitions() ?? [];
+
+        IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0 || a2aTools.Count > 0
+            ? [.. (localTools ?? []), .. mcpTools, .. a2aTools]
             : null;
 
         var apiKey = await ApiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct);

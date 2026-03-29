@@ -1658,6 +1658,89 @@ export const mcpServers = {
   test: (id: string) => api.post<McpServerTestResult>(`/api/v1/mcp-servers/${id}/test`, {}),
 }
 
+// A2A Server Types
+export interface A2aServerSummary {
+  id: string
+  name: string
+  description?: string
+  address: string
+  isEnabled: boolean
+  connectToNavi: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface A2aHeaderConfiguration {
+  id: string
+  headerName: string
+  headerValue?: string
+  isCredentialReference: boolean
+  credentialId?: string
+  credentialFieldType?: string
+}
+
+export interface A2aServerDetails extends A2aServerSummary {
+  headerConfigurations: A2aHeaderConfiguration[]
+}
+
+export interface CreateA2aHeaderConfigurationRequest {
+  headerName: string
+  headerValue?: string
+  credentialId?: string
+  credentialFieldType?: string
+}
+
+export interface CreateA2aServerRequest {
+  name: string
+  description?: string
+  address: string
+  isEnabled?: boolean
+  connectToNavi?: boolean
+  headerConfigurations?: CreateA2aHeaderConfigurationRequest[]
+}
+
+export interface UpdateA2aServerRequest extends CreateA2aServerRequest {}
+
+export interface A2aAgentCardSkill {
+  id: string
+  name: string
+  description: string
+  tags?: string[]
+}
+
+export interface A2aAgentCardCapabilities {
+  streaming: boolean
+  pushNotifications: boolean
+}
+
+export interface A2aAgentCard {
+  name: string
+  description: string
+  url: string
+  version: string
+  skills: A2aAgentCardSkill[]
+  capabilities?: A2aAgentCardCapabilities
+  defaultInputModes?: string[]
+  defaultOutputModes?: string[]
+}
+
+export interface A2aServerTestResult {
+  success: boolean
+  elapsedMs: number
+  error?: string
+  agentCard?: A2aAgentCard
+}
+
+// A2A Servers API
+export const a2aServers = {
+  list: () => api.get<A2aServerSummary[]>('/api/v1/a2a-servers'),
+  get: (id: string) => api.get<A2aServerDetails>(`/api/v1/a2a-servers/${id}`),
+  create: (data: CreateA2aServerRequest) => api.post<A2aServerDetails>('/api/v1/a2a-servers', data),
+  update: (id: string, data: UpdateA2aServerRequest) => api.put<A2aServerDetails>(`/api/v1/a2a-servers/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/a2a-servers/${id}`),
+  test: (id: string) => api.post<A2aServerTestResult>(`/api/v1/a2a-servers/${id}/test`, {}),
+}
+
 // Tool Groups API
 export const toolGroups = {
   list: () => api.get<ToolGroupDefinition[]>('/api/v1/tool-groups'),
@@ -1677,6 +1760,12 @@ export interface McpServerReference {
 }
 
 export interface SubAgentReference {
+  id: string
+  name: string
+  description?: string
+}
+
+export interface A2aServerReference {
   id: string
   name: string
   description?: string
@@ -1732,6 +1821,7 @@ export interface AgentContractV1 {
   timeoutSeconds?: number
   mcpServers?: McpServerReference[]
   subAgents?: SubAgentReference[]
+  a2aServers?: A2aServerReference[]
   enableSandbox?: boolean
   modelId?: string
   prompts?: string[]

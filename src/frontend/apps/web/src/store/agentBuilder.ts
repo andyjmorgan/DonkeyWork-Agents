@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
 import { agentNodeTypes } from '@/components/agent-builder/agentNodeTypes'
-import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference, ToolConfig, ToolOverride, ContextManagementConfigV1 } from '@donkeywork/api-client'
+import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference, A2aServerReference, ToolConfig, ToolOverride, ContextManagementConfigV1 } from '@donkeywork/api-client'
 
 export interface AgentNodeConfig {
   type: string
@@ -264,6 +264,16 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       if (exists) return
     }
 
+    // For A2A servers, check if this specific server is already on the canvas
+    if (nodeType === 'agentA2aServer' && schemaInfo.a2aServerId) {
+      const exists = nodes.some(
+        (n) =>
+          n.data?.nodeType === 'agentA2aServer' &&
+          n.data?.a2aServerId === schemaInfo.a2aServerId
+      )
+      if (exists) return
+    }
+
     const nodeId = generateGuid()
 
     // Model node uses its own component type; everything else uses agentSatellite
@@ -284,6 +294,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         mcpServerId: schemaInfo.mcpServerId,
         toolGroupId: schemaInfo.toolGroupId,
         subAgentId: schemaInfo.subAgentId,
+        a2aServerId: schemaInfo.a2aServerId,
         promptId: schemaInfo.promptId,
       },
     }
@@ -314,6 +325,13 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         type: nodeType,
         promptId: schemaInfo.promptId as string,
         promptName: schemaInfo.promptName as string,
+      }
+    } else if (nodeType === 'agentA2aServer') {
+      config = {
+        type: nodeType,
+        a2aServerId: schemaInfo.a2aServerId as string,
+        a2aServerName: schemaInfo.a2aServerName as string,
+        a2aServerDescription: (schemaInfo.a2aServerDescription as string) || '',
       }
     } else if (nodeType === 'agentSandbox') {
       config = { type: nodeType, enabled: true }
@@ -397,7 +415,9 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         n.data?.nodeType === 'agentToolGroup' ||
         n.data?.nodeType === 'agentSandbox'
     )
-    const agentNodes = nodes.filter((n) => n.data?.nodeType === 'agentSubAgent')
+    const agentNodes = nodes.filter(
+      (n) => n.data?.nodeType === 'agentSubAgent' || n.data?.nodeType === 'agentA2aServer'
+    )
 
     const centerX = 400
     const centerY = 300
@@ -573,6 +593,22 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       })
       .filter((r): r is SubAgentReference => r !== null)
     if (subAgentRefs.length > 0) contract.subAgents = subAgentRefs
+
+    // A2A Servers — each node references an external A2A agent
+    const a2aNodes = nodes.filter((n) => n.data?.nodeType === 'agentA2aServer')
+    const a2aRefs: A2aServerReference[] = a2aNodes
+      .map((n) => {
+        const cfg = nodeConfigurations[n.id]
+        if (!cfg?.a2aServerId) return null
+        const ref: A2aServerReference = {
+          id: cfg.a2aServerId as string,
+          name: (cfg.a2aServerName as string) || '',
+        }
+        if (cfg.a2aServerDescription) ref.description = cfg.a2aServerDescription as string
+        return ref
+      })
+      .filter((r): r is A2aServerReference => r !== null)
+    if (a2aRefs.length > 0) contract.a2aServers = a2aRefs
 
     // Tool Groups — each node may contain multiple tool IDs
     const toolNodes = nodes.filter((n) => n.data?.nodeType === 'agentToolGroup')

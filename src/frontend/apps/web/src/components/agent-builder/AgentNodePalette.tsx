@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Brain, FileText, Server, Zap, Box, Bot, Plus, type LucideIcon } from 'lucide-react'
+import { Brain, FileText, Server, Zap, Box, Bot, Globe, Plus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgentBuilderStore } from '@/store/agentBuilder'
-import { mcpServers, agentDefinitions, prompts as promptsApi, type McpServerSummary, type AgentDefinitionSummary, type PromptSummary } from '@donkeywork/api-client'
+import { mcpServers, a2aServers, agentDefinitions, prompts as promptsApi, type McpServerSummary, type A2aServerSummary, type AgentDefinitionSummary, type PromptSummary } from '@donkeywork/api-client'
 import { CreatePromptDialog } from './CreatePromptDialog'
 import { McpServerTestDialog } from '@/components/mcp/McpServerTestDialog'
 
@@ -13,6 +13,7 @@ const iconMap: Record<string, LucideIcon> = {
   zap: Zap,
   container: Box,
   bot: Bot,
+  globe: Globe,
 }
 
 const colorClasses: Record<string, { border: string; iconContainer: string; iconColor: string }> = {
@@ -46,6 +47,11 @@ const colorClasses: Record<string, { border: string; iconContainer: string; icon
     iconContainer: 'bg-gradient-to-br from-rose-500 to-pink-600 shadow-lg shadow-rose-500/25',
     iconColor: 'text-white',
   },
+  teal: {
+    border: 'border-teal-500/30 bg-teal-500/5 hover:border-teal-500/50 hover:bg-teal-500/10',
+    iconContainer: 'bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-500/25',
+    iconColor: 'text-white',
+  },
 }
 
 interface PaletteItem {
@@ -74,6 +80,7 @@ export function AgentNodePalette() {
   const agentId = useAgentBuilderStore((s) => s.agentId)
   const isReadOnly = useAgentBuilderStore((s) => s.isReadOnly)
   const [serverList, setServerList] = useState<McpServerSummary[]>([])
+  const [a2aServerList, setA2aServerList] = useState<A2aServerSummary[]>([])
   const [agentList, setAgentList] = useState<AgentDefinitionSummary[]>([])
   const [promptList, setPromptList] = useState<PromptSummary[]>([])
   const [createPromptOpen, setCreatePromptOpen] = useState(false)
@@ -85,6 +92,7 @@ export function AgentNodePalette() {
 
   useEffect(() => {
     mcpServers.list().then(setServerList).catch(console.error)
+    a2aServers.list().then(setA2aServerList).catch(console.error)
     agentDefinitions.list().then(setAgentList).catch(console.error)
     refreshPrompts()
   }, [refreshPrompts])
@@ -108,6 +116,11 @@ export function AgentNodePalette() {
   const hasSubAgent = (subAgentId: string) =>
     nodes.some(
       (n) => n.data?.nodeType === 'agentSubAgent' && n.data?.subAgentId === subAgentId
+    )
+
+  const hasA2aServer = (a2aServerId: string) =>
+    nodes.some(
+      (n) => n.data?.nodeType === 'agentA2aServer' && n.data?.a2aServerId === a2aServerId
     )
 
   const hasPrompt = (promptId: string) =>
@@ -246,6 +259,25 @@ export function AgentNodePalette() {
       isDisabled: isReadOnly || hasSubAgent(agent.id),
     }))
 
+  // A2A Server items (from API)
+  const a2aItems: PaletteItem[] = a2aServerList.map((server) => ({
+    key: `a2a-${server.id}`,
+    dragData: {
+      nodeType: 'agentA2aServer',
+      displayName: server.name,
+      icon: 'globe',
+      color: 'teal',
+      canDelete: true,
+      a2aServerId: server.id,
+      a2aServerName: server.name,
+      a2aServerDescription: server.description,
+    },
+    displayName: server.name,
+    icon: 'globe',
+    color: 'teal',
+    isDisabled: isReadOnly || hasA2aServer(server.id),
+  }))
+
   // Sandbox item
   const sandboxItem: PaletteItem = {
     key: 'sandbox',
@@ -327,6 +359,20 @@ export function AgentNodePalette() {
             mcpItems.map(renderItem)
           ) : (
             <p className="text-xs text-muted-foreground px-1">No MCP servers configured</p>
+          )}
+        </div>
+      </div>
+
+      {/* A2A Servers */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+          A2A Servers
+        </h3>
+        <div className="space-y-2">
+          {a2aItems.length > 0 ? (
+            a2aItems.map(renderItem)
+          ) : (
+            <p className="text-xs text-muted-foreground px-1">No A2A servers configured</p>
           )}
         </div>
       </div>

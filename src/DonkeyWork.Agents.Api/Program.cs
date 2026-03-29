@@ -8,6 +8,7 @@ using DonkeyWork.Agents.Credentials.Api.Options;
 using DonkeyWork.Agents.Credentials.Api.Services;
 using DonkeyWork.Agents.Identity.Api;
 using DonkeyWork.Agents.Identity.Api.Options;
+using DonkeyWork.Agents.A2a.Api;
 using DonkeyWork.Agents.Mcp.Api;
 using DonkeyWork.Agents.Mcp.Core;
 using DonkeyWork.Agents.Notifications.Core;
@@ -90,6 +91,9 @@ builder.Services.AddProjectsApi();
 
 // Add MCP module
 builder.Services.AddMcpApi();
+
+// Add A2A module
+builder.Services.AddA2aApi();
 
 // Add Conversations module
 builder.Services.AddConversationsApi(builder.Configuration);

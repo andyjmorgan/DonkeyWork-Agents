@@ -7,6 +7,7 @@ using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Persistence.Entities.Actors;
 using DonkeyWork.Agents.Persistence.Entities.AgentDefinitions;
+using DonkeyWork.Agents.Persistence.Entities.A2a;
 using DonkeyWork.Agents.Persistence.Entities.Prompts;
 using DonkeyWork.Agents.Persistence.Entities.Research;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
@@ -80,6 +81,10 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<McpHttpOAuthConfigurationEntity> McpHttpOAuthConfigurations => Set<McpHttpOAuthConfigurationEntity>();
     public DbSet<McpHttpHeaderConfigurationEntity> McpHttpHeaderConfigurations => Set<McpHttpHeaderConfigurationEntity>();
     public DbSet<McpStdioEnvironmentVariableEntity> McpStdioEnvironmentVariables => Set<McpStdioEnvironmentVariableEntity>();
+
+    // A2A server configurations module
+    public DbSet<A2aServerConfigurationEntity> A2aServerConfigurations => Set<A2aServerConfigurationEntity>();
+    public DbSet<A2aServerHeaderConfigurationEntity> A2aServerHeaderConfigurations => Set<A2aServerHeaderConfigurationEntity>();
 
     // Agent Definitions module
     public DbSet<AgentDefinitionEntity> AgentDefinitions => Set<AgentDefinitionEntity>();

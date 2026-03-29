@@ -10,12 +10,14 @@ using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Tools;
+using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
+using DonkeyWork.Agents.A2a.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
@@ -47,6 +49,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
     private bool _sqlRecordCreated;
     private bool _titleGenerated;
     private McpServerReference[] _discoveredMcpServers = [];
+    private A2aServerReference[]? _discoveredA2aServers;
     private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
     private DateTimeOffset _activatedAt;
 
@@ -60,6 +63,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         IExternalApiKeyService apiKeyService,
         IIdentityContext identityContext,
         IMcpServerConfigurationService mcpServerConfigService,
+        IA2aServerConfigurationService a2aServerConfigService,
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
         IPromptService promptService,
@@ -75,6 +79,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             anthropicOptions.Value,
             apiKeyService,
             mcpServerConfigService,
+            a2aServerConfigService,
             mcpSandboxManagerClient,
             messageStore,
             promptService,
@@ -130,6 +135,33 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 _ = ProvisionSandboxInternalAsync(SandboxHandle);
             }
         }
+    }
+
+    protected override A2aServerReference[] GetA2aServerReferences(AgentContract contract)
+    {
+        return _discoveredA2aServers ?? [];
+    }
+
+    protected override async Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
+    {
+        if (A2aToolProvider is not null)
+            return;
+
+        var configs = await A2aServerConfigService.GetNaviConnectionConfigsAsync(ct);
+
+        if (configs.Count == 0)
+        {
+            _discoveredA2aServers = [];
+            return;
+        }
+
+        A2aToolProvider = new A2aToolProvider();
+        await A2aToolProvider.InitializeAsync(configs, Logger, ct);
+
+        _discoveredA2aServers = configs
+            .Select(c => new A2aServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description })
+            .ToArray();
+        GrainContext.A2aServers = _discoveredA2aServers;
     }
 
     protected override async Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)

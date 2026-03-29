@@ -16,6 +16,7 @@ public class GrainContext
     public Action<string>? ProgressCallback { get; set; }
     public SandboxProvisioningHandle? SandboxHandle { get; set; }
     public McpServerReference[] McpServers { get; set; } = [];
+    public A2aServerReference[] A2aServers { get; set; } = [];
     public SubAgentReference[] SubAgents { get; set; } = [];
     public string[] ToolGroups { get; set; } = [];
     public string? Icon { get; set; }

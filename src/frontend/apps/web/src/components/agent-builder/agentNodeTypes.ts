@@ -60,4 +60,12 @@ export const agentNodeTypes: Record<string, AgentNodeTypeInfo> = {
     canDelete: true,
     targetHandle: 'agents',
   },
+  agentA2aServer: {
+    type: 'agentA2aServer',
+    displayName: 'A2A Server',
+    icon: 'globe',
+    color: 'teal',
+    canDelete: true,
+    targetHandle: 'agents',
+  },
 }
