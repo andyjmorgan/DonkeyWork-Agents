@@ -55,6 +55,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
             Address = request.Address,
             IsEnabled = request.IsEnabled,
             ConnectToNavi = request.ConnectToNavi,
+            PublishToMcp = request.PublishToMcp,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -124,6 +125,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
         entity.Address = request.Address;
         entity.IsEnabled = request.IsEnabled;
         entity.ConnectToNavi = request.ConnectToNavi;
+        entity.PublishToMcp = request.PublishToMcp;
         entity.UpdatedAt = now;
 
         var existingHeaders = entity.HeaderConfigurations
@@ -211,6 +213,17 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
         var entities = await _dbContext.A2aServerConfigurations
             .AsNoTracking()
             .Where(c => c.IsEnabled && c.ConnectToNavi)
+            .Include(c => c.HeaderConfigurations)
+            .ToListAsync(cancellationToken);
+
+        return await BuildConnectionConfigsAsync(entities, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<A2aConnectionConfigV1>> GetMcpPublishedConnectionConfigsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.A2aServerConfigurations
+            .AsNoTracking()
+            .Where(c => c.IsEnabled && c.PublishToMcp)
             .Include(c => c.HeaderConfigurations)
             .ToListAsync(cancellationToken);
 
@@ -313,6 +326,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
             Address = entity.Address,
             IsEnabled = entity.IsEnabled,
             ConnectToNavi = entity.ConnectToNavi,
+            PublishToMcp = entity.PublishToMcp,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
@@ -328,6 +342,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
             Address = entity.Address,
             IsEnabled = entity.IsEnabled,
             ConnectToNavi = entity.ConnectToNavi,
+            PublishToMcp = entity.PublishToMcp,
             HeaderConfigurations = entity.HeaderConfigurations.Select(h => new A2aHeaderConfigurationV1
             {
                 Id = h.Id,

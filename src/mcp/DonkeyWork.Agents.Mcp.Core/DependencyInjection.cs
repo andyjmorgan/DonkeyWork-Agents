@@ -45,6 +45,8 @@ public static class DependencyInjection
         });
 
         // Register scoped services
+        services.AddMemoryCache();
+        services.AddScoped<IA2aMcpToolService, A2aMcpToolService>();
         services.AddScoped<IMcpToolDiscoveryService, McpToolDiscoveryService>();
         services.AddScoped<IMcpToolExecutor, McpToolExecutor>();
 

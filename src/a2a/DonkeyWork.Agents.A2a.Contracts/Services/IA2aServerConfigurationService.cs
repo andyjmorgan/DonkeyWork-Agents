@@ -18,5 +18,7 @@ public interface IA2aServerConfigurationService
 
     Task<IReadOnlyList<A2aConnectionConfigV1>> GetNaviConnectionConfigsAsync(CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<A2aConnectionConfigV1>> GetMcpPublishedConnectionConfigsAsync(CancellationToken cancellationToken = default);
+
     Task<A2aConnectionConfigV1?> GetConnectionConfigByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }

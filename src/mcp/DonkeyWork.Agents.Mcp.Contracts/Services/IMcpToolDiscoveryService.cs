@@ -1,3 +1,4 @@
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace DonkeyWork.Agents.Mcp.Contracts.Services;
@@ -13,6 +14,11 @@ public interface IMcpToolDiscoveryService
     /// </summary>
     /// <returns>A read-only collection of discovered tools.</returns>
     IReadOnlyList<McpServerTool> DiscoverTools();
+
+    /// <summary>
+    /// Discovers dynamic tools from external sources (e.g., A2A agents).
+    /// </summary>
+    Task<IReadOnlyList<Tool>> DiscoverDynamicToolsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a tool by name.

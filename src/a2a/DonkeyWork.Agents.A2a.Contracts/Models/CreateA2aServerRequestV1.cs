@@ -25,6 +25,9 @@ public sealed class CreateA2aServerRequestV1
     [JsonPropertyName("connectToNavi")]
     public bool ConnectToNavi { get; init; }
 
+    [JsonPropertyName("publishToMcp")]
+    public bool PublishToMcp { get; init; }
+
     [JsonPropertyName("headerConfigurations")]
     public List<CreateA2aHeaderConfigurationRequestV1>? HeaderConfigurations { get; init; }
 }

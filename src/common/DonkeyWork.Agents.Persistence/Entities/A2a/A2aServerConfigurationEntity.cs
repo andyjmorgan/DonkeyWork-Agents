@@ -12,5 +12,7 @@ public class A2aServerConfigurationEntity : BaseEntity
 
     public bool ConnectToNavi { get; set; }
 
+    public bool PublishToMcp { get; set; }
+
     public ICollection<A2aServerHeaderConfigurationEntity> HeaderConfigurations { get; set; } = new List<A2aServerHeaderConfigurationEntity>();
 }

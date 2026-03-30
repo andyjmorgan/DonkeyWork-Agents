@@ -33,7 +33,7 @@ public class ListToolsHandler : IListToolsHandler
     }
 
     /// <inheritdoc />
-    public ValueTask<ListToolsResult> HandleAsync(
+    public async ValueTask<ListToolsResult> HandleAsync(
         RequestContext<ListToolsRequestParams> context,
         CancellationToken cancellationToken = default)
     {
@@ -41,19 +41,22 @@ public class ListToolsHandler : IListToolsHandler
 
         _logger.LogDebug("Listing tools for user {UserId}", userId);
 
-        var tools = _toolDiscoveryService.DiscoverTools();
+        var staticTools = _toolDiscoveryService.DiscoverTools().Select(t => t.ProtocolTool).ToList();
+        var dynamicTools = await _toolDiscoveryService.DiscoverDynamicToolsAsync(cancellationToken);
 
         var result = new ListToolsResult
         {
-            Tools = tools.Select(t => t.ProtocolTool).ToList()
+            Tools = [..staticTools, ..dynamicTools]
         };
 
         _logger.LogInformation(
-            "Returning {ToolCount} tools for user {UserId}",
+            "Returning {ToolCount} tools ({StaticCount} static, {DynamicCount} dynamic) for user {UserId}",
             result.Tools.Count,
+            staticTools.Count,
+            dynamicTools.Count,
             userId);
 
-        return ValueTask.FromResult(result);
+        return result;
     }
 
     private string GetUserIdForLogging()

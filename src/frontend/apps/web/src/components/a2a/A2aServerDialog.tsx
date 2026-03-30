@@ -79,6 +79,7 @@ export function A2aServerDialog({
   const [address, setAddress] = useState('')
   const [isEnabled, setIsEnabled] = useState(true)
   const [connectToNavi, setConnectToNavi] = useState(false)
+  const [publishToMcp, setPublishToMcp] = useState(false)
   const [headers, setHeaders] = useState<HeaderEntry[]>([])
   const [revealedHeaders, setRevealedHeaders] = useState<Set<number>>(new Set())
   const [availableCredentials, setAvailableCredentials] = useState<CredentialSummary[]>([])
@@ -104,6 +105,7 @@ export function A2aServerDialog({
         setAddress(editingServer.address)
         setIsEnabled(editingServer.isEnabled)
         setConnectToNavi(editingServer.connectToNavi)
+        setPublishToMcp(editingServer.publishToMcp ?? false)
         setHeaders(
           (editingServer.headerConfigurations || []).map((h) => ({
             headerName: h.headerName,
@@ -126,6 +128,7 @@ export function A2aServerDialog({
     setAddress('')
     setIsEnabled(true)
     setConnectToNavi(false)
+    setPublishToMcp(false)
     setHeaders([])
     setRevealedHeaders(new Set())
     setError(null)
@@ -193,6 +196,7 @@ export function A2aServerDialog({
           address,
           isEnabled,
           connectToNavi,
+          publishToMcp,
           headerConfigurations,
         }
         await a2aServers.update(editingServer!.id, updateRequest)
@@ -203,6 +207,7 @@ export function A2aServerDialog({
           address,
           isEnabled,
           connectToNavi,
+          publishToMcp,
           headerConfigurations,
         }
         await a2aServers.create(createRequest)
@@ -552,6 +557,20 @@ export function A2aServerDialog({
             id="connectToNavi"
             checked={connectToNavi}
             onCheckedChange={setConnectToNavi}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="publishToMcp">Publish to MCP</Label>
+            <p className="text-xs text-muted-foreground">
+              Expose this agent as a tool on the DonkeyWork MCP server
+            </p>
+          </div>
+          <Switch
+            id="publishToMcp"
+            checked={publishToMcp}
+            onCheckedChange={setPublishToMcp}
           />
         </div>
       </div>

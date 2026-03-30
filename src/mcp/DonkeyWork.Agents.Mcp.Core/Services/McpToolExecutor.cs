@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@ public class McpToolExecutor : IMcpToolExecutor
     private readonly ILogger<McpToolExecutor> _logger;
     private readonly IMcpToolDiscoveryService _toolDiscoveryService;
     private readonly IIdentityContext _identityContext;
+    private readonly IA2aMcpToolService _a2aMcpToolService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolExecutor"/> class.
@@ -23,14 +25,17 @@ public class McpToolExecutor : IMcpToolExecutor
     /// <param name="logger">The logger instance.</param>
     /// <param name="toolDiscoveryService">The tool discovery service.</param>
     /// <param name="identityContext">The identity context for the current request.</param>
+    /// <param name="a2aMcpToolService">The A2A MCP tool service.</param>
     public McpToolExecutor(
         ILogger<McpToolExecutor> logger,
         IMcpToolDiscoveryService toolDiscoveryService,
-        IIdentityContext identityContext)
+        IIdentityContext identityContext,
+        IA2aMcpToolService a2aMcpToolService)
     {
         _logger = logger;
         _toolDiscoveryService = toolDiscoveryService;
         _identityContext = identityContext;
+        _a2aMcpToolService = a2aMcpToolService;
     }
 
     /// <inheritdoc />
@@ -45,6 +50,11 @@ public class McpToolExecutor : IMcpToolExecutor
             "Tool invocation started: {ToolName} by user {UserId}",
             toolName,
             userId);
+
+        if (_a2aMcpToolService.CanHandle(toolName))
+        {
+            return await ExecuteA2aToolAsync(toolName, context, userId, cancellationToken);
+        }
 
         var tool = _toolDiscoveryService.GetTool(toolName);
         if (tool is null)
@@ -98,6 +108,46 @@ public class McpToolExecutor : IMcpToolExecutor
                 {
                     new TextContentBlock { Text = $"Tool execution failed: {ex.Message}" }
                 }
+            };
+        }
+    }
+
+    private async Task<CallToolResult> ExecuteA2aToolAsync(
+        string toolName,
+        RequestContext<CallToolRequestParams> context,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Routing to A2A agent tool: {ToolName} by user {UserId}", toolName, userId);
+
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            JsonElement? arguments = null;
+            if (context.Params?.Arguments is { } args)
+            {
+                arguments = JsonSerializer.SerializeToElement(args);
+            }
+
+            var result = await _a2aMcpToolService.ExecuteAsync(toolName, arguments, cancellationToken);
+            stopwatch.Stop();
+            LogToolCompletion(toolName, userId, stopwatch.ElapsedMilliseconds, result.IsError == true);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(
+                ex,
+                "A2A tool invocation failed: {ToolName} by user {UserId} after {ElapsedMs}ms",
+                toolName,
+                userId,
+                stopwatch.ElapsedMilliseconds);
+
+            return new CallToolResult
+            {
+                IsError = true,
+                Content = [new TextContentBlock { Text = $"A2A tool execution failed: {ex.Message}" }],
             };
         }
     }

@@ -1,6 +1,7 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace DonkeyWork.Agents.Mcp.Core.Services;
@@ -13,6 +14,7 @@ public class McpToolDiscoveryService : IMcpToolDiscoveryService
     private readonly ILogger<McpToolDiscoveryService> _logger;
     private readonly IMcpToolRegistry _toolRegistry;
     private readonly IIdentityContext _identityContext;
+    private readonly IA2aMcpToolService _a2aMcpToolService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolDiscoveryService"/> class.
@@ -20,14 +22,17 @@ public class McpToolDiscoveryService : IMcpToolDiscoveryService
     /// <param name="logger">The logger instance.</param>
     /// <param name="toolRegistry">The singleton tool registry.</param>
     /// <param name="identityContext">The identity context for the current request.</param>
+    /// <param name="a2aMcpToolService">The A2A MCP tool service.</param>
     public McpToolDiscoveryService(
         ILogger<McpToolDiscoveryService> logger,
         IMcpToolRegistry toolRegistry,
-        IIdentityContext identityContext)
+        IIdentityContext identityContext,
+        IA2aMcpToolService a2aMcpToolService)
     {
         _logger = logger;
         _toolRegistry = toolRegistry;
         _identityContext = identityContext;
+        _a2aMcpToolService = a2aMcpToolService;
     }
 
     /// <inheritdoc />
@@ -42,6 +47,12 @@ public class McpToolDiscoveryService : IMcpToolDiscoveryService
             GetUserIdForLogging());
 
         return filteredTools;
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Tool>> DiscoverDynamicToolsAsync(CancellationToken cancellationToken = default)
+    {
+        return _a2aMcpToolService.DiscoverToolsAsync(cancellationToken);
     }
 
     /// <inheritdoc />

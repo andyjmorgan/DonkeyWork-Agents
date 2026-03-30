@@ -1,12 +1,12 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using DonkeyWork.Agents.A2a.Contracts.Helpers;
 using DonkeyWork.Agents.A2a.Contracts.Models;
 using DonkeyWork.Agents.Actors.Core.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.A2a;
 
-internal sealed partial class A2aToolProvider : IAsyncDisposable
+internal sealed class A2aToolProvider : IAsyncDisposable
 {
     private static readonly TimeSpan PerServerTimeout = TimeSpan.FromSeconds(30);
 
@@ -39,7 +39,7 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
                 var card = JsonSerializer.Deserialize<A2aAgentCardV1>(json);
 
                 var agentName = card?.Name ?? config.Name;
-                var toolName = SanitizeToolName(agentName);
+                var toolName = A2aProtocolHelper.SanitizeToolName(agentName);
 
                 if (_tools.ContainsKey(toolName))
                 {
@@ -64,7 +64,7 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
                 {
                     Name = toolName,
                     DisplayName = agentName,
-                    Description = BuildToolDescription(card, config.Description),
+                    Description = A2aProtocolHelper.BuildToolDescription(card, config.Description),
                     InputSchema = inputSchema,
                     DeferLoading = false,
                 };
@@ -121,7 +121,7 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
                 ? ctxProp.GetString()
                 : null;
 
-            var jsonRpcRequest = BuildMessageSendRequest(message, contextId);
+            var jsonRpcRequest = A2aProtocolHelper.BuildMessageSendRequest(message, contextId);
             var endpointUrl = $"{toolInfo.ConnectionConfig.Address.TrimEnd('/')}/a2a";
 
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpointUrl);
@@ -133,7 +133,8 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
             response.EnsureSuccessStatusCode();
 
             var responseBody = await response.Content.ReadAsStringAsync(ct);
-            return ParseMessageResponse(responseBody);
+            var (isError, content) = A2aProtocolHelper.ParseMessageResponse(responseBody);
+            return isError ? ToolResult.Error(content) : ToolResult.Success(content);
         }
         catch (Exception ex)
         {
@@ -148,112 +149,4 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
         _tools.Clear();
         return ValueTask.CompletedTask;
     }
-
-    private static string BuildToolDescription(A2aAgentCardV1? card, string? fallbackDescription)
-    {
-        var desc = card?.Description ?? fallbackDescription ?? "Remote A2A agent";
-        var parts = new List<string> { desc };
-
-        if (card?.Skills is { Count: > 0 })
-        {
-            parts.Add("Skills:");
-            foreach (var skill in card.Skills)
-            {
-                var line = $"- {skill.Name}";
-                if (!string.IsNullOrEmpty(skill.Description) &&
-                    !string.Equals(skill.Description, skill.Name, StringComparison.OrdinalIgnoreCase))
-                    line += $": {skill.Description}";
-                parts.Add(line);
-            }
-        }
-
-        parts.Add("Returns a contextId for multi-turn conversations.");
-        return string.Join("\n", parts);
-    }
-
-    private static string BuildMessageSendRequest(string message, string? contextId)
-    {
-        var id = Guid.NewGuid().ToString("N");
-
-        var messageId = Guid.NewGuid().ToString("N");
-
-        object messageObj = string.IsNullOrEmpty(contextId)
-            ? new
-            {
-                messageId,
-                role = "user",
-                parts = new[] { new { kind = "text", text = message } },
-            }
-            : new
-            {
-                messageId,
-                role = "user",
-                parts = new[] { new { kind = "text", text = message } },
-                contextId,
-            };
-
-        var request = new
-        {
-            jsonrpc = "2.0",
-            id,
-            method = "message/send",
-            @params = new { message = messageObj },
-        };
-
-        return JsonSerializer.Serialize(request);
-    }
-
-    private static ToolResult ParseMessageResponse(string responseBody)
-    {
-        using var doc = JsonDocument.Parse(responseBody);
-        var root = doc.RootElement;
-
-        if (root.TryGetProperty("error", out var errorProp))
-        {
-            var errorMessage = errorProp.TryGetProperty("message", out var msgProp)
-                ? msgProp.GetString() ?? "Unknown error"
-                : "Unknown JSON-RPC error";
-            return ToolResult.Error(errorMessage);
-        }
-
-        if (!root.TryGetProperty("result", out var result))
-            return ToolResult.Error("A2A server returned no result.");
-
-        var responseContextId = result.TryGetProperty("contextId", out var ctxProp)
-            ? ctxProp.GetString()
-            : null;
-
-        var textParts = new List<string>();
-        if (result.TryGetProperty("parts", out var partsArray) && partsArray.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var part in partsArray.EnumerateArray())
-            {
-                var kind = part.TryGetProperty("kind", out var kindProp) ? kindProp.GetString() : null;
-                if (kind == "text" && part.TryGetProperty("text", out var textProp))
-                    textParts.Add(textProp.GetString() ?? "");
-            }
-        }
-
-        var responseText = textParts.Count > 0
-            ? string.Join("\n", textParts)
-            : "Agent returned no text content.";
-
-        var content = !string.IsNullOrEmpty(responseContextId)
-            ? $"contextId: {responseContextId}\n\n{responseText}"
-            : responseText;
-
-        return ToolResult.Success(content);
-    }
-
-    private static string SanitizeToolName(string name)
-    {
-        var sanitized = ToolNameSanitizer().Replace(name.ToLowerInvariant(), "_");
-        sanitized = sanitized.Trim('_');
-        if (sanitized.Length == 0)
-            sanitized = "a2a_agent";
-        return $"a2a_{sanitized}";
-    }
-
-    [GeneratedRegex("[^a-z0-9]+")]
-    private static partial Regex ToolNameSanitizer();
 }

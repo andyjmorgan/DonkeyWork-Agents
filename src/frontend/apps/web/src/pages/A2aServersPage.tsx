@@ -141,6 +141,9 @@ export function A2aServersPage() {
                         {server.connectToNavi && (
                           <Badge variant="outline" className="text-xs px-1.5 py-0">Navi</Badge>
                         )}
+                        {server.publishToMcp && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">MCP</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={server.isEnabled ? 'default' : 'secondary'}>
@@ -209,6 +212,9 @@ export function A2aServersPage() {
                           <span className="font-medium">{server.name}</span>
                           {server.connectToNavi && (
                             <Badge variant="outline" className="text-xs px-1.5 py-0">Navi</Badge>
+                          )}
+                          {server.publishToMcp && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">MCP</Badge>
                           )}
                         </div>
                       </TableCell>

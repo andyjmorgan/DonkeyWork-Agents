@@ -1666,6 +1666,7 @@ export interface A2aServerSummary {
   address: string
   isEnabled: boolean
   connectToNavi: boolean
+  publishToMcp: boolean
   createdAt: string
   updatedAt: string
 }
@@ -1696,6 +1697,7 @@ export interface CreateA2aServerRequest {
   address: string
   isEnabled?: boolean
   connectToNavi?: boolean
+  publishToMcp?: boolean
   headerConfigurations?: CreateA2aHeaderConfigurationRequest[]
 }
 

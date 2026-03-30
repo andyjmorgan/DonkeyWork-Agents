@@ -22,6 +22,9 @@ public sealed class A2aServerSummaryV1
     [JsonPropertyName("connectToNavi")]
     public bool ConnectToNavi { get; init; }
 
+    [JsonPropertyName("publishToMcp")]
+    public bool PublishToMcp { get; init; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }
 
