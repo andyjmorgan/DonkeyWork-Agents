@@ -16,4 +16,5 @@ internal class ModelMiddlewareContext
     public Guid TurnId { get; set; }
     public Guid? ParentTurnId { get; set; }
     public Func<InternalMessage, Task>? PersistMessage { get; set; }
+    public Func<Task<IReadOnlyList<InternalMessage>>>? DrainPendingMessages { get; set; }
 }

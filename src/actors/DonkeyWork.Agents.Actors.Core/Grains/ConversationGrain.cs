@@ -444,7 +444,22 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         {
             NextSequenceNumber = await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber, ct);
-        }, ct, turnId);
+        }, ct, turnId, drainPendingMessages: async () =>
+        {
+            var drained = new List<InternalMessage>();
+            while (_queue.Reader.TryRead(out var queued))
+            {
+                Interlocked.Decrement(ref _pendingCount);
+                var msg = FormatMessage(queued);
+                msg.TurnId = turnId;
+                NextSequenceNumber = await MessageStore.AppendMessageAsync(
+                    GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber, ct);
+                drained.Add(msg);
+            }
+            if (drained.Count > 0)
+                EmitQueueStatus();
+            return drained;
+        });
 
         // Sync local list reference (pipeline may have grown it via middleware appends)
         Messages = contextMessages;
