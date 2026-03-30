@@ -153,14 +153,18 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
     {
         var id = Guid.NewGuid().ToString("N");
 
+        var messageId = Guid.NewGuid().ToString("N");
+
         object messageObj = string.IsNullOrEmpty(contextId)
             ? new
             {
+                messageId,
                 role = "user",
                 parts = new[] { new { kind = "text", text = message } },
             }
             : new
             {
+                messageId,
                 role = "user",
                 parts = new[] { new { kind = "text", text = message } },
                 contextId,
