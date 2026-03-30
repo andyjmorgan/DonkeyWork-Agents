@@ -36,7 +36,6 @@ export function NotificationListener() {
 
   useNotifications({
     onNotification: (notification: WorkspaceNotification) => {
-      // Handle conversation activity tracking
       if (notification.type === 'ConversationAgentStarted') {
         addActiveConversation(notification.entityId)
         return

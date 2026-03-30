@@ -65,7 +65,6 @@ export function EditSandboxCredentialMappingDialog({
   const [oauthTokens, setOauthTokens] = useState<OAuthToken[]>([])
   const [loadingCredentials, setLoadingCredentials] = useState(false)
 
-  // Reset form when mapping changes
   useEffect(() => {
     setHeaderName(mapping.headerName)
     setHeaderValuePrefix(mapping.headerValuePrefix ?? '')
@@ -95,7 +94,6 @@ export function EditSandboxCredentialMappingDialog({
     load()
   }, [open])
 
-  // Reset credential selection when type changes (but not on initial load)
   const [hasChangedType, setHasChangedType] = useState(false)
   useEffect(() => {
     if (hasChangedType) {
@@ -104,7 +102,6 @@ export function EditSandboxCredentialMappingDialog({
     }
   }, [credentialType, hasChangedType])
 
-  // Fetch available fields when credential is selected
   useEffect(() => {
     if (!credentialId || !credentialType) {
       setAvailableFields([])

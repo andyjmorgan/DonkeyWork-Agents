@@ -41,7 +41,6 @@ Log.Logger = new LoggerConfiguration()
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services)
@@ -50,7 +49,6 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
         outputTemplate:
         "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}"));
 
-// Add API versioning
 builder.Services.AddApiVersioning(options =>
 {
     options.DefaultApiVersion = new ApiVersion(1.0);
@@ -63,7 +61,6 @@ builder.Services.AddApiVersioning(options =>
     options.SubstituteApiVersionInUrl = true;
 });
 
-// Add controllers
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -71,55 +68,39 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.AllowOutOfOrderMetadataProperties = true;
     });
 
-// Add OpenAPI
 builder.Services.AddOpenApi();
 
-// Add Persistence module (provides DbContext)
 builder.Services.AddPersistence(builder.Configuration);
 
-// Add Orchestrations module
 builder.Services.AddOrchestrationsApi();
 
-// Add Credentials module
 builder.Services.AddCredentialsApi();
 
-// Add Identity module
 builder.Services.AddIdentityApi(builder.Configuration);
 
-// Add Projects module
 builder.Services.AddProjectsApi();
 
-// Add MCP module
 builder.Services.AddMcpApi();
 
-// Add A2A module
 builder.Services.AddA2aApi();
 
-// Add Conversations module
 builder.Services.AddConversationsApi(builder.Configuration);
 
 builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly, typeof(IdentityTools).Assembly);
 
-// Add Agent Definitions module
 builder.Services.AddAgentDefinitionsApi();
 
-// Add Prompts module
 builder.Services.AddPromptsApi();
 
-// Add Providers module
 builder.Services.AddProvidersApi();
 
-// Add Storage module
 builder.Services.AddStorageApi(builder.Configuration);
 
-// Add Actors module (agent orchestration via Orleans)
 builder.Host.AddActorsApi(builder.Configuration);
 builder.Services.AddActorsServices(builder.Configuration);
 
-// Add Notifications module (includes SignalR)
 builder.Services.AddNotificationsCore();
 
-// Add gRPC for internal credential store service
 var grpcOptions = builder.Configuration.GetSection(InternalGrpcOptions.SectionName).Get<InternalGrpcOptions>();
 if (grpcOptions?.Enabled == true)
 {
@@ -165,7 +146,6 @@ if (grpcOptions?.Enabled == true)
     });
 }
 
-// Configure Data Protection with PostgreSQL storage
 builder.Services.AddDataProtection()
     .SetApplicationName("DonkeyWork.Agents")
     .PersistKeysToDbContext<AgentsDbContext>();
@@ -186,7 +166,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure forwarded headers for reverse proxy (must be first)
 var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
@@ -196,7 +175,6 @@ forwardedHeadersOptions.KnownNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
-// Add Serilog request logging
 app.UseSerilogRequestLogging(options =>
 {
     options.GetLevel = (httpContext, elapsed, ex) =>
@@ -211,10 +189,8 @@ app.UseSerilogRequestLogging(options =>
     };
 });
 
-// Enable developer exception page in all environments for debugging
 app.UseDeveloperExceptionPage();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -235,10 +211,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Map Actors WebSocket endpoints for conversation interaction
 app.MapActorsEndpoints();
 
-// Map SignalR hub for real-time notifications
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.MapMcp().RequireAuthorization(new AuthorizeAttribute
@@ -255,7 +229,6 @@ app.MapGet("/.well-known/oauth-authorization-server",
 
 app.MapHealthChecks("/healthz");
 
-// Map gRPC credential store service (internal only, port 8090)
 if (grpcOptions?.Enabled == true)
 {
     app.MapGrpcService<CredentialStoreGrpcService>();

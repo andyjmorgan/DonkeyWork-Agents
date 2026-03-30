@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useId } from 'react'
 import { GitBranch, Code, Eye, AlertCircle } from 'lucide-react'
 import mermaid from 'mermaid'
 
-// Initialize mermaid with theme detection
 mermaid.initialize({
   startOnLoad: false,
   theme: 'dark',
@@ -25,7 +24,6 @@ export function MermaidBlock({ node }: NodeViewProps) {
   const code = node.textContent || ''
 
   useEffect(() => {
-    // Update mermaid theme based on document
     const isDark = document.documentElement.classList.contains('dark')
     mermaid.initialize({
       startOnLoad: false,
@@ -43,7 +41,6 @@ export function MermaidBlock({ node }: NodeViewProps) {
     const renderDiagram = async () => {
       try {
         setError(null)
-        // Check if the diagram is valid first
         const isValid = await mermaid.parse(code)
         if (isValid) {
           const { svg: renderedSvg } = await mermaid.render(idRef.current, code)

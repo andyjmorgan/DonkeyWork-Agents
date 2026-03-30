@@ -81,7 +81,6 @@ public sealed class NatsQueueAdapterFactory : IQueueAdapterFactory
 
     private async Task EnsureStreamExists(INatsJSContext js)
     {
-        // Build the list of subjects: "{prefix}.0", "{prefix}.1", ...
         var subjects = new List<string>();
         for (var i = 0; i < _options.Partitions; i++)
             subjects.Add($"{_options.SubjectPrefix}.{i}");

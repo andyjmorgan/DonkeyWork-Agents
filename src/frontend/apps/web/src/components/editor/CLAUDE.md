@@ -2,7 +2,7 @@
 
 ## Node Architecture
 
-All workflow nodes follow a consistent pattern for visual design, behavior, and connections.
+All workflow nodes use a unified `SchemaNode` component that reads metadata from a centralized `nodeTypes.ts` registry. Visual design, behavior, and connections are driven by the registry rather than individual node components.
 
 ---
 
@@ -192,119 +192,57 @@ Each node type has a dedicated color scheme from the DonkeyWork design system:
 
 ## Creating a New Node Type
 
-### 1. Create Node Component
+All nodes are rendered by the unified `SchemaNode` component. Adding a new node type means adding an entry to the `NODE_TYPES` registry in `nodeTypes.ts` - no new React component is needed.
+
+### 1. Add to Node Type Registry (`nodeTypes.ts`)
 
 ```tsx
-// src/components/editor/nodes/MyNode.tsx
-import { memo } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { Zap } from 'lucide-react'
-import { BaseNode } from './BaseNode'
-
-export interface MyNodeData {
-  displayName: string
-  // ... other data fields
-}
-
-export const MyNode = memo(({ id, data, selected }: NodeProps<MyNodeData>) => {
-  return (
-    <BaseNode id={id} selected={selected} borderColor="border-purple-500">
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="!w-3 !h-3 !bg-purple-500 !border-2 !border-background"
-      />
-
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10">
-          <Zap className="h-4 w-4 text-purple-500" />
-        </div>
-        <div className="flex-1">
-          <div className="font-medium text-sm">{data.displayName}</div>
-          <div className="text-xs text-muted-foreground">My Node</div>
-        </div>
-      </div>
-
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!w-3 !h-3 !bg-purple-500 !border-2 !border-background"
-      />
-    </BaseNode>
-  )
-})
-
-MyNode.displayName = 'MyNode'
-```
-
-### 2. Export from index.ts
-
-```tsx
-// src/components/editor/nodes/index.ts
-export { StartNode } from './StartNode'
-export { ModelNode } from './ModelNode'
-export { EndNode } from './EndNode'
-export { ActionNode } from './ActionNode'
-export { MyNode } from './MyNode'  // Add your node
-```
-
-### 3. Register in CanvasInner.tsx
-
-```tsx
-// src/components/editor/CanvasInner.tsx
-import { StartNode, ModelNode, EndNode, ActionNode, MyNode } from './nodes'
-
-const nodeTypes = useMemo(
-  () => ({
-    start: StartNode,
-    model: ModelNode,
-    end: EndNode,
-    action: ActionNode,
-    myNode: MyNode  // Register your node type
-  }),
-  []
-)
-```
-
-### 4. Add to Editor Store
-
-Update `src/store/editor.ts` to handle your node type:
-
-```tsx
-// Add config interface
-export interface MyNodeConfig {
-  name: string
-  // ... other config fields
-}
-
-// Update NodeConfig union
-export type NodeConfig =
-  | StartNodeConfig
-  | ModelNodeConfig
-  | EndNodeConfig
-  | ActionNodeConfig
-  | MyNodeConfig  // Add your config
-
-// Add case in addNode function
-else if (type === 'myNode') {
-  defaultConfig = {
-    name: nodeName,
-    // ... default values
-  } as MyNodeConfig
-  nodeData = {
-    displayName: (config as any).displayName || '',
-    // ... node data
-  }
+export const NODE_TYPES: Record<string, NodeTypeMetadata> = {
+  // ... existing entries
+  myNode: {
+    type: 'myNode',
+    displayName: 'My Node',
+    description: 'Does something useful',
+    icon: Zap,                              // Lucide icon
+    borderColor: 'border-purple-500',
+    iconBgColor: 'bg-purple-500/10',
+    iconColor: 'text-purple-500',
+    handleColor: '!bg-purple-500',
+    category: 'utility',                    // 'flow' | 'ai' | 'utility' | 'action'
+    canDelete: true,
+    schemaSource: { type: 'local', schema: myNodeSchema },  // or backend endpoint
+    showEditableName: true,
+  },
 }
 ```
 
-### 5. Add Properties Panel
+### 2. Define Schema (if local)
 
-Create `src/components/editor/properties/MyNodeProperties.tsx` and add to PropertiesPanel switch statement.
+For nodes with local config (not fetched from backend API):
 
-### 6. Add to Node Palette
+```tsx
+const myNodeSchema: LocalNodeSchema = {
+  tabs: [{ name: 'Settings', order: 0 }],
+  fields: [
+    {
+      name: 'myField',
+      label: 'My Field',
+      description: 'Description here',
+      controlType: 'Text',
+      propertyType: 'string',
+      order: 0,
+      tab: 'Settings',
+      required: true,
+    },
+  ],
+}
+```
 
-Add your node to the appropriate section in `NodePalette.tsx`.
+For nodes with backend-driven config, use `schemaSource: { type: 'backend-action', endpoint: (actionType) => \`/api/v1/...\` }`.
+
+### 3. Properties Panel
+
+The `SchemaPropertiesPanel` renders config fields automatically from the schema. No per-node properties component is needed unless custom rendering is required.
 
 ---
 
@@ -313,23 +251,14 @@ Add your node to the appropriate section in `NodePalette.tsx`.
 ### Node vs NodeConfig
 
 - **Node** (ReactFlow): Visual representation on canvas
-  - Contains: `id`, `type`, `position`, `data` (display info)
-  - Managed by ReactFlow
+  - Contains: `id`, `type` (always `"schemaNode"`), `position`, `data` (SchemaNodeData)
+  - `data.nodeType` holds the logical type (e.g., `"start"`, `"model"`, `"action"`)
+  - Managed by ReactFlow via the unified `SchemaNode` component
 
 - **NodeConfig** (Editor Store): Configuration/settings
-  - Contains: `name`, and type-specific config
+  - Contains type-specific config fields driven by the schema
   - Stored in `nodeConfigurations` map keyed by node ID
   - Persisted to backend
-
-### Updating Nodes
-
-```tsx
-// Update node configuration (persisted settings)
-updateNodeConfig(nodeId, { name: 'new name' })
-
-// Update node data (visual/display info)
-updateNodeData(nodeId, { displayName: 'New Display Name' })
-```
 
 ---
 
@@ -375,13 +304,12 @@ const Icon = getIcon(data.icon)
 
 ## Testing Nodes
 
-See `ActionNode.test.tsx` for testing patterns:
+See `nodes/ActionNode.test.tsx` for testing patterns:
 
 1. Wrap in ReactFlowProvider
-2. Test rendering with different props
-3. Test icon variations
+2. Test rendering with different data props
+3. Test icon and color variations
 4. Test selection states
-5. Test parameter storage in data
 
 ---
 
@@ -398,17 +326,14 @@ See `ActionNode.test.tsx` for testing patterns:
 
 ## Reference
 
-### Existing Node Files
+### Key Files
 
-- **StartNode**: Simplest example, no delete button, only output handle
-- **EndNode**: Only input handle, no delete button
-- **ModelNode**: Full example with dynamic icons, two handles
-- **ActionNode**: Full example with parameter support, two handles
-
-### Related Files
-
-- `BaseNode.tsx` - Wrapper component
-- `CanvasInner.tsx` - Node type registration
-- `PropertiesPanel.tsx` - Properties routing
-- `NodePalette.tsx` - Node palette sections
+- `nodes/SchemaNode.tsx` - Unified node component (renders all node types)
+- `nodes/BaseNode.tsx` - Wrapper providing settings/delete buttons, selection ring
+- `nodeTypes.ts` - Node type registry (colors, icons, schemas, categories)
+- `CanvasInner.tsx` - ReactFlow canvas (registers single `schemaNode` type)
+- `NodePalette.tsx` - Drag-to-add palette (fetches available types from API)
+- `PropertiesPanel.tsx` - Properties routing for selected node
+- `properties/SchemaPropertiesPanel.tsx` - Schema-driven config editor
+- `properties/FieldRenderer.tsx` - Renders individual config fields
 - `editor.ts` (store) - State management

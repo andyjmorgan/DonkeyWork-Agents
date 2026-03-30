@@ -17,7 +17,6 @@ internal static class AnthropicToolMapper
         var result = new List<BetaToolUnion>();
         var hasDeferredTools = false;
 
-        // Map client tools
         if (hasClientTools)
         {
             foreach (var tool in tools!)
@@ -36,7 +35,6 @@ internal static class AnthropicToolMapper
             }
         }
 
-        // Add tool search when there are deferred tools
         if (hasDeferredTools)
         {
             result.Insert(0, new BetaToolSearchToolBm25_20251119
@@ -45,7 +43,6 @@ internal static class AnthropicToolMapper
             });
         }
 
-        // Append server tools
         if (options.WebSearch.Enabled)
         {
             result.Add(new BetaWebSearchTool20250305

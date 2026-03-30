@@ -23,15 +23,12 @@ export function useTokenRefresh() {
     if (state.isTokenExpired()) {
       const refreshed = await state.refreshTokens()
       if (!refreshed) {
-        // Refresh failed - log the user out
         state.logout()
         window.location.href = '/api/v1/auth/logout'
       }
     } else if (state.shouldRefreshToken()) {
-      // Proactively refresh before expiry
       const refreshed = await state.refreshTokens()
       if (!refreshed) {
-        // Refresh failed - log the user out
         state.logout()
         window.location.href = '/api/v1/auth/logout'
       }
@@ -40,7 +37,6 @@ export function useTokenRefresh() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      // Clear interval if user is not authenticated
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
         intervalRef.current = null
@@ -51,7 +47,6 @@ export function useTokenRefresh() {
     // Initial check
     checkAndRefreshToken()
 
-    // Set up periodic checks
     intervalRef.current = window.setInterval(checkAndRefreshToken, TOKEN_REFRESH_INTERVAL)
 
     return () => {

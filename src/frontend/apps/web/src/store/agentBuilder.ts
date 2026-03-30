@@ -654,7 +654,6 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       }
     }
 
-    // Set tool configuration if there are any overrides or non-default defer settings
     if (allToolOverrides.length > 0 || hasAnyNonDeferred) {
       const toolConfig: ToolConfig = {
         deferToolLoading: !hasAnyNonDeferred,

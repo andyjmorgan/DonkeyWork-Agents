@@ -93,13 +93,11 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         ConversationContext? conversation,
         CancellationToken cancellationToken)
     {
-        // Create timeout token source
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(_options.Value.ExecutionTimeout);
 
         try
         {
-            // Load orchestration version
             var version = await _dbContext.OrchestrationVersions
                 .Include(v => v.Orchestration)
                 .FirstOrDefaultAsync(v => v.Id == versionId, timeoutCts.Token);
@@ -109,12 +107,10 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 throw new InvalidOperationException($"Orchestration version not found: {versionId}");
             }
 
-            // Validate interface matches the version's configured interface
             // Note: Interface validation removed - the interface config determines how the orchestration
             // is exposed (API, MCP, etc.), not how it can be executed internally. Playground and
             // internal testing should work regardless of interface setting.
 
-            // Serialize input for storage
             var inputJson = conversation != null
                 ? JsonSerializer.Serialize(new { conversationId = conversation.Id })
                 : input.GetRawText();
@@ -171,7 +167,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
 
             foreach (var nodeId in analysisResult.ExecutionOrder)
             {
-                // Get node from typed ReactFlow data
                 var node = version.ReactFlowData.Nodes.FirstOrDefault(n => n.Id == nodeId);
 
                 if (node == null)
@@ -182,27 +177,23 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 // Use typed NodeType enum directly
                 var nodeTypeEnum = node.Data.NodeType;
 
-                // Get node configuration - already typed
                 if (!nodeConfigurations.TryGetValue(nodeId, out var nodeConfig))
                 {
                     throw new InvalidOperationException($"Node configuration not found: {nodeId}");
                 }
 
-                // Log for debugging
                 _logger.LogDebug(
                     "Node {NodeId} type: {NodeType}, config type: {ConfigType}",
                     nodeId,
                     nodeTypeEnum,
                     nodeConfig.GetType().Name);
 
-                // Get node name from configuration (all NodeConfiguration subclasses have Name)
                 var nodeName = nodeConfig.Name;
 
                 // Determine input for this node
                 string? nodeInput = null;
                 if (nodeTypeEnum == NodeType.Start)
                 {
-                    // Start node input is the execution input
                     nodeInput = inputJson;
                 }
                 else
@@ -215,7 +206,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                     }
                 }
 
-                // Create NodeExecution record
                 var nodeExecution = new OrchestrationNodeExecutionEntity
                 {
                     Id = Guid.NewGuid(),
@@ -234,14 +224,12 @@ public class OrchestrationExecutor : IOrchestrationExecutor
 
                 try
                 {
-                    // Get executor from registry
                     var executor = _executorRegistry.GetExecutor(nodeTypeEnum) as INodeExecutor;
                     if (executor == null)
                     {
                         throw new InvalidOperationException($"Executor not found for node type: {nodeTypeEnum}");
                     }
 
-                    // Execute node (timed) - executor emits NodeStarted/NodeCompleted events
                     var nodeStopwatch = Stopwatch.StartNew();
                     var output = await executor.ExecuteAsync(
                         nodeId,
@@ -249,10 +237,8 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                         timeoutCts.Token);
                     nodeStopwatch.Stop();
 
-                    // Store output in context using node name
                     _executionContext.SetNodeOutput(nodeName, output);
 
-                    // Update NodeExecution record
                     nodeExecution.Status = ExecutionStatus.Completed;
                     nodeExecution.CompletedAt = DateTimeOffset.UtcNow;
                     nodeExecution.DurationMs = (int)nodeStopwatch.ElapsedMilliseconds;
@@ -271,7 +257,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 {
                     _logger.LogError(ex, "Node execution failed: {NodeId} ({NodeType})", nodeId, nodeTypeEnum);
 
-                    // Update node execution as failed
                     nodeExecution.Status = ExecutionStatus.Failed;
                     nodeExecution.CompletedAt = DateTimeOffset.UtcNow;
                     nodeExecution.ErrorMessage = ex.Message;
@@ -290,7 +275,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 .OfType<EndNodeOutput>()
                 .FirstOrDefault();
 
-            // Get the raw message output for the event (before any DB serialization)
             var messageOutput = endNodeOutput?.ToMessageOutput() ?? string.Empty;
 
             if (endNodeOutput != null)
@@ -299,7 +283,6 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 execution.Output = JsonSerializer.Serialize(messageOutput);
             }
 
-            // Calculate total tokens
             var totalTokens = _executionContext.NodeOutputs.Values
                 .OfType<ModelNodeOutput>()
                 .Sum(o => o.TotalTokens ?? 0);

@@ -42,7 +42,6 @@ function EventRow({ event }: { event: SocketEvent }) {
   const [expanded, setExpanded] = useState(false);
   const color = EVENT_COLORS[event.eventType] ?? "text-muted-foreground";
 
-  // Build a short summary
   let summary = "";
   if (event.eventType === "message" || event.eventType === "thinking") {
     const text = (event.data.text as string) ?? "";

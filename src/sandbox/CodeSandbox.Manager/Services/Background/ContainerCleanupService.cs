@@ -144,7 +144,6 @@ public class ContainerCleanupService : BackgroundService
             labelSelector: $"managed-by=CodeSandbox-Manager,container-type={containerType}",
             cancellationToken: cancellationToken);
 
-        // Filter to only pods that have a user-id label (i.e., they've been assigned)
         var assignedPods = userPods.Items
             .Where(p => p.Metadata.Labels?.ContainsKey("user-id") == true)
             .ToList();
@@ -171,7 +170,6 @@ public class ContainerCleanupService : BackgroundService
             await DeletePodAsync(pod.Metadata.Name, $"{containerType} {reason}", cancellationToken, forceDelete: true);
         }
 
-        // Check running pods for idle timeout
         var now = DateTimeOffset.UtcNow;
         var idleThreshold = TimeSpan.FromMinutes(idleTimeoutMinutes);
         var idleContainers = new List<V1Pod>();
@@ -199,7 +197,6 @@ public class ContainerCleanupService : BackgroundService
                 containerType, runningPods.Count, idleContainers.Count, completedPods.Count);
         }
 
-        // Delete idle containers
         foreach (var pod in idleContainers)
         {
             await DeletePodAsync(pod.Metadata.Name, $"{containerType} idle timeout", cancellationToken);

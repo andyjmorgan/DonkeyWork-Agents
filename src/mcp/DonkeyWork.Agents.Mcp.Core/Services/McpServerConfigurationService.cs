@@ -63,7 +63,6 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
 
         _dbContext.McpServerConfigurations.Add(entity);
 
-        // Add transport-specific configuration
         if (request.TransportType == McpTransportType.Stdio && request.StdioConfiguration != null)
         {
             var stdioConfigId = Guid.NewGuid();
@@ -78,7 +77,6 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             };
             _dbContext.McpStdioConfigurations.Add(stdioConfig);
 
-            // Add environment variable entities
             if (request.StdioConfiguration.EnvironmentVariables != null)
             {
                 foreach (var envVar in request.StdioConfiguration.EnvironmentVariables)
@@ -111,7 +109,6 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             };
             _dbContext.McpHttpConfigurations.Add(httpConfig);
 
-            // Add OAuth configuration if applicable
             if (request.HttpConfiguration.AuthType == McpHttpAuthType.OAuth && request.HttpConfiguration.OAuthConfiguration != null)
             {
                 var oauthConfig = new McpHttpOAuthConfigurationEntity
@@ -128,7 +125,6 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
                 _dbContext.McpHttpOAuthConfigurations.Add(oauthConfig);
             }
 
-            // Add header configurations if applicable
             if (request.HttpConfiguration.AuthType == McpHttpAuthType.Header && request.HttpConfiguration.HeaderConfigurations != null)
             {
                 foreach (var headerConfig in request.HttpConfiguration.HeaderConfigurations)
@@ -210,7 +206,6 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             .ToDictionary(h => h.HeaderName, h => (h.HeaderValueEncrypted, h.CredentialId, h.CredentialFieldType), StringComparer.OrdinalIgnoreCase)
             ?? new Dictionary<string, (string? HeaderValueEncrypted, Guid? CredentialId, string? CredentialFieldType)>(StringComparer.OrdinalIgnoreCase);
 
-        // Remove old transport configurations
         if (entity.StdioConfiguration != null)
         {
             if (entity.StdioConfiguration.EnvironmentVariableConfigurations.Any())
@@ -233,7 +228,6 @@ public class McpServerConfigurationService : IMcpServerConfigurationService
             _dbContext.McpHttpConfigurations.Remove(entity.HttpConfiguration);
         }
 
-        // Add new transport configuration
         if (request.TransportType == McpTransportType.Stdio && request.StdioConfiguration != null)
         {
             var stdioConfigId = Guid.NewGuid();

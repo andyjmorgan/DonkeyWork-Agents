@@ -22,7 +22,6 @@ export function LoginCallbackPage() {
   const navigate = useNavigate()
   const { setTokens, setUser } = useAuthStore()
 
-  // Parse URL params once on mount - compute initial error state synchronously
   const initialState = useMemo(() => {
     const hash = window.location.hash.substring(1)
     const params = new URLSearchParams(hash)
@@ -53,10 +52,8 @@ export function LoginCallbackPage() {
       return
     }
 
-    // Store tokens
     setTokens(accessToken, refreshToken, parseInt(expiresIn || '300', 10))
 
-    // Parse user info from JWT
     const payload = parseJwt(accessToken)
     if (payload) {
       setUser({
@@ -67,7 +64,6 @@ export function LoginCallbackPage() {
       })
     }
 
-    // Clear the hash from the URL for security
     window.history.replaceState(null, '', window.location.pathname)
 
     // Redirect to the app

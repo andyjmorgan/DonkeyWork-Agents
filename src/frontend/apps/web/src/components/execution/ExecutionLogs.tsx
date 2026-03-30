@@ -13,7 +13,6 @@ export function ExecutionLogs({ executionId }: ExecutionLogsProps) {
   const [error, setError] = useState<string | null>(null)
   const prevExecutionIdRef = useRef(executionId)
 
-  // Clear logs synchronously when executionId becomes null
   useLayoutEffect(() => {
     if (prevExecutionIdRef.current !== executionId && !executionId) {
       setLogs([])

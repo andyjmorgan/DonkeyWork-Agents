@@ -17,7 +17,6 @@ public static class DependencyInjection
         // Model Pipeline (public interface, transient for fresh instances per request)
         services.AddTransient<IModelPipeline, ModelPipeline>();
 
-        // Register internal Core services
         services.AddProvidersCore();
 
         return services;

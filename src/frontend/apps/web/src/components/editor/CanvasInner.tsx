@@ -46,12 +46,10 @@ export function CanvasInner() {
     []
   )
 
-  // Handle canvas click (deselect)
   const handlePaneClick = useCallback(() => {
     selectNode(null)
   }, [selectNode])
 
-  // Handle viewport change
   const handleMove = useCallback(
     (_event: MouseEvent | TouchEvent | null, viewport: { x: number; y: number; zoom: number }) => {
       setViewport(viewport)
@@ -59,25 +57,21 @@ export function CanvasInner() {
     [setViewport]
   )
 
-  // Handle drag over
   const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
   }, [])
 
-  // Handle format/tidy up
   const handleTidyUp = useCallback(() => {
     tidyUpNodes()
     // Fit view after layout to show all nodes
     setTimeout(() => fitView({ padding: 0.2 }), 50)
   }, [tidyUpNodes, fitView])
 
-  // Handle drop
   const handleDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault()
 
-      // Get node type info from JSON data
       const jsonData = event.dataTransfer.getData('application/json')
       if (!jsonData) return
 
@@ -89,13 +83,11 @@ export function CanvasInner() {
         return
       }
 
-      // Get the drop position
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY
       })
 
-      // Add the node with schema data
       addNode(position, nodeTypeInfo)
     },
     [screenToFlowPosition, addNode]

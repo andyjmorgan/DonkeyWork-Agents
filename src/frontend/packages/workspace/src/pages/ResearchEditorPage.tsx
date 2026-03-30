@@ -135,7 +135,6 @@ export function ResearchEditorPage({ researchId, isNew, nav }: { researchId?: st
     setTags(tags.filter((_, i) => i !== index))
   }
 
-  // Show result section when status is Completed or result has content
   const showResultSection = status === 'Completed' || result.trim().length > 0
 
   if (isLoading) {

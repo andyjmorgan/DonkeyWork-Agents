@@ -295,7 +295,7 @@ This is already configured globally in `Program.cs` and in services that use cus
 
 - Keycloak with JWT Bearer tokens
 - Audience validated via `azp` claim (Keycloak sets `aud: "account"` by default)
-- See `keycloak.md` for configuration details
+- See `src/identity/readme.md` for configuration details
 
 ### IIdentityContext
 
@@ -673,15 +673,18 @@ The `src/sandbox/` directory contains independently deployable code execution se
 
 ```
 src/sandbox/
-├── CodeSandbox.Contracts/     # Shared models, DTOs, service interfaces
-├── CodeSandbox.Manager/       # Orchestrates sandbox lifecycle (port 8668)
-├── CodeSandbox.Executor/      # Runs user code inside Kata VM pods (port 8666)
-├── CodeSandbox.AuthProxy/     # OAuth proxy for sandbox auth (ports 8080/8081)
-└── Directory.Packages.props   # Central NuGet package versions for sandbox
+├── CodeSandbox.Contracts/           # Shared models, DTOs, service interfaces
+├── CodeSandbox.Manager/             # Orchestrates sandbox lifecycle (port 8668)
+├── CodeSandbox.Manager.Contracts/   # gRPC proto definitions for Manager
+├── CodeSandbox.Executor/            # Runs user code inside Kata VM pods (port 8666)
+├── CodeSandbox.AuthProxy/           # OAuth proxy for sandbox auth (ports 8080/8081)
+└── Directory.Packages.props         # Central NuGet package versions for sandbox
 
 test/sandbox/
-├── CodeSandbox.Executor.IntegrationTests/  # Testcontainers-based integration tests
-└── Directory.Packages.props                # Test package versions
+├── CodeSandbox.Executor.IntegrationTests/    # Testcontainers-based integration tests
+├── CodeSandbox.McpServer.IntegrationTests/   # MCP server integration tests
+├── CodeSandbox.McpServer.Tests/              # MCP server unit tests
+└── Directory.Packages.props                  # Test package versions
 ```
 
 ### Components

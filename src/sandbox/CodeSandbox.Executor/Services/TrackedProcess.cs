@@ -101,7 +101,6 @@ public class TrackedProcess
             }
             else
             {
-                // Subscribe for live events
                 _subscribers.Add(channel.Writer);
             }
         }
@@ -115,7 +114,6 @@ public class TrackedProcess
         }
         finally
         {
-            // Clean up subscriber if we're cancelled or done
             lock (_lock)
             {
                 _subscribers.Remove(channel.Writer);

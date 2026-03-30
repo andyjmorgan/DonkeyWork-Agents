@@ -31,15 +31,12 @@ public class TemplateRenderer : ITemplateRenderer
             throw new InvalidOperationException($"Template parse error: {errors}");
         }
 
-        // Build Scriban context using ScriptObject for proper variable access
         var scriptObject = new ScriptObject();
 
-        // Convert input to navigable object for Scriban
         // Always use a ScriptObject (never null) to allow safe property access
         var inputObject = ConvertToScribanObject(_context.Input) ?? new ScriptObject();
         scriptObject["Input"] = inputObject;
 
-        // Convert node outputs to navigable objects
         var stepsObject = new ScriptObject();
         foreach (var (nodeName, output) in _context.NodeOutputs)
         {

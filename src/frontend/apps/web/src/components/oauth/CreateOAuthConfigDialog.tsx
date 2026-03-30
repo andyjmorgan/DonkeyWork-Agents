@@ -54,7 +54,6 @@ export function CreateOAuthConfigDialog({
   // Scope selection for built-in providers
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set())
 
-  // Load provider metadata on mount
   useEffect(() => {
     if (open) {
       loadMetadata()
@@ -93,7 +92,6 @@ export function CreateOAuthConfigDialog({
       setAuthorizationUrl(meta.authorizationUrl)
       setTokenUrl(meta.tokenUrl)
       setUserInfoUrl(meta.userInfoUrl)
-      // Initialize selected scopes from available scopes metadata
       const defaults = new Set(
         (meta.availableScopes ?? [])
           .filter((s) => s.isDefault || s.isRequired)

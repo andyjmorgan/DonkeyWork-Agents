@@ -20,7 +20,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddOrchestrationsApi(this IServiceCollection services)
     {
-        // Register options
         services.AddOptions<OrchestrationsOptions>()
             .BindConfiguration(OrchestrationsOptions.SectionName)
             .ValidateDataAnnotations()
@@ -31,7 +30,6 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        // Register NATS connection and JetStream context as singletons
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<NatsOptions>>().Value;
@@ -46,7 +44,6 @@ public static class DependencyInjection
             var options = sp.GetRequiredService<IOptions<NatsOptions>>().Value;
             var jsContext = new NatsJSContext(connection);
 
-            // Ensure the shared stream exists with wildcard subject
             var config = new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
             {
                 MaxAge = options.MaxAge
@@ -72,7 +69,6 @@ public static class DependencyInjection
             return jsContext;
         });
 
-        // Register services
         services.AddScoped<IOrchestrationService, OrchestrationService>();
         services.AddScoped<IOrchestrationVersionService, OrchestrationVersionService>();
 
@@ -86,27 +82,20 @@ public static class DependencyInjection
 
         services.AddScoped<IOrchestrationExecutor, OrchestrationExecutor>();
 
-        // Register node schema services
         services.AddSingleton<INodeSchemaGenerator, NodeSchemaGenerator>();
         services.AddSingleton<INodeTypeSchemaService, NodeTypeSchemaService>();
         services.AddSingleton<IMultimodalChatSchemaService, MultimodalChatSchemaService>();
 
-        // Register execution context as scoped (hydrated by orchestrator)
         services.AddScoped<IExecutionContext, Core.Execution.ExecutionContext>();
 
-        // Register template renderer as scoped (uses IExecutionContext)
         services.AddScoped<ITemplateRenderer, TemplateRenderer>();
 
-        // Register stream writer as scoped (one producer per execution)
         services.AddScoped<IExecutionStreamWriter, ExecutionStreamWriter>();
 
-        // Register repositories
         services.AddScoped<IOrchestrationExecutionRepository, OrchestrationExecutionRepository>();
 
-        // Register execution infrastructure
         services.AddSingleton<GraphAnalyzer>();
 
-        // Register node method registry with provider discovery
         services.AddSingleton(sp =>
         {
             var registry = new NodeMethodRegistry();
@@ -115,21 +104,17 @@ public static class DependencyInjection
             return registry;
         });
 
-        // Register node providers as scoped (they access scoped IExecutionContext)
         services.AddScoped<HttpNodeProvider>();
         services.AddScoped<TimingNodeProvider>();
         services.AddScoped<UtilityNodeProvider>();
 
-        // Register generic executor for provider-based nodes
         services.AddScoped<GenericNodeExecutor>();
 
-        // Register dedicated executors for complex nodes
         services.AddScoped<StartNodeExecutor>();
         services.AddScoped<EndNodeExecutor>();
         services.AddScoped<ModelNodeExecutor>();
         services.AddScoped<MultimodalChatNodeExecutor>();
 
-        // Register executor registry with mappings
         services.AddScoped<INodeExecutorRegistry>(sp =>
         {
             var registry = new NodeExecutorRegistry(sp);
@@ -148,7 +133,6 @@ public static class DependencyInjection
             return registry;
         });
 
-        // Register background service
         services.AddHostedService<StreamCleanupBackgroundService>();
 
         return services;

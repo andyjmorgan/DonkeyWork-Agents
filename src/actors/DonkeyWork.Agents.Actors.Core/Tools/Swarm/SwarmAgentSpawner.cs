@@ -46,7 +46,6 @@ public sealed class SwarmAgentSpawner
             conversationId,
             taskId);
 
-        // Notify observer of the spawn
         context.Observer?.OnEvent(new StreamAgentSpawnEvent(
             context.GrainKey,
             agentKey,
@@ -66,7 +65,6 @@ public sealed class SwarmAgentSpawner
             }
         }
 
-        // Create execution record before spawning
         var contractJson = JsonSerializer.Serialize(contract, ContractJsonOptions);
         var executionId = await _executionRepository.CreateAsync(
             identityContext.UserId,
@@ -87,11 +85,9 @@ public sealed class SwarmAgentSpawner
         if (executionId != Guid.Empty)
             RequestContext.Set(GrainCallContextKeys.ExecutionId, executionId.ToString());
 
-        // Get the agent grain and fire-and-forget the execution
         var grain = context.GrainFactory.GetGrain<IAgentGrain>(agentKey);
         _ = grain.RunAsync(contract, query, context.Observer);
 
-        // Register with the conversation's agent registry
         var registryKey = AgentKeys.Conversation(identityContext.UserId, conversationId);
         var registry = context.GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
 

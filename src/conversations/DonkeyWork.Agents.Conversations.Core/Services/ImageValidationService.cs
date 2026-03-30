@@ -30,7 +30,6 @@ public class ImageValidationService : IImageValidationService
     /// <inheritdoc />
     public async Task<ImageValidationResult> ValidateAsync(string contentType, long fileSizeBytes, Stream fileStream)
     {
-        // Validate file size
         if (fileSizeBytes > _options.MaxFileSizeBytes)
         {
             var maxMb = _options.MaxFileSizeBytes / (1024 * 1024);
@@ -42,13 +41,11 @@ public class ImageValidationService : IImageValidationService
             return ImageValidationResult.Failure("File is empty.");
         }
 
-        // Validate claimed MIME type
         if (!_options.AllowedMimeTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
         {
             return ImageValidationResult.Failure($"Content type '{contentType}' is not allowed. Allowed types: {string.Join(", ", _options.AllowedMimeTypes)}");
         }
 
-        // Validate magic bytes
         var detectedMimeType = await DetectMimeTypeFromMagicBytesAsync(fileStream);
 
         if (detectedMimeType == null)
@@ -61,7 +58,6 @@ public class ImageValidationService : IImageValidationService
             return ImageValidationResult.Failure($"Detected file type '{detectedMimeType}' is not allowed.");
         }
 
-        // Reset stream position for subsequent reads
         if (fileStream.CanSeek)
         {
             fileStream.Position = 0;
@@ -75,7 +71,6 @@ public class ImageValidationService : IImageValidationService
 
     private async Task<string?> DetectMimeTypeFromMagicBytesAsync(Stream stream)
     {
-        // Read enough bytes to check all magic byte patterns
         var buffer = new byte[12];
         var originalPosition = stream.CanSeek ? stream.Position : 0;
 
@@ -91,7 +86,6 @@ public class ImageValidationService : IImageValidationService
             return null;
         }
 
-        // Check each format
         foreach (var (mimeType, patterns) in MagicBytes)
         {
             foreach (var pattern in patterns)
@@ -113,7 +107,6 @@ public class ImageValidationService : IImageValidationService
             }
         }
 
-        // Reset stream position
         if (stream.CanSeek)
         {
             stream.Position = originalPosition;

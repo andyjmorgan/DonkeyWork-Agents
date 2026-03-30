@@ -56,7 +56,6 @@ public class ExecutionStreamService : IExecutionStreamService
         _logger.LogInformation("Starting to read events from subject {Subject} with offset {Offset}",
             subject, offset);
 
-        // Create an ephemeral ordered consumer filtered to this execution's subject
         var consumerConfig = new ConsumerConfig
         {
             FilterSubject = subject,
@@ -77,7 +76,6 @@ public class ExecutionStreamService : IExecutionStreamService
 
         _logger.LogInformation("Consumer created for subject {Subject}", subject);
 
-        // Start a background fetch loop
         var cts = new CancellationTokenSource();
         var fetchTask = Task.Run(async () =>
         {
@@ -142,7 +140,6 @@ public class ExecutionStreamService : IExecutionStreamService
                     yield return evt;
                 }
 
-                // Check if execution completed
                 if (completionSource.Task.IsCompleted)
                 {
                     _logger.LogInformation(

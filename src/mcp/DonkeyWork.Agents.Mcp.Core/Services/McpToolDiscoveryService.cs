@@ -65,7 +65,6 @@ public class McpToolDiscoveryService : IMcpToolDiscoveryService
             return null;
         }
 
-        // Check if the user has access to this tool
         if (!IsToolAccessibleToUser(tool))
         {
             _logger.LogWarning(

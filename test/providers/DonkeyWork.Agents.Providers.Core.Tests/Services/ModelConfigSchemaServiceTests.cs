@@ -199,7 +199,6 @@ public class ModelConfigSchemaServiceTests
         // Assert
         Assert.NotNull(schema);
 
-        // Check base fields
         Assert.Contains(schema.Fields, f => f.Name == "temperature");
         Assert.Contains(schema.Fields, f => f.Name == "maxOutputTokens");
 

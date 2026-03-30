@@ -61,7 +61,6 @@ export function PropertiesPanel() {
     }
   }, [isResizing])
 
-  // Find the selected node
   const selectedNode = selectedNodeId
     ? nodes.find(n => n.id === selectedNodeId)
     : null
@@ -75,7 +74,6 @@ export function PropertiesPanel() {
   const getNodeTitle = (): string => {
     if (!selectedNode) return 'Properties'
 
-    // Get display name from node data (comes from schema)
     const displayName = selectedNode.data?.displayName as string
     return displayName ? `${displayName} Properties` : 'Node Properties'
   }
@@ -83,7 +81,6 @@ export function PropertiesPanel() {
   const renderNodeProperties = () => {
     if (!selectedNode) return null
 
-    // Get backend node type from node data (all nodes are schemaNode type now)
     const backendNodeType = selectedNode.data?.nodeType as string
 
     if (!backendNodeType) {
@@ -99,7 +96,6 @@ export function PropertiesPanel() {
       return <MultimodalChatPropertiesPanel nodeId={selectedNode.id} />
     }
 
-    // Get provider and modelId for credential filtering and supportedBy checks (Model nodes)
     const config = nodeConfigurations[selectedNode.id]
     const isModelNode = backendNodeType === 'Model' || backendNodeType === 'MultimodalChatModel'
     const credentialProvider = isModelNode ? (config?.provider as string) : undefined

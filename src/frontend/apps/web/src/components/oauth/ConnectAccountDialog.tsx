@@ -53,7 +53,6 @@ export function ConnectAccountDialog({
       const providerMeta = allMetadata.find((m) => m.provider === config.provider) ?? null
       setMetadata(providerMeta)
 
-      // Initialize from the config's saved scopes, or fall back to the provider's defaults
       if (config.scopes && config.scopes.length > 0) {
         setSelectedScopes(new Set(config.scopes))
       } else if (providerMeta) {
@@ -100,7 +99,6 @@ export function ConnectAccountDialog({
     ? (config?.customProviderName || 'Custom')
     : config?.provider
 
-  // Build a lookup of scope metadata for the provider
   const scopeMetadataMap = new Map<string, OAuthScopeMetadata>()
   if (metadata) {
     for (const s of metadata.availableScopes) {

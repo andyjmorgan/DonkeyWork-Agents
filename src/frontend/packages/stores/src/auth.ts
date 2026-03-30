@@ -121,7 +121,6 @@ export const useAuthStore = create<AuthState>()(
         const timeRemaining = expiresAt ? Math.round((expiresAt - Date.now()) / 1000) : 'unknown'
         console.debug(`[Auth] Starting token refresh. Token expires in ${timeRemaining}s. RefreshToken preview: ${refreshToken.substring(0, 20)}...`)
 
-        // Create the refresh promise
         const refreshPromise = (async () => {
           set({ isRefreshing: true })
 
@@ -136,7 +135,6 @@ export const useAuthStore = create<AuthState>()(
             })
 
             if (!response.ok) {
-              // Refresh failed - try to get error details
               try {
                 const errorBody = await response.json()
                 console.error('[Auth] Token refresh failed:', {
@@ -151,14 +149,12 @@ export const useAuthStore = create<AuthState>()(
                   refreshTokenPreview: refreshToken.substring(0, 20) + '...',
                 })
               }
-              // Refresh failed - logout
               get().logout()
               return false
             }
 
             const data: RefreshTokenResponse = await response.json()
 
-            // Update tokens
             const now = Date.now()
             const expiresAt = now + data.expiresIn * 1000
             set({

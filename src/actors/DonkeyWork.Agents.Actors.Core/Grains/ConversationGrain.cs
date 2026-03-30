@@ -120,7 +120,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 },
                 ct);
 
-            // Store discovered MCP servers so they persist across turns for delegate inheritance
             _discoveredMcpServers = httpConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description })
                 .Concat(stdioConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description }))
                 .ToArray();
@@ -220,7 +219,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
     protected override async Task OnBeforeDeactivateAsync(CancellationToken ct)
     {
-        // Record execution completion for the conversation agent
         if (ExecutionId != Guid.Empty)
         {
             var grainKey = this.GetPrimaryKeyString();
@@ -261,7 +259,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         _queue.Writer.TryWrite(msg);
         Interlocked.Increment(ref _pendingCount);
 
-        // Emit result data event for the frontend
         EmitAgentResultData(agentKey, label, result, isError);
         EnsureProcessingLoop();
         EmitQueueStatus();
@@ -351,7 +348,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 var contract = ResolveContract();
                 Contract = contract;
 
-                // Create execution record once per activation
                 if (ExecutionId == Guid.Empty)
                 {
                     var contractJson = System.Text.Json.JsonSerializer.Serialize(contract);
@@ -373,10 +369,8 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                 var ct = _currentTurnCts.Token;
 
-                // Snapshot sequence number for rollback
                 var snapshotSequenceNumber = NextSequenceNumber;
 
-                // Add message to history
                 var turnId = Guid.NewGuid();
                 var internalMsg = FormatMessage(message);
                 internalMsg.TurnId = turnId;
@@ -455,7 +449,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         // Sync local list reference (pipeline may have grown it via middleware appends)
         Messages = contextMessages;
 
-        // Emit completion with final text
         if (assistantMsg?.TextContent is not null)
         {
             Emit(new StreamCompleteEvent(GrainContext.GrainKey, assistantMsg.TextContent));
@@ -485,7 +478,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             }
         }
 
-        // Determine agent type from the key prefix
         var agentType = agentKey switch
         {
             _ when agentKey.StartsWith(AgentKeys.DelegatePrefix) => AgentTypes.Delegate,

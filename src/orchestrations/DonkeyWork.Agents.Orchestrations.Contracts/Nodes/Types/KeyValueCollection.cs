@@ -103,7 +103,6 @@ public class KeyValueCollectionJsonConverter : JsonConverter<KeyValueCollection?
             return null;
         }
 
-        // Handle legacy string format (e.g., "Key: Value\nKey2: Value2" or "{{variable}}")
         if (reader.TokenType == JsonTokenType.String)
         {
             var stringValue = reader.GetString();
@@ -112,14 +111,12 @@ public class KeyValueCollectionJsonConverter : JsonConverter<KeyValueCollection?
                 return new KeyValueCollection();
             }
 
-            // Check if it's a pure variable expression
             var trimmed = stringValue.Trim();
             if (trimmed.StartsWith("{{") && trimmed.EndsWith("}}"))
             {
                 return KeyValueCollection.FromVariable(trimmed);
             }
 
-            // Parse legacy "Key: Value\n" format
             var items = new List<KeyValueItem>();
             foreach (var line in stringValue.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
@@ -136,7 +133,6 @@ public class KeyValueCollectionJsonConverter : JsonConverter<KeyValueCollection?
             return KeyValueCollection.FromItems(items);
         }
 
-        // Handle object format
         if (reader.TokenType == JsonTokenType.StartObject)
         {
             var collection = new KeyValueCollection();

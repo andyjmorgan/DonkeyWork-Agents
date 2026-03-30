@@ -117,7 +117,6 @@ public class TasksTools
         [Description("Milestone ID to associate with (omit to keep current)")] Guid? milestoneId = null,
         CancellationToken ct = default)
     {
-        // Fetch current task to merge with provided values
         var current = await _taskItemService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {

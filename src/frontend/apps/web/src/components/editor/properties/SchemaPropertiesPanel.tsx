@@ -41,7 +41,6 @@ export function SchemaPropertiesPanel({
   const prevNodeTypeRef = useRef(nodeType)
   const prevModelIdRef = useRef(modelId)
 
-  // Fetch schema on mount and nodeType change
   useEffect(() => {
     let isMounted = true
 
@@ -71,7 +70,6 @@ export function SchemaPropertiesPanel({
     }
   }, [nodeType])
 
-  // Set loading state synchronously when nodeType changes
   useLayoutEffect(() => {
     if (prevNodeTypeRef.current !== nodeType) {
       setLoading(true)
@@ -80,7 +78,6 @@ export function SchemaPropertiesPanel({
     }
   }, [nodeType])
 
-  // Fetch model definition when modelId changes (for Model nodes)
   useEffect(() => {
     let isMounted = true
 
@@ -100,7 +97,6 @@ export function SchemaPropertiesPanel({
     }
   }, [modelId])
 
-  // Clear selected model synchronously when modelId becomes null
   useLayoutEffect(() => {
     if (prevModelIdRef.current !== modelId && !modelId) {
       setSelectedModel(null)
@@ -112,7 +108,6 @@ export function SchemaPropertiesPanel({
     updateNodeConfig(nodeId, { [fieldName]: value })
   }
 
-  // Check if a field should be visible based on reliesUpon
   const isFieldVisible = (field: NodeFieldSchema): boolean => {
     if (!field.reliesUpon) return true
 
@@ -137,7 +132,6 @@ export function SchemaPropertiesPanel({
       groups[tab].push(field)
     }
 
-    // Sort fields within each tab by order
     for (const tab of Object.keys(groups)) {
       groups[tab].sort((a, b) => a.order - b.order)
     }
@@ -145,7 +139,6 @@ export function SchemaPropertiesPanel({
     return groups
   }, [schema])
 
-  // Get sorted tabs
   const sortedTabs = useMemo(() => {
     if (!schema) return []
 

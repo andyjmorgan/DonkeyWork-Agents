@@ -14,10 +14,8 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddNotificationsCore(this IServiceCollection services)
     {
-        // Add SignalR for real-time notifications
         services.AddSignalR();
 
-        // Add notification service
         services.AddScoped<INotificationService, NotificationService>();
 
         return services;

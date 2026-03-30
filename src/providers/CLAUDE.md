@@ -37,7 +37,7 @@ Each model entry has the following fields:
 | `input_cost_per_million_tokens` | decimal | Cost per 1M input tokens (USD) |
 | `output_cost_per_million_tokens` | decimal | Cost per 1M output tokens (USD) |
 | `supports` | object | Capability flags (see below) |
-| `client_types` | string[] | Supported client types: "MultimodalInput", "TextOnly" |
+| `client_types` | string[] | Supported client types: "MultimodalInput", "MultimodalDuplex", "ImageOutput", "AudioOutput", "VideoOutput" |
 | `config_overrides` | object? | Optional per-model config field overrides |
 
 ### Supports Object

@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY: 192.168.0.140:5555
+  REGISTRY: ${{ vars.DOCKER_REGISTRY }}
   IMAGE_NAME: donkeywork-agents/codesandbox-executor-base
 
 permissions:
@@ -37,7 +37,7 @@ jobs:
         with:
           driver-opts: network=host
           buildkitd-config-inline: |
-            [registry."192.168.0.140:5555"]
+            [registry."${{ vars.DOCKER_REGISTRY }}"]
               http = true
 
       - name: Login to Nexus

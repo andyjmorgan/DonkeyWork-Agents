@@ -413,7 +413,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
             };
             const innerBoxes = getInner();
 
-            // Update debug info with nesting details
             setSocketEvents((prev) => {
               const last = prev[prev.length - 1];
               if (last?.id === socketEventId) {
@@ -776,7 +775,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     });
 
     try {
-      // Get state and agents from grain in parallel
       const [stateResult, agentsResult] = await Promise.all([
         sendRpc("getState") as Promise<GetStateResponse>,
         sendRpc("listAgents").catch(() => [] as TrackedAgent[]) as Promise<TrackedAgent[]>,
@@ -789,7 +787,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         console.debug("[reconnect] first message $type:", grainMessages[0]?.$type);
       }
 
-      // Convert grain state to ChatMessage[] format, overlaying agent info
       if (grainMessages.length > 0) {
         const chatMessages = internalToChat(grainMessages, agents);
         setMessages(chatMessages);
@@ -809,7 +806,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         setIsProcessing(true);
       }
 
-      // Stop buffering and replay
       isBufferingRef.current = false;
       const buffered = eventBufferRef.current;
       eventBufferRef.current = [];
@@ -866,12 +862,10 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     let activeConvId = conversationId;
 
     if (!activeConvId) {
-      // Create a conversation record and connect
       const result = await conversations.create({});
       activeConvId = result.id;
       setConversationId(activeConvId);
 
-      // Notify the app about the new conversation
       options?.onConversationCreated?.(activeConvId);
 
       await connect(activeConvId);

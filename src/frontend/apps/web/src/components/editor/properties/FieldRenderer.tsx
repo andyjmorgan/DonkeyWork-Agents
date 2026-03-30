@@ -79,7 +79,6 @@ export function FieldRenderer({
   // Track if field is in variable mode (showing ScribanEditor instead of native control)
   const [isVariableMode, setIsVariableMode] = useState(false)
 
-  // Check if value contains a variable expression
   const hasVariableExpression = typeof value === 'string' && value.includes('{{')
 
   // Determine if we should show variable mode (either explicitly toggled or value has variables)
@@ -88,11 +87,9 @@ export function FieldRenderer({
   // Control types that need the variable mode toggle (native controls that don't support variables directly)
   const needsVariableToggle = field.supportsVariables && ['Slider', 'Toggle', 'Number', 'Select'].includes(field.controlType)
 
-  // Check if field is immutable (read-only)
   const isReadOnly = readOnly || field.immutable === true
 
-  // Load credentials if this is a Credential field
-  // NOTE: All hooks MUST be called before any conditional returns
+  // All hooks MUST be called before any conditional returns
   const loadCredentials = useCallback(() => {
     credentials.list().then(setAvailableCredentials).catch(console.error)
   }, [])
@@ -103,15 +100,12 @@ export function FieldRenderer({
     }
   }, [field.controlType, loadCredentials])
 
-  // Check if field should be hidden based on supportedBy
-  // If supportedBy is specified and modelId is not in the list, hide the field
   if (field.supportedBy && field.supportedBy.length > 0 && modelId) {
     if (!field.supportedBy.includes(modelId)) {
       return null
     }
   }
 
-  // Filter credentials by provider if specified
   const filteredCredentials = credentialProvider
     ? availableCredentials.filter(c => c.provider === credentialProvider)
     : availableCredentials
@@ -180,7 +174,6 @@ export function FieldRenderer({
         )
 
       case 'Number':
-        // Show ScribanEditor if in variable mode
         if (showAsVariable && field.supportsVariables) {
           return (
             <ScribanEditor
@@ -208,7 +201,6 @@ export function FieldRenderer({
         )
 
       case 'Slider': {
-        // Show ScribanEditor if in variable mode
         if (showAsVariable && field.supportsVariables) {
           return (
             <ScribanEditor
@@ -231,7 +223,6 @@ export function FieldRenderer({
         const sliderDefault = field.default ?? (isMaxOutputTokens ? 4096 : 0)
         const currentValue = Number(value ?? sliderDefault)
 
-        // Format display: integers with locale for large numbers, decimals for others
         const displayValue = isMaxOutputTokens
           ? currentValue.toLocaleString()
           : (Number.isInteger(currentValue) ? currentValue.toString() : currentValue.toFixed(2))
@@ -264,7 +255,6 @@ export function FieldRenderer({
       }
 
       case 'Select':
-        // Show ScribanEditor if in variable mode
         if (showAsVariable && field.supportsVariables) {
           return (
             <ScribanEditor
@@ -295,7 +285,6 @@ export function FieldRenderer({
         )
 
       case 'Toggle':
-        // Show ScribanEditor if in variable mode
         if (showAsVariable && field.supportsVariables) {
           return (
             <ScribanEditor

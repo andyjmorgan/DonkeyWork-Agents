@@ -57,7 +57,6 @@ public class AvailableCredentialsController : ControllerBase
 
         var result = new List<AvailableCredentialV1>();
 
-        // Add OAuth providers
         foreach (var provider in Enum.GetValues<OAuthProvider>())
         {
             result.Add(new AvailableCredentialV1
@@ -68,7 +67,6 @@ public class AvailableCredentialsController : ControllerBase
             });
         }
 
-        // Add API key providers
         foreach (var provider in Enum.GetValues<ExternalApiKeyProvider>())
         {
             result.Add(new AvailableCredentialV1

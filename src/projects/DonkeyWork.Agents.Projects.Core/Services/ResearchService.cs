@@ -57,7 +57,6 @@ public class ResearchService : IResearchService
 
         _dbContext.Research.Add(research);
 
-        // Add tags
         if (request.Tags?.Any() == true)
         {
             foreach (var tag in request.Tags)
@@ -79,7 +78,6 @@ public class ResearchService : IResearchService
 
         _logger.LogInformation("Created research {ResearchId}", researchId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.ProjectCreated,
@@ -127,7 +125,6 @@ public class ResearchService : IResearchService
             return null;
         }
 
-        // Validate completion requirements
         var isCompleted = request.Status is Contracts.Models.ResearchStatus.Completed;
         var isCancelled = request.Status is Contracts.Models.ResearchStatus.Cancelled;
 
@@ -148,7 +145,6 @@ public class ResearchService : IResearchService
         research.Status = newStatus;
         research.UpdatedAt = now;
 
-        // Set completed timestamp when moving to terminal status
         if (!wasTerminal && isNowTerminal)
         {
             research.CompletedAt = now;
@@ -158,7 +154,6 @@ public class ResearchService : IResearchService
             research.CompletedAt = null;
         }
 
-        // Update tags - remove existing and add new
         _dbContext.ResearchTags.RemoveRange(research.Tags);
         if (request.Tags?.Any() == true)
         {
@@ -181,7 +176,6 @@ public class ResearchService : IResearchService
 
         _logger.LogInformation("Updated research {ResearchId}", id);
 
-        // Send notification (fire-and-forget)
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
             ? $"'{request.Title}' is now {FormatStatus(request.Status)}"
@@ -195,7 +189,6 @@ public class ResearchService : IResearchService
             EntityId = id
         });
 
-        // Send typed notification when status changed
         if (statusChanged)
         {
             _ = _projectNotificationService.SendResearchStatusChangedAsync(
@@ -227,7 +220,6 @@ public class ResearchService : IResearchService
 
         _logger.LogInformation("Deleted research {ResearchId}", id);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.ProjectDeleted,

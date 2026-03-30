@@ -59,7 +59,6 @@ export function useDesktopAuth() {
               })
             }
           } catch {
-            // Refresh failed - need re-login
             await invoke('clear_tokens')
             logout()
           }

@@ -294,7 +294,6 @@ public class ExternalApiKeysControllerTests : ControllerIntegrationTestBase
         SetTestUser(user1);
         await PostAsync<ExternalApiKeyResponseV1>(BaseUrl, TestDataBuilder.CreateExternalApiKeyRequest(name: "User1 Key"));
 
-        // Create keys for user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
         await PostAsync<ExternalApiKeyResponseV1>(BaseUrl, TestDataBuilder.CreateExternalApiKeyRequest(name: "User2 Key"));

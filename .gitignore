@@ -117,5 +117,8 @@ secrets.json
 # Rust / Cargo
 target/
 
+# Claude Code
+.claude/
+
 # Local data (docker volumes)
 /data/

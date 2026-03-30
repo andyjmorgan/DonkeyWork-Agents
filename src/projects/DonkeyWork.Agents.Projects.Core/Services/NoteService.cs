@@ -59,7 +59,6 @@ public class NoteService : INoteService
 
         _dbContext.Notes.Add(note);
 
-        // Add tags
         if (request.Tags?.Any() == true)
         {
             foreach (var tag in request.Tags)
@@ -81,7 +80,6 @@ public class NoteService : INoteService
 
         _logger.LogInformation("Created note {NoteId}", noteId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.NoteCreated,
@@ -190,7 +188,6 @@ public class NoteService : INoteService
         note.ResearchId = request.ResearchId;
         note.UpdatedAt = now;
 
-        // Update tags - remove existing and add new
         _dbContext.NoteTags.RemoveRange(note.Tags);
         if (request.Tags?.Any() == true)
         {
@@ -213,7 +210,6 @@ public class NoteService : INoteService
 
         _logger.LogInformation("Updated note {NoteId}", noteId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.NoteUpdated,
@@ -223,7 +219,6 @@ public class NoteService : INoteService
             ParentId = request.MilestoneId ?? request.ProjectId
         });
 
-        // Send typed notification
         _ = _projectNotificationService.SendNoteUpdatedAsync(
             _identityContext.UserId,
             new NoteUpdatedNotification
@@ -253,7 +248,6 @@ public class NoteService : INoteService
 
         _logger.LogInformation("Deleted note {NoteId}", noteId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.NoteDeleted,

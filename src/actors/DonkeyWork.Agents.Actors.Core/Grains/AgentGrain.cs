@@ -189,7 +189,6 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
         SetupGrainContext();
 
-        // Read executionId set by the spawner via RequestContext
         var executionIdStr = RequestContext.Get(GrainCallContextKeys.ExecutionId) as string;
         if (Guid.TryParse(executionIdStr, out var execId))
             ExecutionId = execId;
@@ -331,7 +330,6 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             ? (ExplicitCancel ? AgentCompleteReason.Cancelled : AgentCompleteReason.Failed)
             : AgentCompleteReason.Completed;
 
-        // Update execution audit trail
         if (ExecutionId != Guid.Empty)
         {
             var status = reason switch

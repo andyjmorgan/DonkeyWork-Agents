@@ -130,15 +130,12 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
   const provider = config?.provider as string | undefined
   const modelId = config?.modelId as string | undefined
 
-  // Fetch schema based on provider
   const { schema, modelInfo, loading, error } = useSchemaData(provider, modelId)
 
-  // Get config value helper - handles nested paths
   const getConfigValue = useCallback((fieldName: string): unknown => {
     return getNestedValue(config as Record<string, unknown>, fieldName)
   }, [config])
 
-  // Update config value helper - handles nested paths
   const handleFieldChange = useCallback((fieldName: string, value: unknown) => {
     if (!config) return
 
@@ -153,9 +150,7 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     }
   }, [nodeId, config, updateNodeConfig])
 
-  // Check if a field should be visible based on reliesUpon and supportedBy
   const isFieldVisible = useCallback((field: NodeFieldSchema): boolean => {
-    // Check reliesUpon dependency
     if (field.reliesUpon) {
       const dependentValue = getConfigValue(field.reliesUpon.fieldName)
       if (dependentValue !== field.reliesUpon.value) {
@@ -163,7 +158,6 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
       }
     }
 
-    // Check supportedBy - if specified, only show if modelId is in the array
     if (field.supportedBy && field.supportedBy.length > 0 && modelId) {
       if (!field.supportedBy.includes(modelId)) {
         return false
@@ -173,7 +167,6 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     return true
   }, [getConfigValue, modelId])
 
-  // Build dependency groups: map parent field names to their dependent fields
   const dependencyGroups = useMemo(() => {
     if (!schema) return new Map<string, NodeFieldSchema[]>()
 
@@ -193,7 +186,6 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     return groups
   }, [schema])
 
-  // Get set of field names that are dependent fields (should not render standalone)
   const dependentFieldNames = useMemo(() => {
     const names = new Set<string>()
     dependencyGroups.forEach((dependents) => {
@@ -208,14 +200,11 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
 
     const result: Record<string, { ungrouped: NodeFieldSchema[], groups: Record<string, NodeFieldSchema[]> }> = {}
 
-    // Initialize tabs (handle null/undefined tabs array)
     const tabs = schema.tabs ?? []
     for (const tab of tabs) {
       result[tab.name] = { ungrouped: [], groups: {} }
     }
 
-    // Add fields to their tabs and groups (handle null/undefined fields array)
-    // Skip fields that are dependent fields (they'll be rendered in dependency cards)
     const fields = schema.fields ?? []
     for (const field of fields) {
       // Skip 'name', 'provider', 'modelId' fields - we render them separately
@@ -239,7 +228,6 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
       }
     }
 
-    // Sort fields within each tab/group by order
     for (const tabName of Object.keys(result)) {
       result[tabName].ungrouped.sort((a, b) => a.order - b.order)
       for (const groupName of Object.keys(result[tabName].groups)) {
@@ -250,7 +238,6 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     return result
   }, [schema, dependentFieldNames])
 
-  // Get sorted tabs
   const sortedTabs = useMemo(() => {
     if (!schema) return []
 
@@ -297,13 +284,11 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     }
   }
 
-  // Render a single field
   const renderField = (field: NodeFieldSchema) => {
     if (!isFieldVisible(field)) return null
 
     const value = getConfigValue(field.name)
 
-    // Render immutable fields as read-only
     if (field.immutable) {
       return (
         <FormField
@@ -332,12 +317,10 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     )
   }
 
-  // Render a dependency card for a parent toggle field with its dependent fields
   const renderDependencyCard = (parentField: NodeFieldSchema, dependentFields: NodeFieldSchema[]) => {
     const parentValue = getConfigValue(parentField.name)
     const isEnabled = (parentValue as boolean) ?? (parentField.default as boolean) ?? false
 
-    // Filter dependent fields that match the enabled state
     const visibleDependents = dependentFields.filter(field => {
       if (!field.reliesUpon) return false
       return parentValue === field.reliesUpon.value
@@ -372,12 +355,10 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     )
   }
 
-  // Check if a field is a parent field that has dependencies
   const isParentField = useCallback((field: NodeFieldSchema): boolean => {
     return dependencyGroups.has(field.name)
   }, [dependencyGroups])
 
-  // Render a single field, or if it's a parent field, render it as a dependency card
   const renderFieldOrDependencyCard = (field: NodeFieldSchema) => {
     if (isParentField(field)) {
       const dependents = dependencyGroups.get(field.name) || []
@@ -386,7 +367,6 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     return renderField(field)
   }
 
-  // Render a group of fields
   const renderGroup = (groupName: string, fields: NodeFieldSchema[]) => {
     const visibleFields = fields.filter(isFieldVisible)
     if (visibleFields.length === 0) return null
@@ -399,7 +379,6 @@ export function MultimodalChatPropertiesPanel({ nodeId }: MultimodalChatProperti
     )
   }
 
-  // Render tab content
   const renderTabContent = (tabName: string) => {
     const tabContent = fieldsByTab[tabName]
     if (!tabContent) return null

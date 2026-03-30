@@ -19,10 +19,8 @@ public static class DependencyInjection
         services.Configure<PersistenceOptions>(
             configuration.GetSection(PersistenceOptions.SectionName));
 
-        // Register interceptors
         services.AddSingleton<AuditableInterceptor>();
 
-        // Register DbContext
         services.AddDbContext<AgentsDbContext>((serviceProvider, dbContextOptions) =>
         {
             var auditableInterceptor = serviceProvider.GetRequiredService<AuditableInterceptor>();
@@ -39,7 +37,6 @@ public static class DependencyInjection
                 .AddInterceptors(auditableInterceptor);
         });
 
-        // Register DbContextFactory for components that need short-lived contexts (e.g. Orleans grains)
         services.AddDbContextFactory<AgentsDbContext>((serviceProvider, dbContextOptions) =>
         {
             dbContextOptions
@@ -53,7 +50,6 @@ public static class DependencyInjection
                 });
         });
 
-        // Register migration service
         services.AddScoped<IMigrationService, MigrationService>();
 
         return services;

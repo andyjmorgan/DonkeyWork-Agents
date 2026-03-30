@@ -304,7 +304,6 @@ public sealed class StorageService : IStorageService
             .OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // Extract folder names from common prefixes (e.g. "{userId}/folder/" -> "folder")
         var folders = commonPrefixes
             .Select(p => p[s3Prefix.Length..].TrimEnd('/'))
             .Where(n => !string.IsNullOrEmpty(n))

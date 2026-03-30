@@ -96,7 +96,6 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
     {
         try
         {
-            // Create minimal instance for type discovery
             // We need to provide required properties
             var name = "temp";
             var constructors = configType.GetConstructors();
@@ -169,7 +168,6 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
             var reliesUponAttr = property.GetCustomAttribute<ReliesUponAttribute>();
             var supportsVariables = property.GetCustomAttribute<SupportVariablesAttribute>() != null;
 
-            // Add tab if not already present
             if (tabAttr != null && !tabs.ContainsKey(tabAttr.Name))
             {
                 tabs[tabAttr.Name] = new TabSchema
@@ -260,7 +258,6 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
 
     private static bool IsRequiredProperty(PropertyInfo property)
     {
-        // Check for 'required' keyword (init-only with no default)
         var nullabilityContext = new NullabilityInfoContext();
         var nullabilityInfo = nullabilityContext.Create(property);
         return nullabilityInfo.WriteState == NullabilityState.NotNull;

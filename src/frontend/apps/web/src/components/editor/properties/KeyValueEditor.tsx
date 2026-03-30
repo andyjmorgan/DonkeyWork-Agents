@@ -30,7 +30,6 @@ export function KeyValueEditor({
   value,
   onChange
 }: KeyValueEditorProps) {
-  // Ensure collection has all required properties with defaults
   const collection: KeyValueCollection = {
     useVariable: value?.useVariable ?? false,
     variable: value?.variable ?? '',

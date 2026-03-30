@@ -50,15 +50,12 @@ export function ExecutionDetailPage() {
       setLoading(true)
       setError(null)
 
-      // Load execution details
       const exec = await executions.get(executionId)
       setExecution(exec)
 
-      // Load node executions
       const nodeExecResponse = await executions.getNodeExecutions(executionId)
       setNodeExecutions(nodeExecResponse.nodeExecutions)
 
-      // Load orchestration info
       try {
         const orchestrationData = await orchestrations.get(exec.orchestrationId)
         setOrchestration(orchestrationData)

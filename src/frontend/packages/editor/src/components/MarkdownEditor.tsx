@@ -21,7 +21,6 @@ import { TableWithControls } from './TableWithControls'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import '../styles/markdown-editor.css'
 
-// Create lowlight instance with common languages
 const lowlight = createLowlight(common)
 
 // Custom Table extension with controls
@@ -123,7 +122,6 @@ export function MarkdownEditor({
     immediatelyRender: false,
   })
 
-  // Handle raw markdown changes
   const handleRawChange = useCallback((markdown: string) => {
     if (!editor) return
     if (markdown === lastContent.current) return
@@ -138,7 +136,6 @@ export function MarkdownEditor({
     isUpdatingFromRaw.current = false
   }, [editor, onChange])
 
-  // Insert markdown at the end of the content (for code mode toolbar actions)
   const handleInsertMarkdown = useCallback((markdown: string) => {
     const newContent = content + markdown
     lastContent.current = newContent
@@ -153,7 +150,6 @@ export function MarkdownEditor({
     }
   }, [content, onChange, editor])
 
-  // Update editor content when props change
   useEffect(() => {
     if (!editor) return
     if (content === lastContent.current) return

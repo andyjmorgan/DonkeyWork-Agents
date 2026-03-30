@@ -26,7 +26,6 @@ export function TableWithControls({ editor, getPos, node }: NodeViewProps) {
     const handleMouseMove = (e: MouseEvent) => {
       const target = e.target as HTMLElement
 
-      // Clear any pending timeout
       if (clearTimeoutRef.current) {
         clearTimeout(clearTimeoutRef.current)
         clearTimeoutRef.current = null

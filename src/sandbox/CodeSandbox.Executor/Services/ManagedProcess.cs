@@ -112,7 +112,6 @@ public class ManagedProcess
             await process.WaitForExitAsync();
 
             // CRITICAL: WaitForExitAsync() only waits for process exit, not for event handlers to finish.
-            // Call again to ensure all OutputDataReceived events have been processed.
             await process.WaitForExitAsync();
 
             tracked.WriteEvent(new CompletedEvent
@@ -131,7 +130,6 @@ public class ManagedProcess
         {
             _logger?.LogError(ex, "Error monitoring process. Pid: {Pid}", pid);
 
-            // Send a completion event even on error so subscribers aren't stuck
             tracked.WriteEvent(new CompletedEvent
             {
                 Pid = pid,

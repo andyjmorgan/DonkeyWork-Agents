@@ -35,10 +35,8 @@ internal sealed class AccumulatorMiddleware : IModelMiddleware
 
         await foreach (var msg in next(context))
         {
-            // Pass through every message for real-time streaming
             yield return msg;
 
-            // Simultaneously accumulate
             if (msg is ModelMiddlewareMessage { ModelMessage: var modelMsg })
             {
                 switch (modelMsg)
@@ -123,7 +121,6 @@ internal sealed class AccumulatorMiddleware : IModelMiddleware
             }
         }
 
-        // Finalize text block placeholders
         foreach (var (blockIndex, position) in textBlockPositions)
         {
             if (textByBlock.TryGetValue(blockIndex, out var textSb))
@@ -132,7 +129,6 @@ internal sealed class AccumulatorMiddleware : IModelMiddleware
             }
         }
 
-        // Finalize thinking block placeholders
         foreach (var (thinkIndex, position) in thinkingBlockPositions)
         {
             if (thinkingByIndex.TryGetValue(thinkIndex, out var thinkAcc))
@@ -142,7 +138,6 @@ internal sealed class AccumulatorMiddleware : IModelMiddleware
             }
         }
 
-        // Build the accumulated assistant message
         var fullText = string.Join("", textByBlock.OrderBy(kv => kv.Key).Select(kv => kv.Value.ToString()));
 
         var contentBlocks = orderedBlocks

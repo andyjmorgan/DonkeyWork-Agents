@@ -32,8 +32,14 @@ A comprehensive project management feature for organizing work with milestones, 
 - Completion notes for documenting resolution
 - Tags for categorization
 
+### Research
+- Standalone research items for capturing investigation and analysis
+- Title and content (markdown supported)
+- Tags for categorization
+- Can have notes attached
+
 ### Notes
-- Can exist **standalone** or within a project/milestone
+- Can exist **standalone** or within a project, milestone, or research item
 - Title and content (markdown supported)
 - Tags for categorization
 - Ordered via sortOrder
@@ -47,7 +53,8 @@ src/projects/
 │   │   ├── ProjectsController.cs      # /api/v1/projects
 │   │   ├── MilestonesController.cs    # /api/v1/projects/{projectId}/milestones
 │   │   ├── TasksController.cs         # /api/v1/tasks (with /standalone endpoint)
-│   │   └── NotesController.cs         # /api/v1/notes (with /standalone endpoint)
+│   │   ├── NotesController.cs         # /api/v1/notes (with /standalone endpoint)
+│   │   └── ResearchController.cs      # /api/v1/research
 │   └── DependencyInjection.cs
 ├── DonkeyWork.Agents.Projects.Contracts/
 │   ├── Models/
@@ -55,20 +62,31 @@ src/projects/
 │   │   ├── ProjectV1.cs               # Project DTOs
 │   │   ├── MilestoneV1.cs             # Milestone DTOs
 │   │   ├── TaskItemV1.cs              # Task DTOs
+│   │   ├── TaskItemSummaryV1.cs       # Task summary DTOs
+│   │   ├── TaskItemFilterRequestV1.cs # Task filter request
 │   │   ├── NoteV1.cs                  # Note DTOs
+│   │   ├── NoteSummaryV1.cs           # Note summary DTOs
+│   │   ├── ResearchV1.cs              # Research DTOs
+│   │   ├── ResearchDetailsV1.cs       # Research detail DTOs
+│   │   ├── ResearchSummaryV1.cs       # Research summary DTOs
 │   │   ├── TagV1.cs                   # Tag DTOs
-│   │   └── FileReferenceV1.cs         # File reference DTOs
+│   │   ├── FileReferenceV1.cs         # File reference DTOs
+│   │   └── UpdateAcknowledgmentV1.cs  # Update acknowledgment DTO
 │   └── Services/
 │       ├── IProjectService.cs
 │       ├── IMilestoneService.cs
 │       ├── ITaskItemService.cs
-│       └── INoteService.cs
+│       ├── INoteService.cs
+│       ├── IResearchService.cs
+│       └── IProjectNotificationService.cs
 └── DonkeyWork.Agents.Projects.Core/
     └── Services/
         ├── ProjectService.cs
         ├── MilestoneService.cs
         ├── TaskItemService.cs
-        └── NoteService.cs
+        ├── NoteService.cs
+        ├── ResearchService.cs
+        └── ProjectNotificationService.cs
 ```
 
 ## Database Schema
@@ -79,13 +97,17 @@ Located in `src/common/DonkeyWork.Agents.Persistence/`:
 - `ProjectEntity` - Main project entity
 - `MilestoneEntity` - Project milestones
 - `TaskItemEntity` - Tasks (standalone or linked)
-- `NoteEntity` - Notes (standalone or linked)
+- `NoteEntity` - Notes (standalone or linked to projects, milestones, or research)
 - `ProjectTagEntity`, `MilestoneTagEntity`, `TaskItemTagEntity`, `NoteTagEntity` - Tags
 - `ProjectFileReferenceEntity`, `MilestoneFileReferenceEntity` - File references
 
-### EF Configurations (`Configurations/Projects/`)
+### Entities (`Entities/Research/`)
+- `ResearchEntity` - Research items
+- `ResearchTagEntity` - Research tags
+
+### EF Configurations (`Configurations/Projects/` and `Configurations/Research/`)
 All entities use Fluent API configuration with:
-- Table names in `projects` schema (e.g., `projects.projects`, `projects.milestones`)
+- Table names in `projects` or `research` schema
 - Proper indexes on foreign keys and common query patterns
 - String conversion for enum columns
 
@@ -129,9 +151,18 @@ All entities use Fluent API configuration with:
 | PUT | `/api/v1/notes/{id}` | Update note |
 | DELETE | `/api/v1/notes/{id}` | Delete note |
 
+### Research
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/research` | List all research items |
+| GET | `/api/v1/research/{id}` | Get research item details |
+| POST | `/api/v1/research` | Create research item |
+| PUT | `/api/v1/research/{id}` | Update research item |
+| DELETE | `/api/v1/research/{id}` | Delete research item |
+
 ## Frontend
 
-Located in `src/frontend/src/`:
+Located in `src/frontend/apps/{web,desktop}/src/`:
 
 ### Pages
 - `ProjectsPage.tsx` - List and manage projects
@@ -146,19 +177,20 @@ Projects are accessible via the sidebar under the "Projects" group with links to
 - Notes (standalone)
 
 ### API Client
-Extended in `lib/api.ts` with:
+Extended in `packages/api-client/src/lib/api.ts` with:
 - Type definitions for all models
-- CRUD functions for projects, milestones, tasks, notes
+- CRUD functions for projects, milestones, tasks, notes, research
 
 ## Testing
 
 Test project: `test/projects/DonkeyWork.Agents.Projects.Core.Tests/`
 
 ### Test Coverage
-- `ProjectServiceTests` - 18 tests
-- `MilestoneServiceTests` - 13 tests
-- `TaskItemServiceTests` - 16 tests
-- `NoteServiceTests` - 16 tests
+- `ProjectServiceTests` - 28 tests
+- `MilestoneServiceTests` - 24 tests
+- `TaskItemServiceTests` - 26 tests
+- `NoteServiceTests` - 24 tests
+- `ResearchServiceTests` - 13 tests
 
 ### Running Tests
 ```bash

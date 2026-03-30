@@ -74,8 +74,11 @@ All entities inherit from `BaseEntity` which provides:
 |--------|-------------|
 | `ExternalApiKeyEntity` | Third-party LLM provider API keys (OpenAI, Anthropic, etc.) |
 | `OAuthTokenEntity` | OAuth tokens for connected services |
-| `UserApiKeyEntity` | User-generated API keys for accessing this system |
+| `OAuthStateEntity` | OAuth flow state for CSRF protection |
 | `OAuthProviderConfigEntity` | Custom OAuth app configurations |
+| `UserApiKeyEntity` | User-generated API keys for accessing this system |
+| `SandboxCredentialMappingEntity` | Mappings between credentials and sandbox environments |
+| `SandboxCustomVariableEntity` | Custom environment variables for sandboxes |
 
 ## Entity Configurations
 
@@ -126,14 +129,17 @@ await migrationService.MigrateAsync();
 ### Creating Migrations
 
 ```bash
-cd src/common/DonkeyWork.Agents.Persistence
-dotnet ef migrations add <MigrationName>
+dotnet ef migrations add <MigrationName> \
+  --startup-project src/DonkeyWork.Agents.Api \
+  --project src/common/DonkeyWork.Agents.Persistence
 ```
 
 ### Applying Migrations
 
 ```bash
-dotnet ef database update
+dotnet ef database update \
+  --startup-project src/DonkeyWork.Agents.Api \
+  --project src/common/DonkeyWork.Agents.Persistence
 ```
 
 ## Adding a New Module
@@ -152,7 +158,9 @@ dotnet ef database update
 
 5. **Generate migration**:
    ```bash
-   dotnet ef migrations add Add{Module}Entities
+   dotnet ef migrations add Add{Module}Entities \
+     --startup-project src/DonkeyWork.Agents.Api \
+     --project src/common/DonkeyWork.Agents.Persistence
    ```
 
 ## Example Entity

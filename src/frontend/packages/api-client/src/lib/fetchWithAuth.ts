@@ -8,7 +8,6 @@ export async function fetchWithAuth(
 ): Promise<Response> {
   const { logout, refreshTokens, shouldRefreshToken, isTokenExpired } = useAuthStore.getState()
 
-  // Check if token is completely expired first
   if (isTokenExpired() && retryOnUnauthorized) {
     console.debug('[fetchWithAuth] Token expired, attempting refresh before request to:', url)
     const refreshed = await refreshTokens()
@@ -28,7 +27,6 @@ export async function fetchWithAuth(
     })
   }
 
-  // Get potentially updated token after refresh
   const currentToken = useAuthStore.getState().accessToken
 
   const response = await fetch(url, {
@@ -48,7 +46,6 @@ export async function fetchWithAuth(
       return fetchWithAuth(url, options, false)
     }
 
-    // Refresh failed - logout and redirect
     console.warn('[fetchWithAuth] Token refresh failed after 401, logging out and redirecting to /login')
     logout()
     getPlatformConfig().navigate('/login')

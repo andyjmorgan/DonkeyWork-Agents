@@ -25,7 +25,6 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     {
         await Factory.EnsureDatabaseCreatedAsync();
 
-        // Initialize Respawner for database cleanup
         await using var connection = new NpgsqlConnection(Infrastructure.Postgres.ConnectionString);
         await connection.OpenAsync();
 

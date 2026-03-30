@@ -83,13 +83,11 @@ export function CreateSandboxCredentialMappingDialog({
     load()
   }, [open])
 
-  // Reset credential selection when type changes
   useEffect(() => {
     setCredentialId('')
     setAvailableFields([])
   }, [credentialType])
 
-  // Fetch available fields when credential is selected
   useEffect(() => {
     if (!credentialId || !credentialType) {
       setAvailableFields([])

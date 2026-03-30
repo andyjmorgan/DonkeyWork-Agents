@@ -51,7 +51,6 @@ public sealed class NodeMethodRegistry
             var hasCancellationToken = parameters.Length > 1 &&
                                        parameters[1].ParameterType == typeof(CancellationToken);
 
-            // Validate return type is Task<T>
             if (!method.ReturnType.IsGenericType ||
                 method.ReturnType.GetGenericTypeDefinition() != typeof(Task<>))
             {

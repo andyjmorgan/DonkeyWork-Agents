@@ -9,6 +9,7 @@ Shared grain interfaces, protocol types, events, and messages for the actor syst
 - `Models/` — Data types (`AgentResult`, `TrackedAgent`, `AgentKeys`, `CancelScope`)
 - `Messages/` — Internal message protocol (`InternalMessage` hierarchy, content blocks)
 - `Events/` — Stream events for real-time UI updates (`StreamEventBase` hierarchy)
+- `Services/` — Service interfaces (`IGrainMessageStore`, `IAgentExecutionService`, `IAgentExecutionRepository`, `IToolGroupService`)
 
 ## Serialization
 

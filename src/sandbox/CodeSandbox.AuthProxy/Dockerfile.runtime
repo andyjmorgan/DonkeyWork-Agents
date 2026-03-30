@@ -1,5 +1,4 @@
 # Runtime-only Dockerfile - uses pre-built artifacts from CI/CD pipeline
-# Published to 192.168.0.140:5555/donkeywork-agents/sandbox-authproxy
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 WORKDIR /app

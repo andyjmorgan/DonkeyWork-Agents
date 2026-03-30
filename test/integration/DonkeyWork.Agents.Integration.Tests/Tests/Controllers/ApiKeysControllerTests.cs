@@ -218,7 +218,6 @@ public class ApiKeysControllerTests : ControllerIntegrationTestBase
         SetTestUser(user1);
         await PostAsync<CreateApiKeyResponseV1>(BaseUrl, TestDataBuilder.CreateApiKeyRequest("user1-key"));
 
-        // Create API keys for user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
         await PostAsync<CreateApiKeyResponseV1>(BaseUrl, TestDataBuilder.CreateApiKeyRequest("user2-key"));

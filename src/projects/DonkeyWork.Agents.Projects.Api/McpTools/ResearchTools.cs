@@ -100,7 +100,6 @@ public class ResearchTools
         [Description("Status: NotStarted, InProgress, Completed, or Cancelled (omit to keep current)")] ResearchStatus? status = null,
         CancellationToken ct = default)
     {
-        // Fetch current research to merge with provided values
         var current = await _researchService.GetByIdAsync(id, ct: ct);
         if (current == null)
         {

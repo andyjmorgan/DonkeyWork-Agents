@@ -64,10 +64,8 @@ public class MultimodalChatSchemaService : IMultimodalChatSchemaService
         var tabs = new Dictionary<string, TabSchema>();
         var fields = new List<FieldSchema>();
 
-        // Generate fields from base ChatModelConfig
         GenerateFieldsFromType(typeof(ChatModelConfig), null, tabs, fields);
 
-        // Generate fields from provider-specific config with prefix
         if (_providerConfigTypes.TryGetValue(provider, out var providerConfigType))
         {
             var providerTabName = _providerDisplayNames[provider];
@@ -115,7 +113,6 @@ public class MultimodalChatSchemaService : IMultimodalChatSchemaService
             // Determine tab name - use provider override for provider-specific fields without explicit tab
             var tabName = providerTabOverride ?? tabAttr?.Name;
 
-            // Add tab if not already present
             if (!string.IsNullOrEmpty(tabName) && !tabs.ContainsKey(tabName))
             {
                 tabs[tabName] = new TabSchema
@@ -136,7 +133,6 @@ public class MultimodalChatSchemaService : IMultimodalChatSchemaService
             // Determine control type
             var controlType = DetermineControlType(property.PropertyType, sliderAttr, rangeAttr, selectOptionsAttr, editorTypeAttr, credentialMappingAttr);
 
-            // Get default value
             object? defaultValue = null;
             if (sliderAttr?.HasDefault == true)
             {
@@ -151,7 +147,6 @@ public class MultimodalChatSchemaService : IMultimodalChatSchemaService
                 defaultValue = selectOptionsAttr.Default;
             }
 
-            // Build reliesUpon with prefix if needed
             NodesReliesUponSchema? reliesUponSchema = null;
             if (reliesUponAttr != null)
             {
@@ -277,7 +272,6 @@ public class MultimodalChatSchemaService : IMultimodalChatSchemaService
             return ControlType.Text;
         }
 
-        // Check for array types (Resolvable<string>[])
         if (propertyType.IsArray && propertyType.GetElementType() != null)
         {
             return ControlType.TextAreaList;
@@ -288,14 +282,12 @@ public class MultimodalChatSchemaService : IMultimodalChatSchemaService
 
     private static Type GetUnderlyingType(Type type)
     {
-        // Handle nullable
         var nullableUnderlying = Nullable.GetUnderlyingType(type);
         if (nullableUnderlying != null)
         {
             type = nullableUnderlying;
         }
 
-        // Handle Resolvable<T>
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Resolvable<>))
         {
             return type.GetGenericArguments()[0];
@@ -306,16 +298,13 @@ public class MultimodalChatSchemaService : IMultimodalChatSchemaService
 
     private static bool IsResolvableType(Type type)
     {
-        // Handle nullable
         var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
-        // Check for Resolvable<T>
         if (underlyingType.IsGenericType && underlyingType.GetGenericTypeDefinition() == typeof(Resolvable<>))
         {
             return true;
         }
 
-        // Check for Resolvable<T>[]
         if (underlyingType.IsArray)
         {
             var elementType = underlyingType.GetElementType();

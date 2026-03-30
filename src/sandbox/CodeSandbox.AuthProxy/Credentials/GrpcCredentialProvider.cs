@@ -89,7 +89,6 @@ public class GrpcCredentialProvider : ICredentialProvider, IDisposable
             return null;
         }
 
-        // Check cache
         if (_cache.TryGetValue(domain, out var cached) && !cached.IsExpired)
         {
             _logger.LogDebug("Cache hit for domain {Domain}: {Count} header(s)",
@@ -97,7 +96,6 @@ public class GrpcCredentialProvider : ICredentialProvider, IDisposable
             return cached.Headers;
         }
 
-        // Fetch from gRPC
         try
         {
             var metadata = new Metadata { { "x-user-id", _userId } };

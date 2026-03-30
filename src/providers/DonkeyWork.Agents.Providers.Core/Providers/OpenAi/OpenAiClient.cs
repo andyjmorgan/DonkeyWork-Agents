@@ -131,14 +131,12 @@ internal sealed class OpenAiClient : IAiClient
         // Non-streaming API call
         ChatCompletion completion = await _chatClient.CompleteChatAsync(chatMessages, options, cancellationToken);
 
-        // Emit block start
         yield return new ModelResponseBlockStart
         {
             BlockIndex = 0,
             Type = InternalContentBlockType.Text
         };
 
-        // Extract text content from response
         var textContent = new System.Text.StringBuilder();
         foreach (var part in completion.Content)
         {
@@ -148,16 +146,13 @@ internal sealed class OpenAiClient : IAiClient
             }
         }
 
-        // Emit the complete text as a single chunk
         if (textContent.Length > 0)
         {
             yield return new ModelResponseTextContent { Content = textContent.ToString() };
         }
 
-        // Emit block end
         yield return new ModelResponseBlockEnd { BlockIndex = 0 };
 
-        // Emit usage
         if (completion.Usage is not null)
         {
             yield return new ModelResponseUsage
@@ -167,7 +162,6 @@ internal sealed class OpenAiClient : IAiClient
             };
         }
 
-        // Emit stream end
         yield return new ModelResponseStreamEnd
         {
             Reason = MapFinishReason(completion.FinishReason),

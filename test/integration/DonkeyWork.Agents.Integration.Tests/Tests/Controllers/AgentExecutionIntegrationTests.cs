@@ -610,7 +610,6 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
             var response = await PostResponseAsync($"{AgentsBaseUrl}/{agentId}/test", executeRequest);
             var result = await response.Content.ReadFromJsonAsync<ExecuteOrchestrationResponseV1>(JsonOptions);
 
-            // Get node executions
             var nodeExecutionsResponse = await GetAsync<GetNodeExecutionsResponseV1>($"{AgentsBaseUrl}/executions/{result!.ExecutionId}/nodes");
 
             // Assert
@@ -687,7 +686,6 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
             Viewport = new ReactFlowViewport { X = 0, Y = 0, Zoom = 1 }
         };
 
-        // Build node configurations dictionary
         var nodeConfigs = new Dictionary<string, object>
         {
             [startNodeId.ToString()] = new

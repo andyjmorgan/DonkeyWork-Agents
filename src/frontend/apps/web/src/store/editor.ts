@@ -147,7 +147,6 @@ const defaultInputSchema = {
   required: ['input']
 }
 
-// Generate GUID
 function generateGuid(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
@@ -156,7 +155,6 @@ function generateGuid(): string {
   })
 }
 
-// Create initial state with Start and End nodes
 const createInitialState = () => {
   const startId = generateGuid()
   const endId = generateGuid()
@@ -293,15 +291,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { nodes, nodeConfigurations, generateNodeName } = get()
     const nodeId = generateGuid()
 
-    // Get node type from schema info
     const nodeType = schemaInfo.nodeType as string
     const displayName = schemaInfo.displayName as string || nodeType
 
-    // Generate instance name based on display name (allows A-Za-z0-9_-)
     const baseName = displayName.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_-]/g, '')
     const nodeName = generateNodeName(baseName)
 
-    // Create ReactFlow node with all display data from schema
     const newNode: Node = {
       id: nodeId,
       type: 'schemaNode',
@@ -318,26 +313,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     }
 
-    // Create config with type discriminator for backend serialization
     const newConfig: NodeConfig = {
       type: nodeType,
       name: nodeName
     }
 
-    // Add default values based on node type
     if (nodeType === 'Start') {
       newConfig.inputSchema = defaultInputSchema
     } else if (nodeType === 'Model') {
-      // Copy model-specific data from schema info
       newConfig.provider = schemaInfo.provider
       newConfig.modelId = schemaInfo.modelId
     } else if (nodeType === 'MultimodalChatModel') {
-      // Copy model-specific data from schema info - provider and modelId are immutable
       newConfig.provider = schemaInfo.provider
       newConfig.modelId = schemaInfo.modelId
-      // Initialize required fields
       newConfig.userMessages = []
-      // Initialize providerConfig with type discriminator for polymorphic deserialization
       newConfig.providerConfig = { type: schemaInfo.provider }
     }
 
@@ -465,7 +454,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { nodes, edges, nodeConfigurations } = get()
     const errors: ValidationError[] = []
 
-    // Check for exactly one Start node
     const startNodes = nodes.filter(n => n.data?.nodeType === 'Start')
     if (startNodes.length === 0) {
       errors.push({ field: 'nodes', message: 'Missing Start node' })
@@ -473,7 +461,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       errors.push({ field: 'nodes', message: 'Multiple Start nodes found. Only one allowed.' })
     }
 
-    // Check for exactly one End node
     const endNodes = nodes.filter(n => n.data?.nodeType === 'End')
     if (endNodes.length === 0) {
       errors.push({ field: 'nodes', message: 'Missing End node' })
@@ -481,33 +468,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       errors.push({ field: 'nodes', message: 'Multiple End nodes found. Only one allowed.' })
     }
 
-    // Check all nodes have configurations
     nodes.forEach(node => {
       if (!nodeConfigurations[node.id]) {
         errors.push({ nodeId: node.id, field: 'config', message: `Missing configuration for node ${node.id}` })
       } else {
         const config = nodeConfigurations[node.id]
 
-        // Check node name
         if (!config.name || config.name.trim() === '') {
           errors.push({ nodeId: node.id, field: 'name', message: 'Node name is required' })
         }
 
-        // Check type discriminator
         if (!config.type) {
           errors.push({ nodeId: node.id, field: 'type', message: 'Node type is required' })
         }
       }
     })
 
-    // Check for unique names
     const names = Object.values(nodeConfigurations).map(c => c.name)
     const duplicates = names.filter((name, index) => names.indexOf(name) !== index)
     if (duplicates.length > 0) {
       errors.push({ field: 'names', message: `Duplicate node names found: ${duplicates.join(', ')}` })
     }
 
-    // Check all edges reference existing nodes
     edges.forEach(edge => {
       if (!nodes.find(n => n.id === edge.source)) {
         errors.push({ field: 'edges', message: `Edge references non-existent source node: ${edge.source}` })
@@ -551,7 +533,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { nodes, edges } = get()
     if (nodes.length === 0) return
 
-    // Build adjacency list for topological sort
     const inDegree: Record<string, number> = {}
     const children: Record<string, string[]> = {}
 
@@ -589,14 +570,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       currentLevel = nextLevel
     }
 
-    // Handle any remaining nodes (disconnected or in cycles)
     const placedNodes = new Set(levels.flat())
     const remainingNodes = nodes.filter(n => !placedNodes.has(n.id)).map(n => n.id)
     if (remainingNodes.length > 0) {
       levels.push(remainingNodes)
     }
 
-    // Calculate positions
     const NODE_WIDTH = 200
     const VERTICAL_SPACING = 120
     const HORIZONTAL_SPACING = 50
@@ -631,7 +610,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   getReachablePredecessors: (nodeId: string) => {
     const { nodes, edges, nodeConfigurations } = get()
 
-    // Build reverse adjacency list (target -> sources)
     const predecessors: Record<string, string[]> = {}
     nodes.forEach(node => {
       predecessors[node.id] = []
@@ -696,7 +674,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       throw new Error('No orchestration ID - create orchestration first')
     }
 
-    // Find start node and get input schema
     const startNode = nodes.find(n => n.data?.nodeType === 'Start')
     const startConfig = startNode ? nodeConfigurations[startNode.id] : null
     const inputSchema = (startConfig?.inputSchema as { type: string; properties?: Record<string, unknown>; required?: string[] }) || defaultInputSchema

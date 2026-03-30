@@ -29,7 +29,6 @@ public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSch
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // Get user from headers or use default
         var userIdString = Request.Headers[UserIdHeader].FirstOrDefault();
         var userId = string.IsNullOrEmpty(userIdString)
             ? TestUser.Default.UserId
@@ -42,7 +41,6 @@ public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSch
         // Set identity context - this is what the real auth handlers do
         _identityContext.SetIdentity(userId, email, name, username);
 
-        // Create claims
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),

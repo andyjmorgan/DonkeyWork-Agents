@@ -51,7 +51,6 @@ public class GraphAnalyzer
             var nodes = reactFlowData.Nodes;
             var edges = reactFlowData.Edges;
 
-            // Build node ID set and find start node
             var nodeIds = new HashSet<Guid>();
             Guid? startNodeId = null;
 
@@ -68,7 +67,6 @@ public class GraphAnalyzer
 
                 nodeIds.Add(node.Id);
 
-                // Find start node using typed enum
                 if (node.Data.NodeType == NodeType.Start)
                 {
                     if (startNodeId != null)
@@ -92,7 +90,6 @@ public class GraphAnalyzer
                 };
             }
 
-            // Build adjacency lists
             var adjacencyList = nodeIds.ToDictionary(id => id, _ => new List<Guid>());
             var reverseAdjacencyList = nodeIds.ToDictionary(id => id, _ => new List<Guid>());
 
@@ -153,7 +150,6 @@ public class GraphAnalyzer
             var sortQueue = new Queue<Guid>();
             var executionOrder = new List<Guid>();
 
-            // Start with nodes that have no incoming edges (should just be start node)
             foreach (var nodeId in nodeIds)
             {
                 if (inDegree[nodeId] == 0)
@@ -177,7 +173,6 @@ public class GraphAnalyzer
                 }
             }
 
-            // Check for cycles
             if (executionOrder.Count != nodeIds.Count)
             {
                 return new GraphAnalysisResult

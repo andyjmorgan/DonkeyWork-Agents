@@ -57,7 +57,6 @@ export function useNotificationHub() {
     // Request notification permission
     await ensureNotificationPermission()
 
-    // Clean up existing connection
     if (connectionRef.current) {
       try {
         await connectionRef.current.stop()
@@ -71,7 +70,6 @@ export function useNotificationHub() {
     const connection = new HubConnectionBuilder()
       .withUrl(HUB_URL, {
         accessTokenFactory: () => {
-          // Get fresh token each time (in case it was refreshed)
           const currentToken = useAuthStore.getState().accessToken
           return currentToken ?? ''
         },
@@ -95,7 +93,6 @@ export function useNotificationHub() {
       .configureLogging(LogLevel.Warning)
       .build()
 
-    // Register notification handler
     connection.on(
       'ReceiveNotification',
       (notification: WorkspaceNotification) => {
@@ -105,7 +102,6 @@ export function useNotificationHub() {
           notification.entityId
         )
 
-        // Send native notification for completed agent runs (unless user is viewing that conversation)
         if (notification.type === 'ConversationAgentCompleted') {
           const isViewing = useActiveConversationsStore.getState().currentConversationId === notification.entityId
           if (!isViewing && permissionRef.current) {
@@ -174,7 +170,6 @@ export function useNotificationHub() {
     }
 
     return () => {
-      // Cleanup on unmount
       if (connectionRef.current) {
         connectionRef.current.stop().catch(() => {
           // Ignore cleanup errors

@@ -307,7 +307,6 @@ public class TasksControllerTests : ControllerIntegrationTestBase
         SetTestUser(user1);
         await PostAsync<TaskItemV1>(BaseUrl, TestDataBuilder.CreateTaskItemRequest("User1 Task"));
 
-        // Create tasks for user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
         await PostAsync<TaskItemV1>(BaseUrl, TestDataBuilder.CreateTaskItemRequest("User2 Task"));

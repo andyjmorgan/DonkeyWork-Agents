@@ -26,10 +26,8 @@ public class McpServerGrpcService : McpServerService.McpServerServiceBase
             string.Join(", ", request.Arguments),
             request.TimeoutSeconds);
 
-        // Create an internal channel for events from StdioBridge
         var eventChannel = Channel.CreateUnbounded<StdioBridge.StartEvent>();
 
-        // Start the bridge in a background task that writes to the channel
         var startTask = Task.Run(async () =>
         {
             try
@@ -62,7 +60,6 @@ public class McpServerGrpcService : McpServerService.McpServerServiceBase
                 Message = evt.Message
             };
 
-            // Set error field for error events
             if (evt.EventType == "error")
             {
                 grpcEvent.Error = evt.Message;
@@ -71,7 +68,6 @@ public class McpServerGrpcService : McpServerService.McpServerServiceBase
             await responseStream.WriteAsync(grpcEvent, context.CancellationToken);
         }
 
-        // Ensure the start task completes (may have thrown)
         await startTask;
     }
 

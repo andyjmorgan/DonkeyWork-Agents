@@ -44,10 +44,8 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
         MultimodalChatModelNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Build messages list
         var messages = new List<ChatMessage>();
 
-        // Render system prompts (if any)
         if (config.SystemPrompts != null && config.SystemPrompts.Count > 0)
         {
             foreach (var systemPrompt in config.SystemPrompts)
@@ -63,7 +61,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
         // In Chat mode, use conversation from context (content is already hydrated)
         if (Context.Conversation != null)
         {
-            // Add conversation history
             foreach (var msg in Context.Conversation.Messages)
             {
                 var role = msg.Role == Contracts.Models.ConversationRole.User
@@ -76,7 +73,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
                 });
             }
 
-            // Add current message (already hydrated with base64 images)
             messages.Add(new ChatMessage
             {
                 Role = ChatMessageRole.User,
@@ -85,7 +81,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
         }
         else
         {
-            // Render user messages from config (non-chat mode)
             foreach (var userMessage in config.UserMessages)
             {
                 if (string.IsNullOrWhiteSpace(userMessage))
@@ -101,7 +96,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
             throw new InvalidOperationException("At least one user message is required");
         }
 
-        // Resolve credential
         var credential = await _credentialService.GetByIdAsync(
             Context.UserId,
             config.CredentialId,
@@ -113,7 +107,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
                 $"Credential not found: {config.CredentialId}");
         }
 
-        // Build options dictionary
         var options = new Dictionary<string, object>();
         if (config.Temperature.HasValue)
         {
@@ -124,7 +117,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
             options["max_tokens"] = config.MaxOutputTokens.Value;
         }
 
-        // Create pipeline request
         var request = new ModelPipelineRequest
         {
             Messages = messages,
@@ -137,7 +129,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
             Options = options.Count > 0 ? options : null
         };
 
-        // Execute pipeline and stream events
         var responseBuilder = new StringBuilder();
         int? totalTokens = null;
         int? inputTokens = null;
@@ -167,7 +158,6 @@ public class MultimodalChatNodeExecutor : NodeExecutor<MultimodalChatModelNodeCo
                 case TextDeltaEvent textDelta:
                     responseBuilder.Append(textDelta.Text);
 
-                    // Emit TokenDelta event to execution stream
                     await _streamWriter.WriteEventAsync(
                         new TokenDeltaEvent
                         {

@@ -5,10 +5,11 @@
 - **Framework**: React 19 + Vite + TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui + CSS Variables (HSL)
 - **State Management**: Zustand (with persist middleware)
-- **Workflow Editor**: ReactFlow
+- **Workflow Editor**: ReactFlow (@xyflow/react v12)
 - **Icons**: lucide-react
-- **Authentication**: Keycloak JWT
-- **API Client**: Auto-generated from backend OpenAPI spec
+- **Authentication**: Keycloak JWT (OAuth PKCE)
+- **API Client**: Auto-generated from backend OpenAPI spec (`@donkeywork/api-client`)
+- **Monorepo**: pnpm workspaces
 
 ## Design Principles
 
@@ -21,203 +22,125 @@
 
 ## Project Structure
 
+This is a pnpm monorepo with two apps and shared packages:
+
 ```
-src/
-├── components/
-│   ├── layout/
-│   │   ├── AppLayout.tsx         # Main layout with sidebar
-│   │   ├── Sidebar.tsx           # Left navigation menu
-│   │   ├── Header.tsx            # Top header (mobile menu toggle, user, theme)
-│   │   └── ThemeToggle.tsx       # Dark/light mode switcher
-│   ├── auth/
-│   │   ├── AuthProvider.tsx      # Keycloak context provider
-│   │   ├── ProtectedRoute.tsx    # Route guard for authenticated routes
-│   │   └── LoginRedirect.tsx     # Login landing page
-│   ├── agents/
-│   │   ├── AgentList.tsx
-│   │   ├── AgentCard.tsx
-│   │   └── CreateAgentDialog.tsx
-│   ├── editor/
-│   │   ├── WorkflowEditor.tsx    # Main editor container
-│   │   ├── Canvas.tsx            # ReactFlow wrapper
-│   │   ├── NodePalette.tsx       # Draggable node types
-│   │   ├── PropertiesPanel.tsx   # Selected node configuration
-│   │   └── nodes/
-│   │       ├── StartNode.tsx
-│   │       ├── ModelNode.tsx
-│   │       └── EndNode.tsx
-│   ├── execution/
-│   │   ├── TestPanel.tsx         # Input form + execute button
-│   │   ├── StreamingOutput.tsx   # Real-time SSE event display
-│   │   └── ExecutionHistory.tsx
-│   ├── credentials/
-│   │   ├── CredentialList.tsx
-│   │   ├── CredentialCard.tsx
-│   │   └── CreateCredentialDialog.tsx
-│   └── ui/                       # shadcn/ui components
-├── hooks/
-│   ├── useAuth.ts                # Keycloak auth hook
-│   ├── useApi.ts                 # API client hook with auth
-│   └── useExecutionStream.ts     # SSE streaming hook
-├── lib/
-│   ├── utils.ts                  # cn() helper
-│   ├── api.ts                    # Generated API client
-│   └── keycloak.ts               # Keycloak configuration
-├── store/
-│   ├── theme.ts                  # Theme store (Zustand)
-│   ├── editor.ts                 # Editor state (nodes, edges, config)
-│   └── auth.ts                   # Auth state
-├── types/
-│   └── api.ts                    # Generated API types
-├── pages/
-│   ├── LoginPage.tsx             # Login landing / redirect
-│   ├── AgentsPage.tsx            # Agent list
-│   ├── AgentEditorPage.tsx       # Workflow editor
-│   ├── ExecutionsPage.tsx        # Execution history
-│   ├── CredentialsPage.tsx       # API keys / secrets
-│   └── NotFoundPage.tsx
-├── App.tsx
-├── main.tsx
-└── index.css
+src/frontend/
+├── pnpm-workspace.yaml
+├── package.json                         # Root scripts proxy to @donkeywork/web
+├── colorstyle.html                      # Dark mode design system reference
+├── lightmmode.colorstyle.html           # Light mode design system reference
+├── apps/
+│   ├── web/                             # Main web application (@donkeywork/web)
+│   │   └── src/
+│   │       ├── App.tsx                  # BrowserRouter + auth guard + providers
+│   │       ├── main.tsx
+│   │       ├── index.css
+│   │       ├── components/
+│   │       │   ├── layout/              # AppLayout, Sidebar, Header, ThemeToggle
+│   │       │   ├── editor/              # Workflow editor (see editor/CLAUDE.md)
+│   │       │   ├── execution/           # TestPanel, StreamingOutput
+│   │       │   ├── credentials/         # Credential management
+│   │       │   ├── agent-builder/       # Agent builder UI
+│   │       │   ├── agent-chat/          # Chat interface
+│   │       │   ├── a2a/                 # A2A server components
+│   │       │   ├── mcp/                 # MCP server components
+│   │       │   ├── oauth/               # OAuth client components
+│   │       │   ├── providers/           # NotificationListener, etc.
+│   │       │   ├── sandbox-settings/    # Code sandbox config
+│   │       │   ├── skills/              # Skills management
+│   │       │   ├── files/               # File management
+│   │       │   ├── branding/            # Branding components
+│   │       │   ├── icons/               # Custom icon components
+│   │       │   └── ui/                  # shadcn/ui components
+│   │       ├── hooks/
+│   │       │   ├── useExecutionStream.ts
+│   │       │   ├── useAgentTestStream.ts
+│   │       │   ├── useTokenRefresh.ts
+│   │       │   ├── useOAuthFlow.ts
+│   │       │   ├── useNotifications.ts
+│   │       │   └── useWorkspaceNav.ts
+│   │       ├── lib/
+│   │       │   └── utils.ts             # cn() helper
+│   │       ├── store/
+│   │       │   ├── editor.ts            # Editor state (nodes, edges, config)
+│   │       │   └── agentBuilder.ts      # Agent builder state
+│   │       ├── pages/                   # All route pages
+│   │       ├── platform/               # Web platform config
+│   │       ├── schemas/                # JSON schemas
+│   │       ├── types/                  # TypeScript types
+│   │       └── test/                   # Test utilities
+│   └── desktop/                         # Tauri desktop app (see desktop/CLAUDE.md)
+├── packages/
+│   ├── api-client/                      # Auto-generated API client (@donkeywork/api-client)
+│   ├── chat/                            # Chat components (@donkeywork/chat)
+│   ├── editor/                          # Editor components (@donkeywork/editor)
+│   ├── platform/                        # Platform abstraction (@donkeywork/platform)
+│   ├── stores/                          # Shared Zustand stores (@donkeywork/stores)
+│   │   └── src/
+│   │       ├── auth.ts                  # Auth state
+│   │       ├── theme.ts                # Theme state
+│   │       └── active-conversations.ts
+│   ├── ui/                              # Shared UI components (@donkeywork/ui)
+│   └── workspace/                       # Workspace components (@donkeywork/workspace)
 ```
 
 ---
 
-## Navigation
+## Pages (Web App)
 
-### Left Sidebar Menu
+The web app uses react-router-dom with these routes:
 
-```
-+------------------+
-|  DonkeyWork      |  <- Logo (with donkey icon)
-|  --------------  |
-|  Agents          |  <- /agents
-|  API Keys        |  <- /api-keys
-|  Secrets         |  <- /secrets
-+------------------+
-```
-
-- Mobile: Hamburger menu in header, sidebar slides in as overlay
-- Desktop: Fixed sidebar
-
-### Routes
-
-```
-/                       -> Redirect to /agents
-/login                  -> Login landing page
-/login/callback         -> OAuth callback (parses tokens from URL fragment)
-/agents                 -> Agent list
-/agents/:id             -> Agent editor (workflow canvas)
-/api-keys               -> API keys management (with table + CRUD)
-/secrets                -> Secrets management (Coming Soon)
-/profile                -> User profile
-```
+| Route | Page |
+|-------|------|
+| `/` | Redirect to `/orchestrations` |
+| `/login` | Login page |
+| `/login/callback` | OAuth callback |
+| `/oauth/callback` | OAuth provider callback |
+| `/orchestrations` | Orchestration list |
+| `/orchestrations/:id` | Orchestration editor |
+| `/agent-definitions` | Agent definitions |
+| `/agent-builder/:id` | Agent builder |
+| `/agent-chat/:id?` | Agent chat interface |
+| `/conversations` | Conversation history |
+| `/prompts` | Prompt management |
+| `/api-keys` | API key management |
+| `/credentials` | Credential management |
+| `/connected-accounts` | OAuth connected accounts |
+| `/oauth-clients` | OAuth client management |
+| `/mcp-servers` | MCP server management |
+| `/a2a-servers` | A2A server management |
+| `/skills` | Skills list |
+| `/skills/:id` | Skill detail |
+| `/executions` | Execution history |
+| `/executions/:id` | Execution detail |
+| `/projects` | Project management |
+| `/projects/:id` | Project detail |
+| `/projects/:projectId/milestones/:milestoneId` | Milestone detail |
+| `/tasks` | Task list |
+| `/tasks/:id?` | Task editor |
+| `/notes` | Notes list |
+| `/notes/:id?` | Note editor |
+| `/research` | Research list |
+| `/research/:id?` | Research editor |
+| `/files` | File management |
+| `/sandbox-settings` | Sandbox settings |
+| `/profile` | User profile |
 
 ---
 
 ## Authentication
 
-### Keycloak Integration
+### OAuth PKCE Flow
 
-**Flow:**
-1. User visits any protected route
-2. `ProtectedRoute` checks for valid JWT in memory/localStorage
-3. If no token or expired -> redirect to `/login`
-4. `/login` page shows "Login with DonkeyWork" button
-5. Button redirects to Keycloak login page
-6. After Keycloak auth -> redirect back to `/login/callback`
-7. Callback page exchanges code for tokens via backend
-8. Store access token + refresh token
-9. Redirect to original destination (or `/agents`)
-
-**Token Management:**
-- Access token stored in memory (short-lived)
-- Refresh token stored in localStorage (longer-lived)
-- Auto-refresh before access token expires (e.g., refresh at 80% of lifetime)
-- On 401 response -> attempt token refresh -> if fails, redirect to `/login`
-
-**API Integration:**
-```typescript
-// All API calls include Authorization header
-const response = await fetch('/api/v1/agents', {
-  headers: {
-    'Authorization': `Bearer ${accessToken}`,
-    'Content-Type': 'application/json',
-  },
-})
-
-// Interceptor handles 401
-if (response.status === 401) {
-  const refreshed = await refreshToken()
-  if (!refreshed) {
-    redirectToLogin()
-    return
-  }
-  // Retry original request with new token
-}
-```
-
-**Backend Endpoints (needed):**
-```
-POST /api/v1/auth/token          -> Exchange Keycloak code for tokens
-POST /api/v1/auth/refresh        -> Refresh access token
-POST /api/v1/auth/logout         -> Revoke tokens
-GET  /api/v1/auth/me             -> Get current user info
-```
-
----
-
-## API Client
-
-### Auto-Generation
-
-Generate TypeScript client from backend OpenAPI spec:
-
-```bash
-npx @hey-api/openapi-ts -i http://localhost:5050/swagger/v1/swagger.json -o src/lib/api
-```
-
-### API Client Wrapper
-
-```typescript
-// src/lib/api-client.ts
-import { useAuthStore } from '@/store/auth'
-
-const BASE_URL = import.meta.env.VITE_API_URL || ''
-
-async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const { accessToken, refreshAccessToken, logout } = useAuthStore.getState()
-
-  const response = await fetch(`${BASE_URL}${url}`, {
-    ...options,
-    headers: {
-      ...options.headers,
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  if (response.status === 401) {
-    const refreshed = await refreshAccessToken()
-    if (!refreshed) {
-      logout()
-      window.location.href = '/login'
-      throw new Error('Session expired')
-    }
-    // Retry with new token
-    return fetchWithAuth(url, options)
-  }
-
-  return response
-}
-
-export const api = {
-  get: (url: string) => fetchWithAuth(url),
-  post: (url: string, body: unknown) => fetchWithAuth(url, { method: 'POST', body: JSON.stringify(body) }),
-  put: (url: string, body: unknown) => fetchWithAuth(url, { method: 'PUT', body: JSON.stringify(body) }),
-  delete: (url: string) => fetchWithAuth(url, { method: 'DELETE' }),
-}
-```
+1. User visits protected route, `AuthGuard` checks for valid JWT
+2. If no token -> redirect to `/login`
+3. Login page redirects to Keycloak with PKCE
+4. Keycloak redirects back to `/login/callback`
+5. Callback exchanges code for tokens via backend
+6. Tokens stored in Zustand auth store (from `@donkeywork/stores`)
+7. `useTokenRefresh` hook handles automatic refresh before expiry
+8. On 401 -> attempt refresh -> if fails, redirect to login
 
 ---
 
@@ -249,14 +172,13 @@ Open these files in a browser to see the full visual reference.
 
 ### Node Colors (same for both modes)
 
-| Node Type | Color | Tailwind Class |
-|-----------|-------|----------------|
-| Start | `#22c55e` | `node-start` |
-| End | `#f97316` | `node-end` |
-| Action | `#a855f7` | `node-action` |
-| Utility | `#22d3ee` | `node-utility` |
-| Model | `#3b82f6` | `node-model` |
-| Condition | `#eab308` | `node-condition` |
+| Node Type | Color | Border Class |
+|-----------|-------|--------------|
+| Start | `#22c55e` | `border-green-500` |
+| End | `#f97316` | `border-orange-500` |
+| Action | `#a855f7` | `border-purple-500` |
+| Utility | `#22d3ee` | `border-cyan-500` |
+| Model | `#3b82f6` | `border-blue-500` |
 
 ### Component Patterns
 
@@ -278,16 +200,11 @@ Open these files in a browser to see the full visual reference.
 - Border: `border-border`
 - Hover: `hover:border-accent/30` or `hover:shadow-md`
 
-**Badges:**
-- Status badges use colored backgrounds with matching borders
-- Include dot indicator with status color
-
 ### Typography
 
 - **Font family**: Inter (body), JetBrains Mono (code)
 - **Headings**: Semibold/Bold, slate-900 (light) / white (dark)
 - **Body**: Regular, slate-700 (light) / slate-300 (dark)
-- **Muted**: Regular, slate-500 (light) / slate-500 (dark)
 
 ---
 
@@ -326,79 +243,6 @@ xl: 1280px  -> Desktops
 
 Use this pattern for all data tables. Shows cards on mobile, full table on desktop.
 
-### Structure
-
-```tsx
-{items.length > 0 && (
-  <>
-    {/* Mobile view - card layout */}
-    <div className="space-y-3 md:hidden">
-      {items.map((item) => (
-        <div key={item.id} className="rounded-lg border border-border bg-card p-4 space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1 min-w-0 flex-1">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Name: </span>
-                <span className="font-medium">{item.name}</span>
-              </div>
-              {/* More fields with "Label: Value" format */}
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {/* Action buttons */}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-
-    {/* Desktop view - table layout */}
-    <div className="hidden md:block rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            {/* More columns */}
-            <TableHead className="w-[100px]">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">{item.name}</TableCell>
-              {/* More cells */}
-              <TableCell>
-                <div className="flex items-center gap-1">
-                  {/* Action buttons */}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-
-    {/* Pagination */}
-    {totalPages > 1 && (
-      <div className="flex items-center justify-between pt-4">
-        <p className="text-sm text-muted-foreground">
-          Showing {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount}
-        </p>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={!canGoBack}>
-            <ChevronLeft className="h-4 w-4" /> Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={!canGoForward}>
-            Next <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    )}
-  </>
-)}
-```
-
-### Key Points
-
 - **Mobile**: Card layout with "Label: Value" format, action buttons top-right
 - **Desktop**: Full table with all columns visible
 - **Pagination**: Default PAGE_SIZE = 20, shows "Showing X-Y of Z"
@@ -409,82 +253,24 @@ Use this pattern for all data tables. Shows cards on mobile, full table on deskt
 ## Development Commands
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Build for production
-npm run lint         # Lint
-npm run generate-api # Generate API client (after backend is running)
+# From src/frontend/ (proxied to @donkeywork/web)
+pnpm dev              # Start dev server
+pnpm build            # Build for production
+pnpm lint             # Lint
+pnpm test:run         # Run tests
+
+# From src/frontend/apps/desktop/
+pnpm dev              # Start Vite dev server (port 5174)
+pnpm tauri dev        # Start Tauri native dev mode
+pnpm tauri build      # Build native app
 ```
-
----
-
-## Environment Variables
-
-```env
-# .env.development
-VITE_API_URL=http://localhost:5050
-VITE_KEYCLOAK_URL=http://localhost:8080
-VITE_KEYCLOAK_REALM=donkeywork
-VITE_KEYCLOAK_CLIENT_ID=donkeywork-frontend
-```
-
----
-
-## Milestones
-
-### Phase 1: Scaffold ✅
-- [x] Vite + React + TypeScript project setup
-- [x] Tailwind + shadcn/ui setup
-- [x] Theme (CSS variables, dark mode, ThemeToggle)
-- [x] Layout (AppLayout, Sidebar, Header)
-- [x] Routing (react-router-dom)
-- [x] Auth placeholder (no Keycloak yet, mock user)
-
-### Phase 2: Agent List & CRUD ✅
-- [x] AgentList page with mock data
-- [x] AgentCard component
-- [x] CreateAgentDialog
-- [x] Delete confirmation
-
-### Phase 3: Workflow Editor ✅
-- [x] ReactFlow canvas setup (upgraded to @xyflow/react v12)
-- [x] Custom nodes (Start, Model, End)
-- [x] Node palette (drag to canvas)
-- [x] Edge connections
-- [x] Properties panel (with Monaco Editor for schemas)
-- [x] Editor Zustand store
-- [ ] Save to localStorage (mock persistence) **← NEXT**
-
-### Phase 4: Node Configuration ✅
-- [x] StartNode panel (name, InputSchema editor)
-- [x] ModelNode panel (provider, model, credential, prompts)
-- [x] EndNode panel (name, OutputSchema editor)
-- [ ] Form validation **← TODO**
-
-### Phase 5: Execution UI
-- [ ] TestPanel with dynamic input form
-- [ ] Mock streaming output
-- [ ] ExecutionHistory list
-- [ ] ExecutionDetail view
-
-### Phase 6: Authentication
-- [ ] Keycloak integration
-- [ ] AuthProvider + ProtectedRoute
-- [ ] Login page
-- [ ] Token refresh logic
-- [ ] 401 handling
-
-### Phase 7: API Integration
-- [ ] Generate API client from OpenAPI
-- [ ] Wire up all endpoints
-- [ ] Replace mocks with real data
-- [ ] SSE streaming integration
 
 ---
 
 ## Notes
 
-- Copy ThemeToggle, theme store, CSS variables directly from CodeSandbox-Manager
-- Use same icon library (lucide-react)
-- Match visual style (borders, cards, spacing)
+- Use same icon library (lucide-react) throughout
 - Keep components small and focused
 - Prefer composition over configuration
+- Shared stores, UI, and platform code live in `packages/`
+- App-specific code lives in `apps/web/` or `apps/desktop/`

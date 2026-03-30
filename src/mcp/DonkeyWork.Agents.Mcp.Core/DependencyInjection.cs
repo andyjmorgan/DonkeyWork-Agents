@@ -35,7 +35,6 @@ public static class DependencyInjection
     /// <returns>The MCP server builder for further configuration.</returns>
     public static IMcpServerBuilder AddDynamicMcpServer(this IServiceCollection services, params Assembly[] toolAssemblies)
     {
-        // Register the singleton tool registry and initialize it
         services.AddSingleton<McpToolRegistry>();
         services.AddSingleton<IMcpToolRegistry>(sp =>
         {
@@ -44,13 +43,11 @@ public static class DependencyInjection
             return registry;
         });
 
-        // Register scoped services
         services.AddMemoryCache();
         services.AddScoped<IA2aMcpToolService, A2aMcpToolService>();
         services.AddScoped<IMcpToolDiscoveryService, McpToolDiscoveryService>();
         services.AddScoped<IMcpToolExecutor, McpToolExecutor>();
 
-        // Register scoped handlers
         services.AddScoped<IListToolsHandler, ListToolsHandler>();
         services.AddScoped<ICallToolHandler, CallToolHandler>();
 
@@ -64,7 +61,6 @@ public static class DependencyInjection
                 options.Stateless = true;
             });
 
-        // Configure custom handlers for tool operations
         // The handlers delegate to the scoped services resolved from the request context
         builder.WithListToolsHandler(ListToolsHandlerDelegate);
         builder.WithCallToolHandler(CallToolHandlerDelegate);

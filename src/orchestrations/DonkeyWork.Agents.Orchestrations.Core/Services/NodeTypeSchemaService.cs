@@ -32,13 +32,11 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
         var result = new List<NodeTypeInfo>();
         var assembly = typeof(NodeConfiguration).Assembly;
 
-        // Find all concrete NodeConfiguration classes
         var configTypes = assembly.GetTypes()
             .Where(t => t.IsSubclassOf(typeof(NodeConfiguration)) && !t.IsAbstract);
 
         foreach (var configType in configTypes)
         {
-            // Read NodeAttribute from the class
             var nodeAttr = configType.GetCustomAttribute<NodeAttribute>();
             if (nodeAttr == null)
             {
@@ -46,7 +44,6 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                 continue;
             }
 
-            // Create minimal instance to get NodeType
             var instance = CreateMinimalInstance(configType);
             if (instance == null)
             {
@@ -77,7 +74,6 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
     {
         try
         {
-            // Create minimal instance for type discovery (required properties need values)
             return configType.Name switch
             {
                 nameof(StartNodeConfiguration) => new StartNodeConfiguration

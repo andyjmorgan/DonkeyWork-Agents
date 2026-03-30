@@ -55,18 +55,15 @@ public abstract class NodeExecutor<TConfig, TOutput> : INodeExecutor
                 $"Expected configuration of type {typeof(TConfig).Name} but received {config.GetType().Name}");
         }
 
-        // Emit NodeStarted event
         await _streamWriter.WriteEventAsync(new NodeStartedEvent { NodeId = nodeId });
 
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            // Execute the node
             var output = await ExecuteInternalAsync(typedConfig, cancellationToken);
             stopwatch.Stop();
 
-            // Emit NodeCompleted event with output
             await _streamWriter.WriteEventAsync(
                 new NodeCompletedEvent
                 {

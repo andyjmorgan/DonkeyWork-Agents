@@ -375,7 +375,6 @@ export function useAgentTestStream() {
           }
         }
 
-        // Process remaining buffer after stream ends
         if (buffer.trim()) {
           const dataMatch = buffer.match(/^data:\s*(.+)$/m)
           if (dataMatch) {

@@ -49,7 +49,6 @@ export function CodeBlockWithCopy(props: NodeViewProps) {
   const preRef = useRef<HTMLPreElement>(null)
   const currentLanguage = node.attrs.language || 'plaintext'
 
-  // Render MermaidBlock for mermaid language
   if (currentLanguage === 'mermaid') {
     return <MermaidBlock {...props} />
   }

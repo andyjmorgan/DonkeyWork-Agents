@@ -394,7 +394,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         ContextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
         MaxOutputTokens = modelDefinition?.MaxOutputTokens ?? 0;
 
-        // Populate grain context with MCP servers, sub-agents, and tool groups for swarm tool inheritance
         GrainContext.McpServers = GetMcpServerReferences(contract);
         GrainContext.A2aServers = GetA2aServerReferences(contract);
         GrainContext.SubAgents = contract.SubAgents;
@@ -402,29 +401,20 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         GrainContext.Icon = contract.Icon;
         GrainContext.DisplayName = contract.DisplayName;
 
-        // Initialize MCP tools (lazy, once per activation)
         await InitializeMcpToolsAsync(contract, effectiveToolGroups, ct);
-
-        // Initialize A2A tools (lazy, once per activation)
         await InitializeA2aToolsAsync(contract, effectiveToolGroups, ct);
 
-        // Include sandbox tools if MCP servers triggered auto-sandbox
         var effectiveToolTypes = HasMcpSandbox && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
             ? [..toolTypes, typeof(SandboxTools)]
             : toolTypes;
 
-        // Resolve agent catalog early so subclasses can lazily load data needed by GetAdditionalSwarmToolTypes
         var agentCatalog = await GetAgentCatalogPromptAsync(contract, ct);
-
-        // Auto-include swarm tool types
         effectiveToolTypes = GetAdditionalSwarmToolTypes(contract, effectiveToolTypes);
 
-        // Resolve tool configuration from contract
         var toolConfig = contract.ToolConfiguration;
         var hasExplicitConfig = toolConfig is not null;
         var globalDefer = toolConfig?.DeferToolLoading ?? false;
 
-        // Build deferred types and excluded tools from contract overrides
         var deferredTypes = new HashSet<Type>();
         var excludedLocalTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -455,7 +445,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             }
         }
 
-        // Store effective tool types for scope checking during tool execution
         EffectiveToolTypes = effectiveToolTypes;
 
         var localTools = effectiveToolTypes.Length > 0
@@ -465,7 +454,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 excludedLocalTools.Count > 0 ? excludedLocalTools : null)
             : null;
 
-        // Combine local + MCP tool definitions with per-server config
         // MCP tools default to deferred when no explicit config (backward compat)
         var mcpDefer = hasExplicitConfig ? globalDefer : true;
         IReadOnlyList<InternalToolDefinition> mcpTools;
@@ -512,7 +500,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         if (string.IsNullOrEmpty(apiKey))
             throw new InvalidOperationException("No Anthropic API key configured. Add one in Settings > API Keys.");
 
-        // Collect all prompt parts: library prompts first, then contract system prompts
         var promptParts = new List<string>();
 
         foreach (var promptIdStr in contract.Prompts)
@@ -529,7 +516,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         var combinedPrompt = string.Join("\n\n", promptParts);
 
-        // Append sandbox documentation when sandbox tools are in scope
         var hasSandbox = contract.EnableSandbox
                          || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
                          || HasMcpSandbox;
@@ -537,11 +523,9 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
 
-        // Append agent catalog so the model knows which agents it can spawn
         if (agentCatalog is not null)
             systemPrompt += agentCatalog;
 
-        // Append deferred MCP tools catalog so the model knows to use tool_search
         var deferredToolsServers = GetDeferredToolsServers(contract);
         systemPrompt += BuildDeferredToolsPrompt(mcpDefer, deferredToolsServers);
 

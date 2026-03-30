@@ -27,17 +27,14 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
     {
         _logger.LogInformation("Saving draft version for agent {AgentId}", agentId);
 
-        // Check if agent exists
         var agentExists = await _dbContext.Orchestrations.AnyAsync(a => a.Id == agentId, cancellationToken);
         if (!agentExists)
         {
             throw new InvalidOperationException($"Agent {agentId} not found");
         }
 
-        // Validate graph structure and deserialize node configurations
         var nodeConfigurations = ValidateAndDeserializeNodeConfigurations(request);
 
-        // Check if a draft already exists
         var existingDraft = await _dbContext.OrchestrationVersions
             .FirstOrDefaultAsync(v => v.OrchestrationId == agentId && v.IsDraft, cancellationToken);
 
@@ -45,7 +42,6 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
 
         if (existingDraft != null)
         {
-            // Update existing draft
             existingDraft.InputSchema = request.InputSchema;
             existingDraft.OutputSchema = request.OutputSchema;
             existingDraft.ReactFlowData = request.ReactFlowData;
@@ -59,7 +55,6 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
         }
         else
         {
-            // Create new draft
             var latestVersion = await _dbContext.OrchestrationVersions
                 .Where(v => v.OrchestrationId == agentId)
                 .OrderByDescending(v => v.VersionNumber)
@@ -88,17 +83,14 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             _logger.LogInformation("Created new draft version {VersionId} with version number {VersionNumber}", version.Id, nextVersionNumber);
         }
 
-        // Update credential mappings
         if (request.CredentialMappings != null)
         {
-            // Remove existing mappings
             var existingMappings = await _dbContext.OrchestrationVersionCredentialMappings
                 .Where(m => m.OrchestrationVersionId == version.Id)
                 .ToListAsync(cancellationToken);
 
             _dbContext.OrchestrationVersionCredentialMappings.RemoveRange(existingMappings);
 
-            // Add new mappings
             foreach (var mapping in request.CredentialMappings)
             {
                 _dbContext.OrchestrationVersionCredentialMappings.Add(new OrchestrationVersionCredentialMappingEntity
@@ -136,7 +128,6 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
         draft.PublishedAt = DateTimeOffset.UtcNow;
         draft.UpdatedAt = DateTimeOffset.UtcNow;
 
-        // Update agent's current version reference
         var agent = await _dbContext.Orchestrations
             .FirstOrDefaultAsync(a => a.Id == agentId, cancellationToken);
 
@@ -196,10 +187,8 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             throw new InvalidOperationException($"Graph must have exactly one End node. Found: {endNodes}");
         }
 
-        // Build node type map from typed ReactFlow data
         var nodeTypeMap = nodes.ToDictionary(n => n.Id, n => n.Data.NodeType);
 
-        // Deserialize node configurations with type discriminators
         var nodeConfigurations = DeserializeNodeConfigurations(request.NodeConfigurations, nodeTypeMap);
 
         // 3. Validate node name uniqueness
@@ -311,10 +300,8 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
                 throw new InvalidOperationException($"Node configuration for '{nodeId}' has no corresponding ReactFlow node");
             }
 
-            // Get type discriminator from enum
             var discriminator = nodeType.ToTypeDiscriminator();
 
-            // Create enriched config with type discriminator
             var configWithType = new Dictionary<string, object> { ["type"] = discriminator };
             foreach (var configProperty in property.Value.EnumerateObject())
             {

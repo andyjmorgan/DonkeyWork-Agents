@@ -39,7 +39,6 @@ public abstract class BaseConfigurableParameters
             var key = ToCamelCase(property.Name);
             if (values.TryGetValue(key, out var value) && value != null)
             {
-                // Handle Resolvable<T> types
                 var propertyType = property.PropertyType;
                 if (IsResolvableType(propertyType) && value is string stringValue)
                 {

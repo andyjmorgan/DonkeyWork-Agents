@@ -39,7 +39,6 @@ internal sealed class AnthropicProvider : IAiProvider
         var messageParams = MapMessages(messages);
         var mappedTools = AnthropicToolMapper.MapTools(tools, options);
 
-        // Compute thinking, effort, and temperature before the initializer (init-only props)
         BetaThinkingConfigParam? thinking = null;
         BetaOutputConfig? outputConfig = null;
         double? temperature = null;
@@ -111,7 +110,6 @@ internal sealed class AnthropicProvider : IAiProvider
     {
         var message = await client.Beta.Messages.Create(parameters, ct);
 
-        // Usage
         if (message.Usage is not null)
         {
             yield return new ModelResponseUsage
@@ -122,7 +120,6 @@ internal sealed class AnthropicProvider : IAiProvider
             };
         }
 
-        // Content blocks — each yielded as a complete item
         int blockIndex = 0;
         foreach (var block in message.Content)
         {
@@ -134,7 +131,6 @@ internal sealed class AnthropicProvider : IAiProvider
                     Content = textBlock.Text
                 };
 
-                // Citations embedded in the text block
                 if (textBlock.Citations is not null)
                 {
                     foreach (var citation in textBlock.Citations)
@@ -225,7 +221,6 @@ internal sealed class AnthropicProvider : IAiProvider
             blockIndex++;
         }
 
-        // Metadata
         var stopReason = ParseStopReason(message.StopReason?.ToString() ?? "end_turn");
         yield return new ModelResponseMetadata
         {
@@ -242,10 +237,8 @@ internal sealed class AnthropicProvider : IAiProvider
         MessageCreateParams parameters,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        // Track content blocks for accumulating tool input JSON
         var toolInputBuffers = new Dictionary<long, StringBuilder>();
         var toolBlockInfo = new Dictionary<long, (string Id, string Name)>();
-        // Track server tool blocks (web search, web fetch)
         var serverToolBlockInfo = new Dictionary<long, (string Id, string Name)>();
         var serverToolInputBuffers = new Dictionary<long, StringBuilder>();
         InternalStopReason stopReason = InternalStopReason.EndTurn;
@@ -362,8 +355,7 @@ internal sealed class AnthropicProvider : IAiProvider
                 }
                 else if (blockDelta.Delta.TryPickCitations(out var citationsDelta))
                 {
-                    // Extract citation info from the delta
-                    if (citationsDelta.Citation.TryPickBetaCitationsWebSearchResultLocation(
+                        if (citationsDelta.Citation.TryPickBetaCitationsWebSearchResultLocation(
                             out var webCitation))
                     {
                         yield return new ModelResponseCitationContent
@@ -401,7 +393,6 @@ internal sealed class AnthropicProvider : IAiProvider
             {
                 var index = (long)blockStop.Index;
 
-                // Finalize client tool calls
                 if (toolInputBuffers.TryGetValue(index, out var inputBuffer) &&
                     toolBlockInfo.TryGetValue(index, out var info))
                 {
@@ -429,7 +420,6 @@ internal sealed class AnthropicProvider : IAiProvider
                     toolBlockInfo.Remove(index);
                 }
 
-                // Finalize server tool input (query for web search)
                 if (serverToolInputBuffers.TryGetValue(index, out var serverInputBuffer) &&
                     serverToolBlockInfo.TryGetValue(index, out var serverInfo))
                 {

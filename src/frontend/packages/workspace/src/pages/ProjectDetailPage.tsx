@@ -71,7 +71,6 @@ export function ProjectDetailPage({ projectId, nav }: { projectId: string; nav: 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingMilestone, setEditingMilestone] = useState<MilestoneSummary | null>(null)
 
-  // Refresh states
   const [isRefreshingMilestones, setIsRefreshingMilestones] = useState(false)
   const [isRefreshingNotes, setIsRefreshingNotes] = useState(false)
   const [isRefreshingTasks, setIsRefreshingTasks] = useState(false)
@@ -360,7 +359,6 @@ export function ProjectDetailPage({ projectId, nav }: { projectId: string; nav: 
   const handleToggleTaskStatus = async (task: Task) => {
     try {
       if (task.status === 'Completed') {
-        // Toggle back to Pending
         await tasks.update(task.id, {
           title: task.title,
           description: task.description,
@@ -369,7 +367,6 @@ export function ProjectDetailPage({ projectId, nav }: { projectId: string; nav: 
           sortOrder: task.sortOrder,
         })
       } else {
-        // Delete the task when completing
         await tasks.delete(task.id)
       }
       await loadProject()

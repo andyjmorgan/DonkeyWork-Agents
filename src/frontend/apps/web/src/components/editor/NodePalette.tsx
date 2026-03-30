@@ -83,7 +83,6 @@ export function NodePalette() {
   const [allNodeTypes, setAllNodeTypes] = useState<NodeTypeInfo[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch models and node types from backend
   useEffect(() => {
     Promise.all([
       models.list(),
@@ -123,7 +122,6 @@ export function NodePalette() {
       return acc
     }, {} as Record<string, ModelDefinition[]>)
 
-  // Check if Start/End nodes exist
   const hasStartNode = nodes.some(n => n.data?.nodeType === 'Start')
   const hasEndNode = nodes.some(n => n.data?.nodeType === 'End')
 
@@ -131,7 +129,6 @@ export function NodePalette() {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('application/reactflow', nodeType)
 
-    // Store additional data for model/action nodes
     if (data) {
       event.dataTransfer.setData('application/json', JSON.stringify(data))
     }
@@ -159,7 +156,6 @@ export function NodePalette() {
     }
   }
 
-  // Render a node type item
   const renderNodeTypeItem = (nodeType: NodeTypeInfo) => {
     const isDisabled =
       (nodeType.type === 'Start' && hasStartNode) ||
@@ -204,7 +200,6 @@ export function NodePalette() {
   // Category display order
   const categoryOrder = ['Core', 'HTTP', 'Utility', 'Timing']
 
-  // Sort categories
   const sortedCategories = Object.keys(nodeTypesByCategory).sort((a, b) => {
     const aIndex = categoryOrder.indexOf(a)
     const bIndex = categoryOrder.indexOf(b)

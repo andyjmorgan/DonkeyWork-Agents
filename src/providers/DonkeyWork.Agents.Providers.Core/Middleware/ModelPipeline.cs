@@ -38,17 +38,14 @@ public class ModelPipeline : IModelPipeline
         ModelPipelineRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // Map public request to internal context
         var context = MapToInternalContext(request);
 
-        // Build and execute the internal pipeline
         var pipelineFunc = CreatePipelineFunc(PipelineOrder.ToList(), 0, cancellationToken);
 
         ModelResponseUsage? usage = null;
 
         await foreach (var message in pipelineFunc(context).WithCancellation(cancellationToken))
         {
-            // Map internal messages to public events
             var evt = MapToPublicEvent(message, ref usage);
             if (evt != null)
             {

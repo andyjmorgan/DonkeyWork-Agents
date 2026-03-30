@@ -12,16 +12,13 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Configure options with validation
         services.AddOptions<StorageOptions>()
             .BindConfiguration(StorageOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        // Register S3 client wrapper
         services.AddSingleton<IS3ClientWrapper, S3ClientWrapper>();
 
-        // Register services
         services.AddScoped<IStorageService, StorageService>();
         services.AddScoped<ISkillsService, SkillsService>();
 

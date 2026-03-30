@@ -11,7 +11,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Create the new environment variables table first (before dropping the JSON column)
             migrationBuilder.CreateTable(
                 name: "stdio_environment_variables",
                 schema: "mcp",

@@ -39,7 +39,6 @@ internal sealed class McpToolProvider : IAsyncDisposable
         Action<string, bool, long, int, string?>? onServerStatus,
         CancellationToken ct)
     {
-        // Initialize HTTP MCP servers in parallel
         if (httpConfigs.Count > 0)
         {
             var results = new ConcurrentBag<(McpClient Client, string ServerName, IList<McpClientTool> Tools)>();
@@ -66,7 +65,6 @@ internal sealed class McpToolProvider : IAsyncDisposable
             }
         }
 
-        // Initialize stdio MCP servers sequentially (each may create a pod)
         if (stdioConfigs.Count > 0 && sandboxManagerClient is not null)
         {
             foreach (var config in stdioConfigs)
@@ -80,7 +78,6 @@ internal sealed class McpToolProvider : IAsyncDisposable
                     var podName = await sandboxManagerClient.EnsureMcpServerAsync(
                         userId, config.Id, config, null, timeoutCts.Token);
 
-                    // Discover tools via JSON-RPC tools/list
                     var toolsListRequest = BuildToolsListJsonRpc();
                     var response = await sandboxManagerClient.ProxyMcpRequestAsync(
                         podName, toolsListRequest, 30, timeoutCts.Token);
@@ -230,13 +227,11 @@ internal sealed class McpToolProvider : IAsyncDisposable
     /// </summary>
     public async Task<ToolResult> ExecuteAsync(string toolName, JsonElement arguments, CancellationToken ct)
     {
-        // HTTP tool path
         if (_toolsByName.TryGetValue(toolName, out var tool))
         {
             return await ExecuteHttpToolAsync(tool, arguments, ct);
         }
 
-        // Stdio tool path
         if (_stdioTools.TryGetValue(toolName, out var stdioTool))
         {
             return await ExecuteStdioToolAsync(stdioTool, toolName, arguments, ct);
@@ -399,7 +394,6 @@ internal sealed class McpToolProvider : IAsyncDisposable
         using var doc = JsonDocument.Parse(responseBody);
         var root = doc.RootElement;
 
-        // Check for JSON-RPC error
         if (root.TryGetProperty("error", out var errorProp))
         {
             var errorMessage = errorProp.TryGetProperty("message", out var msgProp)

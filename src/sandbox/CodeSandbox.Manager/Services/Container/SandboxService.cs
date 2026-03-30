@@ -33,7 +33,6 @@ public class SandboxService : ISandboxService
     {
         var channel = System.Threading.Channels.Channel.CreateUnbounded<ContainerCreationEvent>();
 
-        // Start the creation process in the background
         var creationTask = CreateSandboxInternalAsync(request, channel.Writer, cancellationToken);
 
         // Stream events to caller as they arrive
@@ -42,7 +41,6 @@ public class SandboxService : ISandboxService
             yield return evt;
         }
 
-        // Ensure creation completes
         await creationTask;
     }
 
@@ -54,7 +52,6 @@ public class SandboxService : ISandboxService
         _logger.LogInformation("Creating sandbox for user {UserId}, conversation {ConversationId}",
             request.UserId, request.ConversationId);
 
-        // Check container limit before creating
         var currentCount = await GetTotalContainerCountAsync(cancellationToken);
         if (currentCount >= _config.MaxTotalContainers)
         {
@@ -86,7 +83,6 @@ public class SandboxService : ISandboxService
 
             _logger.LogInformation("Successfully created sandbox: {PodName}", podName);
 
-            // Emit created event
             writer.TryWrite(new ContainerCreatedEvent
             {
                 PodName = podName,
@@ -169,7 +165,6 @@ public class SandboxService : ISandboxService
                         return;
                     }
 
-                    // Check if the workload container has terminated (e.g. StartError, CrashLoopBackOff)
                     // The pod phase may still be "Running" if a sidecar is alive, so we must check
                     // individual container statuses to detect early failures.
                     var workloadStatus = watchPod.Status?.ContainerStatuses?
@@ -195,7 +190,6 @@ public class SandboxService : ISandboxService
                         return;
                     }
 
-                    // Emit waiting event with detailed status
                     var containerStatus = workloadStatus ?? watchPod.Status?.ContainerStatuses?.FirstOrDefault();
                     string detailedMessage = $"Waiting for pod to be ready (event {eventNumber})";
 
@@ -508,7 +502,6 @@ public class SandboxService : ISandboxService
             Tty = true
         };
 
-        // Build environment variables: proxy env vars first, then user vars (user overrides)
         var envVars = new List<V1EnvVar>();
 
         if (_config.EnableAuthProxy)
@@ -584,7 +577,6 @@ public class SandboxService : ISandboxService
 
         if (_config.EnableAuthProxy)
         {
-            // Mount CA public cert into workload container
             workloadMounts.Add(new V1VolumeMount
             {
                 Name = "proxy-ca-public",
@@ -592,12 +584,10 @@ public class SandboxService : ISandboxService
                 ReadOnlyProperty = true
             });
 
-            // Add sidecar container
             var (authProxyContainer, authProxyVolumes) = BuildAuthProxySidecar(request);
             containers.Add(authProxyContainer);
             volumes.AddRange(authProxyVolumes);
 
-            // Add volumes for CA cert
             volumes.Add(new V1Volume
             {
                 Name = "proxy-ca-public",
@@ -662,7 +652,6 @@ public class SandboxService : ISandboxService
             new() { Name = "ProxyConfiguration__CaPrivateKeyPath", Value = "/certs/ca.key" },
         };
 
-        // Add blocked domains as indexed environment variables
         for (int i = 0; i < _config.AuthProxyBlockedDomains.Count; i++)
         {
             envVars.Add(new V1EnvVar
@@ -684,7 +673,6 @@ public class SandboxService : ISandboxService
 
         var extraVolumes = new List<V1Volume>();
 
-        // Add gRPC credential store configuration if configured
         if (!string.IsNullOrEmpty(_config.CredentialStoreGrpcUrl))
         {
             _logger.LogInformation(
@@ -726,7 +714,6 @@ public class SandboxService : ISandboxService
                 });
             }
 
-            // Mount gRPC client cert
             volumeMounts.Add(new V1VolumeMount
             {
                 Name = "grpc-client-cert",
@@ -896,13 +883,10 @@ public class SandboxService : ISandboxService
     {
         _logger.LogInformation("Executing command in sandbox {SandboxId}: {Command}", sandboxId, request.Command);
 
-        // Update last activity time (fire and forget)
         _ = UpdateLastActivityAsync(sandboxId, cancellationToken);
 
-        // Get pod IP
         var podIp = await GetPodIpAsync(sandboxId, cancellationToken);
 
-        // Create gRPC channel to executor pod
         using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");
         var client = new ExecutorService.ExecutorServiceClient(channel);
 
@@ -920,7 +904,6 @@ public class SandboxService : ISandboxService
             {
                 await foreach (var evt in call.ResponseStream.ReadAllAsync(cancellationToken))
                 {
-                    // Convert gRPC events to SSE format for Manager's external API
                     var sseData = JsonSerializer.Serialize(new
                     {
                         eventType = evt.EventType,

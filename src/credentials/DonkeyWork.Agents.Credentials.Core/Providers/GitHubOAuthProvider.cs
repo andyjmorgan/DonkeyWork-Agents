@@ -71,7 +71,6 @@ public sealed class GitHubOAuthProvider : OAuthProviderBase
             var json = await GetAuthenticatedAsync("https://api.github.com/user/emails", accessToken, cancellationToken);
             var doc = JsonDocument.Parse(json);
 
-            // Find the primary verified email
             foreach (var element in doc.RootElement.EnumerateArray())
             {
                 if (element.TryGetProperty("primary", out var primaryProp) &&

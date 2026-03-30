@@ -44,10 +44,8 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
         ModelNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Build messages list
         var messages = new List<ChatMessage>();
 
-        // Render system prompts (if any)
         if (config.SystemPrompts != null && config.SystemPrompts.Count > 0)
         {
             foreach (var systemPrompt in config.SystemPrompts)
@@ -60,7 +58,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
             }
         }
 
-        // Render user messages
         foreach (var userMessage in config.UserMessages)
         {
             if (string.IsNullOrWhiteSpace(userMessage))
@@ -75,7 +72,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
             throw new InvalidOperationException("At least one user message is required");
         }
 
-        // Resolve credential
         var credential = await _credentialService.GetByIdAsync(
             Context.UserId,
             config.CredentialId,
@@ -87,7 +83,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
                 $"Credential not found: {config.CredentialId}");
         }
 
-        // Build options dictionary
         var options = new Dictionary<string, object>();
         if (config.Temperature.HasValue)
         {
@@ -105,7 +100,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
         // Pass stream option to control whether the provider uses streaming or non-streaming API
         options["stream"] = config.Stream;
 
-        // Create pipeline request
         var request = new ModelPipelineRequest
         {
             Messages = messages,
@@ -118,7 +112,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
             Options = options.Count > 0 ? options : null
         };
 
-        // Execute pipeline and stream events
         var responseBuilder = new StringBuilder();
         int? totalTokens = null;
         int? inputTokens = null;
@@ -148,7 +141,6 @@ public class ModelNodeExecutor : NodeExecutor<ModelNodeConfiguration, ModelNodeO
                 case TextDeltaEvent textDelta:
                     responseBuilder.Append(textDelta.Text);
 
-                    // Emit TokenDelta event to execution stream
                     await _streamWriter.WriteEventAsync(
                         new TokenDeltaEvent
                         {

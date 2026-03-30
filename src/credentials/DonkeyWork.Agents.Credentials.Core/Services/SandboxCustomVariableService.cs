@@ -45,7 +45,6 @@ public sealed class SandboxCustomVariableService : ISandboxCustomVariableService
         CreateSandboxCustomVariableRequestV1 request,
         CancellationToken ct = default)
     {
-        // Check for duplicate key
         var existing = await _dbContext.SandboxCustomVariables
             .FirstOrDefaultAsync(e => e.Key == request.Key, ct);
 

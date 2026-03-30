@@ -93,7 +93,6 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange, onInsertMa
   const [linkUrl, setLinkUrl] = useState('')
   const [mermaidCode, setMermaidCode] = useState('')
 
-  // Check if we're in code-only mode (no TipTap visible)
   const isCodeMode = viewMode === 'code'
 
   const openLinkDialog = useCallback(() => {
@@ -136,10 +135,8 @@ export function MarkdownToolbar({ editor, viewMode, onViewModeChange, onInsertMa
 
   const handleInsertTable = useCallback((rows: number, cols: number, markdown: string) => {
     if (isCodeMode && onInsertMarkdown) {
-      // Insert raw markdown in code mode
       onInsertMarkdown('\n' + markdown + '\n')
     } else {
-      // Insert via TipTap in preview/split mode
       editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
     }
   }, [editor, isCodeMode, onInsertMarkdown])

@@ -98,7 +98,6 @@ public class OAuthController : ControllerBase
         var frontendBaseUrl = $"{Request.Scheme}://{Request.Host}";
         var callbackUrl = $"{frontendBaseUrl}/oauth/callback";
 
-        // Check for errors from provider
         if (!string.IsNullOrEmpty(error))
         {
             _logger.LogWarning("OAuth callback error from {Provider}: {Error}", provider, error);

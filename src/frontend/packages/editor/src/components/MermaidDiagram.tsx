@@ -6,7 +6,6 @@ interface MermaidDiagramProps {
   className?: string
 }
 
-// Initialize mermaid with dark/light theme support
 mermaid.initialize({
   startOnLoad: false,
   theme: 'neutral',

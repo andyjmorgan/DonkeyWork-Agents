@@ -23,7 +23,6 @@ public class PostgresContainerFixture : IAsyncLifetime
     {
         await _container.StartAsync();
 
-        // Enable pgcrypto and pgvector extensions
         await _container.ExecScriptAsync("CREATE EXTENSION IF NOT EXISTS pgcrypto;");
         await _container.ExecScriptAsync("CREATE EXTENSION IF NOT EXISTS vector;");
     }

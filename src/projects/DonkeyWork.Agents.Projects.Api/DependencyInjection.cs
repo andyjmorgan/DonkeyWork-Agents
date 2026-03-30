@@ -8,7 +8,6 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddProjectsApi(this IServiceCollection services)
     {
-        // Register services
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IMilestoneService, MilestoneService>();
         services.AddScoped<ITaskItemService, TaskItemService>();

@@ -65,7 +65,6 @@ internal sealed class AnthropicAiClient : IAiClient
             // Content block start
             if (streamEvent.TryPickContentBlockStart(out var blockStart))
             {
-                // Check if it's a text block
                 if (blockStart.ContentBlock.Type.ToString().Contains("text"))
                 {
                     yield return new ModelResponseBlockStart
@@ -168,14 +167,12 @@ internal sealed class AnthropicAiClient : IAiClient
         // Non-streaming API call
         var response = await _client.Messages.Create(parameters, cancellationToken);
 
-        // Emit block start
         yield return new ModelResponseBlockStart
         {
             BlockIndex = 0,
             Type = InternalContentBlockType.Text
         };
 
-        // Extract text content from response
         var textContent = new System.Text.StringBuilder();
         foreach (var block in response.Content)
         {
@@ -185,7 +182,6 @@ internal sealed class AnthropicAiClient : IAiClient
             }
         }
 
-        // Emit the complete text as a single chunk
         if (textContent.Length > 0)
         {
             yield return new ModelResponseTextContent
@@ -195,10 +191,8 @@ internal sealed class AnthropicAiClient : IAiClient
             };
         }
 
-        // Emit block end
         yield return new ModelResponseBlockEnd { BlockIndex = 0 };
 
-        // Emit usage
         if (response.Usage is not null)
         {
             yield return new ModelResponseUsage
@@ -208,7 +202,6 @@ internal sealed class AnthropicAiClient : IAiClient
             };
         }
 
-        // Emit stream end - map StopReason to internal reason
         var stopReason = InternalStopReason.EndTurn;
         var stopReasonStr = response.StopReason?.ToString();
         if (stopReasonStr?.Contains("max_tokens", StringComparison.OrdinalIgnoreCase) == true)

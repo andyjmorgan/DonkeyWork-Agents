@@ -69,7 +69,6 @@ public class McpToolExecutor : IMcpToolExecutor
                 McpErrorCode.InvalidParams);
         }
 
-        // Check for destructive operations and log accordingly
         var isDestructive = tool.ProtocolTool.Annotations?.DestructiveHint == true;
         if (isDestructive)
         {

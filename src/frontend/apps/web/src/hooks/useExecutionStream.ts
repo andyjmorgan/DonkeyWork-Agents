@@ -23,7 +23,6 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
   const executionIdRef = useRef<string | null>(null)
 
   const startStream = useCallback(async (orchestrationId: string, input: unknown, isTest = false) => {
-    // Cancel any existing stream
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
@@ -34,7 +33,6 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
     executionIdRef.current = null
     setIsStreaming(true)
 
-    // Create new abort controller for this stream
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
@@ -127,7 +125,6 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
   }, [options])
 
   const startChatStream = useCallback(async (orchestrationId: string, messages: ChatMessage[], isTest = true) => {
-    // Cancel any existing stream
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
@@ -138,7 +135,6 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
     executionIdRef.current = null
     setIsStreaming(true)
 
-    // Create new abort controller for this stream
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
@@ -197,7 +193,6 @@ export function useExecutionStream(options: UseExecutionStreamOptions = {}) {
                 setExecutionId(event.executionId)
               }
 
-              // Handle token events for streaming text
               // Events use type discriminator with PascalCase names
               const eventType = event.type
 

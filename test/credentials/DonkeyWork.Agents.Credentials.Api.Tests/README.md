@@ -1,126 +1,85 @@
-# OAuth Controller Tests
+# Credentials Controller Tests
 
-This directory contains comprehensive unit tests for the OAuth integration controllers.
+Unit tests for the credentials module controllers and services.
 
-## Test Coverage
+## Test Files
 
-### OAuthControllerTests (10 tests)
+### OAuthControllerTests (9 tests)
 Tests for OAuth authorization flow and callback handling:
 
 **Authorization URL Generation:**
-- ✅ `GetAuthorizationUrl_WithValidProvider_ReturnsOkWithUrl` - Generates authorization URL and sets cookies
-- ✅ `GetAuthorizationUrl_WithMissingProviderConfig_ReturnsBadRequest` - Handles missing provider configuration
-- ✅ `GetAuthorizationUrl_SetsCookiesWithCorrectOptions` - Verifies cookie creation with correct security settings
+- `GetAuthorizationUrl_WithValidProvider_ReturnsOkWithUrl`
+- `GetAuthorizationUrl_WithMissingProviderConfig_ReturnsBadRequest`
 
 **Callback Handling:**
-- ✅ `Callback_WithSuccessfulFlow_RedirectsToFrontendWithSuccess` - Successful OAuth callback flow
-- ✅ `Callback_WithErrorFromProvider_RedirectsWithError` - Handles provider error responses
-- ✅ `Callback_WithMissingCode_RedirectsWithError` - Validates authorization code presence
-- ✅ `Callback_WithStateMismatch_RedirectsWithError` - CSRF protection via state validation
-- ✅ `Callback_WithMissingCodeVerifier_RedirectsWithError` - PKCE code verifier validation
-- ✅ `Callback_WithMissingUserId_RedirectsWithError` - User ID validation
-- ✅ `Callback_WithFlowException_RedirectsWithError` - Exception handling during token exchange
+- `Callback_WithSuccessfulFlow_RedirectsToFrontendWithSuccess`
+- `Callback_SetsIdentityContextFromState`
+- `Callback_WithErrorFromProvider_RedirectsWithError`
+- `Callback_WithMissingCode_RedirectsWithError`
+- `Callback_WithInvalidState_RedirectsWithError`
+- `Callback_WithProviderMismatch_RedirectsWithError`
+- `Callback_WithFlowException_RedirectsWithError`
 
 ### OAuthProviderConfigsControllerTests (11 tests)
 Tests for OAuth client configuration management:
 
-**List Operations:**
-- ✅ `List_WithConfigs_ReturnsOkWithConfigList` - Lists all provider configs with token status
-- ✅ `List_WithEmptyConfigs_ReturnsOkWithEmptyList` - Handles empty configuration list
+- `List_WithConfigs_ReturnsOkWithConfigList`
+- `List_WithEmptyConfigs_ReturnsOkWithEmptyList`
+- `Get_WithExistingConfig_ReturnsOkWithDetail`
+- `Get_WithNonExistingConfig_ReturnsNotFound`
+- `Get_MasksClientIdAndSecret`
+- `Create_WithValidRequest_ReturnsCreatedAtAction`
+- `Create_WithDuplicateProvider_ReturnsBadRequest`
+- `Update_WithExistingConfig_ReturnsOkWithUpdatedDetail`
+- `Update_WithNonExistingConfig_ReturnsNotFound`
+- `Delete_WithExistingConfig_ReturnsNoContent`
+- `Delete_WithNonExistingConfig_ReturnsNotFound`
 
-**Get Operations:**
-- ✅ `Get_WithExistingConfig_ReturnsOkWithDetail` - Retrieves specific configuration
-- ✅ `Get_WithNonExistingConfig_ReturnsNotFound` - Returns 404 for missing config
-- ✅ `Get_MasksClientIdAndSecret` - Verifies secret masking in responses
-
-**Create Operations:**
-- ✅ `Create_WithValidRequest_ReturnsCreatedAtAction` - Creates new OAuth configuration
-- ✅ `Create_WithDuplicateProvider_ReturnsBadRequest` - Prevents duplicate configurations
-
-**Update Operations:**
-- ✅ `Update_WithExistingConfig_ReturnsOkWithUpdatedDetail` - Updates configuration
-- ✅ `Update_WithNonExistingConfig_ReturnsNotFound` - Returns 404 for missing config
-
-**Delete Operations:**
-- ✅ `Delete_WithExistingConfig_ReturnsNoContent` - Deletes configuration
-- ✅ `Delete_WithNonExistingConfig_ReturnsNotFound` - Returns 404 for missing config
-
-### OAuthTokensControllerTests (12 tests)
+### OAuthTokensControllerTests (16 tests)
 Tests for OAuth token management:
 
-**List Operations:**
-- ✅ `List_WithTokens_ReturnsOkWithTokenList` - Lists all tokens with status indicators
-- ✅ `List_WithExpiredToken_SetsExpiredStatus` - Correctly identifies expired tokens
-- ✅ `List_WithEmptyTokens_ReturnsOkWithEmptyList` - Handles empty token list
+- `List_WithTokens_ReturnsOkWithTokenList`
+- `List_WithExpiredToken_SetsExpiredStatus`
+- `List_WithEmptyTokens_ReturnsOkWithEmptyList`
+- `List_SetsCanRefreshBasedOnRefreshToken`
+- `Get_WithExistingToken_ReturnsOkWithDetail`
+- `Get_WithNonExistingToken_ReturnsNotFound`
+- `Get_MasksAccessToken`
+- `GetAccessToken_WithExistingToken_ReturnsOkWithUnmaskedToken`
+- `GetAccessToken_WithNonExistingToken_ReturnsNotFound`
+- `GetAccessToken_DoesNotIncludeRefreshToken`
+- `Refresh_WithValidToken_ReturnsOkWithSuccess`
+- `Refresh_WithNonExistingToken_ReturnsNotFound`
+- `Refresh_WithMissingProviderConfig_ReturnsBadRequest`
+- `Refresh_WithProviderException_ReturnsBadRequest`
+- `Delete_WithExistingToken_ReturnsNoContent`
+- `Delete_WithNonExistingToken_ReturnsNotFound`
 
-**Get Operations:**
-- ✅ `Get_WithExistingToken_ReturnsOkWithDetail` - Retrieves token details
-- ✅ `Get_WithNonExistingToken_ReturnsNotFound` - Returns 404 for missing token
-- ✅ `Get_MasksAccessToken` - Verifies token masking in responses
+### ApiKeysControllerTests (10 tests)
+Tests for user API key management.
 
-**Refresh Operations:**
-- ✅ `Refresh_WithValidToken_ReturnsOkWithSuccess` - Successfully refreshes token
-- ✅ `Refresh_WithNonExistingToken_ReturnsNotFound` - Returns 404 for missing token
-- ✅ `Refresh_WithMissingProviderConfig_ReturnsBadRequest` - Requires provider configuration
-- ✅ `Refresh_WithProviderException_ReturnsBadRequest` - Handles provider errors
+### SandboxCredentialMappingsControllerTests (17 tests)
+Tests for sandbox credential mapping CRUD operations.
 
-**Delete Operations:**
-- ✅ `Delete_WithExistingToken_ReturnsNoContent` - Disconnects account
-- ✅ `Delete_WithNonExistingToken_ReturnsNotFound` - Returns 404 for missing token
+### AvailableCredentialsControllerTests (3 tests)
+Tests for listing available credentials.
 
-## Test Patterns
+### CredentialStoreGrpcServiceTests (2 tests)
+Tests for the gRPC credential store service.
 
-All tests follow consistent patterns:
+## Mocking Strategy
 
-1. **Arrange** - Set up mocks and test data
-2. **Act** - Call controller method
-3. **Assert** - Verify response type and content
+Each test class mocks only its controller's direct dependencies:
 
-### Mocking Strategy
-
-- `Mock<IOAuthFlowService>` - OAuth flow orchestration
-- `Mock<IOAuthProviderConfigService>` - Provider configuration management
-- `Mock<IOAuthTokenService>` - Token storage and retrieval
-- `Mock<IOAuthProviderFactory>` - Provider factory
-- `Mock<IIdentityContext>` - User context
-- `Mock<ILogger<T>>` - Logging
-
-### Test Naming Convention
-
-`MethodName_StateUnderTest_ExpectedBehavior`
-
-Examples:
-- `GetAuthorizationUrl_WithValidProvider_ReturnsOkWithUrl`
-- `Callback_WithStateMismatch_RedirectsWithError`
-- `Create_WithDuplicateProvider_ReturnsBadRequest`
+- **OAuthControllerTests**: `IOAuthFlowService`, `IIdentityContext`, `ILogger<OAuthController>`
+- **OAuthProviderConfigsControllerTests**: `IOAuthProviderConfigService`, `ILogger<OAuthProviderConfigsController>`
+- **OAuthTokensControllerTests**: `IOAuthTokenService`, `IOAuthProviderConfigService`, `IOAuthProviderFactory`, `IIdentityContext`, `ILogger<OAuthTokensController>`
 
 ## Running Tests
 
 ```bash
-# Run all OAuth controller tests
-dotnet test
-
-# Run with detailed output
-dotnet test --logger "console;verbosity=detailed"
+dotnet test test/credentials/DonkeyWork.Agents.Credentials.Api.Tests/
 
 # Run specific test class
 dotnet test --filter "FullyQualifiedName~OAuthControllerTests"
 ```
-
-## Test Coverage Summary
-
-- **Total Tests:** 43
-- **Passed:** 43 ✅
-- **Failed:** 0
-- **Coverage:** All public controller methods and error paths
-
-## Security Testing
-
-Tests verify security features:
-
-- ✅ PKCE code verifier generation and validation
-- ✅ State parameter CSRF protection
-- ✅ Cookie security attributes (HttpOnly, Secure, SameSite)
-- ✅ Token and secret masking in responses
-- ✅ User isolation via IIdentityContext
-- ✅ Error handling without information leakage

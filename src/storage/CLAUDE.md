@@ -2,7 +2,7 @@
 
 ## Module Overview
 
-This is a blob storage module following the modular monolith architecture. It uses SeaweedFS (S3-compatible) as the sole storage backend — there is no PostgreSQL metadata layer. S3 is the single source of truth for all file data.
+This is a blob storage module following the modular monolith architecture. It uses SeaweedFS (S3-compatible) as the storage backend with an optional filesystem-backed mode for user files. There is no PostgreSQL metadata layer.
 
 ## Object Key Scheme
 
@@ -15,16 +15,19 @@ This is a blob storage module following the modular monolith architecture. It us
 ## Project Responsibilities
 
 ### Contracts (`DonkeyWork.Agents.Storage.Contracts`)
-- Models: `UploadFileRequest`, `StorageUploadResult`, `FileItemV1`, `FileDownloadResult`, `PresignedUrlResult`, `S3ObjectInfo`, `S3ObjectMetadata`
-- Service interfaces: `IStorageService`, `IS3ClientWrapper`
+- Models: `UploadFileRequest`, `StorageUploadResult`, `FileItemV1`, `FileListingResponseV1`, `FileDownloadResult`, `PresignedUrlResult`, `S3ObjectInfo`, `S3ObjectMetadata`, `SkillItemV1`, `SkillUploadResultV1`, `SkillFileNodeV1`, `ReadFileResponseV1`, `WriteFileRequestV1`, `WriteFileResponseV1`, `RenameRequestV1`, `RenameResponseV1`, `DuplicateFileResponseV1`, `CreateFolderResponseV1`
+- Service interfaces: `IStorageService`, `IS3ClientWrapper`, `ISkillsService`
 
 ### Core (`DonkeyWork.Agents.Storage.Core`)
-- `StorageOptions` options class (ServiceUrl, PublicServiceUrl, AccessKey, SecretKey, DefaultBucket)
+- `StorageOptions` options class (ServiceUrl, PublicServiceUrl, AccessKey, SecretKey, DefaultBucket, UsePathStyleAddressing, DefaultPresignedUrlExpiry, FileSystemBasePath, UserFilesSubPath, SkillsSubPath)
 - `IS3ClientWrapper` / `S3ClientWrapper` for testable S3 abstraction
-- `StorageService` — file upload, download, list, delete, presigned URLs (all S3-native)
+- `StorageService` — file upload, download, list, delete, presigned URLs (S3 or filesystem-backed)
+- `SkillsService` — skill file management
+- `FileSystemPathHelper` — path construction for filesystem-backed storage
 
 ### Api (`DonkeyWork.Agents.Storage.Api`)
 - `FilesController` — filename-based file endpoints
+- `SkillsController` — skill file endpoints
 - `DependencyInjection.cs` with `AddStorageApi()` extension method
 
 ## Key Implementation Details
@@ -39,7 +42,7 @@ public interface IS3ClientWrapper
     Task UploadAsync(string bucket, string key, Stream content, string contentType, CancellationToken ct);
     Task<Stream> DownloadAsync(string bucket, string key, CancellationToken ct);
     Task DeleteAsync(string bucket, string key, CancellationToken ct);
-    Task<List<S3ObjectInfo>> ListObjectsAsync(string bucket, string prefix, string? delimiter, CancellationToken ct);
+    Task<(List<S3ObjectInfo> Objects, List<string> CommonPrefixes)> ListObjectsAsync(string bucket, string prefix, string? delimiter, CancellationToken ct);
     Task<S3ObjectMetadata?> GetObjectMetadataAsync(string bucket, string key, CancellationToken ct);
     Task DeleteByPrefixAsync(string bucket, string prefix, CancellationToken ct);
     string GetPreSignedUrl(string bucket, string key, TimeSpan expiry);

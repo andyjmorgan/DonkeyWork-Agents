@@ -33,7 +33,6 @@ public class HttpNodeProvider
         HttpRequestNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Resolve URL with template renderer
         var resolvedUrl = await _templateRenderer.RenderAsync(config.Url, cancellationToken);
 
         _logger.LogDebug("HTTP Request: {Method} {Url}", config.Method, resolvedUrl);
@@ -55,7 +54,6 @@ public class HttpNodeProvider
 
         var request = new HttpRequestMessage(httpMethod, resolvedUrl);
 
-        // Add headers
         if (config.Headers?.Items != null)
         {
             foreach (var header in config.Headers.Items)
@@ -65,7 +63,6 @@ public class HttpNodeProvider
             }
         }
 
-        // Add body if present
         if (!string.IsNullOrEmpty(config.Body))
         {
             var resolvedBody = await _templateRenderer.RenderAsync(config.Body, cancellationToken);

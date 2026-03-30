@@ -75,7 +75,6 @@ internal class PlaceholderAiClient : IAiClient
             Type = InternalContentBlockType.Text
         };
 
-        // Emit complete response at once (non-streaming)
         yield return new ModelResponseTextContent
         {
             BlockIndex = 0,

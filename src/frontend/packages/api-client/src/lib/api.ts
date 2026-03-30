@@ -288,7 +288,6 @@ export const orchestrations = {
   update: (id: string, data: CreateOrchestrationRequest) => fetchWithAuth(`/api/v1/orchestrations/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.json() as Promise<Orchestration>),
   delete: (id: string) => api.delete(`/api/v1/orchestrations/${id}`),
 
-  // Versions
   listVersions: (orchestrationId: string) => api.get<OrchestrationVersion[]>(`/api/v1/orchestrations/${orchestrationId}/versions`),
   getVersion: (orchestrationId: string, versionId: string) => api.get<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions/${versionId}`),
   saveVersion: (orchestrationId: string, data: SaveVersionRequest) => api.post<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions`, data),
@@ -358,18 +357,14 @@ export interface NodeExecution {
 
 // Execution API functions
 export const executions = {
-  // Execute orchestration (production)
   execute: async (orchestrationId: string, input: unknown, versionId?: string) =>
     api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/execute`, { input, versionId }),
 
-  // Test orchestration (playground)
   test: async (orchestrationId: string, input: unknown, versionId?: string) =>
     api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/test`, { input, versionId }),
 
-  // Get execution details
   get: (executionId: string) => api.get<OrchestrationExecution>(`/api/v1/orchestrations/executions/${executionId}`),
 
-  // List executions
   list: (orchestrationId?: string, offset = 0, limit = 20) => {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
     if (orchestrationId) params.append('orchestrationId', orchestrationId)
@@ -378,7 +373,6 @@ export const executions = {
     )
   },
 
-  // Get execution logs
   getLogs: (executionId: string, offset = 0, limit = 100) => {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
     return api.get<{ logs: ExecutionLog[], totalCount: number }>(
@@ -386,7 +380,6 @@ export const executions = {
     )
   },
 
-  // Get node executions (execution trace)
   getNodeExecutions: (executionId: string, offset = 0, limit = 100) => {
     const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
     return api.get<{ nodeExecutions: NodeExecution[], totalCount: number }>(
@@ -520,23 +513,19 @@ export interface RefreshTokenResponse {
 
 // OAuth API functions
 export const oauth = {
-  // Provider metadata
   getProviderMetadata: () => api.get<OAuthProviderMetadata[]>('/api/v1/oauth/configs/providers'),
 
-  // Provider configs
   listConfigs: () => api.get<OAuthProviderConfig[]>('/api/v1/oauth/configs'),
   getConfig: (id: string) => api.get<OAuthProviderConfigDetail>(`/api/v1/oauth/configs/${id}`),
   createConfig: (data: CreateOAuthProviderConfigRequest) => api.post<OAuthProviderConfig>('/api/v1/oauth/configs', data),
   updateConfig: (id: string, data: UpdateOAuthProviderConfigRequest) => api.post<OAuthProviderConfigDetail>(`/api/v1/oauth/configs/${id}`, data),
   deleteConfig: (id: string) => api.delete(`/api/v1/oauth/configs/${id}`),
 
-  // OAuth flow
   getAuthorizationUrl: (provider: OAuthProvider, scopes?: string[]) => {
     const params = scopes?.length ? `?${scopes.map(s => `scopes=${encodeURIComponent(s)}`).join('&')}` : ''
     return api.get<GetAuthorizationUrlResponse>(`/api/v1/oauth/${provider}/authorize${params}`)
   },
 
-  // Tokens
   listTokens: () => api.get<OAuthToken[]>('/api/v1/oauth/tokens'),
   getToken: (id: string) => api.get<OAuthTokenDetail>(`/api/v1/oauth/tokens/${id}`),
   getAccessToken: (id: string) => api.get<GetOAuthAccessTokenResponse>(`/api/v1/oauth/tokens/${id}/access-token`),
@@ -1088,46 +1077,36 @@ export const agentExecutions = {
 
 // Conversations API
 export const conversations = {
-  // List conversations (paginated, newest first)
   list: (offset = 0, limit = 20) =>
     api.get<PaginatedResponse<ConversationSummary>>(`/api/v1/conversations?offset=${offset}&limit=${limit}`),
 
-  // List Navi (agent-only) conversations
   listNavi: (offset = 0, limit = 10) =>
     api.get<PaginatedResponse<ConversationSummary>>(`/api/v1/conversations?agentOnly=true&offset=${offset}&limit=${limit}`),
 
-  // Create a new conversation
   create: (data: CreateConversationRequest) =>
     api.post<ConversationDetails>('/api/v1/conversations', data),
 
-  // Get conversation with all messages
   get: (id: string) =>
     api.get<ConversationDetails>(`/api/v1/conversations/${id}`),
 
-  // Update conversation title
   updateTitle: (id: string, data: UpdateConversationRequest) =>
     fetchWithAuth(`/api/v1/conversations/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data)
     }).then(r => r.json() as Promise<ConversationDetails>),
 
-  // Delete conversation
   delete: (id: string) =>
     api.delete(`/api/v1/conversations/${id}`),
 
-  // Bulk delete conversations
   bulkDelete: (ids: string[]) =>
     api.post<{ deletedCount: number }>('/api/v1/conversations/bulk-delete', { ids }),
 
-  // Send message (returns created user message - streaming happens via SSE)
   sendMessage: (conversationId: string, content: ContentPart[]) =>
     api.post<ConversationMessage>(`/api/v1/conversations/${conversationId}/messages`, { content }),
 
-  // Delete message
   deleteMessage: (conversationId: string, messageId: string) =>
     api.delete(`/api/v1/conversations/${conversationId}/messages/${messageId}`),
 
-  // Upload image for conversation
   uploadImage: async (conversationId: string, file: File): Promise<UploadImageResponse> => {
     const formData = new FormData()
     formData.append('file', file)
@@ -1176,13 +1155,11 @@ export interface StorageUploadResult {
 
 // Files API
 export const files = {
-  // List files
   list: (prefix?: string) => {
     const params = prefix ? `?prefix=${encodeURIComponent(prefix)}` : ''
     return api.get<FileListingResponse>(`/api/v1/files${params}`)
   },
 
-  // Upload file (multipart/form-data)
   upload: async (file: File): Promise<StorageUploadResult> => {
     const formData = new FormData()
     formData.append('file', file)
@@ -1203,11 +1180,9 @@ export const files = {
     return response.json()
   },
 
-  // Delete file
   delete: (fileName: string) =>
     api.delete(`/api/v1/files/${encodeURIComponent(fileName)}`),
 
-  // Download file (returns raw response for streaming)
   download: async (fileName: string): Promise<{ blob: Blob; fileName: string; contentType: string }> => {
     const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/${encodeURIComponent(fileName)}/download`)
     if (!response.ok) {
@@ -1217,7 +1192,6 @@ export const files = {
     const contentDisposition = response.headers.get('content-disposition')
     const contentType = response.headers.get('content-type') || 'application/octet-stream'
 
-    // Extract filename from content-disposition header
     let downloadFileName = fileName
     if (contentDisposition) {
       const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
@@ -1230,13 +1204,11 @@ export const files = {
     return { blob, fileName: downloadFileName, contentType }
   },
 
-  // Get presigned URL for a file (uses catch-all key route)
   getUrl: async (key: string): Promise<string> => {
     const data = await api.get<{ url: string; expiresAt: string }>(`/api/v1/files/url/${key}`)
     return data.url
   },
 
-  // Fetch file content as text (for markdown/text preview, uses catch-all key route)
   fetchText: async (key: string): Promise<string> => {
     const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/download/${key}`)
     if (!response.ok) {
@@ -1304,11 +1276,9 @@ export interface CreateFolderResponse {
 
 // Skills API
 export const skills = {
-  // List skills
   list: () =>
     api.get<SkillItem[]>('/api/v1/skills'),
 
-  // Upload skill zip (multipart/form-data)
   upload: async (file: File): Promise<SkillUploadResult> => {
     const formData = new FormData()
     formData.append('file', file)
@@ -1329,43 +1299,33 @@ export const skills = {
     return response.json()
   },
 
-  // Delete skill
   delete: (name: string) =>
     api.delete(`/api/v1/skills/${encodeURIComponent(name)}`),
 
-  // Get skill file tree contents
   getContents: (name: string) =>
     api.get<SkillFileNode[]>(`/api/v1/skills/${encodeURIComponent(name)}/contents`),
 
-  // Read a file's content
   readFile: (name: string, path: string) =>
     api.get<SkillFileContent>(`/api/v1/skills/${encodeURIComponent(name)}/files/${path}`),
 
-  // Write/update a file's content
   writeFile: (name: string, path: string, request: WriteFileRequest) =>
     api.put<WriteFileResponse>(`/api/v1/skills/${encodeURIComponent(name)}/files/${path}`, request),
 
-  // Delete a file
   deleteFile: (name: string, path: string) =>
     api.delete(`/api/v1/skills/${encodeURIComponent(name)}/files/${path}`),
 
-  // Rename a file or folder
   rename: (name: string, path: string, request: RenameRequest) =>
     api.post<RenameResponse>(`/api/v1/skills/${encodeURIComponent(name)}/rename/${path}`, request),
 
-  // Duplicate a file
   duplicateFile: (name: string, path: string) =>
     api.post<DuplicateFileResponse>(`/api/v1/skills/${encodeURIComponent(name)}/duplicate/${path}`, {}),
 
-  // Create a folder
   createFolder: (name: string, path: string) =>
     api.post<CreateFolderResponse>(`/api/v1/skills/${encodeURIComponent(name)}/folders/${path}`, {}),
 
-  // Delete a folder
   deleteFolder: (name: string, path: string) =>
     api.delete(`/api/v1/skills/${encodeURIComponent(name)}/folders/${path}`),
 
-  // Download skill as zip
   download: async (name: string): Promise<void> => {
     const response = await baseFetchWithAuth(
       `${getPlatformConfig().apiBaseUrl}/api/v1/skills/${encodeURIComponent(name)}/download`
@@ -1572,7 +1532,6 @@ export interface McpServerDetails {
   updatedAt?: string
 }
 
-// Create request types
 export interface CreateMcpEnvironmentVariableRequest {
   name: string
   value?: string

@@ -25,7 +25,6 @@ public static class DependencyInjection
         // Enable PII logging in development for debugging
         IdentityModelEventSource.ShowPII = true;
 
-        // Configure options with validation
         services.AddOptions<KeycloakOptions>()
             .BindConfiguration(KeycloakOptions.SectionName)
             .ValidateDataAnnotations()
@@ -35,14 +34,11 @@ public static class DependencyInjection
             .GetSection(KeycloakOptions.SectionName)
             .Get<KeycloakOptions>() ?? new KeycloakOptions();
 
-        // Register memory cache for identity caching
         services.AddMemoryCache();
 
-        // Register identity context (scoped)
         services.AddScoped<IdentityContext>();
         services.AddScoped<IIdentityContext>(sp => sp.GetRequiredService<IdentityContext>());
 
-        // Register HttpClientFactory for general use (e.g., AuthController)
         services.AddHttpClient();
 
         // Register Keycloak service with typed HttpClient (use internal URL to avoid hairpinning)
@@ -52,7 +48,6 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(keycloakBaseUrl.TrimEnd('/') + "/");
         });
 
-        // Configure authentication with both JWT Bearer and API Key
         services.AddAuthentication(options =>
             {
                 options.DefaultScheme = DefaultScheme;

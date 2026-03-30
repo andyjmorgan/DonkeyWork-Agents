@@ -33,7 +33,6 @@ public class OAuthControllerTests
             _identityContextMock.Object,
             _loggerMock.Object);
 
-        // Setup HttpContext
         _controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()

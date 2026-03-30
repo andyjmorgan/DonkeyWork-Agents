@@ -63,7 +63,6 @@ internal sealed class ToolMiddleware : IModelMiddleware
 
             context.CancellationToken.ThrowIfCancellationRequested();
 
-            // Yield responses and add results to context for the next LLM call
             foreach (var (toolCall, result, duration) in results)
             {
                 yield return new ToolResponseMessage

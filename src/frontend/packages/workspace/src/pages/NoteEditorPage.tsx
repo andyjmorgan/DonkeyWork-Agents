@@ -29,7 +29,6 @@ export function NoteEditorPage({ noteId, nav }: { noteId: string; nav: Workspace
       setTitle(noteData.title)
       setContent(noteData.content || '')
 
-      // Load project if note belongs to one
       if (noteData.projectId) {
         const projectData = await projects.get(noteData.projectId)
         setProject(projectData)

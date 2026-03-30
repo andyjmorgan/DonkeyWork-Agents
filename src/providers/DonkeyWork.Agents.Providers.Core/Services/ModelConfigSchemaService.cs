@@ -112,13 +112,11 @@ public sealed class ModelConfigSchemaService : IModelConfigSchemaService
                 continue;
             }
 
-            // Check capability requirements
             if (!HasRequiredCapabilities(property, model.Supports))
             {
                 continue;
             }
 
-            // Check if field is hidden via override
             if (model.ConfigOverrides != null &&
                 model.ConfigOverrides.TryGetValue(ToCamelCase(property.Name), out var fieldOverride) &&
                 fieldOverride.Hidden == true)
@@ -126,7 +124,6 @@ public sealed class ModelConfigSchemaService : IModelConfigSchemaService
                 continue;
             }
 
-            // Collect tab information
             var tabAttr = property.GetCustomAttribute<TabAttribute>();
             if (tabAttr != null && !tabsDict.ContainsKey(tabAttr.Name))
             {
@@ -192,17 +189,14 @@ public sealed class ModelConfigSchemaService : IModelConfigSchemaService
         var propertyType = GetPropertyTypeName(property.PropertyType);
         var isResolvable = IsResolvableType(property.PropertyType);
 
-        // Get override values if present
         FieldOverride? fieldOverride = null;
         overrides?.TryGetValue(fieldName, out fieldOverride);
 
-        // Build base schema from attributes
         double? min = null, max = null, step = null;
         object? defaultValue = null;
         IReadOnlyList<string>? options = null;
         IReadOnlyList<FieldDependency>? dependencies = null;
 
-        // Read ReliesUpon (new pattern)
         ReliesUponSchema? reliesUponSchema = null;
         if (reliesUponAttr != null)
         {
@@ -214,7 +208,6 @@ public sealed class ModelConfigSchemaService : IModelConfigSchemaService
             };
         }
 
-        // Read legacy DependsOn for backward compatibility
         var dependsOnAttrs = property.GetCustomAttributes<DependsOnAttribute>();
         if (dependsOnAttrs.Any())
         {
@@ -281,7 +274,6 @@ public sealed class ModelConfigSchemaService : IModelConfigSchemaService
             return true;
         }
 
-        // Check for arrays of Resolvable<T>
         if (underlyingType.IsArray)
         {
             var elementType = underlyingType.GetElementType();
@@ -367,20 +359,17 @@ public sealed class ModelConfigSchemaService : IModelConfigSchemaService
     {
         var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
-        // Unwrap Resolvable<T>
         if (underlyingType.IsGenericType &&
             underlyingType.GetGenericTypeDefinition() == typeof(Resolvable<>))
         {
             underlyingType = underlyingType.GetGenericArguments()[0];
         }
 
-        // Unwrap arrays
         if (underlyingType.IsArray)
         {
             var elementType = underlyingType.GetElementType();
             if (elementType != null)
             {
-                // Unwrap Resolvable<T> from array element type
                 if (elementType.IsGenericType &&
                     elementType.GetGenericTypeDefinition() == typeof(Resolvable<>))
                 {
@@ -402,7 +391,6 @@ public sealed class ModelConfigSchemaService : IModelConfigSchemaService
             return "string";
         }
 
-        // Check if it's an array
         var isArray = type.IsArray ||
                      (Nullable.GetUnderlyingType(type) ?? type).IsArray ||
                      (type.IsGenericType &&

@@ -99,7 +99,6 @@ public class ProjectsTools
         [Description("Completion notes (set when marking as Completed or Cancelled, omit to keep current)")] string? completionNotes = null,
         CancellationToken ct = default)
     {
-        // Fetch current project to merge with provided values
         var current = await _projectService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {

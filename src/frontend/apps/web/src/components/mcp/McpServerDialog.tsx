@@ -116,7 +116,6 @@ export function McpServerDialog({
 
   const isEditing = !!editingServer
 
-  // Load credentials and OAuth tokens when dialog opens
   useEffect(() => {
     if (open) {
       credentials.list().then(setAvailableCredentials).catch(() => {})
@@ -124,7 +123,6 @@ export function McpServerDialog({
     }
   }, [open])
 
-  // Reset form when dialog opens/closes or editing server changes
   useEffect(() => {
     if (open) {
       if (editingServer) {
@@ -175,7 +173,6 @@ export function McpServerDialog({
           }
         }
       } else {
-        // Reset to defaults for new server
         resetForm()
       }
     }

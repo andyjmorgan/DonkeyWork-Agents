@@ -128,7 +128,6 @@ internal sealed class OpenAiResponsesClient : IAiClient
 
                 // Response completed - final event with usage info
                 case StreamingResponseCompletedUpdate completed:
-                    // Emit usage information
                     if (completed.Response?.Usage is not null)
                     {
                         yield return new ModelResponseUsage
@@ -138,7 +137,6 @@ internal sealed class OpenAiResponsesClient : IAiClient
                         };
                     }
 
-                    // Emit stream end with appropriate reason
                     // If there were function calls, report ToolUse reason
                     var stopReason = hasFunctionCalls
                         ? InternalStopReason.ToolUse
@@ -209,12 +207,10 @@ internal sealed class OpenAiResponsesClient : IAiClient
         var contentIndex = 0;
         var hasFunctionCalls = false;
 
-        // Process output items
         foreach (var outputItem in result.OutputItems)
         {
             if (outputItem is MessageResponseItem messageItem)
             {
-                // Process text content
                 foreach (var contentPart in messageItem.Content)
                 {
                     if (contentPart.Kind == ResponseContentPartKind.OutputText && !string.IsNullOrEmpty(contentPart.Text))
@@ -248,7 +244,6 @@ internal sealed class OpenAiResponsesClient : IAiClient
             }
         }
 
-        // Emit usage
         if (result.Usage is not null)
         {
             yield return new ModelResponseUsage
@@ -258,7 +253,6 @@ internal sealed class OpenAiResponsesClient : IAiClient
             };
         }
 
-        // Emit stream end - if there were function calls, report ToolUse reason
         var stopReason = hasFunctionCalls
             ? InternalStopReason.ToolUse
             : MapStatus(result.Status, result.IncompleteStatusDetails);
@@ -346,7 +340,6 @@ internal sealed class OpenAiResponsesClient : IAiClient
             StoredOutputEnabled = false // Disable server-side conversation memory
         };
 
-        // Map provider parameters
         if (providerParameters is not null)
         {
             if (providerParameters.TryGetValue("temperature", out var temp))
@@ -359,7 +352,6 @@ internal sealed class OpenAiResponsesClient : IAiClient
                 options.TopP = Convert.ToSingle(topP);
         }
 
-        // Map tools
         if (tools is { Count: > 0 })
         {
             foreach (var tool in tools)

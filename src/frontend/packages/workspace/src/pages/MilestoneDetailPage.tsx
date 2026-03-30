@@ -73,7 +73,6 @@ export function MilestoneDetailPage({ projectId, milestoneId, nav }: { projectId
   const [statusValue, setStatusValue] = useState<MilestoneStatus>('NotStarted')
   const [dueDateValue, setDueDateValue] = useState('')
 
-  // Refresh states
   const [isRefreshingNotes, setIsRefreshingNotes] = useState(false)
   const [isRefreshingTasks, setIsRefreshingTasks] = useState(false)
 
@@ -299,7 +298,6 @@ export function MilestoneDetailPage({ projectId, milestoneId, nav }: { projectId
   const handleToggleTaskStatus = async (task: Task) => {
     try {
       if (task.status === 'Completed') {
-        // Toggle back to Pending
         await tasks.update(task.id, {
           title: task.title,
           description: task.description,
@@ -308,7 +306,6 @@ export function MilestoneDetailPage({ projectId, milestoneId, nav }: { projectId
           sortOrder: task.sortOrder,
         })
       } else {
-        // Delete the task when completing
         await tasks.delete(task.id)
       }
       await loadData()

@@ -54,7 +54,6 @@ export function OrchestrationEditorPage() {
   const [isPublishing, setIsPublishing] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
-  // Get input schema from start node
   const startNode = nodes.find(n => n.data?.nodeType === 'Start')
   const inputSchema = startNode ? (nodeConfigurations[startNode.id] as { inputSchema?: JSONSchema } | undefined)?.inputSchema : undefined
 
@@ -64,12 +63,10 @@ export function OrchestrationEditorPage() {
         setIsLoading(true)
 
         if (id) {
-          // Load existing orchestration
           const { orchestrations } = await import('@donkeywork/api-client')
           const orchestration = await orchestrations.get(id)
           const versions = await orchestrations.listVersions(id)
 
-          // Find draft version or use latest published
           const draftVersion = versions.find(v => v.isDraft)
           const currentVersion = draftVersion || versions.find(v => v.id === orchestration.currentVersionId)
 
@@ -86,7 +83,6 @@ export function OrchestrationEditorPage() {
               } : {})
             }
 
-            // Load the version data into the store
             await loadOrchestration(
               orchestration.id,
               orchestration.name,
@@ -275,7 +271,6 @@ export function OrchestrationEditorPage() {
       } : {})
     }
 
-    // Create a new draft by loading the version's data and marking as draft
     const store = useEditorStore.getState()
     store.loadOrchestration(
       orchestrationId!,

@@ -231,7 +231,6 @@ public class McpServersControllerTests : ControllerIntegrationTestBase
         await PostAsync<McpServerDetailsV1>(BaseUrl, TestDataBuilder.CreateMcpStdioServerRequest("User1 Server 1"));
         await PostAsync<McpServerDetailsV1>(BaseUrl, TestDataBuilder.CreateMcpStdioServerRequest("User1 Server 2"));
 
-        // Create servers as user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
         await PostAsync<McpServerDetailsV1>(BaseUrl, TestDataBuilder.CreateMcpStdioServerRequest("User2 Server 1"));

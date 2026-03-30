@@ -28,7 +28,6 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
         // Provide configuration values BEFORE options validation runs
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Add test configuration that will satisfy ValidateOnStart validation
             var testConfig = new Dictionary<string, string?>
             {
                 // Keycloak options (auth is replaced, but validation still runs)
@@ -69,17 +68,14 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
 
         builder.ConfigureTestServices(services =>
         {
-            // Remove the existing DbContext registration
             services.RemoveAll<DbContextOptions<AgentsDbContext>>();
             services.RemoveAll<AgentsDbContext>();
 
-            // Register test IdentityContext
             services.RemoveAll<IdentityContext>();
             services.RemoveAll<IIdentityContext>();
             services.AddScoped<IdentityContext>();
             services.AddScoped<IIdentityContext>(sp => sp.GetRequiredService<IdentityContext>());
 
-            // Add DbContext with TestContainers PostgreSQL
             services.AddDbContext<AgentsDbContext>((serviceProvider, options) =>
             {
                 options.UseNpgsql(_infrastructure.Postgres.ConnectionString, npgsqlOptions =>
@@ -88,7 +84,6 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 });
             });
 
-            // Remove all existing auth option configurations (JWT, API Key, McpAuth, MultiAuth)
             // to avoid "Scheme already exists" errors when re-registering
             services.RemoveAll<IConfigureOptions<AuthenticationOptions>>();
             services.RemoveAll<IPostConfigureOptions<AuthenticationOptions>>();

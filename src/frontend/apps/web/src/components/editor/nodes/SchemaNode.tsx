@@ -121,13 +121,8 @@ const defaultColorScheme = colorSchemes.violet
 export const SchemaNode = memo(({ id, data, selected }: NodeProps) => {
   const nodeData = data as unknown as SchemaNodeData
 
-  // Get icon from schema, default to Zap
   const Icon = iconMap[nodeData.icon || ''] || Zap
-
-  // Get color scheme from schema, default to violet
   const colors = colorSchemes[nodeData.color || ''] || defaultColorScheme
-
-  // Get behaviors from schema data (defaults to true if not specified)
   const canDelete = nodeData.canDelete !== false
   const hasInputHandle = nodeData.hasInputHandle !== false
   const hasOutputHandle = nodeData.hasOutputHandle !== false

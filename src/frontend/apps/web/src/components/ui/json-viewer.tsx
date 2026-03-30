@@ -12,7 +12,6 @@ export function JsonViewer({ data, collapsed = 2, name = false, className }: Jso
   const { theme } = useThemeStore()
   const isDark = theme === 'dark'
 
-  // Parse string data if needed
   let parsedData = data
   if (typeof data === 'string') {
     try {
@@ -23,7 +22,6 @@ export function JsonViewer({ data, collapsed = 2, name = false, className }: Jso
     }
   }
 
-  // Handle null/undefined
   if (parsedData === null || parsedData === undefined) {
     return (
       <div className={`text-sm text-muted-foreground ${className}`}>

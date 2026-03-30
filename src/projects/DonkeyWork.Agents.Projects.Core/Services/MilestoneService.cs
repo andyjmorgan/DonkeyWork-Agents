@@ -68,7 +68,6 @@ public class MilestoneService : IMilestoneService
 
         _dbContext.Milestones.Add(milestone);
 
-        // Add tags
         if (request.Tags?.Any() == true)
         {
             foreach (var tag in request.Tags)
@@ -86,7 +85,6 @@ public class MilestoneService : IMilestoneService
             }
         }
 
-        // Add file references
         if (request.FileReferences?.Any() == true)
         {
             foreach (var fileRef in request.FileReferences)
@@ -110,7 +108,6 @@ public class MilestoneService : IMilestoneService
 
         _logger.LogInformation("Created milestone {MilestoneId}", milestoneId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.MilestoneCreated,
@@ -186,7 +183,6 @@ public class MilestoneService : IMilestoneService
         milestone.SortOrder = request.SortOrder;
         milestone.UpdatedAt = now;
 
-        // Set completed timestamp when moving to terminal status
         if (!wasTerminal && isNowTerminal)
         {
             milestone.CompletedAt = now;
@@ -196,7 +192,6 @@ public class MilestoneService : IMilestoneService
             milestone.CompletedAt = null;
         }
 
-        // Update tags - remove existing and add new
         _dbContext.MilestoneTags.RemoveRange(milestone.Tags);
         if (request.Tags?.Any() == true)
         {
@@ -215,7 +210,6 @@ public class MilestoneService : IMilestoneService
             }
         }
 
-        // Update file references - remove existing and add new
         _dbContext.MilestoneFileReferences.RemoveRange(milestone.FileReferences);
         if (request.FileReferences?.Any() == true)
         {
@@ -240,7 +234,6 @@ public class MilestoneService : IMilestoneService
 
         _logger.LogInformation("Updated milestone {MilestoneId}", milestoneId);
 
-        // Send notification (fire-and-forget)
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
             ? $"'{request.Name}' is now {FormatStatus(request.Status)}"
@@ -255,7 +248,6 @@ public class MilestoneService : IMilestoneService
             ParentId = milestone.ProjectId
         });
 
-        // Send typed notification when milestone status changed to Completed
         if (statusChanged && newStatus == Persistence.Entities.Projects.MilestoneStatus.Completed)
         {
             var projectName = await _dbContext.Projects
@@ -304,7 +296,6 @@ public class MilestoneService : IMilestoneService
 
         _logger.LogInformation("Deleted milestone {MilestoneId}", milestoneId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.MilestoneDeleted,

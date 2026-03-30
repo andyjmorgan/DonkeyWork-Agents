@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY: 192.168.0.140:5555
+  REGISTRY: ${{ vars.DOCKER_REGISTRY }}
   BACKEND_IMAGE: donkeywork-agents/api
   FRONTEND_IMAGE: donkeywork-agents/frontend
   SANDBOX_MANAGER_IMAGE: donkeywork-agents/sandbox-manager
@@ -124,12 +124,12 @@ jobs:
         run: |
           if [ "${{ needs.changes.outputs.sandbox-executor-base }}" == "true" ]; then
             echo "Dockerfile.base changed, building locally..."
-            docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+            docker build -t ${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
           else
             echo "Pulling base image from Nexus..."
-            docker pull 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest || {
+            docker pull ${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest || {
               echo "Pull failed, building locally as fallback..."
-              docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+              docker build -t ${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
             }
           fi
 
@@ -388,12 +388,12 @@ jobs:
         run: |
           if [ "${{ needs.changes.outputs.sandbox-executor-base }}" == "true" ]; then
             echo "Dockerfile.base changed, building locally..."
-            docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+            docker build -t ${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
           else
             echo "Pulling base image from Nexus..."
-            docker pull 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest || {
+            docker pull ${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest || {
               echo "Pull failed, building locally as fallback..."
-              docker build -t 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
+              docker build -t ${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile.base .
             }
           fi
 
@@ -436,7 +436,7 @@ jobs:
 
       - name: Push Executor Base Image
         if: github.event_name != 'pull_request' && needs.changes.outputs.sandbox-executor-base == 'true'
-        run: docker push 192.168.0.140:5555/donkeywork-agents/codesandbox-executor-base:latest
+        run: docker push ${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest
 
   build-sandbox-authproxy:
     name: Build Sandbox AuthProxy Docker Image

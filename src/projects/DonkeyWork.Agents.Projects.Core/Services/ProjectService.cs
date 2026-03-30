@@ -52,7 +52,6 @@ public class ProjectService : IProjectService
 
         _dbContext.Projects.Add(project);
 
-        // Add tags
         if (request.Tags?.Any() == true)
         {
             foreach (var tag in request.Tags)
@@ -70,7 +69,6 @@ public class ProjectService : IProjectService
             }
         }
 
-        // Add file references
         if (request.FileReferences?.Any() == true)
         {
             foreach (var fileRef in request.FileReferences)
@@ -94,7 +92,6 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Created project {ProjectId}", projectId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.ProjectCreated,
@@ -168,7 +165,6 @@ public class ProjectService : IProjectService
         project.CompletionNotes = request.CompletionNotes;
         project.UpdatedAt = now;
 
-        // Set completed timestamp when moving to terminal status
         if (!wasTerminal && isNowTerminal)
         {
             project.CompletedAt = now;
@@ -178,7 +174,6 @@ public class ProjectService : IProjectService
             project.CompletedAt = null;
         }
 
-        // Update tags - remove existing and add new
         _dbContext.ProjectTags.RemoveRange(project.Tags);
         if (request.Tags?.Any() == true)
         {
@@ -197,7 +192,6 @@ public class ProjectService : IProjectService
             }
         }
 
-        // Update file references - remove existing and add new
         _dbContext.ProjectFileReferences.RemoveRange(project.FileReferences);
         if (request.FileReferences?.Any() == true)
         {
@@ -222,7 +216,6 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Updated project {ProjectId}", projectId);
 
-        // Send notification (fire-and-forget)
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
             ? $"'{request.Name}' is now {FormatStatus(request.Status)}"
@@ -266,7 +259,6 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Deleted project {ProjectId}", projectId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.ProjectDeleted,

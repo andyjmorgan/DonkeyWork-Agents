@@ -53,12 +53,10 @@ export function CreateCredentialDialog({
 
       const response = await credentials.create(requestBody)
 
-      // Reset form
       setName('')
       setApiKey('')
       setProvider(defaultProvider || 'OpenAi')
 
-      // Notify parent and close
       onCreated?.(response.id)
       onOpenChange(false)
     } catch (err) {
@@ -100,7 +98,6 @@ export function CreateCredentialDialog({
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      // Reset form when closing
       setName('')
       setApiKey('')
       setProvider(defaultProvider || 'OpenAi')

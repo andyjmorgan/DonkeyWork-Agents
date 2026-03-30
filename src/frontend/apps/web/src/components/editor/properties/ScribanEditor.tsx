@@ -145,7 +145,6 @@ export function ScribanEditor({
       const textToInsert = item.hasChildren ? item.insertText + '.' : item.insertText
       const newValue = value.substring(0, replaceFrom) + textToInsert + after
 
-      // Set pending cursor position before triggering onChange
       pendingCursorRef.current = replaceFrom + textToInsert.length
       onChange(newValue)
     }
@@ -169,7 +168,6 @@ export function ScribanEditor({
     }
   }, [showSuggestions, suggestions, selectedIndex, insertSuggestion])
 
-  // Set cursor position after value changes from suggestion insertion
   useEffect(() => {
     if (pendingCursorRef.current !== null && textareaRef.current) {
       const pos = pendingCursorRef.current
@@ -186,7 +184,6 @@ export function ScribanEditor({
     checkForSuggestions()
   }, [value, checkForSuggestions])
 
-  // Render text with highlighted Scriban expressions
   const renderHighlightedText = useMemo(() => {
     if (!value) return null
 
@@ -196,7 +193,6 @@ export function ScribanEditor({
     let match
 
     while ((match = regex.exec(value)) !== null) {
-      // Add text before the match
       if (match.index > lastIndex) {
         parts.push(
           <span key={`text-${lastIndex}`} className="text-foreground">
@@ -204,7 +200,6 @@ export function ScribanEditor({
           </span>
         )
       }
-      // Add the highlighted match
       parts.push(
         <span key={`expr-${match.index}`} className="text-cyan-400">
           {match[0]}
@@ -213,7 +208,6 @@ export function ScribanEditor({
       lastIndex = match.index + match[0].length
     }
 
-    // Add remaining text
     if (lastIndex < value.length) {
       parts.push(
         <span key={`text-${lastIndex}`} className="text-foreground">

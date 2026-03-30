@@ -158,7 +158,6 @@ public class OAuthTokensController : ControllerBase
 
         try
         {
-            // Check if the token has a refresh token
             if (string.IsNullOrEmpty(token.RefreshToken))
             {
                 return BadRequest(new RefreshTokenResponseV1
@@ -168,7 +167,6 @@ public class OAuthTokensController : ControllerBase
                 });
             }
 
-            // Get provider config
             var config = await _configService.GetByProviderAsync(_identityContext.UserId, token.Provider, cancellationToken);
             if (config == null)
             {
@@ -179,22 +177,18 @@ public class OAuthTokensController : ControllerBase
                 });
             }
 
-            // Get provider instance (pass config for custom providers)
             var provider = _providerFactory.GetProvider(token.Provider, config);
 
-            // Refresh token
             var tokenResponse = await provider.RefreshTokenAsync(
                 token.RefreshToken,
                 config.ClientId,
                 config.ClientSecret,
                 cancellationToken);
 
-            // Calculate new expiration (null means the token does not expire)
             DateTimeOffset? newExpiresAt = tokenResponse.ExpiresIn.HasValue
                 ? DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn.Value)
                 : null;
 
-            // Update stored token
             await _tokenService.RefreshTokenAsync(
                 id,
                 tokenResponse.AccessToken,

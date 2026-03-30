@@ -47,7 +47,6 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
             return AuthenticateResult.NoResult();
         }
 
-        // Validate API key and get user ID
         var userId = await _apiKeyService.ValidateAsync(apiKey);
         if (userId == null)
         {
@@ -59,7 +58,6 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         var cacheKey = $"identity:{userId}";
         if (!_cache.TryGetValue<CachedIdentity>(cacheKey, out var cachedIdentity))
         {
-            // Fetch from Keycloak - we need an admin token or service account for this
             // For now, we'll create a minimal identity with just the user ID
             // In production, you'd use Keycloak Admin API to get user details
             cachedIdentity = new CachedIdentity
@@ -85,7 +83,6 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
             cachedIdentity.Name,
             cachedIdentity.Username);
 
-        // Create claims principal
         var claims = new List<Claim>
         {
             new("sub", cachedIdentity.UserId.ToString()),

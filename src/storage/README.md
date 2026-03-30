@@ -1,18 +1,14 @@
 # Storage Module
 
-Blob storage module for the DonkeyWork-Agents modular monolith using **SeaweedFS** as the S3-compatible storage backend with PostgreSQL for metadata tracking.
+Blob storage module for the DonkeyWork-Agents modular monolith using **SeaweedFS** as the S3-compatible storage backend. There is no PostgreSQL metadata layer -- S3 is the single source of truth for file data. An optional filesystem-backed mode is available for user files.
 
 ## Module Structure
 
 ```
 src/storage/
-├── DonkeyWork.Agents.Storage.Contracts/   # Entities, Interfaces, DTOs, Enums
-├── DonkeyWork.Agents.Storage.Core/        # Service implementations
+├── DonkeyWork.Agents.Storage.Contracts/   # Models, DTOs, service interfaces
+├── DonkeyWork.Agents.Storage.Core/        # Service implementations, options
 └── DonkeyWork.Agents.Storage.Api/         # Controllers, DI registration
-
-src/common/DonkeyWork.Agents.Persistence/
-├── Configurations/Storage/                # EF Fluent API configurations
-└── Repositories/Storage/                  # Repository implementations
 ```
 
 ## Storage Backend
@@ -22,59 +18,24 @@ src/common/DonkeyWork.Agents.Persistence/
 - Lightweight, suitable for dev and small-scale production
 - Docker: `docker run -d -p 9333:9333 -p 8333:8333 chrislusf/seaweedfs server -s3`
 
-## Database Entities
+## Object Key Scheme
 
-Entities are defined in `Storage.Contracts` with EF configuration via Fluent API in the shared Persistence project.
-
-### StoredFile
-Tracks file metadata and S3 object references.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID | PK, gen_random_uuid() |
-| file_name | VARCHAR(500) | Original filename |
-| content_type | VARCHAR(255) | MIME type |
-| size_bytes | BIGINT | File size |
-| bucket_name | VARCHAR(255) | S3 bucket |
-| object_key | VARCHAR(1024) | S3 key, unique |
-| checksum_sha256 | VARCHAR(64) | Integrity check |
-| status | INT | Active/MarkedForDeletion/Deleted |
-| created_at_utc | TIMESTAMPTZ | |
-| marked_for_deletion_at_utc | TIMESTAMPTZ | Soft delete timestamp |
-| deleted_at_utc | TIMESTAMPTZ | Hard delete timestamp |
-| owner_id | UUID | Optional owner reference |
-| metadata | JSONB | Flexible attributes |
-
-### FileShare
-Manages shareable links with expiration and optional password protection.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID | PK |
-| file_id | UUID | FK → stored_files |
-| share_token | VARCHAR(128) | Unique, cryptographic |
-| expires_at_utc | TIMESTAMPTZ | Default: 24 hours |
-| status | INT | Active/Expired/Revoked |
-| created_at_utc | TIMESTAMPTZ | |
-| max_downloads | INT | Optional limit |
-| download_count | INT | |
-| password_hash | VARCHAR(255) | BCrypt, optional |
+- **User files**: `{userId}/{filename}` (flat per-user namespace)
+- **Conversation images**: `{userId}/conversations/{convId}/{filename}`
+- File identifier is the filename, not a UUID
+- Uploading the same filename overwrites the existing file
+- Hard delete only
 
 ## API Endpoints
 
-### Files (`/api/storage/files`)
-- `POST /` - Upload file (multipart/form-data)
-- `GET /{id}` - Get file metadata
-- `GET /{id}/download` - Download file
-- `GET ?ownerId={guid}` - List files by owner
-- `DELETE /{id}` - Soft delete file
-
-### Shares (`/api/storage/shares`)
-- `POST /` - Create share link (returns presigned URL)
-- `GET /{token}` - Get share metadata
-- `GET /{token}/download` - Download via share (anonymous)
-- `GET /file/{fileId}` - List shares for file
-- `DELETE /{shareId}` - Revoke share
+### Files (`/api/v1/files`)
+- `GET /` - List files and folders for the current user
+- `POST /` - Upload file (multipart/form-data, 100MB limit)
+- `GET /{filename}/download` - Download by filename
+- `GET /{filename}/url` - Presigned URL by filename
+- `DELETE /{filename}` - Delete by filename
+- `GET /download/{**key}` - Download by path key (conversation images)
+- `GET /url/{**key}` - Presigned URL by path key
 
 ## Configuration
 
@@ -82,35 +43,21 @@ Add to `appsettings.json`:
 
 ```json
 {
-  "ConnectionStrings": {
-    "StorageDb": "Host=localhost;Database=donkeywork_storage;Username=postgres;Password=postgres"
-  },
   "Storage": {
     "ServiceUrl": "http://localhost:8333",
     "AccessKey": "admin",
     "SecretKey": "admin",
     "DefaultBucket": "files",
-    "DefaultShareExpiry": "1.00:00:00",
-    "FileDeletionGracePeriod": "30.00:00:00",
-    "UsePathStyleAddressing": true
+    "UsePathStyleAddressing": true,
+    "PublicServiceUrl": null,
+    "FileSystemBasePath": null,
+    "UserFilesSubPath": "files",
+    "SkillsSubPath": "skills"
   }
 }
 ```
 
-## Docker Compose
-
-Add SeaweedFS to your docker-compose.yml:
-
-```yaml
-seaweedfs:
-  image: chrislusf/seaweedfs
-  command: server -s3
-  ports:
-    - "9333:9333"  # Master
-    - "8333:8333"  # S3 API
-  volumes:
-    - seaweedfs_data:/data
-```
+When `FileSystemBasePath` is set, user files are stored on the filesystem instead of S3.
 
 ## Registration
 

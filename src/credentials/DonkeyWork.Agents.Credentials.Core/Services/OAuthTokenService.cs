@@ -75,13 +75,11 @@ public sealed class OAuthTokenService : IOAuthTokenService
     {
         var scopesList = scopes.ToList();
 
-        // Check if a token already exists for this provider
         var existing = await _dbContext.OAuthTokens
             .FirstOrDefaultAsync(e => e.UserId == userId && e.Provider == provider, cancellationToken);
 
         if (existing != null)
         {
-            // Update existing token
             existing.ExternalUserId = externalUserId;
             existing.Email = email;
             existing.AccessTokenEncrypted = Encrypt(accessToken);
@@ -95,7 +93,6 @@ public sealed class OAuthTokenService : IOAuthTokenService
             return ToModel(existing);
         }
 
-        // Create new token
         var entity = new OAuthTokenEntity
         {
             UserId = userId,

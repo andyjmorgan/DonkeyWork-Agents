@@ -7,13 +7,14 @@ Grain implementations, AI provider abstraction, and middleware pipeline for agen
 The pipeline uses a right-to-left fold composition pattern. Each middleware wraps the next, forming a chain:
 
 ```
-Exception -> Tool -> Guardrails -> Accumulator -> Provider
+Exception -> Tool -> Guardrails -> Accumulator -> UsageTracking -> Provider
 ```
 
 - **ExceptionMiddleware** (outermost) — catches exceptions from inner pipeline, yields `ErrorMessage`
 - **ToolMiddleware** — agentic tool loop with eager parallel execution (max 25 iterations)
 - **GuardrailsMiddleware** — pass-through stub for future content filtering
 - **AccumulatorMiddleware** — accumulates streamed content blocks into `InternalAssistantMessage`
+- **UsageTrackingMiddleware** — tracks token usage from provider responses
 - **ProviderMiddleware** (terminal) — calls `IAiProviderFactory` to get a provider and stream completions
 
 `ModelPipeline` builds the chain via `ActivatorUtilities.CreateInstance` and folds right-to-left so `ExceptionMiddleware.ExecuteAsync` is called first, with each middleware receiving a `next` delegate pointing to the middleware below it.

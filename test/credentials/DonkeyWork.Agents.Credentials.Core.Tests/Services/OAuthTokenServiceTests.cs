@@ -85,7 +85,6 @@ public class OAuthTokenServiceTests : IDisposable
         var externalUserId = "ext_456";
         var email = "user@microsoft.com";
 
-        // Create initial token
         await _service.StoreTokenAsync(
             _userId,
             provider,

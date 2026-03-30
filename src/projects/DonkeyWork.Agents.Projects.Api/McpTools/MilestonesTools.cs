@@ -112,7 +112,6 @@ public class MilestonesTools
         [Description("New sort order for display (omit to keep current)")] int? sortOrder = null,
         CancellationToken ct = default)
     {
-        // Fetch current milestone to merge with provided values
         var current = await _milestoneService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {

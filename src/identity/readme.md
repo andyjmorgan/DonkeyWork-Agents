@@ -19,9 +19,13 @@ identity/
 │       ├── IdentityContext.cs
 │       └── KeycloakService.cs
 └── DonkeyWork.Agents.Identity.Api/
+    ├── Authentication/
+    │   └── ApiKeyAuthenticationHandler.cs  # API key auth scheme
     ├── Controllers/
     │   ├── AuthController.cs      # OAuth2 + PKCE test flow
     │   └── MeController.cs        # Get authenticated user
+    ├── McpTools/
+    │   └── IdentityTools.cs       # MCP tool for identity lookup
     ├── Options/
     │   └── KeycloakOptions.cs
     └── DependencyInjection.cs

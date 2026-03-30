@@ -4,9 +4,9 @@ This module manages LLM provider definitions, model catalogs, and provider clien
 
 ## Supported Providers
 
-- **OpenAI**: GPT-5, GPT-5 mini, GPT-5 nano, GPT Image 1.5, GPT-4o mini TTS, Sora 2
-- **Anthropic**: Claude Opus 4.5, Claude Sonnet 4.5, Claude Haiku 4.5
-- **Google**: Gemini 2.5 Pro/Flash, Gemini 3 Pro/Flash, Veo 3.1
+- **OpenAI**: GPT-5, GPT-5 mini, GPT-5 nano
+- **Anthropic**: Claude Opus 4.6, Claude Sonnet 4.6, Claude Haiku 4.5
+- **Google**: Gemini 2.5 Pro/Flash, Gemini 3 Pro/Flash
 
 ## Provider Client Types
 
@@ -14,11 +14,11 @@ Models are categorized by their input/output capabilities:
 
 | Client Type | Input | Output | Examples |
 |-------------|-------|--------|----------|
-| MultimodalInput | Text, Image, Audio | Text | GPT-5, Claude 4.5, Gemini |
+| MultimodalInput | Text, Image, Audio | Text | GPT-5, Claude 4.6, Gemini |
 | MultimodalDuplex | Text, Image, Audio | Text, Image | Gemini models |
-| ImageOutput | Text, Image | Image | GPT Image 1.5 |
-| AudioOutput | Text | Audio | GPT-4o mini TTS |
-| VideoOutput | Text, Image | Video + Audio | Sora 2, Veo 3.1 |
+| ImageOutput | Text, Image | Image | (no models yet) |
+| AudioOutput | Text | Audio | (no models yet) |
+| VideoOutput | Text, Image | Video + Audio | (no models yet) |
 
 ## Model Catalog
 
@@ -27,7 +27,7 @@ Models are defined in `Data/models.json` with the following structure:
 - `id`: Unique model identifier
 - `name`: Display name
 - `provider`: OpenAI, Anthropic, or Google
-- `mode`: Chat, ImageGeneration, AudioGeneration, VideoGeneration
+- `mode`: Chat, Embedding, ImageGeneration, AudioGeneration, AudioTranscription, VideoGeneration
 - `max_input_tokens`: Maximum input context window
 - `max_output_tokens`: Maximum output tokens
 - `input_cost_per_million_tokens`: Cost per 1M input tokens

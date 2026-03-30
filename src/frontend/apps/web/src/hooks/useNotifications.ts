@@ -87,7 +87,6 @@ export function useNotifications(
       return
     }
 
-    // Clean up existing connection
     if (connectionRef.current) {
       try {
         await connectionRef.current.stop()
@@ -101,7 +100,6 @@ export function useNotifications(
     const connection = new HubConnectionBuilder()
       .withUrl(HUB_URL, {
         accessTokenFactory: () => {
-          // Get fresh token each time (in case it was refreshed)
           const currentToken = useAuthStore.getState().accessToken
           return currentToken ?? ''
         },
@@ -120,7 +118,6 @@ export function useNotifications(
       .configureLogging(LogLevel.Warning)
       .build()
 
-    // Set up event handlers
     connection.on('ReceiveNotification', (notification: WorkspaceNotification) => {
       console.log('[Notifications] Received:', notification.type, notification.entityId)
       onNotificationRef.current?.(notification)
@@ -176,7 +173,6 @@ export function useNotifications(
     }
 
     return () => {
-      // Cleanup on unmount
       if (connectionRef.current) {
         connectionRef.current.stop().catch(() => {
           // Ignore cleanup errors

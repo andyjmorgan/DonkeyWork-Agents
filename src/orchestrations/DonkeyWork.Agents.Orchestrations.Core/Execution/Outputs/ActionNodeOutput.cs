@@ -17,7 +17,6 @@ public sealed class ActionNodeOutput : NodeOutput
 
     public override string ToMessageOutput()
     {
-        // Convert the result to a JSON string for downstream nodes
         return System.Text.Json.JsonSerializer.Serialize(Result);
     }
 }

@@ -32,7 +32,6 @@ public class OrchestrationService : IOrchestrationService
         var startNodeId = Guid.NewGuid();
         var endNodeId = Guid.NewGuid();
 
-        // Create default template: Start -> End
         var defaultInputSchema = JsonDocument.Parse("""
             {
                 "type": "object",
@@ -206,14 +205,12 @@ public class OrchestrationService : IOrchestrationService
 
     public async Task<IReadOnlyList<ChatEnabledOrchestrationV1>> ListChatEnabledAsync(CancellationToken cancellationToken = default)
     {
-        // Get all orchestrations with their current (published) version
         var orchestrations = await _dbContext.Orchestrations
             .AsNoTracking()
             .Include(o => o.CurrentVersion)
             .Where(o => o.CurrentVersionId != null)
             .ToListAsync(cancellationToken);
 
-        // Filter to those with ChatInterfaceConfig and map to response
         return orchestrations
             .Where(o => o.CurrentVersion?.Interface is ChatInterfaceConfig)
             .Select(o => new ChatEnabledOrchestrationV1

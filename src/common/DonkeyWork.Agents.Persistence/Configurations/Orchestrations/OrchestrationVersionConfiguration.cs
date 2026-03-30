@@ -169,7 +169,6 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        // Check if this is the new format (has "type" discriminator)
         if (root.TryGetProperty("type", out _))
         {
             return JsonSerializer.Deserialize<InterfaceConfig>(json, InterfaceJsonOptions)

@@ -153,7 +153,6 @@ public class TlsMitmHandler
                     continue;
                 }
 
-                // Combine pending data with newly read bytes
                 byte[] workingData;
                 if (pendingData.Length > 0)
                 {
@@ -184,11 +183,9 @@ public class TlsMitmHandler
                         // === AUDIT: Log the request ===
                         LogAuditMessage(host, "REQUEST", requestCount, headerText, headersToInject);
 
-                        // Write original headers up to the blank line
                         await destination.WriteAsync(
                             workingData.AsMemory(offset, markerIdx - offset), cancellationToken);
 
-                        // Inject headers if configured
                         if (injectionBytes.Length > 0)
                         {
                             await destination.WriteAsync(
@@ -326,7 +323,6 @@ public class TlsMitmHandler
                         // === AUDIT: Log the response ===
                         LogAuditMessage(host, "RESPONSE", responseCount, headerText, null);
 
-                        // Forward response headers verbatim (including the \r\n\r\n)
                         await destination.WriteAsync(
                             workingData.AsMemory(offset, markerIdx - offset + headerEndMarker.Length),
                             cancellationToken);
@@ -404,7 +400,6 @@ public class TlsMitmHandler
         _logger.LogInformation("[AUDIT] {Direction} #{Num} {Host} | {StatusLine}",
             direction, messageNum, host, lines[0]);
 
-        // Log each header with sensitive value redaction
         for (var i = 1; i < lines.Length; i++)
         {
             var colonIdx = lines[i].IndexOf(':');
@@ -415,7 +410,6 @@ public class TlsMitmHandler
             _logger.LogInformation("[AUDIT]   {Name}: {Value}", name, RedactIfSensitive(name, value));
         }
 
-        // Log injected headers (if any)
         if (injectedHeaders is { Count: > 0 })
         {
             foreach (var (name, value) in injectedHeaders)

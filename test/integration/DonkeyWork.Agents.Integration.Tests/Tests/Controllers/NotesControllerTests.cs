@@ -290,7 +290,6 @@ public class NotesControllerTests : ControllerIntegrationTestBase
         SetTestUser(user1);
         await PostAsync<NoteV1>(BaseUrl, TestDataBuilder.CreateNoteRequest("User1 Note"));
 
-        // Create notes for user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
         await PostAsync<NoteV1>(BaseUrl, TestDataBuilder.CreateNoteRequest("User2 Note"));

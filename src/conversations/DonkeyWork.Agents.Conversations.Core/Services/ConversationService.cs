@@ -182,7 +182,6 @@ public class ConversationService : IConversationService
             return false;
         }
 
-        // Delete associated images from S3
         await _storageService.DeleteByPrefixAsync(
             $"conversations/{conversationId}",
             cancellationToken);
@@ -208,7 +207,6 @@ public class ConversationService : IConversationService
             return 0;
         }
 
-        // Delete associated images from S3 for each conversation
         foreach (var conversation in conversations)
         {
             await _storageService.DeleteByPrefixAsync(
@@ -252,7 +250,6 @@ public class ConversationService : IConversationService
 
         _dbContext.ConversationMessages.Add(message);
 
-        // Update conversation timestamp
         conversation.UpdatedAt = now;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -303,10 +300,8 @@ public class ConversationService : IConversationService
             return null;
         }
 
-        // Get file size
         var fileSize = fileStream.Length;
 
-        // Validate image
         var validationResult = await _imageValidationService.ValidateAsync(contentType, fileSize, fileStream);
 
         if (!validationResult.IsValid)
@@ -314,7 +309,6 @@ public class ConversationService : IConversationService
             throw new InvalidOperationException(validationResult.ErrorMessage);
         }
 
-        // Reset stream position after validation
         if (fileStream.CanSeek)
         {
             fileStream.Position = 0;
@@ -331,7 +325,6 @@ public class ConversationService : IConversationService
 
         var result = await _storageService.UploadAsync(uploadRequest, cancellationToken);
 
-        // Return the relative key (strip the userId prefix)
         var relativeKey = result.ObjectKey;
         var userPrefix = $"{_identityContext.UserId}/";
         if (relativeKey.StartsWith(userPrefix))

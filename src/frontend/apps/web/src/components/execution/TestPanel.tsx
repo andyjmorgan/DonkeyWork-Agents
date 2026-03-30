@@ -8,7 +8,6 @@ interface TestPanelProps {
   inputSchema?: JSONSchema
 }
 
-// Generate example JSON from schema
 function generateExampleFromSchema(schema: JSONSchema): Record<string, unknown> {
   if (!schema || schema.type !== 'object') {
     return {}
@@ -54,7 +53,6 @@ export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
 
 // Direct JSON test interface (non-streaming)
 function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: string; inputSchema?: JSONSchema }) {
-  // Initialize input from schema if available
   const initialInput = useMemo(() => {
     if (inputSchema) {
       return JSON.stringify(generateExampleFromSchema(inputSchema), null, 2)
@@ -68,7 +66,6 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionStatus, setExecutionStatus] = useState<'Completed' | 'Failed' | null>(null)
 
-  // Update input when schema changes (for subsequent schema loads)
   const prevInputSchemaRef = useRef(inputSchema)
   useLayoutEffect(() => {
     if (inputSchema && prevInputSchemaRef.current !== inputSchema) {

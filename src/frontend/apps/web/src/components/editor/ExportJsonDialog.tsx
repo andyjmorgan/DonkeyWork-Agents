@@ -47,7 +47,6 @@ export function ExportJsonDialog({
     URL.revokeObjectURL(url)
   }
 
-  // Parse JSON for the viewer
   let parsedJson: unknown = null
   try {
     parsedJson = JSON.parse(json)

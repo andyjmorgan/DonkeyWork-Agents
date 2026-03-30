@@ -37,7 +37,6 @@ function OrchestrationMetadataDialogContent({
   const [error, setError] = useState('')
 
   const validateName = (value: string): boolean => {
-    // Validate: a-z, 0-9, -, _ only
     const regex = /^[a-z0-9_-]+$/
     if (!value.trim()) {
       setError('Name is required')

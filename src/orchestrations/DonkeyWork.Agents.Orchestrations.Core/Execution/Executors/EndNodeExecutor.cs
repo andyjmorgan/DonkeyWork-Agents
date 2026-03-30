@@ -27,10 +27,8 @@ public class EndNodeExecutor : NodeExecutor<EndNodeConfiguration, EndNodeOutput>
             throw new InvalidOperationException("End node has no upstream outputs");
         }
 
-        // Get the last output (most recent node execution)
         var lastOutput = Context.NodeOutputs.Values.Last();
 
-        // Convert to final output format
         object finalOutput = lastOutput switch
         {
             NodeOutput nodeOutput => nodeOutput.ToMessageOutput(),

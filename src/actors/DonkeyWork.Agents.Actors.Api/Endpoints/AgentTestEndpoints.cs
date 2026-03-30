@@ -41,7 +41,6 @@ public static class AgentTestEndpoints
             return;
         }
 
-        // Read and parse request body
         AgentTestRequest? request;
         try
         {
@@ -62,7 +61,6 @@ public static class AgentTestEndpoints
             return;
         }
 
-        // Deserialize the contract
         AgentContract contract;
         try
         {
@@ -76,7 +74,6 @@ public static class AgentTestEndpoints
             return;
         }
 
-        // Create a temporary test grain
         var testId = Guid.NewGuid();
         var grainKey = AgentKeys.Test(identityContext.UserId, testId);
 
@@ -86,12 +83,10 @@ public static class AgentTestEndpoints
         using var observer = new SseObserver();
         var observerRef = grainFactory.CreateObjectReference<IAgentResponseObserver>(observer);
 
-        // Set SSE response headers
         context.Response.ContentType = "text/event-stream";
         context.Response.Headers.CacheControl = "no-cache";
         context.Response.Headers.Connection = "keep-alive";
 
-        // Fire the grain execution (don't await — read events from observer)
         var runTask = Task.Run(async () =>
         {
             try
@@ -108,7 +103,6 @@ public static class AgentTestEndpoints
             }
         }, context.RequestAborted);
 
-        // Stream events as SSE
         try
         {
             await foreach (var evt in observer.ReadAllAsync(context.RequestAborted))
@@ -126,7 +120,6 @@ public static class AgentTestEndpoints
             // Client disconnected
         }
 
-        // Wait for the grain to finish
         try
         {
             await runTask;

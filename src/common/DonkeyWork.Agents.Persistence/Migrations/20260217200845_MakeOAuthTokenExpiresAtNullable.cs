@@ -20,7 +20,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                 oldClrType: typeof(DateTimeOffset),
                 oldType: "timestamp with time zone");
 
-            // Clear fake expiry on existing tokens - the code will now correctly
             // set null for providers that don't support token expiry
             migrationBuilder.Sql(
                 "UPDATE credentials.oauth_tokens SET \"ExpiresAt\" = NULL;");

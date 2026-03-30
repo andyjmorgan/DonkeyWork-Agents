@@ -25,7 +25,6 @@ const MAX_COLS = 10
 const DEFAULT_ROWS = 3
 const DEFAULT_COLS = 3
 
-// Generate initial headers array
 function generateInitialHeaders(cols: number): string[] {
   return Array.from({ length: cols }, (_, i) => `Column ${i + 1}`)
 }
@@ -50,7 +49,6 @@ function TableDialogContent({
     })
   }
 
-  // Handle cols change - update headers array
   const handleColsChange = (newCols: number) => {
     setCols(newCols)
     setHeaders(prev => {
@@ -62,7 +60,6 @@ function TableDialogContent({
     })
   }
 
-  // Generate markdown table
   const markdown = useMemo(() => {
     const headerRow = '| ' + headers.map(h => h || 'Column').join(' | ') + ' |'
     const separatorRow = '| ' + headers.map(() => '---').join(' | ') + ' |'

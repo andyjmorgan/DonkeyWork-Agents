@@ -108,7 +108,6 @@ public class NotesTools
         [Description("Research ID to associate with (omit to keep current)")] Guid? researchId = null,
         CancellationToken ct = default)
     {
-        // Fetch current note to merge with provided values
         var current = await _noteService.GetByIdAsync(id, cancellationToken: ct);
         if (current == null)
         {

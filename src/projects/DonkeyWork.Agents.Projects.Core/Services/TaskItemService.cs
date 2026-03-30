@@ -61,7 +61,6 @@ public class TaskItemService : ITaskItemService
 
         _dbContext.TaskItems.Add(taskItem);
 
-        // Add tags
         if (request.Tags?.Any() == true)
         {
             foreach (var tag in request.Tags)
@@ -83,7 +82,6 @@ public class TaskItemService : ITaskItemService
 
         _logger.LogInformation("Created task item {TaskItemId}", taskItemId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.TaskCreated,
@@ -255,7 +253,6 @@ public class TaskItemService : ITaskItemService
         taskItem.MilestoneId = request.MilestoneId;
         taskItem.UpdatedAt = now;
 
-        // Set completed timestamp when moving to terminal status
         if (!wasTerminal && isNowTerminal)
         {
             taskItem.CompletedAt = now;
@@ -265,7 +262,6 @@ public class TaskItemService : ITaskItemService
             taskItem.CompletedAt = null;
         }
 
-        // Update tags - remove existing and add new
         _dbContext.TaskItemTags.RemoveRange(taskItem.Tags);
         if (request.Tags?.Any() == true)
         {
@@ -288,7 +284,6 @@ public class TaskItemService : ITaskItemService
 
         _logger.LogInformation("Updated task item {TaskItemId}", taskItemId);
 
-        // Send notification (fire-and-forget)
         var statusChanged = oldStatus != newStatus;
         var notificationMessage = statusChanged
             ? $"'{request.Title}' is now {FormatStatus(request.Status)}"
@@ -303,7 +298,6 @@ public class TaskItemService : ITaskItemService
             ParentId = request.MilestoneId ?? request.ProjectId
         });
 
-        // Send typed notification when status changed
         if (statusChanged)
         {
             _ = _projectNotificationService.SendTaskStatusChangedAsync(
@@ -347,7 +341,6 @@ public class TaskItemService : ITaskItemService
 
         _logger.LogInformation("Deleted task item {TaskItemId}", taskItemId);
 
-        // Send notification (fire-and-forget)
         _ = _notificationService.SendAsync(new WorkspaceNotification
         {
             Type = NotificationType.TaskDeleted,

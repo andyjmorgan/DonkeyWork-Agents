@@ -24,7 +24,6 @@ export function internalToChat(
 ): ChatMessage[] {
   const result: ChatMessage[] = [];
 
-  // Build agent lookup: agentKey -> TrackedAgent
   const agentMap = new Map<string, TrackedAgent>();
   if (agents) {
     for (const a of agents) {
@@ -32,7 +31,6 @@ export function internalToChat(
     }
   }
 
-  // Build map: toolUseId -> tool result content (for extracting agent_key from spawn results)
   const toolResultMap = new Map<string, { content: string; isError: boolean }>();
   for (const msg of messages) {
     if (msg.$type === "InternalToolResultMessage") {
@@ -76,7 +74,6 @@ export function internalToChat(
           boxes.unshift({ type: "text", text: am.textContent });
         }
 
-        // Merge tool results from subsequent InternalToolResultMessage entries
         for (let j = i + 1; j < messages.length; j++) {
           const next = messages[j];
           if (next.$type !== "InternalToolResultMessage") break;
@@ -126,7 +123,6 @@ function overlayAgents(
     const box = boxes[i];
     if (box.type !== "tool_use" || !SPAWN_TOOL_NAMES.has(box.toolName)) continue;
 
-    // Parse the tool result to get the agent_key
     const resultEntry = toolResultMap.get(box.toolUseId);
     if (!resultEntry) continue;
 
@@ -158,14 +154,11 @@ function overlayAgents(
         : undefined
       : "completed";
 
-    // Build the agent group content boxes
     const agentBoxes: ContentBox[] = [];
     if (tracked?.result?.content) {
       agentBoxes.push({ type: "text", text: tracked.result.content });
     }
 
-    // Find child agents (agents whose parentAgentKey matches this agent)
-    // and create nested agent_group boxes for them
     for (const [childKey, childAgent] of agentMap) {
       if (childAgent.parentAgentKey === agentKey) {
         const childComplete = childAgent.status !== "Pending";

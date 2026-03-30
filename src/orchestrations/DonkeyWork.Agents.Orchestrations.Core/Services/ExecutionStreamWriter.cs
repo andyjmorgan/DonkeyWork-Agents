@@ -56,7 +56,6 @@ public class ExecutionStreamWriter : IExecutionStreamWriter
             throw new InvalidOperationException("ExecutionStreamWriter must be initialized before writing events");
         }
 
-        // Set execution ID and timestamp on the event
         evt.ExecutionId = _executionId;
         evt.Timestamp = DateTime.UtcNow;
 

@@ -468,7 +468,6 @@ public class ExecutionsController : ControllerBase
     {
         var executionId = Guid.NewGuid();
 
-        // Create stream and execute orchestration (blocks until completion)
         await _streamService.CreateStreamAsync(executionId);
         await _orchestrator.ExecuteAsync(
             executionId,
@@ -478,7 +477,6 @@ public class ExecutionsController : ControllerBase
             input,
             HttpContext.RequestAborted);
 
-        // Get final execution state from database
         var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
 
         if (execution == null)
@@ -515,12 +513,9 @@ public class ExecutionsController : ControllerBase
 
     private ConversationContext BuildConversationContext(IReadOnlyList<ChatMessageV1> messages)
     {
-        // Find the last user message as the current message
         var lastUserMessage = messages.LastOrDefault(m => m.Role.Equals("user", StringComparison.OrdinalIgnoreCase));
         var currentMessageText = lastUserMessage?.Content ?? string.Empty;
 
-        // Convert messages to conversation history (excluding the last user message which is "current")
-        // Wrap string content in TextChatContentPart (playground API uses simple strings)
         var historyMessages = messages
             .Take(messages.Count - 1) // Exclude last message (current user message)
             .Select(m => new ConversationMessage
@@ -578,7 +573,6 @@ public class ExecutionsController : ControllerBase
     {
         var executionId = Guid.NewGuid();
 
-        // Create stream and execute orchestration (blocks until completion)
         await _streamService.CreateStreamAsync(executionId);
         await _orchestrator.ExecuteChatAsync(
             executionId,
@@ -587,7 +581,6 @@ public class ExecutionsController : ControllerBase
             conversation,
             HttpContext.RequestAborted);
 
-        // Get final execution state from database
         var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
 
         if (execution == null)

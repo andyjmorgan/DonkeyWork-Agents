@@ -60,7 +60,6 @@ public sealed class OAuthTokenRefreshWorker : BackgroundService
 
         try
         {
-            // Get tokens expiring within the refresh window
             var expiringTokens = await tokenService.GetExpiringTokensAsync(
                 _options.TokenRefreshWindow,
                 cancellationToken);
@@ -105,7 +104,6 @@ public sealed class OAuthTokenRefreshWorker : BackgroundService
         {
             _logger.LogInformation("Refreshing token {TokenId} for provider {Provider}", tokenId, provider);
 
-            // Get the full token (with refresh token)
             var token = await tokenService.GetByIdAsync(userId, tokenId, cancellationToken);
             if (token == null)
             {
@@ -120,7 +118,6 @@ public sealed class OAuthTokenRefreshWorker : BackgroundService
                 return;
             }
 
-            // Get provider configuration
             var config = await configService.GetByProviderAsync(userId, provider, cancellationToken);
             if (config == null)
             {
@@ -128,22 +125,18 @@ public sealed class OAuthTokenRefreshWorker : BackgroundService
                 return;
             }
 
-            // Get provider instance (pass config for custom providers)
             var oauthProvider = providerFactory.GetProvider(provider, config);
 
-            // Refresh the token
             var tokenResponse = await oauthProvider.RefreshTokenAsync(
                 token.RefreshToken,
                 config.ClientId,
                 config.ClientSecret,
                 cancellationToken);
 
-            // Calculate new expiration (null means the token does not expire)
             DateTimeOffset? newExpiresAt = tokenResponse.ExpiresIn.HasValue
                 ? DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn.Value)
                 : null;
 
-            // Update stored token
             await tokenService.RefreshTokenAsync(
                 tokenId,
                 tokenResponse.AccessToken,

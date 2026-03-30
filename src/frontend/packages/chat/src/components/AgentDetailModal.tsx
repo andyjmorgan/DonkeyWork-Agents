@@ -90,7 +90,6 @@ export function AgentDetailModal({
     }
   }, [open, agentKey]);
 
-  // Fetch messages when opening a completed agent with empty boxes
   useEffect(() => {
     if (!open || !isComplete || !onFetchMessages) return;
     if (boxes.length > 0) return;
@@ -104,7 +103,6 @@ export function AgentDetailModal({
       .finally(() => setIsFetching(false));
   }, [open, isComplete, boxes.length, agentKey, onFetchMessages]);
 
-  // Reset fetched state when modal closes or agent changes
   useEffect(() => {
     if (!open) {
       setFetchedBoxes([]);

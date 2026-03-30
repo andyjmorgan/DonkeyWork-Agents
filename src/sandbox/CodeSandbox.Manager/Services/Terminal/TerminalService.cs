@@ -48,10 +48,8 @@ public class TerminalService : ITerminalService
 
         try
         {
-            // Update activity timestamp
             _ = _containerService.UpdateLastActivityAsync(sandboxId, cancellationToken);
 
-            // Connect to Kubernetes exec
             k8sWebSocket = await ConnectToKubernetesExecAsync(sandboxId, cancellationToken);
 
             // Track session for resize operations
@@ -59,7 +57,6 @@ public class TerminalService : ITerminalService
 
             _logger.LogInformation("Connected to Kubernetes exec for sandbox {SandboxId}", sandboxId);
 
-            // Create linked cancellation for when either side disconnects
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             // Bridge bidirectionally
@@ -83,7 +80,6 @@ public class TerminalService : ITerminalService
         {
             _activeSessions.TryRemove(sandboxId, out _);
 
-            // Close WebSockets gracefully
             if (k8sWebSocket != null && k8sWebSocket.State == WebSocketState.Open)
             {
                 try
@@ -190,10 +186,8 @@ public class TerminalService : ITerminalService
 
                 if (result.Count == 0) continue;
 
-                // Update activity on input
                 _ = _containerService.UpdateLastActivityAsync(sandboxId, cancellationToken);
 
-                // Check if this is a JSON control message (resize)
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
                     var text = Encoding.UTF8.GetString(buffer, 0, result.Count);

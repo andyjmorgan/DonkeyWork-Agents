@@ -42,7 +42,6 @@ public sealed class OAuthFlowService : IOAuthFlowService
         IReadOnlyList<string>? scopes = null,
         CancellationToken cancellationToken = default)
     {
-        // Get provider configuration for the user
         var config = await _providerConfigService.GetByProviderAsync(userId, provider, cancellationToken);
         if (config == null)
         {
@@ -50,14 +49,10 @@ public sealed class OAuthFlowService : IOAuthFlowService
                 $"OAuth provider configuration not found for {provider}. Please configure the provider first.");
         }
 
-        // Generate PKCE parameters
         var codeVerifier = PkceUtility.GenerateCodeVerifier();
         var codeChallenge = PkceUtility.GenerateCodeChallenge(codeVerifier);
-
-        // Generate state for CSRF protection
         var state = GenerateState();
 
-        // Store state in database
         var stateEntity = new OAuthStateEntity
         {
             UserId = userId,
@@ -70,13 +65,9 @@ public sealed class OAuthFlowService : IOAuthFlowService
         _dbContext.OAuthStates.Add(stateEntity);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // Get provider instance (pass config for custom providers)
         var oauthProvider = _providerFactory.GetProvider(provider, config);
-
-        // Determine scopes: use explicitly passed scopes, then config scopes, then provider defaults
         var effectiveScopes = scopes ?? config.Scopes;
 
-        // Build authorization URL with scopes
         var authorizationUrl = oauthProvider.BuildAuthorizationUrl(
             config.ClientId,
             config.RedirectUri,
@@ -101,7 +92,6 @@ public sealed class OAuthFlowService : IOAuthFlowService
             return null;
         }
 
-        // Check expiration
         if (entity.ExpiresAt < DateTimeOffset.UtcNow)
         {
             // Expired - clean it up and return null
@@ -129,7 +119,6 @@ public sealed class OAuthFlowService : IOAuthFlowService
         string codeVerifier,
         CancellationToken cancellationToken = default)
     {
-        // Get provider configuration
         var config = await _providerConfigService.GetByProviderAsync(userId, provider, cancellationToken);
         if (config == null)
         {
@@ -137,10 +126,8 @@ public sealed class OAuthFlowService : IOAuthFlowService
                 $"OAuth provider configuration not found for {provider}.");
         }
 
-        // Get provider instance (pass config for custom providers)
         var oauthProvider = _providerFactory.GetProvider(provider, config);
 
-        // Exchange code for tokens
         var tokenResponse = await oauthProvider.ExchangeCodeForTokensAsync(
             code,
             codeVerifier,
@@ -149,17 +136,14 @@ public sealed class OAuthFlowService : IOAuthFlowService
             config.RedirectUri,
             cancellationToken);
 
-        // Get user information
         var userInfo = await oauthProvider.GetUserInfoAsync(
             tokenResponse.AccessToken,
             cancellationToken);
 
-        // Calculate expiration time (null means the token does not expire)
         DateTimeOffset? expiresAt = tokenResponse.ExpiresIn.HasValue
             ? DateTimeOffset.UtcNow.AddSeconds(tokenResponse.ExpiresIn.Value)
             : null;
 
-        // Store or update token
         var token = await _tokenService.StoreTokenAsync(
             userId,
             provider,

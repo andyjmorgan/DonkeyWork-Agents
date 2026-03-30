@@ -56,12 +56,10 @@ export function TaskEditorPage({ taskId, isNew, nav }: { taskId?: string; isNew?
       setStatus(taskData.status)
       setCompletionNotes(taskData.completionNotes || '')
 
-      // Load project if task belongs to one
       if (taskData.projectId) {
         const projectData = await projects.get(taskData.projectId)
         setProject(projectData)
 
-        // Load milestone if task belongs to one
         if (taskData.milestoneId) {
           const milestoneData = await milestones.get(taskData.projectId, taskData.milestoneId)
           setMilestone(milestoneData)

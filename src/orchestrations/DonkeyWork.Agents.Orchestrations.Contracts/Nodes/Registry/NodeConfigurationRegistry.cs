@@ -101,7 +101,6 @@ public sealed class NodeConfigurationRegistry
 
     private void DiscoverConfigurationTypes()
     {
-        // Register known types
         _configTypes[NodeType.Start] = typeof(StartNodeConfiguration);
         _configTypes[NodeType.End] = typeof(EndNodeConfiguration);
         _configTypes[NodeType.Model] = typeof(ModelNodeConfiguration);
@@ -191,7 +190,6 @@ public class GuidDictionaryConverter<TValue> : System.Text.Json.Serialization.Js
             reader.Read();
 
             // For polymorphic types, we need to ensure the type discriminator is first
-            // Read the entire value as a JsonDocument, reorder if needed, then deserialize
             if (typeof(TValue).IsAbstract || typeof(TValue).IsInterface)
             {
                 using var doc = JsonDocument.ParseValue(ref reader);
@@ -237,7 +235,6 @@ public class GuidDictionaryConverter<TValue> : System.Text.Json.Serialization.Js
         if (typeValue == null)
             return element.GetRawText();
 
-        // Build reordered JSON with type first
         using var stream = new MemoryStream();
         using var writer = new Utf8JsonWriter(stream);
 
@@ -268,7 +265,6 @@ public class GuidDictionaryConverter<TValue> : System.Text.Json.Serialization.Js
             // For polymorphic types, ensure type discriminator is written first
             if (typeof(TValue).IsAbstract || typeof(TValue).IsInterface)
             {
-                // Serialize to intermediate JSON, then reorder
                 var json = JsonSerializer.Serialize(kvp.Value, _valueOptions);
                 using var doc = JsonDocument.Parse(json);
                 var reordered = ReorderTypeDiscriminator(doc.RootElement);

@@ -24,7 +24,6 @@ internal sealed class ProviderMiddleware : IModelMiddleware
         // Terminal middleware — does not call next()
         var provider = _providerFactory.Create(ProviderType.Anthropic);
 
-        // Extract system prompt: use context.SystemPrompt, or find the first system message
         var systemPrompt = context.SystemPrompt;
         if (string.IsNullOrEmpty(systemPrompt))
         {
@@ -34,7 +33,6 @@ internal sealed class ProviderMiddleware : IModelMiddleware
             systemPrompt = sysMsg?.Content ?? "";
         }
 
-        // Filter out system messages from the messages list sent to the provider
         var nonSystemMessages = context.Messages
             .Where(m => m is not InternalContentMessage { Role: InternalMessageRole.System })
             .ToList();

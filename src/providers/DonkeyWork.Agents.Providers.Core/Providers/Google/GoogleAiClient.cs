@@ -66,7 +66,6 @@ internal sealed class GoogleAiClient : IAiClient
                 };
             }
 
-            // Check finish reason
             if (response?.Candidates is { Length: > 0 })
             {
                 var candidate = response.Candidates[0];
@@ -91,7 +90,6 @@ internal sealed class GoogleAiClient : IAiClient
             }
         }
 
-        // Close block if still open
         if (blockStarted)
         {
             yield return new ModelResponseBlockEnd { BlockIndex = blockIndex };
@@ -120,14 +118,12 @@ internal sealed class GoogleAiClient : IAiClient
         // Non-streaming API call
         var response = await _model.GenerateContentAsync(request, cancellationToken: cancellationToken);
 
-        // Emit block start
         yield return new ModelResponseBlockStart
         {
             BlockIndex = 0,
             Type = InternalContentBlockType.Text
         };
 
-        // Extract and emit text content
         if (response?.Text is not null)
         {
             yield return new ModelResponseTextContent
@@ -137,10 +133,8 @@ internal sealed class GoogleAiClient : IAiClient
             };
         }
 
-        // Emit block end
         yield return new ModelResponseBlockEnd { BlockIndex = 0 };
 
-        // Emit usage info
         if (response?.UsageMetadata is not null)
         {
             yield return new ModelResponseUsage
@@ -176,7 +170,6 @@ internal sealed class GoogleAiClient : IAiClient
     {
         if (providerParameters is null) return;
 
-        // Configure via GenerationConfig
         var config = _model.Config ?? new GenerationConfig();
 
         if (providerParameters.TryGetValue("temperature", out var temp))

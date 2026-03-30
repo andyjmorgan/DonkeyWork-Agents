@@ -24,7 +24,6 @@ export function OrchestrationsPage() {
   const [orchestrationsList, setOrchestrationsList] = useState<OrchestrationWithVersion[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // Fetch orchestrations on mount
   useEffect(() => {
     loadOrchestrations()
   }, [])
@@ -34,7 +33,6 @@ export function OrchestrationsPage() {
       setIsLoading(true)
       const data = await orchestrations.list()
 
-      // Fetch version numbers for orchestrations that have a current version
       const orchestrationsWithVersions = await Promise.all(
         data.map(async (orchestration) => {
           if (orchestration.currentVersionId) {
@@ -67,7 +65,6 @@ export function OrchestrationsPage() {
     try {
       setIsCreating(true)
 
-      // Create orchestration with default name
       const response = await orchestrations.create({
         name: `orchestration_${Date.now()}`,
         description: ''

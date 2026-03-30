@@ -41,19 +41,16 @@ public class GenericNodeExecutor : INodeExecutor
         // Look up provider method by NodeType
         var methodInfo = _methodRegistry.GetMethod(nodeConfig.NodeType);
 
-        // Resolve provider from DI
         var provider = _serviceProvider.GetService(methodInfo.ProviderType)
             ?? throw new InvalidOperationException(
                 $"Provider {methodInfo.ProviderType.Name} not registered in DI");
 
-        // Emit NodeStarted event
         await _streamWriter.WriteEventAsync(new NodeStartedEvent { NodeId = nodeId });
 
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            // Build parameters
             var parameters = new List<object?> { config };
             if (methodInfo.HasCancellationToken)
             {
@@ -66,11 +63,9 @@ public class GenericNodeExecutor : INodeExecutor
 
             stopwatch.Stop();
 
-            // Extract result from Task<T>
             var resultProperty = task.GetType().GetProperty("Result")!;
             var output = (NodeOutput)resultProperty.GetValue(task)!;
 
-            // Emit NodeCompleted event
             await _streamWriter.WriteEventAsync(
                 new NodeCompletedEvent
                 {
@@ -84,7 +79,6 @@ public class GenericNodeExecutor : INodeExecutor
         {
             stopwatch.Stop();
 
-            // Unwrap TargetInvocationException
             var innerEx = ex.InnerException ?? ex;
             throw new InvalidOperationException(
                 $"Node execution failed: {innerEx.Message}", innerEx);

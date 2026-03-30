@@ -11,7 +11,6 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Kestrel: HTTP/1.1 on port 8080 for REST + WebSocket
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(8080, listenOptions =>
@@ -20,7 +19,6 @@ builder.WebHost.ConfigureKestrel(options =>
     });
 });
 
-// Add Serilog
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services)
@@ -28,13 +26,11 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 Log.Information("Starting Sandbox Manager API");
 
-// Configure and validate SandboxManagerConfig with IOptions
 builder.Services.AddOptions<SandboxManagerConfig>()
     .BindConfiguration(nameof(SandboxManagerConfig))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-// Register Kubernetes client
 builder.Services.AddSingleton<IKubernetes>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<Program>>();
@@ -71,29 +67,23 @@ builder.Services.AddSingleton<IKubernetes>(sp =>
     return new Kubernetes(defaultConfig);
 });
 
-// Register application services
 builder.Services.AddScoped<ISandboxService, SandboxService>();
 builder.Services.AddScoped<IMcpContainerService, McpContainerService>();
 builder.Services.AddScoped<ITerminalService, TerminalService>();
 
-// Register background services
 builder.Services.AddHostedService<ContainerCleanupService>();
 
-// Add health checks
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
 
-// Add OpenAPI
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Validate configuration on startup
 var config = app.Services.GetRequiredService<IOptions<SandboxManagerConfig>>().Value;
 Log.Information("Configuration loaded: Namespace={Namespace}, RuntimeClass={RuntimeClass}",
     config.TargetNamespace, config.RuntimeClassName);
 
-// Configure HTTP pipeline
 app.UseSerilogRequestLogging(options =>
 {
     options.GetLevel = (httpContext, elapsed, ex) =>
@@ -107,7 +97,6 @@ app.UseSerilogRequestLogging(options =>
     };
 });
 
-// Enable OpenAPI and Scalar
 app.MapOpenApi();
 app.MapScalarApiReference("/scalar", (options, context) =>
 {
@@ -117,19 +106,15 @@ app.MapScalarApiReference("/scalar", (options, context) =>
 
 Log.Information("API documentation enabled at /scalar/v1");
 
-// Enable WebSockets for terminal connections (HTTP/1.1, port 8080)
 app.UseWebSockets(new WebSocketOptions
 {
     KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 
-// Map health check endpoint
 app.MapHealthChecks("/healthz");
 
-// Map WebSocket terminal endpoint
 app.MapTerminalEndpoints();
 
-// Map REST endpoints (HTTP/1.1, port 8080)
 app.MapSandboxEndpoints();
 app.MapMcpEndpoints();
 

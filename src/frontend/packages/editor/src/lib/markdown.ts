@@ -13,10 +13,8 @@ marked.setOptions({
 export function parseMarkdown(markdown: string): string {
   if (!markdown) return ''
 
-  // Convert markdown to HTML
   let html = marked.parse(markdown, { async: false }) as string
 
-  // Convert GFM task list syntax to Tiptap-compatible format
   html = html.replace(
     /<li><input type="checkbox" disabled(?:\s+checked)?>\s*/g,
     (match) => {
@@ -25,11 +23,9 @@ export function parseMarkdown(markdown: string): string {
     }
   )
 
-  // Convert task lists UL to have data-type="taskList"
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
 
-  // Find all list items that contain task list checkboxes
   const listItems = doc.querySelectorAll('li')
   listItems.forEach((li) => {
     const checkbox = li.querySelector('input[type="checkbox"]')
@@ -43,7 +39,6 @@ export function parseMarkdown(markdown: string): string {
     }
   })
 
-  // Remove trailing newlines from code blocks
   const codeBlocks = doc.querySelectorAll('pre code')
   codeBlocks.forEach((code) => {
     if (code.textContent) {
@@ -99,7 +94,6 @@ turndownService.addRule('codeBlock', {
     const preElement = node as HTMLElement
     const codeElement = node.firstChild as HTMLElement
 
-    // Check for language in data-language attribute or class
     const dataLanguage = preElement.getAttribute('data-language')
     const classLanguage = codeElement?.className.replace('language-', '')
     const language = dataLanguage || classLanguage || ''
@@ -128,7 +122,6 @@ turndownService.addRule('table', {
 
       markdown += '| ' + cellContents.join(' | ') + ' |\n'
 
-      // Add separator row after header
       if (rowIndex === 0 && row.querySelector('th')) {
         const separator = cells.map(() => '---').join(' | ')
         markdown += '| ' + separator + ' |\n'

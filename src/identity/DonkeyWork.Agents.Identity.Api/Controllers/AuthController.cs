@@ -52,11 +52,9 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status302Found)]
     public IActionResult Login([FromQuery] string? idpHint = null)
     {
-        // Generate PKCE code verifier and challenge
         var codeVerifier = GenerateCodeVerifier();
         var codeChallenge = GenerateCodeChallenge(codeVerifier);
 
-        // Store code verifier in a secure cookie for the callback
         Response.Cookies.Append(CodeVerifierCookieName, codeVerifier, new CookieOptions
         {
             HttpOnly = true,
@@ -65,10 +63,8 @@ public class AuthController : ControllerBase
             MaxAge = TimeSpan.FromMinutes(10)
         });
 
-        // Build the redirect URI for the callback
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/callback";
 
-        // Build the Keycloak authorization URL
         var authorizationUrl = $"{_keycloakOptions.Authority}/protocol/openid-connect/auth?" +
             $"client_id={Uri.EscapeDataString(EffectiveClientId)}" +
             $"&response_type=code" +
@@ -108,7 +104,6 @@ public class AuthController : ControllerBase
             : $"{Request.Scheme}://{Request.Host}";
         var frontendCallbackUrl = $"{frontendBaseUrl}/login/callback";
 
-        // Check for errors from Keycloak
         if (!string.IsNullOrEmpty(error))
         {
             return Redirect($"{frontendCallbackUrl}#error={Uri.EscapeDataString(error)}&error_description={Uri.EscapeDataString(error_description ?? "")}");
@@ -119,16 +114,13 @@ public class AuthController : ControllerBase
             return Redirect($"{frontendCallbackUrl}#error=missing_code&error_description={Uri.EscapeDataString("Authorization code is required.")}");
         }
 
-        // Retrieve the code verifier from the cookie
         if (!Request.Cookies.TryGetValue(CodeVerifierCookieName, out var codeVerifier) || string.IsNullOrEmpty(codeVerifier))
         {
             return Redirect($"{frontendCallbackUrl}#error=missing_verifier&error_description={Uri.EscapeDataString("PKCE code verifier not found. Please start the login flow again.")}");
         }
 
-        // Clear the code verifier cookie
         Response.Cookies.Delete(CodeVerifierCookieName);
 
-        // Build the redirect URI (must match exactly what was sent in /login)
         var redirectUri = $"{Request.Scheme}://{Request.Host}/api/v1/auth/callback";
 
         // Exchange the authorization code for tokens (use internal URL to avoid hairpinning)
@@ -167,7 +159,6 @@ public class AuthController : ControllerBase
             return Redirect($"{frontendCallbackUrl}#error=invalid_token_response&error_description={Uri.EscapeDataString("Failed to parse token response.")}");
         }
 
-        // Build the redirect URL with tokens in the fragment (fragment is not sent to server)
         var fragmentParams = new List<string>
         {
             $"access_token={Uri.EscapeDataString(tokens.AccessToken)}",
@@ -195,7 +186,6 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
     {
-        // Log truncated token for debugging (first 20 chars + length)
         var tokenPreview = string.IsNullOrEmpty(request.RefreshToken)
             ? "(empty)"
             : $"{request.RefreshToken[..Math.Min(20, request.RefreshToken.Length)]}... (len={request.RefreshToken.Length})";

@@ -147,7 +147,6 @@ public class McpContainerService : IMcpContainerService
                         return;
                     }
 
-                    // Emit waiting event with detailed status
                     var containerStatus = watchPod.Status?.ContainerStatuses?.FirstOrDefault();
                     string detailedMessage = $"Waiting for pod to be ready (event {eventNumber})";
 
@@ -377,7 +376,6 @@ public class McpContainerService : IMcpContainerService
             Message = $"Connecting to gRPC at {podIp}:8666"
         };
 
-        // Store launch command in annotation
         try
         {
             var nowTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
@@ -425,7 +423,6 @@ public class McpContainerService : IMcpContainerService
         _logger.LogInformation("ProxyMcpRequestAsync: pod={PodName} ip={PodIp}, sending {Length} chars: {Body}",
             podName, podIp, jsonRpcBody.Length, bodyTruncated);
 
-        // Update last activity (fire-and-forget)
         _ = UpdateLastActivityAsync(podName, cancellationToken);
 
         using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");

@@ -207,7 +207,6 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
         var createRequest = TestDataBuilder.CreateAgentRequest();
         var created = await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, createRequest);
 
-        // Save a draft version
         var versionRequest = TestDataBuilder.CreateSaveVersionRequest();
         await PostResponseAsync($"{BaseUrl}/{created!.Id}/versions", versionRequest);
 
@@ -303,7 +302,6 @@ public class AgentsControllerTests : ControllerIntegrationTestBase
         SetTestUser(user1);
         await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("user1-agent"));
 
-        // Create agents for user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
         await PostAsync<CreateOrchestrationResponseV1>(BaseUrl, TestDataBuilder.CreateAgentRequest("user2-agent"));

@@ -91,7 +91,6 @@ public class StdioBridge : IDisposable
             _error = null;
         }
 
-        // Clean up any previous process
         KillMcpProcess();
 
         var startTime = DateTime.UtcNow;
@@ -104,7 +103,6 @@ public class StdioBridge : IDisposable
 
         try
         {
-            // Run pre-exec scripts sequentially
             foreach (var script in preExecScripts)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -186,12 +184,10 @@ public class StdioBridge : IDisposable
             return null;
         }
 
-        // Extract the request id so we can match the response
         var requestId = ExtractId(jsonRpcRequest);
         if (requestId is null)
             throw new InvalidOperationException("Could not extract id from JSON-RPC request");
 
-        // Extract method name for logging
         var method = ExtractMethod(jsonRpcRequest);
 
         var bodyTruncated = jsonRpcRequest.Length > 500 ? jsonRpcRequest[..500] + "...(truncated)" : jsonRpcRequest;
@@ -313,7 +309,6 @@ public class StdioBridge : IDisposable
 
                     if (line is null)
                     {
-                        // Process closed stdout
                         lock (_stateLock)
                         {
                             if (_state == McpServerState.Ready)
@@ -472,7 +467,6 @@ public class StdioBridge : IDisposable
                 ElapsedSeconds: (DateTime.UtcNow - startTime).TotalSeconds));
         }
 
-        // Send an MCP initialize request to verify the server is ready
         var initializeRequest = JsonSerializer.Serialize(new
         {
             jsonrpc = "2.0",
@@ -493,14 +487,12 @@ public class StdioBridge : IDisposable
         {
             _logger.LogInformation("WaitForMcpReadyAsync: sending initialize request: {Request}", initializeRequest);
 
-            // Write the initialize request to stdin
             await _stdin!.WriteLineAsync(initializeRequest.AsMemory(), timeoutCts.Token);
             await _stdin.FlushAsync(timeoutCts.Token);
 
             _logger.LogInformation("WaitForMcpReadyAsync: initialize probe written and flushed, waiting for response...");
             Emit("handshake_sent", "Initialize probe sent, waiting for response...");
 
-            // Read response from stdout - wait for valid JSON-RPC response
             while (true)
             {
                 if (_mcpProcess is null || _mcpProcess.HasExited)
@@ -522,13 +514,11 @@ public class StdioBridge : IDisposable
                 var lineTruncated = line.Length > 500 ? line[..500] + "...(truncated)" : line;
                 _logger.LogInformation("WaitForMcpReadyAsync: received stdout line ({Length} chars): {Content}", line.Length, lineTruncated);
 
-                // Check if this is a valid JSON-RPC response to our initialize request
                 if (IsJsonRpcResponse(line))
                 {
                     _logger.LogInformation("WaitForMcpReadyAsync: got initialize response: {Response}", lineTruncated);
                     Emit("handshake_response", "Server responded to initialize probe");
 
-                    // Send the initialized notification to complete the handshake
                     var initializedNotification = JsonSerializer.Serialize(new
                     {
                         jsonrpc = "2.0",
@@ -576,7 +566,6 @@ public class StdioBridge : IDisposable
 
         process.Start();
 
-        // Log output in background
         var stdoutTask = Task.Run(async () =>
         {
             while (await process.StandardOutput.ReadLineAsync(cancellationToken) is { } line)
@@ -606,7 +595,6 @@ public class StdioBridge : IDisposable
     {
         var workDir = ResolveWorkingDirectory(workingDirectory);
 
-        // Build proper argument string - each argument properly quoted if needed
         var argumentString = string.Join(" ", arguments.Select(arg =>
             arg.Contains(' ') || arg.Contains('"') ? $"\"{arg.Replace("\"", "\\\"")}\"" : arg));
 
@@ -661,7 +649,6 @@ public class StdioBridge : IDisposable
             }
             catch
             {
-                // Process exited
             }
         });
 
@@ -799,11 +786,9 @@ public class StdioBridge : IDisposable
 
     private void KillMcpProcess()
     {
-        // Stop the keepalive timer
         _keepaliveTimer?.Dispose();
         _keepaliveTimer = null;
 
-        // Stop the background reader
         _stdoutReaderCts?.Cancel();
         _stdoutReaderCts?.Dispose();
         _stdoutReaderCts = null;

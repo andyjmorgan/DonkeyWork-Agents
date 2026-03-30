@@ -225,7 +225,6 @@ public class ProjectsControllerTests : ControllerIntegrationTestBase
         SetTestUser(user1);
         await PostAsync<ProjectDetailsV1>(BaseUrl, TestDataBuilder.CreateProjectRequest("User1 Project"));
 
-        // Create projects for user 2
         var user2 = TestUser.CreateRandom();
         SetTestUser(user2);
         await PostAsync<ProjectDetailsV1>(BaseUrl, TestDataBuilder.CreateProjectRequest("User2 Project"));

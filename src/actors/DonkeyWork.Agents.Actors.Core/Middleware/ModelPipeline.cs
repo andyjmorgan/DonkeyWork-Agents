@@ -32,7 +32,6 @@ public sealed class ModelPipeline
     private Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> BuildPipeline(
         Type[] middlewareTypes)
     {
-        // Start from the innermost (last) middleware and fold right-to-left
         Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>>? current = null;
 
         for (int i = middlewareTypes.Length - 1; i >= 0; i--)

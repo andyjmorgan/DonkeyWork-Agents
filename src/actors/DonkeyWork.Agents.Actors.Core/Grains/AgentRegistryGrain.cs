@@ -77,7 +77,6 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             return BuildWaitResult(alreadyDone);
         }
 
-        // Wait for first pending agent to complete
         var pendingTasks = _agents.Values
             .Where(e => e.Info.Status == AgentStatus.Pending)
             .Select(e => e.Tcs.Task)
@@ -92,7 +91,6 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         if (completedTask == timeoutTask)
             return null;
 
-        // Find which entry just completed
         var completed = _agents.Values
             .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
             .OrderBy(e => e.Info.SpawnedAt)
