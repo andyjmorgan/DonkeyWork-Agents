@@ -64,7 +64,7 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
                 {
                     Name = toolName,
                     DisplayName = agentName,
-                    Description = $"{card?.Description ?? config.Description ?? "Remote A2A agent"}. Returns a contextId for multi-turn conversations.",
+                    Description = BuildToolDescription(card, config.Description),
                     InputSchema = inputSchema,
                     DeferLoading = false,
                 };
@@ -147,6 +147,28 @@ internal sealed partial class A2aToolProvider : IAsyncDisposable
         _httpClient = null;
         _tools.Clear();
         return ValueTask.CompletedTask;
+    }
+
+    private static string BuildToolDescription(A2aAgentCardV1? card, string? fallbackDescription)
+    {
+        var desc = card?.Description ?? fallbackDescription ?? "Remote A2A agent";
+        var parts = new List<string> { desc };
+
+        if (card?.Skills is { Count: > 0 })
+        {
+            parts.Add("Skills:");
+            foreach (var skill in card.Skills)
+            {
+                var line = $"- {skill.Name}";
+                if (!string.IsNullOrEmpty(skill.Description) &&
+                    !string.Equals(skill.Description, skill.Name, StringComparison.OrdinalIgnoreCase))
+                    line += $": {skill.Description}";
+                parts.Add(line);
+            }
+        }
+
+        parts.Add("Returns a contextId for multi-turn conversations.");
+        return string.Join("\n", parts);
     }
 
     private static string BuildMessageSendRequest(string message, string? contextId)
