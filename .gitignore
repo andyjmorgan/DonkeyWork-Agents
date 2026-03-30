@@ -120,5 +120,11 @@ target/
 # Claude Code
 .claude/
 
+# Docker local dev
+docker/
+
+# Samples (kept locally, not in repo)
+samples/
+
 # Local data (docker volumes)
 /data/
