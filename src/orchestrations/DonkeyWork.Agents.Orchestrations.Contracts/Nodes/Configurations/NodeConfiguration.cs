@@ -16,6 +16,8 @@ namespace DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 [JsonDerivedType(typeof(HttpRequestNodeConfiguration), typeDiscriminator: "HttpRequest")]
 [JsonDerivedType(typeof(SleepNodeConfiguration), typeDiscriminator: "Sleep")]
 [JsonDerivedType(typeof(MultimodalChatModelNodeConfiguration), typeDiscriminator: "MultimodalChatModel")]
+[JsonDerivedType(typeof(TextToSpeechNodeConfiguration), typeDiscriminator: "TextToSpeech")]
+[JsonDerivedType(typeof(StoreAudioNodeConfiguration), typeDiscriminator: "StoreAudio")]
 public abstract class NodeConfiguration
 {
     /// <summary>

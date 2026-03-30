@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Play, Flag, Globe, Mail, Database, File, Zap, FileText, Clock, Brain } from 'lucide-react'
+import { Play, Flag, Globe, Mail, Database, File, Zap, FileText, Clock, Brain, Volume2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEditorStore } from '@/store/editor'
@@ -26,6 +26,7 @@ const iconMap: Record<string, LucideIcon> = {
   'file-text': FileText,
   clock: Clock,
   brain: Brain,
+  'volume-2': Volume2,
 }
 
 // Color classes for nodes

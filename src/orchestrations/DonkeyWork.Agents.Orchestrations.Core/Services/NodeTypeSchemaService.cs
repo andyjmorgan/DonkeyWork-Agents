@@ -106,6 +106,22 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     Name = "temp",
                     DurationSeconds = 0
                 },
+                nameof(TextToSpeechNodeConfiguration) => new TextToSpeechNodeConfiguration
+                {
+                    Name = "temp",
+                    CredentialId = Guid.Empty,
+                    Model = "tts-1",
+                    Voice = "alloy",
+                    InputText = ""
+                },
+                nameof(StoreAudioNodeConfiguration) => new StoreAudioNodeConfiguration
+                {
+                    Name = "temp",
+                    RecordingName = "",
+                    RecordingDescription = "",
+                    AudioObjectKey = "",
+                    Transcript = ""
+                },
                 _ => null
             };
         }

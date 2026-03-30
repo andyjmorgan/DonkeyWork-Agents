@@ -948,8 +948,17 @@ export interface ImageContentPart {
   mediaType: string
 }
 
+export interface AudioContentPart {
+  type: 'audio'
+  recordingId: string
+  objectKey: string
+  mediaType: string
+  transcript?: string
+  name?: string
+}
+
 // Union type for all content parts
-export type ContentPart = TextContentPart | ImageContentPart
+export type ContentPart = TextContentPart | ImageContentPart | AudioContentPart
 
 // Image upload response
 export interface UploadImageResponse {
@@ -1888,4 +1897,66 @@ export const prompts = {
   create: (data: CreatePromptRequest) => api.post<PromptDetails>('/api/v1/prompts', data),
   update: (id: string, data: UpdatePromptRequest) => api.put<PromptDetails>(`/api/v1/prompts/${id}`, data),
   delete: (id: string) => api.delete(`/api/v1/prompts/${id}`),
+}
+
+// TTS Types
+export interface TtsRecording {
+  id: string
+  name: string
+  description: string
+  filePath: string
+  transcript: string
+  contentType: string
+  sizeBytes: number
+  voice?: string
+  model?: string
+  createdAt: string
+  playback?: TtsPlayback
+}
+
+export interface TtsPlayback {
+  positionSeconds: number
+  durationSeconds: number
+  completed: boolean
+  playbackSpeed: number
+  updatedAt: string
+}
+
+export interface TtsRecordingListResponse {
+  items: TtsRecording[]
+  totalCount: number
+}
+
+export interface TtsAudioUrlResponse {
+  url: string
+  expiresAt: string
+  contentType: string
+}
+
+export interface UpdatePlaybackRequest {
+  positionSeconds: number
+  durationSeconds: number
+  completed?: boolean
+  playbackSpeed?: number
+}
+
+// TTS API
+export const tts = {
+  listRecordings: (offset = 0, limit = 20) =>
+    api.get<TtsRecordingListResponse>(`/api/v1/tts/recordings?offset=${offset}&limit=${limit}`),
+
+  getRecording: (id: string) =>
+    api.get<TtsRecording>(`/api/v1/tts/recordings/${id}`),
+
+  getAudioUrl: (id: string) =>
+    api.get<TtsAudioUrlResponse>(`/api/v1/tts/recordings/${id}/audio`),
+
+  updatePlayback: (id: string, data: UpdatePlaybackRequest) =>
+    api.put<TtsPlayback>(`/api/v1/tts/recordings/${id}/playback`, data),
+
+  getPlayback: (id: string) =>
+    api.get<TtsPlayback>(`/api/v1/tts/recordings/${id}/playback`),
+
+  deleteRecording: (id: string) =>
+    api.delete(`/api/v1/tts/recordings/${id}`),
 }

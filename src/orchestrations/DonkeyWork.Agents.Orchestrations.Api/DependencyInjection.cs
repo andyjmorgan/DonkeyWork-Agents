@@ -114,6 +114,8 @@ public static class DependencyInjection
         services.AddScoped<EndNodeExecutor>();
         services.AddScoped<ModelNodeExecutor>();
         services.AddScoped<MultimodalChatNodeExecutor>();
+        services.AddScoped<TextToSpeechNodeExecutor>();
+        services.AddScoped<StoreAudioNodeExecutor>();
 
         services.AddScoped<INodeExecutorRegistry>(sp =>
         {
@@ -124,6 +126,10 @@ public static class DependencyInjection
             registry.Register(NodeType.End, typeof(EndNodeExecutor));
             registry.Register(NodeType.Model, typeof(ModelNodeExecutor));
             registry.Register(NodeType.MultimodalChatModel, typeof(MultimodalChatNodeExecutor));
+
+            // Dedicated executors for TTS
+            registry.Register(NodeType.TextToSpeech, typeof(TextToSpeechNodeExecutor));
+            registry.Register(NodeType.StoreAudio, typeof(StoreAudioNodeExecutor));
 
             // Generic executor for provider-based nodes
             registry.Register(NodeType.MessageFormatter, typeof(GenericNodeExecutor));

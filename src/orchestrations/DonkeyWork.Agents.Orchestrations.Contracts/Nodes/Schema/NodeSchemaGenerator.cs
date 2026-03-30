@@ -137,6 +137,28 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
             {
                 return new SleepNodeConfiguration { Name = name, DurationSeconds = 0 };
             }
+            if (configType == typeof(TextToSpeechNodeConfiguration))
+            {
+                return new TextToSpeechNodeConfiguration
+                {
+                    Name = name,
+                    CredentialId = Guid.Empty,
+                    Model = "tts-1",
+                    Voice = "alloy",
+                    InputText = ""
+                };
+            }
+            if (configType == typeof(StoreAudioNodeConfiguration))
+            {
+                return new StoreAudioNodeConfiguration
+                {
+                    Name = name,
+                    RecordingName = "",
+                    RecordingDescription = "",
+                    AudioObjectKey = "",
+                    Transcript = ""
+                };
+            }
 
             return null;
         }

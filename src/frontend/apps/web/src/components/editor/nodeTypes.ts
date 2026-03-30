@@ -17,6 +17,8 @@ import {
   Bot,
   Zap,
   FileText,
+  Volume2,
+  Database,
   // Provider icons
   Sparkles,
   Brain,
