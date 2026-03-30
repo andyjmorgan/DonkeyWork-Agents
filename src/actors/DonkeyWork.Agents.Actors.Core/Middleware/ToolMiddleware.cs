@@ -90,7 +90,16 @@ internal sealed class ToolMiddleware : IModelMiddleware
                     await context.PersistMessage(toolResultMessage);
             }
 
-            // Loop back — next iteration calls LLM with tool results appended
+            // Incorporate any pending messages (e.g. agent results) that arrived during tool execution
+            if (context.DrainPendingMessages is not null)
+            {
+                var pending = await context.DrainPendingMessages();
+                if (pending.Count > 0)
+                {
+                    context.Messages.AddRange(pending);
+                    _logger.LogInformation("ToolMiddleware: incorporated {Count} pending message(s)", pending.Count);
+                }
+            }
         }
     }
 

@@ -370,7 +370,8 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         List<InternalMessage> messages,
         Func<InternalMessage, Task> persistMessage,
         CancellationToken ct,
-        Guid? turnId = null)
+        Guid? turnId = null,
+        Func<Task<IReadOnlyList<InternalMessage>>>? drainPendingMessages = null)
     {
         // Ensure ToolGroupNames.Sandbox is in tool groups when EnableSandbox is set
         var effectiveToolGroups = contract.EnableSandbox
@@ -576,6 +577,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 msg.TurnId = effectiveTurnId;
                 await persistMessage(msg);
             },
+            DrainPendingMessages = drainPendingMessages,
         };
 
         await foreach (var msg in Pipeline.ExecuteAsync(context))
