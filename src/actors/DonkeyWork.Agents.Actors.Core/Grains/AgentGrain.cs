@@ -260,12 +260,15 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         List<InternalMessage> messages,
         CancellationToken ct)
     {
-        var (assistantMsg, _) = await ExecuteTurnAsync(contract, messages, async msg =>
+        var (assistantMsg, _, pipelineError) = await ExecuteTurnAsync(contract, messages, async msg =>
         {
             Messages.Add(msg);
             await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++, ct);
         }, ct);
+
+        if (pipelineError is not null)
+            throw new InvalidOperationException(pipelineError);
 
         return BuildAgentResult(assistantMsg);
     }

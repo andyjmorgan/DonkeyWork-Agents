@@ -320,6 +320,10 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 });
                 break;
 
+            case RetryMessage retry:
+                Emit(new StreamRetryEvent(key, retry.Attempt, retry.MaxRetries, retry.DelayMs, retry.Reason));
+                break;
+
             case ErrorMessage error:
                 Emit(new StreamErrorEvent(key, error.ErrorText));
                 break;
@@ -365,7 +369,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     /// <param name="ct">Cancellation token.</param>
     /// <param name="turnId">Optional turn ID. If null, a new one is generated.</param>
     /// <returns>A tuple of the final assistant message (if any) and the messages list from the context.</returns>
-    protected async Task<(InternalAssistantMessage? AssistantMessage, List<InternalMessage> Messages)> ExecuteTurnAsync(
+    protected async Task<(InternalAssistantMessage? AssistantMessage, List<InternalMessage> Messages, string? PipelineError)> ExecuteTurnAsync(
         AgentContract contract,
         List<InternalMessage> messages,
         Func<InternalMessage, Task> persistMessage,
@@ -580,14 +584,18 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             DrainPendingMessages = drainPendingMessages,
         };
 
+        string? pipelineError = null;
+
         await foreach (var msg in Pipeline.ExecuteAsync(context))
         {
             ct.ThrowIfCancellationRequested();
             EmitStreamEvent(msg);
+            if (msg is ErrorMessage error)
+                pipelineError = error.ErrorText;
         }
 
         var assistantMsg = context.Messages.OfType<InternalAssistantMessage>().LastOrDefault();
-        return (assistantMsg, context.Messages);
+        return (assistantMsg, context.Messages, pipelineError);
     }
 
     protected static string BuildDeferredToolsPrompt(bool mcpDeferred, McpServerReference[]? mcpServers)

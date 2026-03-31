@@ -631,6 +631,21 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         break;
       }
 
+      case "retry": {
+        const attempt = data.attempt as number;
+        const maxRetries = data.maxRetries as number;
+        const reason = (data.reason as string) ?? "Transient error";
+        const retryText = `Retrying (${attempt}/${maxRetries}): ${reason}`;
+        if (agentGroupIndexRef.current.has(agentKey)) {
+          appendOrCreate(assistantId, agentKey, "text",
+            { type: "text", text: retryText });
+        } else {
+          appendOrCreate(assistantId, "", "text",
+            { type: "text", text: retryText });
+        }
+        break;
+      }
+
       case "progress":
         break;
     }

@@ -366,6 +366,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 }
 
                 var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
+                DelayDeactivation(TimeSpan.FromSeconds(timeoutSeconds + 60));
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                 var ct = _currentTurnCts.Token;
 
@@ -430,6 +431,8 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
                 Emit(new StreamTurnEndEvent(GrainContext.GrainKey));
                 EmitQueueStatus();
+
+                DelayDeactivation(TimeSpan.FromMinutes(35));
             }
         }
     }
@@ -440,7 +443,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
     private async Task RunPipelineAsync(AgentContract contract, Guid turnId, CancellationToken ct)
     {
-        var (assistantMsg, contextMessages) = await ExecuteTurnAsync(contract, Messages, async msg =>
+        var (assistantMsg, contextMessages, _) = await ExecuteTurnAsync(contract, Messages, async msg =>
         {
             NextSequenceNumber = await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber, ct);
