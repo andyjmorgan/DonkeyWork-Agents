@@ -12,16 +12,23 @@ interface ScribanEditorProps {
 }
 
 const NODE_OUTPUT_PROPERTIES: Record<string, string[]> = {
-  start: [],
-  end: [],
-  model: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
+  Start: [],
+  End: [],
+  Model: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
   MultimodalChatModel: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
-  action: ['Result', 'ActionType'],
-  messageFormatter: ['FormattedMessage'],
-  httpRequest: ['StatusCode', 'Body', 'Headers', 'IsSuccess'],
-  sleep: ['DurationSeconds'],
-  textToSpeech: ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model'],
-  storeAudio: ['RecordingId', 'Name', 'Description', 'FilePath', 'Transcript'],
+  Action: ['Result', 'ActionType'],
+  MessageFormatter: ['FormattedMessage'],
+  HttpRequest: ['StatusCode', 'Body', 'Headers', 'IsSuccess'],
+  Sleep: ['DurationSeconds'],
+  TextToSpeech: ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model'],
+  StoreAudio: ['RecordingId', 'Name', 'Description', 'FilePath', 'Transcript'],
+}
+
+function getOutputProperties(nodeType: string): string[] {
+  const normalised = Object.keys(NODE_OUTPUT_PROPERTIES).find(
+    k => k.toLowerCase() === nodeType.toLowerCase()
+  )
+  return normalised ? NODE_OUTPUT_PROPERTIES[normalised] : []
 }
 
 interface SuggestionItem {
@@ -52,7 +59,9 @@ export function ScribanEditor({
 
   const predecessors = useMemo(() => {
     const all = predecessorsProp ?? (nodeId ? getReachablePredecessors(nodeId) : [])
-    return all.filter(p => p.nodeType !== 'start')
+    const filtered = all.filter(p => p.nodeType.toLowerCase() !== 'start')
+    console.log('[ScribanEditor] predecessors:', filtered.map(p => ({ name: p.nodeName, type: p.nodeType, outputs: getOutputProperties(p.nodeType) })))
+    return filtered
   }, [predecessorsProp, nodeId, getReachablePredecessors])
 
   const inputProperties = useMemo(() => {
@@ -84,13 +93,13 @@ export function ScribanEditor({
       })
     } else if (pathLower.length === 1 && pathLower[0] === 'steps') {
       predecessors.forEach(pred => {
-        const hasOutputs = (NODE_OUTPUT_PROPERTIES[pred.nodeType] || []).length > 0
-        items.push({ label: pred.nodeName, detail: pred.nodeType, insertText: pred.nodeName, hasChildren: hasOutputs })
+        const outputs = getOutputProperties(pred.nodeType)
+        items.push({ label: pred.nodeName, detail: pred.nodeType, insertText: pred.nodeName, hasChildren: outputs.length > 0 })
       })
     } else if (pathLower.length === 2 && pathLower[0] === 'steps') {
       const pred = predecessors.find(p => p.nodeName.toLowerCase() === pathParts[1].toLowerCase())
       if (pred) {
-        (NODE_OUTPUT_PROPERTIES[pred.nodeType] || []).forEach(prop => {
+        getOutputProperties(pred.nodeType).forEach(prop => {
           items.push({ label: prop, detail: 'Output', insertText: prop, hasChildren: false })
         })
       }
@@ -130,6 +139,7 @@ export function ScribanEditor({
     }
 
     const items = buildSuggestions(match[1])
+    console.log('[ScribanEditor] suggestions for path:', match[1], 'items:', items)
     if (items.length > 0) {
       setSuggestions(items)
       setSelectedIndex(0)
