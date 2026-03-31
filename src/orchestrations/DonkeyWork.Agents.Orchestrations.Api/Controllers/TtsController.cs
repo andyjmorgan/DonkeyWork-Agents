@@ -1,0 +1,102 @@
+using Asp.Versioning;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+namespace DonkeyWork.Agents.Orchestrations.Api.Controllers;
+
+/// <summary>
+/// Manage TTS recordings and playback state.
+/// </summary>
+[ApiController]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/tts")]
+[Authorize]
+[Produces("application/json")]
+public class TtsController : ControllerBase
+{
+    private readonly ITtsService _ttsService;
+
+    public TtsController(ITtsService ttsService)
+    {
+        _ttsService = ttsService;
+    }
+
+    /// <summary>
+    /// List all TTS recordings for the current user.
+    /// </summary>
+    [HttpGet("recordings")]
+    [ProducesResponseType<ListRecordingsResponseV1>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListRecordings(
+        [FromQuery] int offset = 0,
+        [FromQuery] int limit = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _ttsService.ListRecordingsAsync(offset, limit, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get a specific TTS recording by ID.
+    /// </summary>
+    [HttpGet("recordings/{id:guid}")]
+    [ProducesResponseType<TtsRecordingV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRecording(Guid id, CancellationToken cancellationToken)
+    {
+        var recording = await _ttsService.GetRecordingAsync(id, cancellationToken);
+        return recording == null ? NotFound() : Ok(recording);
+    }
+
+    /// <summary>
+    /// Get a presigned URL for the audio file of a recording.
+    /// </summary>
+    [HttpGet("recordings/{id:guid}/audio")]
+    [ProducesResponseType<GetAudioUrlResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAudioUrl(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _ttsService.GetAudioUrlAsync(id, cancellationToken);
+        return result == null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// Update playback state for a recording (last write wins).
+    /// </summary>
+    [HttpPut("recordings/{id:guid}/playback")]
+    [ProducesResponseType<TtsPlaybackV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePlayback(
+        Guid id,
+        [FromBody] UpdatePlaybackRequestV1 request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _ttsService.UpdatePlaybackAsync(id, request, cancellationToken);
+        return result == null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// Get playback state for a recording.
+    /// </summary>
+    [HttpGet("recordings/{id:guid}/playback")]
+    [ProducesResponseType<TtsPlaybackV1>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPlayback(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _ttsService.GetPlaybackAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Delete a TTS recording.
+    /// </summary>
+    [HttpDelete("recordings/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteRecording(Guid id, CancellationToken cancellationToken)
+    {
+        var deleted = await _ttsService.DeleteRecordingAsync(id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
+    }
+}

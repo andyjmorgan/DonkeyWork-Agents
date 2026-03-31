@@ -9,6 +9,7 @@ namespace DonkeyWork.Agents.Conversations.Contracts.Models;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(TextContentPart), "text")]
 [JsonDerivedType(typeof(ImageContentPart), "image")]
+[JsonDerivedType(typeof(AudioContentPart), "audio")]
 public abstract class ContentPart
 {
 }

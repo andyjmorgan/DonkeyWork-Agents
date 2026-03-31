@@ -41,5 +41,15 @@ public enum NodeType
     /// <summary>
     /// Calls a multimodal LLM with configured prompts and parameters.
     /// </summary>
-    MultimodalChatModel
+    MultimodalChatModel,
+
+    /// <summary>
+    /// Generates speech audio from text using a TTS model.
+    /// </summary>
+    TextToSpeech,
+
+    /// <summary>
+    /// Stores generated audio with metadata to create a TTS recording.
+    /// </summary>
+    StoreAudio
 }

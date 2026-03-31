@@ -185,6 +185,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "credentials", "credentials"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.A2a.Api", "src\a2a\DonkeyWork.Agents.A2a.Api\DonkeyWork.Agents.A2a.Api.csproj", "{08D4E187-7AE9-421C-B950-DA5C89A9C388}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "orchestrations", "orchestrations", "{2F02802D-C438-4ECE-5FB8-37C35CBFF0DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Orchestrations.Core.Tests", "test\orchestrations\DonkeyWork.Agents.Orchestrations.Core.Tests\DonkeyWork.Agents.Orchestrations.Core.Tests.csproj", "{68127CF6-D31A-4E29-B709-7F13A8F35352}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "orchestrations", "orchestrations", "{8A5E9163-5DD0-118B-C9E6-EF02A4C5C795}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -951,6 +957,18 @@ Global
 		{08D4E187-7AE9-421C-B950-DA5C89A9C388}.Release|x64.Build.0 = Release|Any CPU
 		{08D4E187-7AE9-421C-B950-DA5C89A9C388}.Release|x86.ActiveCfg = Release|Any CPU
 		{08D4E187-7AE9-421C-B950-DA5C89A9C388}.Release|x86.Build.0 = Release|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Debug|x64.Build.0 = Debug|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Debug|x86.Build.0 = Debug|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Release|x64.ActiveCfg = Release|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Release|x64.Build.0 = Release|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Release|x86.ActiveCfg = Release|Any CPU
+		{68127CF6-D31A-4E29-B709-7F13A8F35352}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1043,5 +1061,8 @@ Global
 		{243AB6EC-654D-498C-824A-ABAE905DCEB7} = {3FC36B88-513F-B642-53B8-D8981C5A6CF0}
 		{AF68749B-5766-73E8-5104-E874B23F80D2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{08D4E187-7AE9-421C-B950-DA5C89A9C388} = {3FC36B88-513F-B642-53B8-D8981C5A6CF0}
+		{2F02802D-C438-4ECE-5FB8-37C35CBFF0DB} = {5897687E-62CC-4170-B568-E63F0CA9FF13}
+		{68127CF6-D31A-4E29-B709-7F13A8F35352} = {2F02802D-C438-4ECE-5FB8-37C35CBFF0DB}
+		{8A5E9163-5DD0-118B-C9E6-EF02A4C5C795} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

@@ -44,11 +44,43 @@ public class TemplateRenderer : ITemplateRenderer
         }
         scriptObject["Steps"] = stepsObject;
 
+        // Register custom functions
+        var customFunctions = new ScriptObject();
+        customFunctions.Import("json_value", new Func<string, string, string>(JsonValueFunction));
+        scriptObject.Import(customFunctions);
+
         var templateContext = new TemplateContext();
         templateContext.PushGlobal(scriptObject);
 
         var result = await parsedTemplate.RenderAsync(templateContext);
         return result;
+    }
+
+    /// <summary>
+    /// Extracts a property value from a JSON string.
+    /// Usage in Scriban: {{ Steps.model.ResponseText | json_value "name" }}
+    /// </summary>
+    private static string JsonValueFunction(string json, string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(json) || string.IsNullOrWhiteSpace(propertyName))
+            return string.Empty;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty(propertyName, out var value))
+            {
+                return value.ValueKind == JsonValueKind.String
+                    ? value.GetString() ?? string.Empty
+                    : value.GetRawText();
+            }
+
+            return string.Empty;
+        }
+        catch (JsonException)
+        {
+            return string.Empty;
+        }
     }
 
     /// <summary>

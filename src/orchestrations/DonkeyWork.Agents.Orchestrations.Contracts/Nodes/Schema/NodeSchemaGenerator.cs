@@ -137,6 +137,30 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
             {
                 return new SleepNodeConfiguration { Name = name, DurationSeconds = 0 };
             }
+            if (configType == typeof(TextToSpeechNodeConfiguration))
+            {
+                return new TextToSpeechNodeConfiguration
+                {
+                    Name = name,
+                    CredentialId = Guid.Empty,
+                    Model = "tts-1",
+                    Voice = "alloy",
+                    InputText = ""
+                };
+            }
+            if (configType == typeof(StoreAudioNodeConfiguration))
+            {
+                return new StoreAudioNodeConfiguration
+                {
+                    Name = name,
+                    RecordingName = "",
+                    RecordingDescription = "",
+                    AudioObjectKey = "",
+                    Transcript = "",
+                    Voice = "",
+                    Model = ""
+                };
+            }
 
             return null;
         }
@@ -165,6 +189,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
 
             var tabAttr = property.GetCustomAttribute<TabAttribute>();
             var sliderAttr = property.GetCustomAttribute<SliderAttribute>();
+            var selectOptionsAttr = property.GetCustomAttribute<SelectOptionsAttribute>();
             var reliesUponAttr = property.GetCustomAttribute<ReliesUponAttribute>();
             var supportsVariables = property.GetCustomAttribute<SupportVariablesAttribute>() != null;
 
@@ -178,6 +203,11 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                 };
             }
 
+            var options = GetEnumOptions(property.PropertyType) ?? selectOptionsAttr?.Options;
+            var defaultValue = sliderAttr?.HasDefault == true
+                ? sliderAttr.Default
+                : selectOptionsAttr?.Default as object;
+
             var fieldSchema = new FieldSchema
             {
                 Name = ToCamelCase(property.Name),
@@ -190,11 +220,11 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                 Required = fieldAttr.Required || IsRequiredProperty(property),
                 SupportsVariables = supportsVariables,
                 Placeholder = fieldAttr.Placeholder,
-                DefaultValue = sliderAttr?.HasDefault == true ? sliderAttr.Default : null,
+                DefaultValue = defaultValue,
                 Min = sliderAttr?.Min,
                 Max = sliderAttr?.Max,
                 Step = sliderAttr?.Step,
-                Options = GetEnumOptions(property.PropertyType),
+                Options = options,
                 ReliesUpon = reliesUponAttr != null
                     ? new ReliesUponSchema
                     {

@@ -13,6 +13,7 @@ import {
   Brain,
   Server,
   Download,
+  Volume2,
   type LucideIcon
 } from 'lucide-react'
 import { BaseNode } from './BaseNode'
@@ -48,6 +49,7 @@ const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
   server: Server,
   download: Download,
+  'volume-2': Volume2,
 }
 
 /**

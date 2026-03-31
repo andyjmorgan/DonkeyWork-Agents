@@ -13,6 +13,8 @@
         <ProjectReference Include="..\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />
         <ProjectReference Include="..\DonkeyWork.Agents.Orchestrations.Core\DonkeyWork.Agents.Orchestrations.Core.csproj" />
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+        <ProjectReference Include="..\..\storage\DonkeyWork.Agents.Storage.Contracts\DonkeyWork.Agents.Storage.Contracts.csproj" />
+        <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
     </ItemGroup>
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
