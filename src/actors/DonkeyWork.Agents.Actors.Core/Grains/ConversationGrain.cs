@@ -165,46 +165,11 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         GrainContext.A2aServers = _discoveredA2aServers;
     }
 
-    protected override async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
+    protected override Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
     {
-        if (OrchestrationToolProvider is not null)
-            return;
-
-        try
-        {
-        var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
-        var toolEnabled = await orchestrationService.ListToolEnabledAsync(ct);
-        Logger.LogInformation("Discovered {Count} tool-enabled orchestrations", toolEnabled.Count);
-
-        if (toolEnabled.Count == 0)
-            return;
-
-        var references = toolEnabled.Select(o => new OrchestrationReference
-        {
-            Id = o.Id.ToString(),
-            Name = o.Name,
-            Description = o.Description
-        }).ToArray();
-
-        var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
-        var executor = ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
-        var executionRepo = ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
-
-        OrchestrationToolProvider = new OrchestrationToolProvider();
-        await OrchestrationToolProvider.InitializeAsync(
-            references,
-            IdentityContext.UserId,
-            orchestrationService,
-            versionService,
-            executor,
-            executionRepo,
-            Logger,
-            ct);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to initialize orchestration tools");
-        }
+        // Orchestration tools for Navi are not auto-discovered yet.
+        // They are only available when explicitly attached to agent definitions.
+        return Task.CompletedTask;
     }
 
     protected override async Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
