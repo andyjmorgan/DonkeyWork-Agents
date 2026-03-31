@@ -713,7 +713,7 @@ public class AgentExecutionIntegrationTests : ControllerIntegrationTestBase
             InputSchema = JsonDocument.Parse(inputSchema),
             ReactFlowData = reactFlowData,
             NodeConfigurations = JsonDocument.Parse(nodeConfigsJson).RootElement.Clone(),
-            Interface = new DirectInterfaceConfig()
+            Interfaces = [new DirectInterfaceConfig()]
         };
     }
 

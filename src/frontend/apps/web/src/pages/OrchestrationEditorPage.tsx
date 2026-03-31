@@ -91,7 +91,7 @@ export function OrchestrationEditorPage() {
               currentVersion.isDraft,
               currentVersion.reactFlowData,
               nodeConfigurations,
-              currentVersion.interface
+              currentVersion.interfaces
             )
           } else {
             // No versions yet (shouldn't happen but handle it)
@@ -220,7 +220,7 @@ export function OrchestrationEditorPage() {
         false, // isDraft = false (now published)
         publishedVersion.reactFlowData,
         nodeConfigurations,
-        publishedVersion.interface
+        publishedVersion.interfaces
       )
 
       // TODO: Show success toast "Version published! The next save will create a new draft."
@@ -254,7 +254,7 @@ export function OrchestrationEditorPage() {
       version.isDraft,
       version.reactFlowData,
       nodeConfigurations,
-      version.interface
+      version.interfaces
     )
   }, [orchestrationId, orchestrationName, orchestrationDescription])
 
@@ -280,7 +280,7 @@ export function OrchestrationEditorPage() {
       true, // Mark as draft
       version.reactFlowData,
       nodeConfigurations,
-      version.interface
+      version.interfaces
     )
     // TODO: Show success toast "Draft created from version X. Save to persist."
   }, [orchestrationId, orchestrationName, orchestrationDescription])

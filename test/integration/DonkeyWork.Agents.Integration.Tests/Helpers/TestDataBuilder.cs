@@ -156,7 +156,7 @@ public static class TestDataBuilder
             InputSchema = JsonDocument.Parse(inputSchemaJson),
             ReactFlowData = parsedReactFlowData,
             NodeConfigurations = JsonDocument.Parse(nodeConfigurationsJson).RootElement.Clone(),
-            Interface = new DirectInterfaceConfig()
+            Interfaces = [new DirectInterfaceConfig()]
         };
     }
 

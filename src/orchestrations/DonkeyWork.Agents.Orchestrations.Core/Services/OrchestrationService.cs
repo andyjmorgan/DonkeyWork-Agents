@@ -212,12 +212,12 @@ public class OrchestrationService : IOrchestrationService
             .ToListAsync(cancellationToken);
 
         return orchestrations
-            .Where(o => o.CurrentVersion?.Interface is ChatInterfaceConfig)
+            .Where(o => o.CurrentVersion?.Interfaces.Any(i => i is ChatInterfaceConfig) == true)
             .Select(o => new ChatEnabledOrchestrationV1
             {
                 Id = o.Id,
                 Name = o.Name,
-                Description = o.CurrentVersion?.Interface?.Description
+                Description = o.CurrentVersion?.Interfaces.OfType<ChatInterfaceConfig>().FirstOrDefault()?.Description
             })
             .ToList();
     }

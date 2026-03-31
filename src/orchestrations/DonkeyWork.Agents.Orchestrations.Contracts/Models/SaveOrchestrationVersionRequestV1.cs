@@ -46,12 +46,12 @@ public sealed class SaveOrchestrationVersionRequestV1
     public IReadOnlyList<CredentialMappingV1>? CredentialMappings { get; init; }
 
     /// <summary>
-    /// Interface configuration for this version.
-    /// Each orchestration supports exactly one interface type.
+    /// Interface configurations for this version.
+    /// An orchestration can support multiple interface types simultaneously.
     /// </summary>
-    [JsonPropertyName("interface")]
+    [JsonPropertyName("interfaces")]
     [Required]
-    public required InterfaceConfig Interface { get; init; }
+    public required IList<InterfaceConfig> Interfaces { get; init; }
 }
 
 /// <summary>

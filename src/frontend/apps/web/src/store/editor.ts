@@ -74,7 +74,7 @@ interface EditorState {
   // Version data
   versionId: string | null
   isDraft: boolean
-  interface: InterfaceConfig
+  interfaces: InterfaceConfig[]
 
   // ReactFlow state
   nodes: Node[]
@@ -113,7 +113,7 @@ interface EditorState {
     isDraft?: boolean,
     reactFlowData?: { nodes: Node[], edges: Edge[], viewport: Viewport },
     nodeConfigurations?: Record<string, NodeConfig>,
-    interfaceConfig?: InterfaceConfig
+    interfaces?: InterfaceConfig[]
   ) => void
 
   // Persistence
@@ -135,7 +135,7 @@ interface EditorState {
   getReachablePredecessors: (nodeId: string) => Array<{ nodeId: string; nodeName: string; nodeType: string }>
 
   // Interface
-  setInterface: (interfaceConfig: InterfaceConfig) => void
+  setInterfaces: (interfaces: InterfaceConfig[]) => void
 }
 
 // Default input schema for Start node
@@ -165,7 +165,7 @@ const createInitialState = () => {
     orchestrationDescription: '',
     versionId: null,
     isDraft: true,
-    interface: { type: 'DirectInterfaceConfig' } as InterfaceConfig,
+    interfaces: [{ type: 'DirectInterfaceConfig' } as InterfaceConfig],
     nodes: [
       {
         id: startId,
@@ -419,7 +419,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set(createInitialState())
   },
 
-  loadOrchestration: (orchestrationId, orchestrationName, orchestrationDescription, versionId, isDraft, reactFlowData, nodeConfigurations, interfaceConfig) => {
+  loadOrchestration: (orchestrationId, orchestrationName, orchestrationDescription, versionId, isDraft, reactFlowData, nodeConfigurations, interfaces) => {
     if (reactFlowData && nodeConfigurations) {
       // Enrich nodes with schema data (for backward compatibility with old saved nodes)
       const enrichedNodes = reactFlowData.nodes.map(node => {
@@ -433,7 +433,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         orchestrationDescription,
         versionId: versionId || null,
         isDraft: isDraft ?? true,
-        interface: interfaceConfig ?? { type: 'DirectInterfaceConfig' } as InterfaceConfig,
+        interfaces: interfaces ?? [{ type: 'DirectInterfaceConfig' } as InterfaceConfig],
         nodes: enrichedNodes,
         edges: reactFlowData.edges,
         viewport: reactFlowData.viewport,
@@ -671,8 +671,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   save: async () => {
     const state = get()
     const { orchestrationId, nodes, edges, viewport, nodeConfigurations } = state
-    const interfaceConfig = state.interface
-
     if (!orchestrationId) {
       throw new Error('No orchestration ID - create orchestration first')
     }
@@ -692,7 +690,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       inputSchema,
       outputSchema: null,
       credentialMappings,
-      interface: interfaceConfig
+      interfaces: state.interfaces
     })
   },
 
@@ -723,8 +721,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   exportToJson: () => {
     const state = get()
     const { orchestrationId, orchestrationName, orchestrationDescription, nodes, edges, viewport, nodeConfigurations } = state
-    const interfaceConfig = state.interface
-
     const startNode = nodes.find(n => n.data?.nodeType === 'Start')
     const startConfig = startNode ? nodeConfigurations[startNode.id] : null
     const inputSchema = (startConfig?.inputSchema as Record<string, unknown>) || defaultInputSchema
@@ -739,13 +735,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         reactFlowData: { nodes, edges, viewport },
         nodeConfigurations,
         inputSchema,
-        interface: interfaceConfig,
+        interfaces: state.interfaces,
         credentialMappings: get().extractCredentialMappings()
       }
     }, null, 2)
   },
 
-  setInterface: (interfaceConfig) => {
-    set({ interface: interfaceConfig })
+  setInterfaces: (interfaces) => {
+    set({ interfaces })
   }
 }))

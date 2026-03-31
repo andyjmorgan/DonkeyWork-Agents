@@ -60,7 +60,7 @@ public class ConversationService : IConversationService
                 throw new InvalidOperationException($"Orchestration {request.OrchestrationId} has no published version");
             }
 
-            if (orchestration.CurrentVersion.Interface is not ChatInterfaceConfig)
+            if (!orchestration.CurrentVersion.Interfaces.Any(i => i is ChatInterfaceConfig))
             {
                 throw new InvalidOperationException($"Orchestration {request.OrchestrationId} does not support Chat interface");
             }

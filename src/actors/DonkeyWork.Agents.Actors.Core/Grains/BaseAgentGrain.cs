@@ -14,6 +14,7 @@ using DonkeyWork.Agents.Actors.Core.Providers.Responses;
 using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
+using DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.A2a.Contracts.Services;
@@ -53,6 +54,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     protected IAgentResponseObserver? Observer;
     private protected McpToolProvider? McpToolProvider;
     private protected A2aToolProvider? A2aToolProvider;
+    private protected OrchestrationToolProvider? OrchestrationToolProvider;
     protected bool HasMcpSandbox;
     protected Type[]? EffectiveToolTypes;
     protected SandboxProvisioningHandle? SandboxHandle;
@@ -118,6 +120,11 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     /// Initializes A2A tools for this grain. Called once per activation when A2A servers are present.
     /// </summary>
     protected abstract Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct);
+
+    /// <summary>
+    /// Initializes orchestration tools for this grain. Called once per activation when orchestrations are attached.
+    /// </summary>
+    protected abstract Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct);
 
     /// <summary>
     /// Returns the agent catalog prompt fragment (e.g., sub-agents or Navi-connected agents).
@@ -239,6 +246,12 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             return new ToolExecutionResult(result.Content, result.IsError);
         }
 
+        if (OrchestrationToolProvider?.HasTool(toolName) == true)
+        {
+            var result = await OrchestrationToolProvider.ExecuteAsync(toolName, arguments, ct);
+            return new ToolExecutionResult(result.Content, result.IsError);
+        }
+
         return new ToolExecutionResult($"Unknown tool: {toolName}", IsError: true);
     }
 
@@ -264,7 +277,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             case ModelMiddlewareMessage { ModelMessage: ModelResponseToolCall toolCall }:
                 Emit(new StreamToolUseEvent(key, toolCall.ToolName, toolCall.ToolUseId, toolCall.Input.GetRawText())
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolCall.ToolName) ?? McpToolProvider?.GetDisplayName(toolCall.ToolName) ?? A2aToolProvider?.GetDisplayName(toolCall.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolCall.ToolName) ?? McpToolProvider?.GetDisplayName(toolCall.ToolName) ?? A2aToolProvider?.GetDisplayName(toolCall.ToolName) ?? OrchestrationToolProvider?.GetDisplayName(toolCall.ToolName),
                 });
                 break;
 
@@ -310,14 +323,18 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                     key, toolResponse.ToolCallId, toolResponse.ToolName,
                     toolResponse.Response, toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName) ?? OrchestrationToolProvider?.GetDisplayName(toolResponse.ToolName),
                 });
                 Emit(new StreamToolCompleteEvent(
                     key, toolResponse.ToolCallId, toolResponse.ToolName,
                     toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName) ?? OrchestrationToolProvider?.GetDisplayName(toolResponse.ToolName),
                 });
+                break;
+
+            case RetryMessage retry:
+                Emit(new StreamRetryEvent(key, retry.Attempt, retry.MaxRetries, retry.DelayMs, retry.Reason));
                 break;
 
             case ErrorMessage error:
@@ -365,7 +382,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     /// <param name="ct">Cancellation token.</param>
     /// <param name="turnId">Optional turn ID. If null, a new one is generated.</param>
     /// <returns>A tuple of the final assistant message (if any) and the messages list from the context.</returns>
-    protected async Task<(InternalAssistantMessage? AssistantMessage, List<InternalMessage> Messages)> ExecuteTurnAsync(
+    protected async Task<(InternalAssistantMessage? AssistantMessage, List<InternalMessage> Messages, string? PipelineError)> ExecuteTurnAsync(
         AgentContract contract,
         List<InternalMessage> messages,
         Func<InternalMessage, Task> persistMessage,
@@ -404,6 +421,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         await InitializeMcpToolsAsync(contract, effectiveToolGroups, ct);
         await InitializeA2aToolsAsync(contract, effectiveToolGroups, ct);
+        await InitializeOrchestrationToolsAsync(contract, ct);
 
         var effectiveToolTypes = HasMcpSandbox && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
             ? [..toolTypes, typeof(SandboxTools)]
@@ -491,9 +509,10 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         }
 
         var a2aTools = A2aToolProvider?.GetToolDefinitions() ?? [];
+        var orchestrationTools = OrchestrationToolProvider?.GetToolDefinitions() ?? [];
 
-        IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0 || a2aTools.Count > 0
-            ? [.. (localTools ?? []), .. mcpTools, .. a2aTools]
+        IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0 || a2aTools.Count > 0 || orchestrationTools.Count > 0
+            ? [.. (localTools ?? []), .. mcpTools, .. a2aTools, .. orchestrationTools]
             : null;
 
         var apiKey = await ApiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct);
@@ -580,14 +599,18 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             DrainPendingMessages = drainPendingMessages,
         };
 
+        string? pipelineError = null;
+
         await foreach (var msg in Pipeline.ExecuteAsync(context))
         {
             ct.ThrowIfCancellationRequested();
             EmitStreamEvent(msg);
+            if (msg is ErrorMessage error)
+                pipelineError = error.ErrorText;
         }
 
         var assistantMsg = context.Messages.OfType<InternalAssistantMessage>().LastOrDefault();
-        return (assistantMsg, context.Messages);
+        return (assistantMsg, context.Messages, pipelineError);
     }
 
     protected static string BuildDeferredToolsPrompt(bool mcpDeferred, McpServerReference[]? mcpServers)

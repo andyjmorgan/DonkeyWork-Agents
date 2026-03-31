@@ -219,8 +219,8 @@ export interface Orchestration {
   createdAt: string
 }
 
-// Interface configuration types (polymorphic, 1:1 - each orchestration has exactly one interface)
-export type InterfaceType = 'DirectInterfaceConfig'
+// Interface configuration types (polymorphic, multi-select)
+export type InterfaceType = 'DirectInterfaceConfig' | 'ToolInterfaceConfig' | 'McpInterfaceConfig' | 'ChatInterfaceConfig'
 
 export interface InterfaceConfigBase {
   type: InterfaceType
@@ -232,7 +232,20 @@ export interface DirectInterfaceConfig extends InterfaceConfigBase {
   type: 'DirectInterfaceConfig'
 }
 
-export type InterfaceConfig = DirectInterfaceConfig
+export interface ToolInterfaceConfig extends InterfaceConfigBase {
+  type: 'ToolInterfaceConfig'
+}
+
+export interface McpInterfaceConfig extends InterfaceConfigBase {
+  type: 'McpInterfaceConfig'
+  toolName?: string
+}
+
+export interface ChatInterfaceConfig extends InterfaceConfigBase {
+  type: 'ChatInterfaceConfig'
+}
+
+export type InterfaceConfig = DirectInterfaceConfig | ToolInterfaceConfig | McpInterfaceConfig | ChatInterfaceConfig
 
 // ReactFlow types - using 'any' to maintain compatibility with ReactFlow library types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -247,7 +260,7 @@ export interface OrchestrationVersion {
   outputSchema?: JSONSchema
   reactFlowData: ReactFlowData
   nodeConfigurations: Record<string, Record<string, unknown>>
-  interface: InterfaceConfig
+  interfaces: InterfaceConfig[]
   createdAt: string
   publishedAt?: string
 }
@@ -270,7 +283,7 @@ export interface SaveVersionRequest {
   inputSchema: JSONSchema
   outputSchema?: JSONSchema | null
   credentialMappings: Array<{ nodeId: string; credentialId: string }>
-  interface: InterfaceConfig
+  interfaces: InterfaceConfig[]
 }
 
 export interface CreateOrchestrationResponse {

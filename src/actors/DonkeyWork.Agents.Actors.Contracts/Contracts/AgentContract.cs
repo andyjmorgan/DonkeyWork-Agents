@@ -31,4 +31,5 @@ public sealed class AgentContract
     [Id(23)] public bool AllowDelegation { get; init; }
     [Id(24)] public ContextManagementConfig ContextManagement { get; init; } = new();
     [Id(25)] public A2aServerReference[] A2aServers { get; init; } = [];
+    [Id(26)] public OrchestrationReference[] Orchestrations { get; init; } = [];
 }

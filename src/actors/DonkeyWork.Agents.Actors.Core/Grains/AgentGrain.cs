@@ -11,6 +11,8 @@ using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
+using DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
+using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.A2a.Contracts.Services;
@@ -19,6 +21,7 @@ using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
 using DonkeyWork.Agents.Providers.Contracts.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -131,6 +134,28 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
         A2aToolProvider = new A2aToolProvider();
         await A2aToolProvider.InitializeAsync(configs, Logger, ct);
+    }
+
+    protected override async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
+    {
+        if (OrchestrationToolProvider is not null || contract.Orchestrations is not { Length: > 0 })
+            return;
+
+        var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
+        var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
+        var executor = ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
+        var executionRepo = ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
+
+        OrchestrationToolProvider = new OrchestrationToolProvider();
+        await OrchestrationToolProvider.InitializeAsync(
+            contract.Orchestrations,
+            IdentityContext.UserId,
+            orchestrationService,
+            versionService,
+            executor,
+            executionRepo,
+            Logger,
+            ct);
     }
 
     protected override Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
@@ -260,12 +285,15 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         List<InternalMessage> messages,
         CancellationToken ct)
     {
-        var (assistantMsg, _) = await ExecuteTurnAsync(contract, messages, async msg =>
+        var (assistantMsg, _, pipelineError) = await ExecuteTurnAsync(contract, messages, async msg =>
         {
             Messages.Add(msg);
             await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++, ct);
         }, ct);
+
+        if (pipelineError is not null)
+            throw new InvalidOperationException(pipelineError);
 
         return BuildAgentResult(assistantMsg);
     }
