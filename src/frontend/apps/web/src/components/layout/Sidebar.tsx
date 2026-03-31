@@ -39,7 +39,7 @@ const navigationGroups: NavGroup[] = [
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
       { name: 'Research', href: '/research', icon: FlaskConical, iconColor: 'text-cyan-500' },
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
-      { name: 'Recordings', href: '/recordings', icon: Volume2, iconColor: 'text-pink-500' },
+      { name: 'Listen', href: '/recordings', icon: Volume2, iconColor: 'text-pink-500' },
     ],
   },
   {
