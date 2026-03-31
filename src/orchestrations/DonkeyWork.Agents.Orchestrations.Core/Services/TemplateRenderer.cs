@@ -86,47 +86,72 @@ public class TemplateRenderer : ITemplateRenderer
     /// <summary>
     /// Converts an object (potentially JsonElement) to a Scriban-navigable object.
     /// </summary>
+    private const int MaxDepth = 10;
+
     internal static object? ConvertToScribanObject(object? input)
     {
-        if (input == null)
+        return ConvertToScribanObject(input, 0);
+    }
+
+    private static object? ConvertToScribanObject(object? input, int depth)
+    {
+        if (input == null || depth > MaxDepth)
             return null;
 
         if (input is JsonElement element)
-        {
             return ConvertJsonElement(element);
-        }
 
         if (input is JsonDocument doc)
-        {
             return ConvertJsonElement(doc.RootElement);
+
+        if (input is string s)
+            return s;
+
+        if (input is ScriptObject)
+            return input;
+
+        if (input is IDictionary<string, object?> dict)
+        {
+            var so = new ScriptObject();
+            foreach (var (key, value) in dict)
+                so[key] = ConvertToScribanObject(value, depth + 1);
+            return so;
         }
 
-        // For other objects, try to convert to ScriptObject if it's a complex type
-        var type = input.GetType();
-        if (!type.IsPrimitive && type != typeof(string) && !type.IsEnum)
+        if (input is System.Collections.IEnumerable enumerable and not string)
         {
-            return ConvertObjectToScriptObject(input);
+            var list = new List<object?>();
+            foreach (var item in enumerable)
+                list.Add(ConvertToScribanObject(item, depth + 1));
+            return list;
         }
+
+        var type = input.GetType();
+        if (!type.IsPrimitive && !type.IsEnum && type != typeof(decimal) && type != typeof(DateTime) && type != typeof(DateTimeOffset))
+            return ConvertObjectToScriptObject(input, depth);
 
         return input;
     }
 
-    /// <summary>
-    /// Converts a CLR object to a ScriptObject for Scriban navigation.
-    /// </summary>
-    private static ScriptObject ConvertObjectToScriptObject(object obj)
+    private static ScriptObject ConvertObjectToScriptObject(object obj, int depth)
     {
         var scriptObject = new ScriptObject();
         var type = obj.GetType();
 
         foreach (var property in type.GetProperties())
         {
-            if (!property.CanRead)
+            if (!property.CanRead || property.GetIndexParameters().Length > 0)
                 continue;
 
-            var value = property.GetValue(obj);
-            var convertedValue = ConvertToScribanObject(value);
-            scriptObject[property.Name] = convertedValue;
+            try
+            {
+                var value = property.GetValue(obj);
+                scriptObject[property.Name] = ConvertToScribanObject(value, depth + 1);
+            }
+            catch
+            {
+                // Skip properties that throw on access
+            }
         }
 
         return scriptObject;
