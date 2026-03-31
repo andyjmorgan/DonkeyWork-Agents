@@ -263,9 +263,19 @@ public sealed class StorageService : IStorageService
             await _s3Client.CreateBucketAsync(_options.DefaultBucket, cancellationToken);
         }
 
-        var objectKey = string.IsNullOrEmpty(request.KeyPrefix)
-            ? $"{_identityContext.UserId}/{request.FileName}"
-            : $"{_identityContext.UserId}/{request.KeyPrefix}/{request.FileName}";
+        string objectKey;
+        if (request.AbsoluteKeyPrefix && !string.IsNullOrEmpty(request.KeyPrefix))
+        {
+            objectKey = $"{request.KeyPrefix}/{request.FileName}";
+        }
+        else if (!string.IsNullOrEmpty(request.KeyPrefix))
+        {
+            objectKey = $"{_identityContext.UserId}/{request.KeyPrefix}/{request.FileName}";
+        }
+        else
+        {
+            objectKey = $"{_identityContext.UserId}/{request.FileName}";
+        }
 
         long sizeBytes;
         using (var ms = new MemoryStream())
@@ -350,6 +360,14 @@ public sealed class StorageService : IStorageService
 
     private string ResolveKey(string objectKey)
     {
+        if (IsAbsoluteKey(objectKey))
+            return objectKey;
+
         return $"{_identityContext.UserId}/{objectKey}";
+    }
+
+    private static bool IsAbsoluteKey(string objectKey)
+    {
+        return objectKey.StartsWith("tts/", StringComparison.OrdinalIgnoreCase);
     }
 }

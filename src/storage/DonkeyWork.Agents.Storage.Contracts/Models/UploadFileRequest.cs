@@ -12,4 +12,9 @@ public sealed class UploadFileRequest
     /// Optional key prefix within the user's namespace (e.g., "conversations/{convId}").
     /// </summary>
     public string? KeyPrefix { get; init; }
+
+    /// <summary>
+    /// When true, use KeyPrefix as an absolute path without prepending the user ID.
+    /// </summary>
+    public bool AbsoluteKeyPrefix { get; init; }
 }

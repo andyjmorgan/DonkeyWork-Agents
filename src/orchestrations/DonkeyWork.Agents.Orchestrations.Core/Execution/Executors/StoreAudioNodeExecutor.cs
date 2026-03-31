@@ -71,7 +71,8 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
                 FileName = fileName,
                 ContentType = contentType,
                 Content = audioStream,
-                KeyPrefix = $"tts/{Context.ExecutionId}"
+                KeyPrefix = $"tts/{Context.UserId}/{Context.ExecutionId}",
+                AbsoluteKeyPrefix = true
             },
             cancellationToken);
 
