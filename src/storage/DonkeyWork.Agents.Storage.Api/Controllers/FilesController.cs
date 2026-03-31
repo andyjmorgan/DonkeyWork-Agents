@@ -125,6 +125,19 @@ public class FilesController : ControllerBase
     }
 
     /// <summary>
+    /// Delete a folder and all its contents.
+    /// </summary>
+    /// <param name="prefix">The folder path to delete (relative to user root).</param>
+    /// <response code="204">Folder deleted.</response>
+    [HttpDelete("folder/{**prefix}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteFolder(string prefix)
+    {
+        await _storageService.DeleteFolderAsync(prefix);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Download a file by full path key (e.g., conversations/{convId}/image.png).
     /// </summary>
     /// <param name="key">The object key path relative to user namespace.</param>

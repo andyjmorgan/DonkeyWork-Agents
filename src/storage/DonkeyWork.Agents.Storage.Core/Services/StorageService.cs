@@ -78,6 +78,20 @@ public sealed class StorageService : IStorageService
         await _s3Client.DeleteByPrefixAsync(_options.DefaultBucket, fullPrefix, cancellationToken);
     }
 
+    public async Task DeleteFolderAsync(string folderPrefix, CancellationToken cancellationToken = default)
+    {
+        var normalizedPrefix = folderPrefix.TrimEnd('/') + "/";
+
+        if (UseFilesystem)
+        {
+            DeleteFolderFromFilesystem(normalizedPrefix);
+            return;
+        }
+
+        var fullPrefix = $"{_identityContext.UserId}/{normalizedPrefix}";
+        await _s3Client.DeleteByPrefixAsync(_options.DefaultBucket, fullPrefix, cancellationToken);
+    }
+
     public async Task<PresignedUrlResult?> GetPublicUrlAsync(string objectKey, TimeSpan? expiry = null, CancellationToken cancellationToken = default)
     {
         if (UseFilesystem && FileSystemPathHelper.IsUserFile(objectKey))
@@ -230,6 +244,19 @@ public sealed class StorageService : IStorageService
         {
             return null;
         }
+    }
+
+    private void DeleteFolderFromFilesystem(string folderPrefix)
+    {
+        var userDir = GetUserDirectory();
+        var folderPath = Path.GetFullPath(Path.Combine(userDir, folderPrefix.TrimEnd('/')));
+        var canonicalUserDir = Path.GetFullPath(userDir + Path.DirectorySeparatorChar);
+
+        if (!folderPath.StartsWith(canonicalUserDir, StringComparison.Ordinal))
+            return;
+
+        if (Directory.Exists(folderPath))
+            Directory.Delete(folderPath, recursive: true);
     }
 
     private bool DeleteFromFilesystem(string objectKey)

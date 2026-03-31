@@ -18,6 +18,7 @@ export function FilesPage() {
   const [currentPrefix, setCurrentPrefix] = useState('')
   const [loading, setLoading] = useState(true)
   const [deletingName, setDeletingName] = useState<string | null>(null)
+  const [deletingFolder, setDeletingFolder] = useState<string | null>(null)
   const [downloadingName, setDownloadingName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
@@ -55,6 +56,24 @@ export function FilesPage() {
       alert('Failed to delete file')
     } finally {
       setDeletingName(null)
+    }
+  }
+
+  const handleDeleteFolder = async (folderName: string) => {
+    if (!confirm(`Are you sure you want to delete the folder "${folderName}" and all its contents? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setDeletingFolder(folderName)
+      const folderPrefix = currentPrefix ? `${currentPrefix}${folderName}` : folderName
+      await files.deleteFolder(folderPrefix)
+      setFolders(prev => prev.filter(f => f !== folderName))
+    } catch (error) {
+      console.error('Failed to delete folder:', error)
+      alert('Failed to delete folder')
+    } finally {
+      setDeletingFolder(null)
     }
   }
 
@@ -243,17 +262,33 @@ export function FilesPage() {
             {/* Mobile view - card layout */}
             <div className="space-y-3 md:hidden">
               {folders.map((folder) => (
-                <button
+                <div
                   key={`folder-${folder}`}
-                  onClick={() => navigateToFolder(folder)}
-                  className="w-full rounded-lg border border-border bg-card p-4 text-left hover:bg-accent/50 transition-colors"
+                  className="rounded-lg border border-border bg-card p-4 hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Folder className="h-4 w-4 text-blue-500 shrink-0" />
-                    <span className="text-sm font-medium">{folder}</span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+                    <button
+                      onClick={() => navigateToFolder(folder)}
+                      className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                    >
+                      <Folder className="h-4 w-4 text-blue-500 shrink-0" />
+                      <span className="text-sm font-medium truncate">{folder}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteFolder(folder)}
+                      disabled={deletingFolder === folder}
+                    >
+                      {deletingFolder === folder ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      )}
+                    </Button>
                   </div>
-                </button>
+                </div>
               ))}
               {fileList.map((file) => (
                 <div key={file.fileName} className="rounded-lg border border-border bg-card p-4 space-y-2">
@@ -340,7 +375,21 @@ export function FilesPage() {
                       <TableCell className="text-muted-foreground">Folder</TableCell>
                       <TableCell className="text-muted-foreground">-</TableCell>
                       <TableCell className="text-muted-foreground">-</TableCell>
-                      <TableCell />
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder) }}
+                          disabled={deletingFolder === folder}
+                          title="Delete folder"
+                        >
+                          {deletingFolder === folder ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          )}
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {fileList.map((file) => (

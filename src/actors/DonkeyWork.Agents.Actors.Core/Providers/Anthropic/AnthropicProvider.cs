@@ -28,12 +28,8 @@ internal sealed class AnthropicProvider : IAiProvider
         ProviderOptions options,
         CancellationToken ct = default)
     {
-        var betaHeader = "interleaved-thinking-2025-05-14,web-fetch-2025-09-10";
+        var betaHeader = "interleaved-thinking-2025-05-14,web-fetch-2025-09-10,compact-2026-01-12,context-management-2025-06-27";
         var ctx = options.ContextManagement;
-        if (ctx.CompactionEnabled)
-            betaHeader += ",compact-2026-01-12";
-        if (ctx.ClearToolResultsEnabled || ctx.ClearThinkingEnabled)
-            betaHeader += ",context-management-2025-06-27";
         _httpClient.DefaultRequestHeaders.Add("anthropic-beta", betaHeader);
         var client = new AnthropicClient { ApiKey = options.ApiKey, HttpClient = _httpClient };
         var messageParams = MapMessages(messages);
@@ -80,7 +76,7 @@ internal sealed class AnthropicProvider : IAiProvider
             thinking = new BetaThinkingConfigDisabled();
         }
 
-        BetaContextManagementConfig? contextManagement = BuildContextManagement(ctx);
+        var contextManagement = BuildContextManagement(ctx);
 
         var parameters = new MessageCreateParams
         {

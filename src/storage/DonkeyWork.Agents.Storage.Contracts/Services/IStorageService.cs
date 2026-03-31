@@ -30,6 +30,11 @@ public interface IStorageService
     Task DeleteByPrefixAsync(string prefix, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes a folder and all its contents within the user's namespace.
+    /// </summary>
+    Task DeleteFolderAsync(string folderPrefix, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a presigned URL for direct file access.
     /// </summary>
     Task<PresignedUrlResult?> GetPublicUrlAsync(string objectKey, TimeSpan? expiry = null, CancellationToken cancellationToken = default);
