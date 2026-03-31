@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, A2aServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, A2aServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, RecordingsPage } from '@/pages'
 import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -105,6 +105,7 @@ export default function App() {
             <Route path="/skills/:name" element={<SkillDetailPage />} />
             <Route path="/tasks/:taskId" element={<TaskEditorPage />} />
             <Route path="/api-keys" element={<ApiKeysPage />} />
+            <Route path="/recordings" element={<RecordingsPage />} />
             <Route path="/credentials" element={<CredentialsPage />} />
             <Route path="/oauth-clients" element={<OAuthClientsPage />} />
             <Route path="/connected-accounts" element={<ConnectedAccountsPage />} />

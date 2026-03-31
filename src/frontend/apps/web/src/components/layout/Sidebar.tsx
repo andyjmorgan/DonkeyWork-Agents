@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Button,
@@ -39,6 +39,7 @@ const navigationGroups: NavGroup[] = [
       { name: 'Notes', href: '/notes', icon: StickyNote, iconColor: 'text-blue-500' },
       { name: 'Research', href: '/research', icon: FlaskConical, iconColor: 'text-cyan-500' },
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
+      { name: 'Recordings', href: '/recordings', icon: Volume2, iconColor: 'text-pink-500' },
     ],
   },
   {

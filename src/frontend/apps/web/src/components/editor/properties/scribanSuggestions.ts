@@ -97,6 +97,6 @@ export function extractPathFromText(text: string, cursorPos: number): string | n
   }
 
   const afterBrace = textUpToCursor.substring(lastBrace + 2)
-  const match = afterBrace.match(/^\s*([\w.\-]*)$/)
+  const match = afterBrace.match(/^\s*([\w.\u002D]*)$/)
   return match ? match[1] : null
 }
