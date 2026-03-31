@@ -57,4 +57,44 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
     [Tab("Settings", Order = 1)]
     [SupportVariables]
     public required string ContentType { get; init; }
+
+    /// <summary>
+    /// The voice used for generation. Use {{Steps.tts_node.Voice}}.
+    /// </summary>
+    [JsonPropertyName("voice")]
+    [ConfigurableField(Label = "Voice", ControlType = ControlType.Text, Order = 50,
+        Description = "The voice used. Use {{Steps.tts_node.Voice}}.")]
+    [Tab("Settings", Order = 1)]
+    [SupportVariables]
+    public string? Voice { get; init; }
+
+    /// <summary>
+    /// The model used for generation. Use {{Steps.tts_node.Model}}.
+    /// </summary>
+    [JsonPropertyName("model")]
+    [ConfigurableField(Label = "Model", ControlType = ControlType.Text, Order = 60,
+        Description = "The model used. Use {{Steps.tts_node.Model}}.")]
+    [Tab("Settings", Order = 1)]
+    [SupportVariables]
+    public string? Model { get; init; }
+
+    /// <summary>
+    /// The transcript text. Use {{Steps.tts_node.Transcript}}.
+    /// </summary>
+    [JsonPropertyName("transcript")]
+    [ConfigurableField(Label = "Transcript", ControlType = ControlType.TextArea, Order = 70,
+        Description = "The transcript text. Use {{Steps.tts_node.Transcript}}.")]
+    [Tab("Settings", Order = 1)]
+    [SupportVariables]
+    public string? Transcript { get; init; }
+
+    /// <summary>
+    /// The file extension. Use {{Steps.tts_node.FileExtension}}.
+    /// </summary>
+    [JsonPropertyName("fileExtension")]
+    [ConfigurableField(Label = "File Extension", ControlType = ControlType.Text, Order = 80,
+        Description = "File extension (e.g. mp3). Use {{Steps.tts_node.FileExtension}}.")]
+    [Tab("Settings", Order = 1)]
+    [SupportVariables]
+    public string? FileExtension { get; init; }
 }

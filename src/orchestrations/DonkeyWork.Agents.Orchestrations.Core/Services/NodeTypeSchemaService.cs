@@ -158,7 +158,7 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     RecordingName = "",
                     RecordingDescription = "",
                     AudioBase64 = "",
-                    ContentType = "audio/mpeg"
+                    ContentType = ""
                 },
                 _ => null
             };

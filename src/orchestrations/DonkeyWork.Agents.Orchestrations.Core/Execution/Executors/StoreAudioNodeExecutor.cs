@@ -11,8 +11,8 @@ namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 
 /// <summary>
 /// Executor for StoreAudio nodes.
-/// Takes base64 audio data from config, uploads to S3, and creates a TtsRecordingEntity.
-/// Metadata (content type, voice, model, transcript) is sourced from the upstream TTS output if available.
+/// All fields come from the node configuration (template-rendered).
+/// No implicit upstream scanning.
 /// </summary>
 public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, StoreAudioNodeOutput>
 {
@@ -44,6 +44,10 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
         var description = await _templateRenderer.RenderAsync(config.RecordingDescription, cancellationToken);
         var audioBase64 = await _templateRenderer.RenderAsync(config.AudioBase64, cancellationToken);
         var contentType = await _templateRenderer.RenderAsync(config.ContentType, cancellationToken);
+        var voice = config.Voice != null ? await _templateRenderer.RenderAsync(config.Voice, cancellationToken) : null;
+        var model = config.Model != null ? await _templateRenderer.RenderAsync(config.Model, cancellationToken) : null;
+        var transcript = config.Transcript != null ? await _templateRenderer.RenderAsync(config.Transcript, cancellationToken) : null;
+        var fileExtension = config.FileExtension != null ? await _templateRenderer.RenderAsync(config.FileExtension, cancellationToken) : null;
 
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidOperationException("Recording name is empty after template rendering");
@@ -54,14 +58,10 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
         if (string.IsNullOrWhiteSpace(contentType))
             contentType = "audio/mpeg";
 
-        var ttsOutput = FindUpstreamTtsOutput();
+        if (string.IsNullOrWhiteSpace(fileExtension))
+            fileExtension = GetExtensionFromContentType(contentType);
 
-        var fileExtension = ttsOutput?.FileExtension ?? GetExtensionFromContentType(contentType);
-        var transcript = ttsOutput?.Transcript ?? string.Empty;
-        var voice = ttsOutput?.Voice;
-        var model = ttsOutput?.Model;
-
-        var fileName = $"{Guid.NewGuid()}.{fileExtension}";
+        var fileName = $"{Guid.NewGuid()}.{fileExtension.Trim()}";
         var audioBytes = Convert.FromBase64String(audioBase64.Trim());
         using var audioStream = new MemoryStream(audioBytes);
 
@@ -69,7 +69,7 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             new UploadFileRequest
             {
                 FileName = fileName,
-                ContentType = contentType,
+                ContentType = contentType.Trim(),
                 Content = audioStream,
                 KeyPrefix = $"tts/{Context.UserId}/{Context.ExecutionId}",
                 AbsoluteKeyPrefix = true
@@ -83,11 +83,11 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             Name = name.Trim(),
             Description = (description ?? string.Empty).Trim(),
             FilePath = uploadResult.ObjectKey,
-            Transcript = transcript,
-            ContentType = contentType,
+            Transcript = transcript ?? string.Empty,
+            ContentType = contentType.Trim(),
             SizeBytes = uploadResult.SizeBytes,
-            Voice = voice,
-            Model = model,
+            Voice = string.IsNullOrWhiteSpace(voice) ? null : voice.Trim(),
+            Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim(),
             OrchestrationExecutionId = Context.ExecutionId,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -107,16 +107,6 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             FilePath = recording.FilePath,
             Transcript = recording.Transcript
         };
-    }
-
-    private TextToSpeechNodeOutput? FindUpstreamTtsOutput()
-    {
-        foreach (var output in Context.NodeOutputs.Values)
-        {
-            if (output is TextToSpeechNodeOutput ttsOutput)
-                return ttsOutput;
-        }
-        return null;
     }
 
     private static string GetExtensionFromContentType(string contentType)

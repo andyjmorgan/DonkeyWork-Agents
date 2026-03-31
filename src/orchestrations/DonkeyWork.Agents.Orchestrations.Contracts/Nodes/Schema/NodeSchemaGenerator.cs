@@ -156,7 +156,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                     RecordingName = "",
                     RecordingDescription = "",
                     AudioBase64 = "",
-                    ContentType = "audio/mpeg"
+                    ContentType = ""
                 };
             }
 
