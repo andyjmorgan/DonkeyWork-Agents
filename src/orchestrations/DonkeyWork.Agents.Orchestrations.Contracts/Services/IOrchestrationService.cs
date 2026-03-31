@@ -37,5 +37,5 @@ public interface IOrchestrationService
     /// </summary>
     Task<IReadOnlyList<ChatEnabledOrchestrationV1>> ListChatEnabledAsync(CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<GetOrchestrationResponseV1>> ListToolEnabledAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ToolEnabledOrchestrationV1>> ListToolEnabledAsync(CancellationToken cancellationToken = default);
 }

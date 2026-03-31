@@ -222,7 +222,7 @@ public class OrchestrationService : IOrchestrationService
             .ToList();
     }
 
-    public async Task<IReadOnlyList<GetOrchestrationResponseV1>> ListToolEnabledAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ToolEnabledOrchestrationV1>> ListToolEnabledAsync(CancellationToken cancellationToken = default)
     {
         var orchestrations = await _dbContext.Orchestrations
             .AsNoTracking()
@@ -231,9 +231,29 @@ public class OrchestrationService : IOrchestrationService
             .Where(o => o.CurrentVersionId != null)
             .ToListAsync(cancellationToken);
 
+        var registry = Orchestrations.Contracts.Nodes.Registry.NodeConfigurationRegistry.Instance;
+
         return orchestrations
             .Where(o => o.CurrentVersion?.Interfaces.Any(i => i is ToolInterfaceConfig) == true)
-            .Select(MapToResponse)
+            .Select(o => new ToolEnabledOrchestrationV1
+            {
+                Orchestration = MapToResponse(o),
+                Version = new GetOrchestrationVersionResponseV1
+                {
+                    Id = o.CurrentVersion!.Id,
+                    OrchestrationId = o.Id,
+                    VersionNumber = o.CurrentVersion.VersionNumber,
+                    IsDraft = o.CurrentVersion.IsDraft,
+                    InputSchema = o.CurrentVersion.InputSchema.RootElement.Clone(),
+                    OutputSchema = o.CurrentVersion.OutputSchema?.RootElement.Clone(),
+                    ReactFlowData = o.CurrentVersion.ReactFlowData,
+                    NodeConfigurations = System.Text.Json.JsonSerializer.SerializeToElement(
+                        o.CurrentVersion.NodeConfigurations, registry.JsonOptions),
+                    Interfaces = o.CurrentVersion.Interfaces,
+                    CreatedAt = o.CurrentVersion.CreatedAt,
+                    PublishedAt = o.CurrentVersion.PublishedAt
+                }
+            })
             .ToList();
     }
 

@@ -174,7 +174,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         try
         {
             var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
-            var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
             var toolEnabled = await orchestrationService.ListToolEnabledAsync(ct);
 
             if (toolEnabled.Count == 0)
@@ -182,17 +181,9 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
             Logger.LogInformation("Discovered {Count} tool-enabled orchestrations", toolEnabled.Count);
 
-            var preloaded = new List<(OrchestrationModels.GetOrchestrationResponseV1, OrchestrationModels.GetOrchestrationVersionResponseV1)>();
-            foreach (var orch in toolEnabled)
-            {
-                if (orch.CurrentVersionId == null) continue;
-                var version = await versionService.GetVersionAsync(orch.Id, orch.CurrentVersionId.Value, IdentityContext.UserId, ct);
-                if (version != null)
-                    preloaded.Add((orch, version));
-            }
-
-            if (preloaded.Count == 0)
-                return;
+            var preloaded = toolEnabled
+                .Select(t => (t.Orchestration, t.Version))
+                .ToList();
 
             var executor = ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
             var executionRepo = ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
