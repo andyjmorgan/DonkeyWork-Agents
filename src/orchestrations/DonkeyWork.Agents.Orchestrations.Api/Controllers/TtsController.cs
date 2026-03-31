@@ -51,15 +51,18 @@ public class TtsController : ControllerBase
     }
 
     /// <summary>
-    /// Get a presigned URL for the audio file of a recording.
+    /// Stream the audio file for a recording.
     /// </summary>
     [HttpGet("recordings/{id:guid}/audio")]
-    [ProducesResponseType<GetAudioUrlResponseV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetAudioUrl(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAudio(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _ttsService.GetAudioUrlAsync(id, cancellationToken);
-        return result == null ? NotFound() : Ok(result);
+        var result = await _ttsService.DownloadAudioAsync(id, cancellationToken);
+        if (result == null)
+            return NotFound();
+
+        return File(result.Value.Content, result.Value.ContentType, result.Value.FileName);
     }
 
     /// <summary>

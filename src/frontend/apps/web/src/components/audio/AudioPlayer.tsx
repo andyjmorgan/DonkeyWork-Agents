@@ -36,14 +36,14 @@ export function AudioPlayer({ recordingId, name, transcript, className }: AudioP
     async function load() {
       try {
         setLoading(true)
-        const [audioData, playbackData] = await Promise.all([
-          tts.getAudioUrl(recordingId),
+        const [blobUrl, playbackData] = await Promise.all([
+          tts.getAudioBlobUrl(recordingId),
           tts.getPlayback(recordingId).catch(() => null),
         ])
 
         if (cancelled) return
 
-        setAudioUrl(audioData.url)
+        setAudioUrl(blobUrl)
 
         if (playbackData) {
           setCurrentTime(playbackData.positionSeconds)

@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Orchestrations.Core.Tests.Helpers;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Storage.Contracts.Models;
 using DonkeyWork.Agents.Storage.Contracts.Services;
+using FileDownloadResult = DonkeyWork.Agents.Storage.Contracts.Models.FileDownloadResult;
 using Moq;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Tests.Services;
@@ -128,41 +129,40 @@ public class TtsServiceTests : IDisposable
 
     #endregion
 
-    #region GetAudioUrlAsync Tests
+    #region DownloadAudioAsync Tests
 
     [Fact]
-    public async Task GetAudioUrlAsync_WithValidRecording_ReturnsPresignedUrl()
+    public async Task DownloadAudioAsync_WithValidRecording_ReturnsStream()
     {
         var recording = MockDbContext.SeedRecording(_dbContext);
-        var expectedUrl = "https://storage.example.com/presigned/audio.mp3";
+        var audioStream = new MemoryStream(new byte[] { 1, 2, 3 });
         _storageServiceMock
-            .Setup(s => s.GetPublicUrlAsync(recording.FilePath, It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PresignedUrlResult { Url = expectedUrl, ExpiresAt = DateTimeOffset.UtcNow.AddHours(1) });
+            .Setup(s => s.DownloadAsync(recording.FilePath, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FileDownloadResult { Content = audioStream, FileName = "test.mp3", ContentType = "audio/mpeg", SizeBytes = 3 });
 
-        var result = await _service.GetAudioUrlAsync(recording.Id);
+        var result = await _service.DownloadAudioAsync(recording.Id);
 
         Assert.NotNull(result);
-        Assert.Equal(expectedUrl, result.Url);
-        Assert.Equal("audio/mpeg", result.ContentType);
+        Assert.Equal("audio/mpeg", result.Value.ContentType);
     }
 
     [Fact]
-    public async Task GetAudioUrlAsync_WithInvalidId_ReturnsNull()
+    public async Task DownloadAudioAsync_WithInvalidId_ReturnsNull()
     {
-        var result = await _service.GetAudioUrlAsync(Guid.NewGuid());
+        var result = await _service.DownloadAudioAsync(Guid.NewGuid());
 
         Assert.Null(result);
     }
 
     [Fact]
-    public async Task GetAudioUrlAsync_WhenStorageReturnsNull_ReturnsNull()
+    public async Task DownloadAudioAsync_WhenStorageReturnsNull_ReturnsNull()
     {
         var recording = MockDbContext.SeedRecording(_dbContext);
         _storageServiceMock
-            .Setup(s => s.GetPublicUrlAsync(It.IsAny<string>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PresignedUrlResult?)null);
+            .Setup(s => s.DownloadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FileDownloadResult?)null);
 
-        var result = await _service.GetAudioUrlAsync(recording.Id);
+        var result = await _service.DownloadAudioAsync(recording.Id);
 
         Assert.Null(result);
     }

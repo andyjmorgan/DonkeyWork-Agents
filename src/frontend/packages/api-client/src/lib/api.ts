@@ -1952,8 +1952,15 @@ export const tts = {
   getRecording: (id: string) =>
     api.get<TtsRecording>(`/api/v1/tts/recordings/${id}`),
 
-  getAudioUrl: (id: string) =>
-    api.get<TtsAudioUrlResponse>(`/api/v1/tts/recordings/${id}/audio`),
+  getAudioBlobUrl: async (id: string): Promise<string> => {
+    const response = await baseFetchWithAuth(
+      `${getPlatformConfig().apiBaseUrl}/api/v1/tts/recordings/${id}/audio`,
+      {},
+      true
+    )
+    const blob = await response.blob()
+    return URL.createObjectURL(blob)
+  },
 
   updatePlayback: (id: string, data: UpdatePlaybackRequest) =>
     api.put<TtsPlayback>(`/api/v1/tts/recordings/${id}/playback`, data),

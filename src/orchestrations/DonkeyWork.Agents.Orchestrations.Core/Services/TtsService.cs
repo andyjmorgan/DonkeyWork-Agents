@@ -56,7 +56,7 @@ public class TtsService : ITtsService
         return recording == null ? null : MapRecording(recording);
     }
 
-    public async Task<GetAudioUrlResponseV1?> GetAudioUrlAsync(
+    public async Task<(Stream Content, string ContentType, string FileName)?> DownloadAudioAsync(
         Guid id, CancellationToken cancellationToken = default)
     {
         var recording = await _dbContext.TtsRecordings
@@ -65,20 +65,11 @@ public class TtsService : ITtsService
         if (recording == null)
             return null;
 
-        var presigned = await _storageService.GetPublicUrlAsync(
-            recording.FilePath,
-            TimeSpan.FromHours(1),
-            cancellationToken);
-
-        if (presigned == null)
+        var download = await _storageService.DownloadAsync(recording.FilePath, cancellationToken);
+        if (download == null)
             return null;
 
-        return new GetAudioUrlResponseV1
-        {
-            Url = presigned.Url,
-            ExpiresAt = presigned.ExpiresAt,
-            ContentType = recording.ContentType
-        };
+        return (download.Content, recording.ContentType, download.FileName);
     }
 
     public async Task<TtsPlaybackV1> GetPlaybackAsync(
