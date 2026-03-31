@@ -2,26 +2,27 @@ namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
 
 /// <summary>
 /// Output from a TextToSpeech node execution.
+/// Contains the generated audio as base64 and metadata. Storage is handled downstream by StoreAudio.
 /// </summary>
 public class TextToSpeechNodeOutput : NodeOutput
 {
     /// <summary>
-    /// The S3 object key of the uploaded audio file.
+    /// The audio data encoded as a base64 string.
     /// </summary>
-    public required string ObjectKey { get; init; }
+    public required string AudioBase64 { get; init; }
 
     /// <summary>
-    /// The file name of the audio file.
-    /// </summary>
-    public required string FileName { get; init; }
-
-    /// <summary>
-    /// The content type of the audio file (e.g., "audio/mpeg").
+    /// The content type of the audio (e.g., "audio/mpeg").
     /// </summary>
     public required string ContentType { get; init; }
 
     /// <summary>
-    /// The size of the audio file in bytes.
+    /// The file extension (e.g., "mp3").
+    /// </summary>
+    public required string FileExtension { get; init; }
+
+    /// <summary>
+    /// The size of the audio in bytes.
     /// </summary>
     public required long SizeBytes { get; init; }
 
@@ -42,6 +43,6 @@ public class TextToSpeechNodeOutput : NodeOutput
 
     public override string ToMessageOutput()
     {
-        return $"Audio generated: {FileName} ({SizeBytes} bytes, voice: {Voice})";
+        return $"Audio generated: {SizeBytes} bytes, voice: {Voice}, format: {FileExtension}";
     }
 }

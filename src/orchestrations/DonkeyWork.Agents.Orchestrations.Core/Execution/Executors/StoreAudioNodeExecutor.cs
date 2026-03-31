@@ -3,18 +3,20 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Tts;
+using DonkeyWork.Agents.Storage.Contracts.Models;
+using DonkeyWork.Agents.Storage.Contracts.Services;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 
 /// <summary>
 /// Executor for StoreAudio nodes.
-/// Persists a TTS recording entity. Audio metadata auto-resolves from the upstream
-/// TextToSpeech node output unless explicitly overridden in the configuration.
+/// Uploads audio bytes from the upstream TTS node to S3 and creates a TtsRecordingEntity.
 /// </summary>
 public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, StoreAudioNodeOutput>
 {
     private readonly AgentsDbContext _dbContext;
+    private readonly IStorageService _storageService;
     private readonly ITemplateRenderer _templateRenderer;
     private readonly ILogger<StoreAudioNodeExecutor> _logger;
 
@@ -22,11 +24,13 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
         IExecutionStreamWriter streamWriter,
         IExecutionContext context,
         AgentsDbContext dbContext,
+        IStorageService storageService,
         ITemplateRenderer templateRenderer,
         ILogger<StoreAudioNodeExecutor> logger)
         : base(streamWriter, context)
     {
         _dbContext = dbContext;
+        _storageService = storageService;
         _templateRenderer = templateRenderer;
         _logger = logger;
     }
@@ -44,18 +48,36 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
         }
 
         var ttsOutput = FindUpstreamTtsOutput();
-
-        var objectKey = await ResolveFieldAsync(config.AudioObjectKey, ttsOutput?.ObjectKey, cancellationToken);
-        var transcript = await ResolveFieldAsync(config.Transcript, ttsOutput?.Transcript, cancellationToken);
-        var contentType = await ResolveFieldAsync(config.AudioContentType, ttsOutput?.ContentType, cancellationToken);
-        var voice = await ResolveFieldAsync(config.Voice, ttsOutput?.Voice, cancellationToken);
-        var model = await ResolveFieldAsync(config.Model, ttsOutput?.Model, cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(objectKey))
+        if (ttsOutput == null)
         {
             throw new InvalidOperationException(
-                "Audio object key could not be resolved. Either connect a TextToSpeech node upstream or set the field manually.");
+                "No upstream TextToSpeech node output found. Connect a TTS node before StoreAudio.");
         }
+
+        var contentType = await ResolveFieldAsync(config.AudioContentType, ttsOutput.ContentType, cancellationToken);
+        var transcript = await ResolveFieldAsync(config.Transcript, ttsOutput.Transcript, cancellationToken);
+        var voice = await ResolveFieldAsync(config.Voice, ttsOutput.Voice, cancellationToken);
+        var model = await ResolveFieldAsync(config.Model, ttsOutput.Model, cancellationToken);
+
+        var fileName = $"{Guid.NewGuid()}.{ttsOutput.FileExtension}";
+        var audioBytes = Convert.FromBase64String(ttsOutput.AudioBase64);
+        using var audioStream = new MemoryStream(audioBytes);
+
+        var uploadResult = await _storageService.UploadAsync(
+            new UploadFileRequest
+            {
+                FileName = fileName,
+                ContentType = contentType ?? "audio/mpeg",
+                Content = audioStream,
+                KeyPrefix = $"tts/{Context.ExecutionId}"
+            },
+            cancellationToken);
+
+        _logger.LogDebug(
+            "Audio uploaded to S3: key={ObjectKey}, size={Size}",
+            uploadResult.ObjectKey, uploadResult.SizeBytes);
+
+        var objectKey = await ResolveFieldAsync(config.AudioObjectKey, uploadResult.ObjectKey, cancellationToken);
 
         var recording = new TtsRecordingEntity
         {
@@ -63,10 +85,10 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             UserId = Context.UserId,
             Name = name.Trim(),
             Description = (description ?? string.Empty).Trim(),
-            FilePath = objectKey.Trim(),
+            FilePath = objectKey!.Trim(),
             Transcript = transcript ?? string.Empty,
             ContentType = string.IsNullOrWhiteSpace(contentType) ? "audio/mpeg" : contentType.Trim(),
-            SizeBytes = ttsOutput?.SizeBytes ?? 0,
+            SizeBytes = uploadResult.SizeBytes,
             Voice = string.IsNullOrWhiteSpace(voice) ? null : voice.Trim(),
             Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim(),
             OrchestrationExecutionId = Context.ExecutionId,

@@ -15,13 +15,13 @@ describe('getOutputProperties', () => {
   describe('fallback (no backend data)', () => {
     it('returns properties for exact case match', () => {
       expect(getOutputProperties('TextToSpeech')).toEqual(
-        ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model']
+        ['AudioBase64', 'ContentType', 'FileExtension', 'SizeBytes', 'Transcript', 'Voice', 'Model']
       )
     })
 
     it('returns properties for case-insensitive match', () => {
       expect(getOutputProperties('texttospeech')).toEqual(
-        ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model']
+        ['AudioBase64', 'ContentType', 'FileExtension', 'SizeBytes', 'Transcript', 'Voice', 'Model']
       )
     })
 
@@ -42,16 +42,16 @@ describe('getOutputProperties', () => {
 
   describe('with backend data', () => {
     const backend: Record<string, string[]> = {
-      TextToSpeech: ['ObjectKey', 'FileName', 'NewProp'],
+      TextToSpeech: ['AudioBase64', 'ContentType', 'NewProp'],
       CustomNode: ['Foo', 'Bar'],
     }
 
     it('prefers backend data over fallback', () => {
-      expect(getOutputProperties('TextToSpeech', backend)).toEqual(['ObjectKey', 'FileName', 'NewProp'])
+      expect(getOutputProperties('TextToSpeech', backend)).toEqual(['AudioBase64', 'ContentType', 'NewProp'])
     })
 
     it('is case-insensitive for backend keys', () => {
-      expect(getOutputProperties('texttospeech', backend)).toEqual(['ObjectKey', 'FileName', 'NewProp'])
+      expect(getOutputProperties('texttospeech', backend)).toEqual(['AudioBase64', 'ContentType', 'NewProp'])
     })
 
     it('returns backend data for types not in fallback', () => {
@@ -290,7 +290,7 @@ describe('buildSuggestions', () => {
       const items = buildSuggestions('Steps.GPT_4o_Mini_TTS.', predecessors, inputProperties)
       const labels = items.map(i => i.label)
       expect(labels).toEqual(
-        ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model']
+        ['AudioBase64', 'ContentType', 'FileExtension', 'SizeBytes', 'Transcript', 'Voice', 'Model']
       )
     })
 
@@ -302,9 +302,9 @@ describe('buildSuggestions', () => {
     })
 
     it('filters output properties by partial name', () => {
-      const items = buildSuggestions('Steps.GPT_4o_Mini_TTS.Obj', predecessors, inputProperties)
+      const items = buildSuggestions('Steps.GPT_4o_Mini_TTS.Aud', predecessors, inputProperties)
       expect(items).toHaveLength(1)
-      expect(items[0].label).toBe('ObjectKey')
+      expect(items[0].label).toBe('AudioBase64')
     })
 
     it('is case-insensitive for predecessor name', () => {
@@ -326,7 +326,7 @@ describe('buildSuggestions', () => {
 
   describe('with backend output properties', () => {
     const backend: Record<string, string[]> = {
-      TextToSpeech: ['ObjectKey', 'FileName', 'BackendOnlyProp'],
+      TextToSpeech: ['AudioBase64', 'ContentType', 'BackendOnlyProp'],
       CustomNode: ['Alpha', 'Beta'],
     }
 

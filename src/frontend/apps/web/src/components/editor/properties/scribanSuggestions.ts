@@ -7,7 +7,7 @@ const FALLBACK_OUTPUT_PROPERTIES: Record<string, string[]> = {
   MessageFormatter: ['FormattedMessage'],
   HttpRequest: ['StatusCode', 'Body', 'Headers', 'IsSuccess'],
   Sleep: ['DurationSeconds'],
-  TextToSpeech: ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model'],
+  TextToSpeech: ['AudioBase64', 'ContentType', 'FileExtension', 'SizeBytes', 'Transcript', 'Voice', 'Model'],
   StoreAudio: ['RecordingId', 'Name', 'Description', 'FilePath', 'Transcript'],
 }
 

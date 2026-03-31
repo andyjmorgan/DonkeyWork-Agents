@@ -3,8 +3,6 @@ using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
-using DonkeyWork.Agents.Storage.Contracts.Models;
-using DonkeyWork.Agents.Storage.Contracts.Services;
 using Microsoft.Extensions.Logging;
 using OpenAI.Audio;
 
@@ -12,12 +10,12 @@ namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 
 /// <summary>
 /// Executor for TextToSpeech nodes.
-/// Calls OpenAI TTS API to generate speech audio, then uploads the result to S3 storage.
+/// Calls the TTS API and returns raw audio bytes with metadata.
+/// Storage is handled downstream by StoreAudioNodeExecutor.
 /// </summary>
 public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfiguration, TextToSpeechNodeOutput>
 {
     private readonly IExternalApiKeyService _credentialService;
-    private readonly IStorageService _storageService;
     private readonly ITemplateRenderer _templateRenderer;
     private readonly ILogger<TextToSpeechNodeExecutor> _logger;
 
@@ -25,13 +23,11 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
         IExecutionStreamWriter streamWriter,
         IExecutionContext context,
         IExternalApiKeyService credentialService,
-        IStorageService storageService,
         ITemplateRenderer templateRenderer,
         ILogger<TextToSpeechNodeExecutor> logger)
         : base(streamWriter, context)
     {
         _credentialService = credentialService;
-        _storageService = storageService;
         _templateRenderer = templateRenderer;
         _logger = logger;
     }
@@ -89,36 +85,20 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
             options,
             cancellationToken);
 
-        var audioData = result.Value;
-
-        _logger.LogDebug("TTS audio generated: {Size} bytes", audioData.ToMemory().Length);
-
-        var fileExtension = config.ResponseFormat;
-        var fileName = $"{Guid.NewGuid()}.{fileExtension}";
+        var audioBytes = result.Value.ToMemory().ToArray();
         var contentType = GetContentType(config.ResponseFormat);
-
-        using var audioStream = audioData.ToStream();
-
-        var uploadResult = await _storageService.UploadAsync(
-            new UploadFileRequest
-            {
-                FileName = fileName,
-                ContentType = contentType,
-                Content = audioStream,
-                KeyPrefix = $"tts/{Context.ExecutionId}"
-            },
-            cancellationToken);
+        var audioBase64 = Convert.ToBase64String(audioBytes);
 
         _logger.LogInformation(
-            "TTS audio uploaded: key={ObjectKey}, size={Size}",
-            uploadResult.ObjectKey, uploadResult.SizeBytes);
+            "TTS audio generated: {Size} bytes, voice={Voice}, model={Model}",
+            audioBytes.Length, config.Voice, config.Model);
 
         return new TextToSpeechNodeOutput
         {
-            ObjectKey = uploadResult.ObjectKey,
-            FileName = uploadResult.FileName,
+            AudioBase64 = audioBase64,
             ContentType = contentType,
-            SizeBytes = uploadResult.SizeBytes,
+            FileExtension = config.ResponseFormat,
+            SizeBytes = audioBytes.Length,
             Transcript = inputText,
             Voice = config.Voice,
             Model = config.Model
