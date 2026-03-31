@@ -1,7 +1,6 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models;
-using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
@@ -156,7 +155,7 @@ public static class TestDataBuilder
             InputSchema = JsonDocument.Parse(inputSchemaJson),
             ReactFlowData = parsedReactFlowData,
             NodeConfigurations = JsonDocument.Parse(nodeConfigurationsJson).RootElement.Clone(),
-            Interfaces = [new DirectInterfaceConfig()]
+            DirectEnabled = true
         };
     }
 
