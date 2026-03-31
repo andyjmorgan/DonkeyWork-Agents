@@ -92,6 +92,7 @@ export function ScribanEditor({
         items.push({ label: prop, detail: 'Input property', insertText: prop, hasChildren: false })
       })
     } else if (pathLower.length === 1 && pathLower[0] === 'steps') {
+      console.log('[ScribanEditor] steps branch, predecessors count:', predecessors.length, 'predecessors:', predecessors)
       predecessors.forEach(pred => {
         const outputs = getOutputProperties(pred.nodeType)
         items.push({ label: pred.nodeName, detail: pred.nodeType, insertText: pred.nodeName, hasChildren: outputs.length > 0 })
