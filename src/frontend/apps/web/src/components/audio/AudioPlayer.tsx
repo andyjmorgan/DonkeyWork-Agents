@@ -155,7 +155,7 @@ export function AudioPlayer({ recordingId, name, transcript, className }: AudioP
       audio.removeEventListener('pause', onPause)
       audio.removeEventListener('ended', onEnded)
     }
-  }, [recordingId])
+  }, [recordingId, audioUrl])
 
   const togglePlay = () => {
     const audio = audioRef.current
