@@ -121,6 +121,6 @@ public sealed class SwarmAgentSpawnTools
 
         contract = contract.WithParentContext(context);
 
-        return await _spawner.SpawnAsync(contract, task, label, context, identityContext, ct);
+        return await _spawner.SpawnAsync(contract, task, label, agent_name, context, identityContext, ct);
     }
 }

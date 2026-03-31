@@ -199,9 +199,17 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         {
             result = [..result, typeof(SwarmAgentSpawnTools)];
 
-            // Also include swarm management tools so the LLM can wait for / cancel custom agents
             if (!result.Contains(typeof(SwarmAgentManagementTools)))
                 result = [..result, typeof(SwarmAgentManagementTools)];
+        }
+
+        if (result.Contains(typeof(SwarmAgentManagementTools)))
+        {
+            if (!result.Contains(typeof(SwarmAgentMessagingTools)))
+                result = [..result, typeof(SwarmAgentMessagingTools)];
+
+            if (!result.Contains(typeof(SwarmSharedContextTools)))
+                result = [..result, typeof(SwarmSharedContextTools)];
         }
 
         return result;

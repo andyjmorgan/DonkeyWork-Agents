@@ -1,5 +1,7 @@
+using System.Threading.Channels;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
+using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +23,7 @@ public class GrainContext
     public string[] ToolGroups { get; set; } = [];
     public string? Icon { get; set; }
     public string? DisplayName { get; set; }
+    public Channel<AgentMessage>? MessageInbox { get; set; }
 
     public void ReportProgress(string breadcrumb) => ProgressCallback?.Invoke(breadcrumb);
 }

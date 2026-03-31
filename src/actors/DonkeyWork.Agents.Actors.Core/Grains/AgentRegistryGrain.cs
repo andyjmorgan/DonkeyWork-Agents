@@ -10,31 +10,43 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
 {
     private readonly ILogger<AgentRegistryGrain> _logger;
     private readonly Dictionary<string, AgentEntry> _agents = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _nameIndex = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _nameCounters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _sharedContext = new(StringComparer.OrdinalIgnoreCase);
 
     public AgentRegistryGrain(ILogger<AgentRegistryGrain> logger)
     {
         _logger = logger;
     }
 
-    #region IAgentRegistryGrain
+    #region Registration
 
-    public Task RegisterAsync(string agentKey, string label, string parentAgentKey, TimeSpan? timeout = null)
+    public Task<string> RegisterAsync(string agentKey, string label, string name, string parentAgentKey, TimeSpan? timeout = null)
     {
         if (_agents.ContainsKey(agentKey))
         {
             _logger.LogWarning("Agent {AgentKey} already registered, ignoring duplicate", agentKey);
-            return Task.CompletedTask;
+            var existing = _agents[agentKey].Info.Name;
+            return Task.FromResult(existing);
         }
+
+        var uniqueName = AssignUniqueName(name);
 
         var entry = new AgentEntry
         {
-            Info = new TrackedAgent(agentKey, label, parentAgentKey, AgentStatus.Pending, null, DateTime.UtcNow),
+            Info = new TrackedAgent(agentKey, label, parentAgentKey, AgentStatus.Pending, null, DateTime.UtcNow, uniqueName),
         };
 
         _agents[agentKey] = entry;
-        _logger.LogInformation("Registered agent {AgentKey} (label: {Label})", agentKey, label);
-        return Task.CompletedTask;
+        _nameIndex[uniqueName] = agentKey;
+
+        _logger.LogInformation("Registered agent {AgentKey} (name: {Name}, label: {Label})", agentKey, uniqueName, label);
+        return Task.FromResult(uniqueName);
     }
+
+    #endregion
+
+    #region Completion
 
     public async Task ReportCompletionAsync(string agentKey, AgentResult result, bool isError = false)
     {
@@ -61,11 +73,27 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         await DeliverToParentAsync(entry, agentKey, result, isError);
     }
 
+    public Task ReportIdleAsync(string agentKey)
+    {
+        if (!_agents.TryGetValue(agentKey, out var entry))
+        {
+            _logger.LogWarning("ReportIdle for unknown agent {AgentKey}", agentKey);
+            return Task.CompletedTask;
+        }
+
+        entry.Info = entry.Info with { Status = AgentStatus.Idle };
+        _logger.LogInformation("Agent {AgentKey} is now idle", agentKey);
+        return Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Waiting
+
     public async Task<AgentWaitResult?> WaitForNextAsync(TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromSeconds(30);
 
-        // Check for already-completed, undelivered agents (oldest first)
         var alreadyDone = _agents.Values
             .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
             .OrderBy(e => e.Info.SpawnedAt)
@@ -134,7 +162,100 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
 
     #endregion
 
+    #region Messaging
+
+    public Task<string?> ResolveAgentKeyByNameAsync(string name)
+    {
+        _nameIndex.TryGetValue(name, out var agentKey);
+        return Task.FromResult(agentKey);
+    }
+
+    public async Task SendMessageAsync(string fromAgentKey, string toAgentKey, AgentMessage message)
+    {
+        if (!_agents.TryGetValue(toAgentKey, out var entry))
+        {
+            _logger.LogWarning("SendMessage to unknown agent {ToAgentKey}", toAgentKey);
+            return;
+        }
+
+        if (entry.Info.Status is not (AgentStatus.Pending or AgentStatus.Idle))
+        {
+            _logger.LogWarning("SendMessage to agent {ToAgentKey} in status {Status}, skipping", toAgentKey, entry.Info.Status);
+            return;
+        }
+
+        var grain = GrainFactory.GetGrain<IAgentGrain>(toAgentKey);
+        await grain.DeliverMessageAsync(message);
+
+        _logger.LogInformation("Delivered message from {From} to {To}", fromAgentKey, toAgentKey);
+    }
+
+    public async Task BroadcastMessageAsync(string fromAgentKey, AgentMessage message)
+    {
+        var targets = _agents
+            .Where(kv => !string.Equals(kv.Key, fromAgentKey, StringComparison.OrdinalIgnoreCase)
+                         && kv.Value.Info.Status is AgentStatus.Pending or AgentStatus.Idle)
+            .ToList();
+
+        foreach (var (agentKey, _) in targets)
+        {
+            try
+            {
+                var grain = GrainFactory.GetGrain<IAgentGrain>(agentKey);
+                await grain.DeliverMessageAsync(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to broadcast message to {AgentKey}", agentKey);
+            }
+        }
+
+        _logger.LogInformation("Broadcast message from {From} to {Count} agent(s)", fromAgentKey, targets.Count);
+    }
+
+    #endregion
+
+    #region Shared Context
+
+    public Task WriteSharedContextAsync(string key, string value)
+    {
+        _sharedContext[key] = value;
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> ReadSharedContextAsync(string key)
+    {
+        _sharedContext.TryGetValue(key, out var value);
+        return Task.FromResult(value);
+    }
+
+    public Task<IReadOnlyDictionary<string, string>> ReadAllSharedContextAsync()
+    {
+        return Task.FromResult<IReadOnlyDictionary<string, string>>(
+            new Dictionary<string, string>(_sharedContext, StringComparer.OrdinalIgnoreCase));
+    }
+
+    public Task<bool> RemoveSharedContextAsync(string key)
+    {
+        return Task.FromResult(_sharedContext.Remove(key));
+    }
+
+    #endregion
+
     #region Private Methods
+
+    private string AssignUniqueName(string baseName)
+    {
+        if (!_nameCounters.TryGetValue(baseName, out var count))
+        {
+            _nameCounters[baseName] = 1;
+            return baseName;
+        }
+
+        var next = count + 1;
+        _nameCounters[baseName] = next;
+        return $"{baseName}_{next}";
+    }
 
     private async Task DeliverToParentAsync(AgentEntry entry, string agentKey, AgentResult result, bool isError)
     {
@@ -142,7 +263,6 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         {
             var parentKey = entry.Info.ParentAgentKey;
 
-            // Only deliver to conversation grains (they accept agent results via queue)
             if (!parentKey.StartsWith(AgentKeys.ConversationPrefix))
                 return;
 

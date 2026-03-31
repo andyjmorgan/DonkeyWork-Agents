@@ -27,6 +27,6 @@ public sealed class SwarmDelegateSpawnTools
         var contract = AgentContracts.Delegate()
             .WithIcon(context.Icon, context.DisplayName)
             .WithParentContext(context);
-        return await _spawner.SpawnAsync(contract, task, label, context, identityContext, ct);
+        return await _spawner.SpawnAsync(contract, task, label, "delegate", context, identityContext, ct);
     }
 }
