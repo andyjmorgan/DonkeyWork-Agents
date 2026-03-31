@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, Wrench, MessageSquare, Zap, Brain, Plug, Hammer } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Button,
