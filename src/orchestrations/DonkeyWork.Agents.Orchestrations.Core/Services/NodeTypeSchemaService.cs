@@ -156,7 +156,9 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                 {
                     Name = "temp",
                     RecordingName = "",
-                    RecordingDescription = ""
+                    RecordingDescription = "",
+                    AudioBase64 = "",
+                    ContentType = "audio/mpeg"
                 },
                 _ => null
             };

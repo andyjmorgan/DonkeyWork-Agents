@@ -5,8 +5,7 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 
 /// <summary>
-/// Configuration for the StoreAudio node - stores generated audio with metadata as a TTS recording.
-/// All audio data is resolved from the upstream TextToSpeech node output automatically.
+/// Configuration for the StoreAudio node - stores audio with metadata as a TTS recording.
 /// </summary>
 [Node(
     DisplayName = "Store Audio",
@@ -38,4 +37,24 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
     [Tab("Settings", Order = 1)]
     [SupportVariables]
     public required string RecordingDescription { get; init; }
+
+    /// <summary>
+    /// Base64-encoded audio data. Use {{Steps.tts_node.AudioBase64}}.
+    /// </summary>
+    [JsonPropertyName("audioBase64")]
+    [ConfigurableField(Label = "Audio Data (Base64)", ControlType = ControlType.Text, Order = 30, Required = true,
+        Description = "Base64 audio data. Use {{Steps.tts_node.AudioBase64}}.")]
+    [Tab("Audio", Order = 2, Icon = "volume-2")]
+    [SupportVariables]
+    public required string AudioBase64 { get; init; }
+
+    /// <summary>
+    /// Content type of the audio. Use {{Steps.tts_node.ContentType}}.
+    /// </summary>
+    [JsonPropertyName("contentType")]
+    [ConfigurableField(Label = "Content Type", ControlType = ControlType.Text, Order = 40, Required = true,
+        Description = "MIME type of the audio. Use {{Steps.tts_node.ContentType}}.")]
+    [Tab("Audio", Order = 2)]
+    [SupportVariables]
+    public required string ContentType { get; init; }
 }

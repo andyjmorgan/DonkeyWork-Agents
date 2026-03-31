@@ -11,8 +11,8 @@ namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 
 /// <summary>
 /// Executor for StoreAudio nodes.
-/// Reads audio data and metadata from the upstream TextToSpeech node output,
-/// uploads to S3, and creates a TtsRecordingEntity.
+/// Takes base64 audio data from config, uploads to S3, and creates a TtsRecordingEntity.
+/// Metadata (content type, voice, model, transcript) is sourced from the upstream TTS output if available.
 /// </summary>
 public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, StoreAudioNodeOutput>
 {
@@ -42,36 +42,38 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
     {
         var name = await _templateRenderer.RenderAsync(config.RecordingName, cancellationToken);
         var description = await _templateRenderer.RenderAsync(config.RecordingDescription, cancellationToken);
+        var audioBase64 = await _templateRenderer.RenderAsync(config.AudioBase64, cancellationToken);
+        var contentType = await _templateRenderer.RenderAsync(config.ContentType, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(name))
-        {
             throw new InvalidOperationException("Recording name is empty after template rendering");
-        }
+
+        if (string.IsNullOrWhiteSpace(audioBase64))
+            throw new InvalidOperationException("Audio data is empty after template rendering");
+
+        if (string.IsNullOrWhiteSpace(contentType))
+            contentType = "audio/mpeg";
 
         var ttsOutput = FindUpstreamTtsOutput();
-        if (ttsOutput == null)
-        {
-            throw new InvalidOperationException(
-                "No upstream TextToSpeech node output found. Connect a TTS node before StoreAudio.");
-        }
 
-        var fileName = $"{Guid.NewGuid()}.{ttsOutput.FileExtension}";
-        var audioBytes = Convert.FromBase64String(ttsOutput.AudioBase64);
+        var fileExtension = ttsOutput?.FileExtension ?? GetExtensionFromContentType(contentType);
+        var transcript = ttsOutput?.Transcript ?? string.Empty;
+        var voice = ttsOutput?.Voice;
+        var model = ttsOutput?.Model;
+
+        var fileName = $"{Guid.NewGuid()}.{fileExtension}";
+        var audioBytes = Convert.FromBase64String(audioBase64.Trim());
         using var audioStream = new MemoryStream(audioBytes);
 
         var uploadResult = await _storageService.UploadAsync(
             new UploadFileRequest
             {
                 FileName = fileName,
-                ContentType = ttsOutput.ContentType,
+                ContentType = contentType,
                 Content = audioStream,
                 KeyPrefix = $"tts/{Context.ExecutionId}"
             },
             cancellationToken);
-
-        _logger.LogDebug(
-            "Audio uploaded to S3: key={ObjectKey}, size={Size}",
-            uploadResult.ObjectKey, uploadResult.SizeBytes);
 
         var recording = new TtsRecordingEntity
         {
@@ -80,11 +82,11 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             Name = name.Trim(),
             Description = (description ?? string.Empty).Trim(),
             FilePath = uploadResult.ObjectKey,
-            Transcript = ttsOutput.Transcript,
-            ContentType = ttsOutput.ContentType,
+            Transcript = transcript,
+            ContentType = contentType,
             SizeBytes = uploadResult.SizeBytes,
-            Voice = ttsOutput.Voice,
-            Model = ttsOutput.Model,
+            Voice = voice,
+            Model = model,
             OrchestrationExecutionId = Context.ExecutionId,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -114,5 +116,18 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
                 return ttsOutput;
         }
         return null;
+    }
+
+    private static string GetExtensionFromContentType(string contentType)
+    {
+        return contentType.ToLowerInvariant() switch
+        {
+            "audio/mpeg" => "mp3",
+            "audio/opus" => "opus",
+            "audio/aac" => "aac",
+            "audio/flac" => "flac",
+            "audio/wav" => "wav",
+            _ => "mp3"
+        };
     }
 }
