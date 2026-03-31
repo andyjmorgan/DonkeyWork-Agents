@@ -14,6 +14,7 @@ using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 using DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
+using OrchestrationModels = DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
@@ -165,11 +166,45 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         GrainContext.A2aServers = _discoveredA2aServers;
     }
 
-    protected override Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
+    protected override async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
     {
-        // Orchestration tools for Navi are not auto-discovered yet.
-        // They are only available when explicitly attached to agent definitions.
-        return Task.CompletedTask;
+        if (OrchestrationToolProvider is not null)
+            return;
+
+        try
+        {
+            var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
+            var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
+            var toolEnabled = await orchestrationService.ListToolEnabledAsync(ct);
+
+            if (toolEnabled.Count == 0)
+                return;
+
+            Logger.LogInformation("Discovered {Count} tool-enabled orchestrations", toolEnabled.Count);
+
+            var preloaded = new List<(OrchestrationModels.GetOrchestrationResponseV1, OrchestrationModels.GetOrchestrationVersionResponseV1)>();
+            foreach (var orch in toolEnabled)
+            {
+                if (orch.CurrentVersionId == null) continue;
+                var version = await versionService.GetVersionAsync(orch.Id, orch.CurrentVersionId.Value, IdentityContext.UserId, ct);
+                if (version != null)
+                    preloaded.Add((orch, version));
+            }
+
+            if (preloaded.Count == 0)
+                return;
+
+            var executor = ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
+            var executionRepo = ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
+
+            OrchestrationToolProvider = new OrchestrationToolProvider();
+            OrchestrationToolProvider.InitializeFromPreloadedData(
+                preloaded, IdentityContext.UserId, executor, executionRepo, Logger);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to initialize orchestration tools");
+        }
     }
 
     protected override async Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)

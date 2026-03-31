@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Core.Providers;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,10 @@ internal sealed partial class OrchestrationToolProvider
 {
     private readonly Dictionary<string, OrchestrationToolInfo> _tools = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Initialize from OrchestrationReferences by fetching data from services.
+    /// Used by AgentGrain where DB calls are safe.
+    /// </summary>
     public async Task InitializeAsync(
         OrchestrationReference[] references,
         Guid userId,
@@ -58,41 +63,83 @@ internal sealed partial class OrchestrationToolProvider
                     continue;
                 }
 
-                var toolInterface = version.Interfaces.OfType<ToolInterfaceConfig>().FirstOrDefault();
-                var toolName = reference.ToolName ?? SanitizeToolName(orchestration.Name);
-                var displayName = toolInterface?.Name ?? orchestration.Name;
-                var description = toolInterface?.Description
-                    ?? reference.Description
-                    ?? orchestration.Description
-                    ?? $"Execute the {orchestration.Name} orchestration";
-
-                if (_tools.ContainsKey(toolName))
-                {
-                    logger.LogWarning("Duplicate orchestration tool name '{ToolName}', skipping", toolName);
-                    continue;
-                }
-
-                var definition = new InternalToolDefinition
-                {
-                    Name = toolName,
-                    DisplayName = displayName,
-                    Description = description,
-                    InputSchema = version.InputSchema,
-                    DeferLoading = false
-                };
-
-                _tools[toolName] = new OrchestrationToolInfo(
-                    definition, orchestrationId, versionId.Value, userId, executor, executionRepo);
-
-                logger.LogInformation(
-                    "Registered orchestration tool '{ToolName}' → {OrchestrationName} (version {VersionId})",
-                    toolName, orchestration.Name, versionId);
+                RegisterTool(orchestration.Name, orchestration.Description, version, orchestrationId,
+                    versionId.Value, userId, reference.ToolName, reference.Description, executor, executionRepo, logger);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to initialize orchestration '{Id}', skipping", reference.Id);
             }
         }
+    }
+
+    /// <summary>
+    /// Initialize from pre-fetched orchestration and version data.
+    /// Used by ConversationGrain to avoid DB calls during ExecuteTurnAsync.
+    /// </summary>
+    public void InitializeFromPreloadedData(
+        IReadOnlyList<(GetOrchestrationResponseV1 Orchestration, GetOrchestrationVersionResponseV1 Version)> orchestrations,
+        Guid userId,
+        IOrchestrationExecutor executor,
+        IOrchestrationExecutionRepository executionRepo,
+        ILogger logger)
+    {
+        foreach (var (orchestration, version) in orchestrations)
+        {
+            try
+            {
+                RegisterTool(orchestration.Name, orchestration.Description, version, orchestration.Id,
+                    version.Id, userId, null, null, executor, executionRepo, logger);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to register orchestration tool '{Name}', skipping", orchestration.Name);
+            }
+        }
+    }
+
+    private void RegisterTool(
+        string orchestrationName,
+        string? orchestrationDescription,
+        GetOrchestrationVersionResponseV1 version,
+        Guid orchestrationId,
+        Guid versionId,
+        Guid userId,
+        string? toolNameOverride,
+        string? descriptionOverride,
+        IOrchestrationExecutor executor,
+        IOrchestrationExecutionRepository executionRepo,
+        ILogger logger)
+    {
+        var toolInterface = version.Interfaces.OfType<ToolInterfaceConfig>().FirstOrDefault();
+        var toolName = toolNameOverride ?? SanitizeToolName(orchestrationName);
+        var displayName = toolInterface?.Name ?? orchestrationName;
+        var description = toolInterface?.Description
+            ?? descriptionOverride
+            ?? orchestrationDescription
+            ?? $"Execute the {orchestrationName} orchestration";
+
+        if (_tools.ContainsKey(toolName))
+        {
+            logger.LogWarning("Duplicate orchestration tool name '{ToolName}', skipping", toolName);
+            return;
+        }
+
+        var definition = new InternalToolDefinition
+        {
+            Name = toolName,
+            DisplayName = displayName,
+            Description = description,
+            InputSchema = version.InputSchema,
+            DeferLoading = false
+        };
+
+        _tools[toolName] = new OrchestrationToolInfo(
+            definition, orchestrationId, versionId, userId, executor, executionRepo);
+
+        logger.LogInformation(
+            "Registered orchestration tool '{ToolName}' → {OrchestrationName} (version {VersionId})",
+            toolName, orchestrationName, versionId);
     }
 
     public IReadOnlyList<InternalToolDefinition> GetToolDefinitions()
