@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Brain, FileText, Server, Zap, Box, Bot, Globe, Plus, type LucideIcon } from 'lucide-react'
+import { Brain, FileText, Server, Zap, Box, Bot, Globe, Plus, Workflow, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgentBuilderStore } from '@/store/agentBuilder'
-import { mcpServers, a2aServers, agentDefinitions, prompts as promptsApi, type McpServerSummary, type A2aServerSummary, type AgentDefinitionSummary, type PromptSummary } from '@donkeywork/api-client'
+import { mcpServers, a2aServers, agentDefinitions, orchestrations as orchestrationsApi, prompts as promptsApi, type McpServerSummary, type A2aServerSummary, type AgentDefinitionSummary, type PromptSummary, type Orchestration } from '@donkeywork/api-client'
 import { CreatePromptDialog } from './CreatePromptDialog'
 import { McpServerTestDialog } from '@/components/mcp/McpServerTestDialog'
 
@@ -13,6 +13,7 @@ const iconMap: Record<string, LucideIcon> = {
   zap: Zap,
   container: Box,
   bot: Bot,
+  workflow: Workflow,
   globe: Globe,
 }
 
@@ -57,6 +58,11 @@ const colorClasses: Record<string, { border: string; iconContainer: string; icon
     iconContainer: 'bg-gradient-to-br from-orange-500 to-red-600 shadow-lg shadow-orange-500/25',
     iconColor: 'text-white',
   },
+  indigo: {
+    border: 'border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-500/50 hover:bg-indigo-500/10',
+    iconContainer: 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/25',
+    iconColor: 'text-white',
+  },
 }
 
 interface PaletteItem {
@@ -88,6 +94,7 @@ export function AgentNodePalette() {
   const [a2aServerList, setA2aServerList] = useState<A2aServerSummary[]>([])
   const [agentList, setAgentList] = useState<AgentDefinitionSummary[]>([])
   const [promptList, setPromptList] = useState<PromptSummary[]>([])
+  const [orchestrationList, setOrchestrationList] = useState<Orchestration[]>([])
   const [createPromptOpen, setCreatePromptOpen] = useState(false)
   const [testingMcpServer, setTestingMcpServer] = useState<{ id: string; name: string } | null>(null)
 
@@ -99,6 +106,7 @@ export function AgentNodePalette() {
     mcpServers.list().then(setServerList).catch(console.error)
     a2aServers.list().then(setA2aServerList).catch(console.error)
     agentDefinitions.list().then(setAgentList).catch(console.error)
+    orchestrationsApi.list().then(setOrchestrationList).catch(console.error)
     refreshPrompts()
   }, [refreshPrompts])
 
@@ -126,6 +134,11 @@ export function AgentNodePalette() {
   const hasA2aServer = (a2aServerId: string) =>
     nodes.some(
       (n) => n.data?.nodeType === 'agentA2aServer' && n.data?.a2aServerId === a2aServerId
+    )
+
+  const hasOrchestration = (orchestrationId: string) =>
+    nodes.some(
+      (n) => n.data?.nodeType === 'agentOrchestration' && n.data?.orchestrationId === orchestrationId
     )
 
   const hasPrompt = (promptId: string) =>
@@ -286,6 +299,25 @@ export function AgentNodePalette() {
     isDisabled: isReadOnly || hasA2aServer(server.id),
   })).sort(sortByName)
 
+  // Orchestration items (from API)
+  const orchestrationItems: PaletteItem[] = orchestrationList.map((orch) => ({
+    key: `orch-${orch.id}`,
+    dragData: {
+      nodeType: 'agentOrchestration',
+      displayName: orch.name,
+      icon: 'workflow',
+      color: 'indigo',
+      canDelete: true,
+      orchestrationId: orch.id,
+      orchestrationName: orch.name,
+      orchestrationDescription: orch.description,
+    },
+    displayName: orch.name,
+    icon: 'workflow',
+    color: 'indigo',
+    isDisabled: isReadOnly || hasOrchestration(orch.id),
+  })).sort(sortByName)
+
   // Sandbox item
   const sandboxItem: PaletteItem = {
     key: 'sandbox',
@@ -381,6 +413,20 @@ export function AgentNodePalette() {
             a2aItems.map(renderItem)
           ) : (
             <p className="text-xs text-muted-foreground px-1">No A2A servers configured</p>
+          )}
+        </div>
+      </div>
+
+      {/* Orchestrations */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+          Orchestrations
+        </h3>
+        <div className="space-y-2">
+          {orchestrationItems.length > 0 ? (
+            orchestrationItems.map(renderItem)
+          ) : (
+            <p className="text-xs text-muted-foreground px-1">No orchestrations created</p>
           )}
         </div>
       </div>

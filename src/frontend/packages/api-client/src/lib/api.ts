@@ -1769,6 +1769,14 @@ export interface A2aServerReference {
   description?: string
 }
 
+export interface OrchestrationReference {
+  id: string
+  name: string
+  description?: string
+  toolName?: string
+  versionId?: string
+}
+
 export interface ToolOverride {
   source: string
   toolName: string
@@ -1820,6 +1828,7 @@ export interface AgentContractV1 {
   mcpServers?: McpServerReference[]
   subAgents?: SubAgentReference[]
   a2aServers?: A2aServerReference[]
+  orchestrations?: OrchestrationReference[]
   enableSandbox?: boolean
   modelId?: string
   prompts?: string[]
