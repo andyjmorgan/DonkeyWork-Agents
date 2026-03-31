@@ -1,8 +1,8 @@
 import { useState, useMemo, useLayoutEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Play, Loader2, RefreshCw, CheckCircle2, XCircle, ScrollText } from 'lucide-react'
 import { Button, Label, Textarea } from '@donkeywork/ui'
 import { executions, type JSONSchema } from '@donkeywork/api-client'
+import { ExecutionDetailDialog } from './ExecutionDetailDialog'
 
 interface TestPanelProps {
   orchestrationId: string
@@ -54,7 +54,7 @@ export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
 
 // Direct JSON test interface (non-streaming)
 function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: string; inputSchema?: JSONSchema }) {
-  const navigate = useNavigate()
+  const [showExecutionLog, setShowExecutionLog] = useState(false)
   const initialInput = useMemo(() => {
     if (inputSchema) {
       return JSON.stringify(generateExampleFromSchema(inputSchema), null, 2)
@@ -202,7 +202,7 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => navigate(`/executions/${executionId}`)}
+                    onClick={() => setShowExecutionLog(true)}
                   >
                     <ScrollText className="h-3 w-3 mr-1" />
                     Execution Log
@@ -226,7 +226,7 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => navigate(`/executions/${executionId}`)}
+                    onClick={() => setShowExecutionLog(true)}
                   >
                     <ScrollText className="h-3 w-3 mr-1" />
                     Execution Log
@@ -249,6 +249,14 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
           )}
         </div>
       </div>
+
+      {executionId && (
+        <ExecutionDetailDialog
+          executionId={executionId}
+          open={showExecutionLog}
+          onOpenChange={setShowExecutionLog}
+        />
+      )}
     </div>
   )
 }
