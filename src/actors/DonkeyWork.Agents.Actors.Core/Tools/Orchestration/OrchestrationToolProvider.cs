@@ -154,7 +154,7 @@ internal sealed partial class OrchestrationToolProvider
         {
             var executionId = Guid.NewGuid();
 
-            using var scope = _serviceProvider.CreateScope();
+            await using var scope = _serviceProvider.CreateAsyncScope();
             var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
             scopedIdentity?.SetIdentity(toolInfo.UserId);
 
