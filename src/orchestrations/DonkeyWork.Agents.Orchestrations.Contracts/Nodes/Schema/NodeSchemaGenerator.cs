@@ -191,6 +191,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
             var sliderAttr = property.GetCustomAttribute<SliderAttribute>();
             var selectOptionsAttr = property.GetCustomAttribute<SelectOptionsAttribute>();
             var reliesUponAttr = property.GetCustomAttribute<ReliesUponAttribute>();
+            var immutableAttr = property.GetCustomAttribute<ImmutableAttribute>();
             var supportsVariables = property.GetCustomAttribute<SupportVariablesAttribute>() != null;
 
             if (tabAttr != null && !tabs.ContainsKey(tabAttr.Name))
@@ -225,6 +226,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                 Max = sliderAttr?.Max,
                 Step = sliderAttr?.Step,
                 Options = options,
+                Immutable = immutableAttr != null,
                 ReliesUpon = reliesUponAttr != null
                     ? new ReliesUponSchema
                     {

@@ -241,6 +241,75 @@
         "compaction": false
       },
       "client_types": ["MultimodalInput", "MultimodalDuplex", "AudioOutput", "ImageOutput"]
+    },
+    {
+      "id": "gpt-4o-mini-tts",
+      "name": "GPT-4o Mini TTS",
+      "provider": "OpenAI",
+      "mode": "AudioGeneration",
+      "max_input_tokens": 2000,
+      "max_output_tokens": 0,
+      "input_cost_per_million_tokens": 0.60,
+      "output_cost_per_million_tokens": 12.00,
+      "supports": {
+        "vision": false,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": true,
+        "compaction": false
+      },
+      "client_types": ["AudioOutput"]
+    },
+    {
+      "id": "tts-1",
+      "name": "TTS-1",
+      "provider": "OpenAI",
+      "mode": "AudioGeneration",
+      "max_input_tokens": 4096,
+      "max_output_tokens": 0,
+      "input_cost_per_million_tokens": 15.00,
+      "output_cost_per_million_tokens": 0,
+      "supports": {
+        "vision": false,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": true,
+        "compaction": false
+      },
+      "client_types": ["AudioOutput"]
+    },
+    {
+      "id": "tts-1-hd",
+      "name": "TTS-1 HD",
+      "provider": "OpenAI",
+      "mode": "AudioGeneration",
+      "max_input_tokens": 4096,
+      "max_output_tokens": 0,
+      "input_cost_per_million_tokens": 30.00,
+      "output_cost_per_million_tokens": 0,
+      "supports": {
+        "vision": false,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": true,
+        "compaction": false
+      },
+      "client_types": ["AudioOutput"]
     }
   ]
 }

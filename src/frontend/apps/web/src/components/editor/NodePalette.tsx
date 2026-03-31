@@ -102,7 +102,7 @@ export function NodePalette() {
   // Group node types by category (excluding Model category since we show models separately)
   const nodeTypesByCategory = useMemo(() => {
     return allNodeTypes
-      .filter(nt => nt.category !== 'AI') // Don't show Model in generic categories - we have special Models section
+      .filter(nt => nt.category !== 'AI' && nt.category !== 'Audio') // Don't show Model/Audio in generic categories - they have dedicated sections
       .reduce((acc, nt) => {
         if (!acc[nt.category]) {
           acc[nt.category] = []
@@ -112,9 +112,20 @@ export function NodePalette() {
       }, {} as Record<string, NodeTypeInfo[]>)
   }, [allNodeTypes])
 
-  // Group models by provider (only chat models)
+  // Group chat models by provider
   const modelsByProvider = allModels
-    .filter(model => model.mode === 'Chat') // Only show chat models, not image/video
+    .filter(model => model.mode === 'Chat')
+    .reduce((acc, model) => {
+      if (!acc[model.provider]) {
+        acc[model.provider] = []
+      }
+      acc[model.provider].push(model)
+      return acc
+    }, {} as Record<string, ModelDefinition[]>)
+
+  // Group audio generation models by provider
+  const ttsModelsByProvider = allModels
+    .filter(model => model.mode === 'AudioGeneration')
     .reduce((acc, model) => {
       if (!acc[model.provider]) {
         acc[model.provider] = []
@@ -212,7 +223,7 @@ export function NodePalette() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <Accordion type="multiple" defaultValue={['models', ...sortedCategories]} className="space-y-2">
+      <Accordion type="multiple" defaultValue={['models', 'tts', ...sortedCategories]} className="space-y-2">
         {/* Models Section - Always show first */}
         <AccordionItem value="models">
           <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline px-2">
@@ -275,6 +286,67 @@ export function NodePalette() {
             )}
           </AccordionContent>
         </AccordionItem>
+
+        {/* Text to Speech Section */}
+        {Object.keys(ttsModelsByProvider).length > 0 && (
+          <AccordionItem value="tts">
+            <AccordionTrigger className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline px-2">
+              Text to Speech
+            </AccordionTrigger>
+            <AccordionContent className="px-2 pb-4">
+              <div className="space-y-4">
+                {Object.entries(ttsModelsByProvider)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([provider, providerModels]) => (
+                  <div key={provider}>
+                    <div className="mb-2 flex items-center gap-2">
+                      <div className="flex h-4 w-4 items-center justify-center">
+                        {getProviderIcon(provider)}
+                      </div>
+                      <h4 className="text-xs font-medium text-muted-foreground">{provider}</h4>
+                    </div>
+                    <div className="space-y-1.5">
+                      {[...providerModels].sort((a, b) => a.name.localeCompare(b.name)).map((model) => {
+                        const colors = getColorClasses('pink')
+                        return (
+                          <div
+                            key={model.id}
+                            draggable
+                            onDragStart={(e) =>
+                              handleDragStart(e, 'schemaNode', {
+                                nodeType: 'TextToSpeech',
+                                displayName: model.name,
+                                icon: 'volume-2',
+                                color: 'pink',
+                                hasInputHandle: true,
+                                hasOutputHandle: true,
+                                canDelete: true,
+                                provider: model.provider,
+                                modelId: model.id
+                              })
+                            }
+                            className={cn(
+                              'flex cursor-move items-center gap-2.5 rounded-xl border-2 p-2.5 transition-all',
+                              colors.border
+                            )}
+                            title={`Add ${model.name} node`}
+                          >
+                            <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md', colors.iconContainer)}>
+                              <Volume2 className="h-3.5 w-3.5 text-white" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium">{model.name}</div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
         {/* Node Type Categories */}
         {sortedCategories.map((category) => (

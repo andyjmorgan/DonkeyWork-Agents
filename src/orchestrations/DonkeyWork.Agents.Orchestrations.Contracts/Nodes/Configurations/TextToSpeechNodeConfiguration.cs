@@ -31,9 +31,9 @@ public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequires
     /// The TTS model to use.
     /// </summary>
     [JsonPropertyName("model")]
-    [ConfigurableField(Label = "Model", ControlType = ControlType.Select, Order = 20)]
+    [ConfigurableField(Label = "Model", ControlType = ControlType.Text, Order = 20)]
     [Tab("Basic", Order = 1)]
-    [SelectOptions("gpt-4o-mini-tts", "tts-1", "tts-1-hd", Default = "gpt-4o-mini-tts")]
+    [Immutable]
     public required string Model { get; init; }
 
     /// <summary>

@@ -98,7 +98,8 @@ export function PropertiesPanel() {
 
     const config = nodeConfigurations[selectedNode.id]
     const isModelNode = backendNodeType === 'Model' || backendNodeType === 'MultimodalChatModel'
-    const credentialProvider = isModelNode ? (config?.provider as string) : undefined
+    const isTtsNode = backendNodeType === 'TextToSpeech'
+    const credentialProvider = (isModelNode || isTtsNode) ? (config?.provider as string) : undefined
     const modelId = isModelNode ? (config?.modelId as string) : undefined
 
     // All other nodes use the unified schema-driven panel
