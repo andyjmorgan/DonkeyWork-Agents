@@ -242,7 +242,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                     nodeExecution.Status = ExecutionStatus.Completed;
                     nodeExecution.CompletedAt = DateTimeOffset.UtcNow;
                     nodeExecution.DurationMs = (int)nodeStopwatch.ElapsedMilliseconds;
-                    nodeExecution.Output = JsonSerializer.Serialize(output);
+                    nodeExecution.Output = JsonSerializer.Serialize(output, output.GetType());
 
                     // For model nodes, store additional information
                     if (output is ModelNodeOutput modelOutput)

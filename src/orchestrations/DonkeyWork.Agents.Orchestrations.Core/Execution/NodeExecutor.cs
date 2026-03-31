@@ -68,7 +68,7 @@ public abstract class NodeExecutor<TConfig, TOutput> : INodeExecutor
                 new NodeCompletedEvent
                 {
                     NodeId = nodeId,
-                    Output = JsonSerializer.Serialize(output)
+                    Output = JsonSerializer.Serialize(output, output.GetType())
                 });
 
             return output;
