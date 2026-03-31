@@ -13,10 +13,15 @@ interface ScribanEditorProps {
 
 const NODE_OUTPUT_PROPERTIES: Record<string, string[]> = {
   start: [],
+  end: [],
   model: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
+  MultimodalChatModel: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
   action: ['Result', 'ActionType'],
   messageFormatter: ['FormattedMessage'],
-  end: []
+  httpRequest: ['StatusCode', 'Body', 'Headers', 'IsSuccess'],
+  sleep: ['DurationSeconds'],
+  textToSpeech: ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model'],
+  storeAudio: ['RecordingId', 'Name', 'Description', 'FilePath', 'Transcript'],
 }
 
 interface SuggestionItem {
