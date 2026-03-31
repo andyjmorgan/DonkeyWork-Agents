@@ -9,7 +9,8 @@ namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 
 /// <summary>
 /// Executor for StoreAudio nodes.
-/// Converges TTS output and model metadata to create a TtsRecordingEntity.
+/// Persists a TTS recording entity. Audio metadata auto-resolves from the upstream
+/// TextToSpeech node output unless explicitly overridden in the configuration.
 /// </summary>
 public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, StoreAudioNodeOutput>
 {
@@ -36,35 +37,36 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
     {
         var name = await _templateRenderer.RenderAsync(config.RecordingName, cancellationToken);
         var description = await _templateRenderer.RenderAsync(config.RecordingDescription, cancellationToken);
-        var objectKey = await _templateRenderer.RenderAsync(config.AudioObjectKey, cancellationToken);
-        var transcript = await _templateRenderer.RenderAsync(config.Transcript, cancellationToken);
-        var contentType = await _templateRenderer.RenderAsync(config.AudioContentType, cancellationToken);
-        var sizeBytesStr = await _templateRenderer.RenderAsync(config.AudioSizeBytes, cancellationToken);
-        var voice = config.Voice != null ? await _templateRenderer.RenderAsync(config.Voice, cancellationToken) : null;
-        var model = config.Model != null ? await _templateRenderer.RenderAsync(config.Model, cancellationToken) : null;
 
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new InvalidOperationException("Recording name is empty after template rendering");
         }
 
+        var ttsOutput = FindUpstreamTtsOutput();
+
+        var objectKey = await ResolveFieldAsync(config.AudioObjectKey, ttsOutput?.ObjectKey, cancellationToken);
+        var transcript = await ResolveFieldAsync(config.Transcript, ttsOutput?.Transcript, cancellationToken);
+        var contentType = await ResolveFieldAsync(config.AudioContentType, ttsOutput?.ContentType, cancellationToken);
+        var voice = await ResolveFieldAsync(config.Voice, ttsOutput?.Voice, cancellationToken);
+        var model = await ResolveFieldAsync(config.Model, ttsOutput?.Model, cancellationToken);
+
         if (string.IsNullOrWhiteSpace(objectKey))
         {
-            throw new InvalidOperationException("Audio object key is empty after template rendering");
+            throw new InvalidOperationException(
+                "Audio object key could not be resolved. Either connect a TextToSpeech node upstream or set the field manually.");
         }
-
-        long.TryParse(sizeBytesStr.Trim(), out var sizeBytes);
 
         var recording = new TtsRecordingEntity
         {
             Id = Guid.NewGuid(),
             UserId = Context.UserId,
             Name = name.Trim(),
-            Description = description.Trim(),
+            Description = (description ?? string.Empty).Trim(),
             FilePath = objectKey.Trim(),
-            Transcript = transcript,
+            Transcript = transcript ?? string.Empty,
             ContentType = string.IsNullOrWhiteSpace(contentType) ? "audio/mpeg" : contentType.Trim(),
-            SizeBytes = sizeBytes,
+            SizeBytes = ttsOutput?.SizeBytes ?? 0,
             Voice = string.IsNullOrWhiteSpace(voice) ? null : voice.Trim(),
             Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim(),
             OrchestrationExecutionId = Context.ExecutionId,
@@ -86,5 +88,27 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             FilePath = recording.FilePath,
             Transcript = recording.Transcript
         };
+    }
+
+    private TextToSpeechNodeOutput? FindUpstreamTtsOutput()
+    {
+        foreach (var output in Context.NodeOutputs.Values)
+        {
+            if (output is TextToSpeechNodeOutput ttsOutput)
+                return ttsOutput;
+        }
+        return null;
+    }
+
+    private async Task<string?> ResolveFieldAsync(
+        string? configValue, string? autoValue, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(configValue))
+        {
+            var rendered = await _templateRenderer.RenderAsync(configValue, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(rendered))
+                return rendered;
+        }
+        return autoValue;
     }
 }

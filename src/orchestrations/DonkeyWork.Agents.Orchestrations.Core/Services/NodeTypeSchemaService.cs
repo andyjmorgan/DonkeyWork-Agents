@@ -156,11 +156,7 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                 {
                     Name = "temp",
                     RecordingName = "",
-                    RecordingDescription = "",
-                    AudioObjectKey = "",
-                    Transcript = "",
-                    Voice = "",
-                    Model = ""
+                    RecordingDescription = ""
                 },
                 _ => null
             };

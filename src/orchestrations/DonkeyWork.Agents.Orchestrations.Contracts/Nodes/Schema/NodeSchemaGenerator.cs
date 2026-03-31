@@ -154,11 +154,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                 {
                     Name = name,
                     RecordingName = "",
-                    RecordingDescription = "",
-                    AudioObjectKey = "",
-                    Transcript = "",
-                    Voice = "",
-                    Model = ""
+                    RecordingDescription = ""
                 };
             }
 
