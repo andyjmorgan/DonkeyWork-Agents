@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Core.Providers;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using Microsoft.Extensions.Logging;
 
@@ -57,7 +58,13 @@ internal sealed partial class OrchestrationToolProvider
                     continue;
                 }
 
+                var toolInterface = version.Interfaces.OfType<ToolInterfaceConfig>().FirstOrDefault();
                 var toolName = reference.ToolName ?? SanitizeToolName(orchestration.Name);
+                var displayName = toolInterface?.Name ?? orchestration.Name;
+                var description = toolInterface?.Description
+                    ?? reference.Description
+                    ?? orchestration.Description
+                    ?? $"Execute the {orchestration.Name} orchestration";
 
                 if (_tools.ContainsKey(toolName))
                 {
@@ -68,8 +75,8 @@ internal sealed partial class OrchestrationToolProvider
                 var definition = new InternalToolDefinition
                 {
                     Name = toolName,
-                    DisplayName = orchestration.Name,
-                    Description = reference.Description ?? orchestration.Description ?? $"Execute the {orchestration.Name} orchestration",
+                    DisplayName = displayName,
+                    Description = description,
                     InputSchema = version.InputSchema,
                     DeferLoading = false
                 };

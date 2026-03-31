@@ -222,6 +222,21 @@ public class OrchestrationService : IOrchestrationService
             .ToList();
     }
 
+    public async Task<IReadOnlyList<GetOrchestrationResponseV1>> ListToolEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        var orchestrations = await _dbContext.Orchestrations
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Include(o => o.CurrentVersion)
+            .Where(o => o.CurrentVersionId != null)
+            .ToListAsync(cancellationToken);
+
+        return orchestrations
+            .Where(o => o.CurrentVersion?.Interfaces.Any(i => i is ToolInterfaceConfig) == true)
+            .Select(MapToResponse)
+            .ToList();
+    }
+
     private static GetOrchestrationResponseV1 MapToResponse(OrchestrationEntity agent)
     {
         return new GetOrchestrationResponseV1

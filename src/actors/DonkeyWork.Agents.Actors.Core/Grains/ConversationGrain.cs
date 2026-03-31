@@ -12,6 +12,8 @@ using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
+using DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
+using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
@@ -163,9 +165,38 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         GrainContext.A2aServers = _discoveredA2aServers;
     }
 
-    protected override Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
+    protected override async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
     {
-        return Task.CompletedTask;
+        if (OrchestrationToolProvider is not null)
+            return;
+
+        var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
+        var toolEnabled = await orchestrationService.ListToolEnabledAsync(ct);
+
+        if (toolEnabled.Count == 0)
+            return;
+
+        var references = toolEnabled.Select(o => new OrchestrationReference
+        {
+            Id = o.Id.ToString(),
+            Name = o.Name,
+            Description = o.Description
+        }).ToArray();
+
+        var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
+        var executor = ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
+        var executionRepo = ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
+
+        OrchestrationToolProvider = new OrchestrationToolProvider();
+        await OrchestrationToolProvider.InitializeAsync(
+            references,
+            IdentityContext.UserId,
+            orchestrationService,
+            versionService,
+            executor,
+            executionRepo,
+            Logger,
+            ct);
     }
 
     protected override async Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)

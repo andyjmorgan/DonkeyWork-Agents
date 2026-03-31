@@ -36,4 +36,6 @@ public interface IOrchestrationService
     /// Lists all orchestrations with Chat interface enabled (has a published version with ChatInterfaceConfig).
     /// </summary>
     Task<IReadOnlyList<ChatEnabledOrchestrationV1>> ListChatEnabledAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<GetOrchestrationResponseV1>> ListToolEnabledAsync(CancellationToken cancellationToken = default);
 }
