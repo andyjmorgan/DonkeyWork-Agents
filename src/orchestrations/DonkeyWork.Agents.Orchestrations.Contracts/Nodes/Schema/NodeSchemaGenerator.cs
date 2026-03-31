@@ -156,7 +156,9 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                     RecordingName = "",
                     RecordingDescription = "",
                     AudioObjectKey = "",
-                    Transcript = ""
+                    Transcript = "",
+                    Voice = "",
+                    Model = ""
                 };
             }
 
@@ -187,6 +189,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
 
             var tabAttr = property.GetCustomAttribute<TabAttribute>();
             var sliderAttr = property.GetCustomAttribute<SliderAttribute>();
+            var selectOptionsAttr = property.GetCustomAttribute<SelectOptionsAttribute>();
             var reliesUponAttr = property.GetCustomAttribute<ReliesUponAttribute>();
             var supportsVariables = property.GetCustomAttribute<SupportVariablesAttribute>() != null;
 
@@ -200,6 +203,11 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                 };
             }
 
+            var options = GetEnumOptions(property.PropertyType) ?? selectOptionsAttr?.Options;
+            var defaultValue = sliderAttr?.HasDefault == true
+                ? sliderAttr.Default
+                : selectOptionsAttr?.Default as object;
+
             var fieldSchema = new FieldSchema
             {
                 Name = ToCamelCase(property.Name),
@@ -212,11 +220,11 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                 Required = fieldAttr.Required || IsRequiredProperty(property),
                 SupportsVariables = supportsVariables,
                 Placeholder = fieldAttr.Placeholder,
-                DefaultValue = sliderAttr?.HasDefault == true ? sliderAttr.Default : null,
+                DefaultValue = defaultValue,
                 Min = sliderAttr?.Min,
                 Max = sliderAttr?.Max,
                 Step = sliderAttr?.Step,
-                Options = GetEnumOptions(property.PropertyType),
+                Options = options,
                 ReliesUpon = reliesUponAttr != null
                     ? new ReliesUponSchema
                     {

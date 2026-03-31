@@ -5,7 +5,8 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 
 /// <summary>
-/// Configuration for the TextToSpeech node - generates speech audio from text using OpenAI TTS.
+/// Configuration for the TextToSpeech node - generates speech audio from text.
+/// Currently supports OpenAI TTS models; designed for future provider extensibility.
 /// </summary>
 [Node(
     DisplayName = "Text to Speech",
@@ -19,7 +20,7 @@ public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequires
     public override NodeType NodeType => NodeType.TextToSpeech;
 
     /// <summary>
-    /// The credential ID for authenticating with OpenAI.
+    /// The credential ID for authenticating with the TTS provider.
     /// </summary>
     [JsonPropertyName("credentialId")]
     [ConfigurableField(Label = "Credential", ControlType = ControlType.Credential, Order = 10)]
@@ -32,16 +33,17 @@ public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequires
     [JsonPropertyName("model")]
     [ConfigurableField(Label = "Model", ControlType = ControlType.Select, Order = 20)]
     [Tab("Basic", Order = 1)]
-    [SelectOptions("tts-1", "tts-1-hd", Default = "tts-1")]
+    [SelectOptions("gpt-4o-mini-tts", "tts-1", "tts-1-hd", Default = "gpt-4o-mini-tts")]
     public required string Model { get; init; }
 
     /// <summary>
     /// The voice to use for speech generation.
+    /// All voices work with gpt-4o-mini-tts; tts-1/tts-1-hd support alloy, ash, coral, echo, fable, nova, onyx, sage, shimmer.
     /// </summary>
     [JsonPropertyName("voice")]
     [ConfigurableField(Label = "Voice", ControlType = ControlType.Select, Order = 30)]
     [Tab("Basic", Order = 1)]
-    [SelectOptions("alloy", "ash", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", Default = "alloy")]
+    [SelectOptions("alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse", Default = "alloy")]
     public required string Voice { get; init; }
 
     /// <summary>
@@ -53,6 +55,18 @@ public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequires
     [Tab("Content", Order = 2, Icon = "file-text")]
     [SupportVariables]
     public required string InputText { get; init; }
+
+    /// <summary>
+    /// Optional instructions for voice steering (tone, pacing, emotion).
+    /// Only supported by gpt-4o-mini-tts.
+    /// </summary>
+    [JsonPropertyName("instructions")]
+    [ConfigurableField(Label = "Voice Instructions", ControlType = ControlType.TextArea, Order = 20,
+        Description = "Guide the voice style: tone, pacing, emotion. Only supported by gpt-4o-mini-tts.",
+        Placeholder = "e.g. Speak in a warm, conversational tone with moderate pacing.")]
+    [Tab("Content", Order = 2)]
+    [SupportVariables]
+    public string? Instructions { get; init; }
 
     /// <summary>
     /// The speed of the generated audio (0.25 to 4.0).

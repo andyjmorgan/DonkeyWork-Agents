@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, Pause, RotateCcw, Volume2, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { Button } from '@donkeywork/ui'
-import { tts, type TtsPlayback } from '@donkeywork/api-client'
+import { tts } from '@donkeywork/api-client'
 import { cn } from '@/lib/utils'
 
 interface AudioPlayerProps {
@@ -16,7 +16,7 @@ const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
 export function AudioPlayer({ recordingId, name, transcript, className }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const reportTimerRef = useRef<ReturnType<typeof setInterval>>()
+  const reportTimerRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
   const [audioUrl, setAudioUrl] = useState<string>()
   const [loading, setLoading] = useState(true)
@@ -53,7 +53,7 @@ export function AudioPlayer({ recordingId, name, transcript, className }: AudioP
             setDuration(playbackData.durationSeconds)
           }
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setError('Failed to load audio')
         }

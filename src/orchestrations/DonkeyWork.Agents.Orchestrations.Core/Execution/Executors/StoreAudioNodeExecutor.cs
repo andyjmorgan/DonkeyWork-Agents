@@ -34,13 +34,14 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
         StoreAudioNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Render all template fields
         var name = await _templateRenderer.RenderAsync(config.RecordingName, cancellationToken);
         var description = await _templateRenderer.RenderAsync(config.RecordingDescription, cancellationToken);
         var objectKey = await _templateRenderer.RenderAsync(config.AudioObjectKey, cancellationToken);
         var transcript = await _templateRenderer.RenderAsync(config.Transcript, cancellationToken);
         var contentType = await _templateRenderer.RenderAsync(config.AudioContentType, cancellationToken);
         var sizeBytesStr = await _templateRenderer.RenderAsync(config.AudioSizeBytes, cancellationToken);
+        var voice = config.Voice != null ? await _templateRenderer.RenderAsync(config.Voice, cancellationToken) : null;
+        var model = config.Model != null ? await _templateRenderer.RenderAsync(config.Model, cancellationToken) : null;
 
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -54,20 +55,6 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
 
         long.TryParse(sizeBytesStr.Trim(), out var sizeBytes);
 
-        // Look for TTS-specific metadata from upstream TextToSpeechNodeOutput
-        string? voice = null;
-        string? model = null;
-        foreach (var output in Context.NodeOutputs.Values)
-        {
-            if (output is TextToSpeechNodeOutput ttsOutput)
-            {
-                voice = ttsOutput.Voice;
-                model = ttsOutput.Model;
-                break;
-            }
-        }
-
-        // Create the recording entity
         var recording = new TtsRecordingEntity
         {
             Id = Guid.NewGuid(),
@@ -78,8 +65,8 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             Transcript = transcript,
             ContentType = string.IsNullOrWhiteSpace(contentType) ? "audio/mpeg" : contentType.Trim(),
             SizeBytes = sizeBytes,
-            Voice = voice,
-            Model = model,
+            Voice = string.IsNullOrWhiteSpace(voice) ? null : voice.Trim(),
+            Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim(),
             OrchestrationExecutionId = Context.ExecutionId,
             CreatedAt = DateTimeOffset.UtcNow
         };

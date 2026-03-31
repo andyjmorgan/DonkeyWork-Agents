@@ -120,7 +120,9 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     RecordingName = "",
                     RecordingDescription = "",
                     AudioObjectKey = "",
-                    Transcript = ""
+                    Transcript = "",
+                    Voice = "",
+                    Model = ""
                 },
                 _ => null
             };

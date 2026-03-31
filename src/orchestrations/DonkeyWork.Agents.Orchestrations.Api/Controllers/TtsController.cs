@@ -1,12 +1,9 @@
 using Asp.Versioning;
-using DonkeyWork.Agents.Identity.Contracts.Services;
-using DonkeyWork.Agents.Persistence;
-using DonkeyWork.Agents.Persistence.Entities.Tts;
-using DonkeyWork.Agents.Storage.Contracts.Services;
+using DonkeyWork.Agents.Orchestrations.Contracts.Models;
+using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace DonkeyWork.Agents.Orchestrations.Api.Controllers;
 
@@ -20,236 +17,75 @@ namespace DonkeyWork.Agents.Orchestrations.Api.Controllers;
 [Produces("application/json")]
 public class TtsController : ControllerBase
 {
-    private readonly AgentsDbContext _dbContext;
-    private readonly IStorageService _storageService;
-    private readonly IIdentityContext _identityContext;
+    private readonly ITtsService _ttsService;
 
-    public TtsController(
-        AgentsDbContext dbContext,
-        IStorageService storageService,
-        IIdentityContext identityContext)
+    public TtsController(ITtsService ttsService)
     {
-        _dbContext = dbContext;
-        _storageService = storageService;
-        _identityContext = identityContext;
+        _ttsService = ttsService;
     }
 
     /// <summary>
     /// List all TTS recordings for the current user.
     /// </summary>
     [HttpGet("recordings")]
-    [ProducesResponseType<TtsRecordingListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ListRecordingsResponseV1>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ListRecordings(
         [FromQuery] int offset = 0,
         [FromQuery] int limit = 20,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.TtsRecordings
-            .Include(r => r.Playback)
-            .OrderByDescending(r => r.CreatedAt);
-
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var recordings = await query
-            .Skip(offset)
-            .Take(limit)
-            .Select(r => new TtsRecordingResponse
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Description = r.Description,
-                FilePath = r.FilePath,
-                Transcript = r.Transcript,
-                ContentType = r.ContentType,
-                SizeBytes = r.SizeBytes,
-                Voice = r.Voice,
-                Model = r.Model,
-                CreatedAt = r.CreatedAt,
-                Playback = r.Playback != null ? new TtsPlaybackResponse
-                {
-                    PositionSeconds = r.Playback.PositionSeconds,
-                    DurationSeconds = r.Playback.DurationSeconds,
-                    Completed = r.Playback.Completed,
-                    PlaybackSpeed = r.Playback.PlaybackSpeed,
-                    UpdatedAt = r.Playback.UpdatedAt ?? r.Playback.CreatedAt
-                } : null
-            })
-            .ToListAsync(cancellationToken);
-
-        return Ok(new TtsRecordingListResponse
-        {
-            Items = recordings,
-            TotalCount = totalCount
-        });
+        var result = await _ttsService.ListRecordingsAsync(offset, limit, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
     /// Get a specific TTS recording by ID.
     /// </summary>
     [HttpGet("recordings/{id:guid}")]
-    [ProducesResponseType<TtsRecordingResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<TtsRecordingV1>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRecording(Guid id, CancellationToken cancellationToken)
     {
-        var recording = await _dbContext.TtsRecordings
-            .Include(r => r.Playback)
-            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-
-        if (recording == null)
-            return NotFound();
-
-        return Ok(new TtsRecordingResponse
-        {
-            Id = recording.Id,
-            Name = recording.Name,
-            Description = recording.Description,
-            FilePath = recording.FilePath,
-            Transcript = recording.Transcript,
-            ContentType = recording.ContentType,
-            SizeBytes = recording.SizeBytes,
-            Voice = recording.Voice,
-            Model = recording.Model,
-            CreatedAt = recording.CreatedAt,
-            Playback = recording.Playback != null ? new TtsPlaybackResponse
-            {
-                PositionSeconds = recording.Playback.PositionSeconds,
-                DurationSeconds = recording.Playback.DurationSeconds,
-                Completed = recording.Playback.Completed,
-                PlaybackSpeed = recording.Playback.PlaybackSpeed,
-                UpdatedAt = recording.Playback.UpdatedAt ?? recording.Playback.CreatedAt
-            } : null
-        });
+        var recording = await _ttsService.GetRecordingAsync(id, cancellationToken);
+        return recording == null ? NotFound() : Ok(recording);
     }
 
     /// <summary>
     /// Get a presigned URL for the audio file of a recording.
     /// </summary>
     [HttpGet("recordings/{id:guid}/audio")]
-    [ProducesResponseType<TtsAudioUrlResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<GetAudioUrlResponseV1>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAudioUrl(Guid id, CancellationToken cancellationToken)
     {
-        var recording = await _dbContext.TtsRecordings
-            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-
-        if (recording == null)
-            return NotFound();
-
-        var presigned = await _storageService.GetPublicUrlAsync(
-            recording.FilePath,
-            TimeSpan.FromHours(1),
-            cancellationToken);
-
-        if (presigned == null)
-            return NotFound("Audio file not found in storage");
-
-        return Ok(new TtsAudioUrlResponse
-        {
-            Url = presigned.Url,
-            ExpiresAt = presigned.ExpiresAt,
-            ContentType = recording.ContentType
-        });
+        var result = await _ttsService.GetAudioUrlAsync(id, cancellationToken);
+        return result == null ? NotFound() : Ok(result);
     }
 
     /// <summary>
     /// Update playback state for a recording (last write wins).
     /// </summary>
     [HttpPut("recordings/{id:guid}/playback")]
-    [ProducesResponseType<TtsPlaybackResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<TtsPlaybackV1>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdatePlayback(
         Guid id,
-        [FromBody] UpdatePlaybackRequest request,
+        [FromBody] UpdatePlaybackRequestV1 request,
         CancellationToken cancellationToken)
     {
-        var recording = await _dbContext.TtsRecordings
-            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-
-        if (recording == null)
-            return NotFound();
-
-        var userId = _identityContext.UserId;
-
-        var playback = await _dbContext.TtsPlayback
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                p => p.RecordingId == id && p.UserId == userId,
-                cancellationToken);
-
-        if (playback == null)
-        {
-            playback = new TtsPlaybackEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                RecordingId = id,
-                PositionSeconds = request.PositionSeconds,
-                DurationSeconds = request.DurationSeconds,
-                Completed = request.Completed,
-                PlaybackSpeed = request.PlaybackSpeed,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
-            };
-            _dbContext.TtsPlayback.Add(playback);
-        }
-        else
-        {
-            // Last write wins
-            playback.PositionSeconds = request.PositionSeconds;
-            playback.DurationSeconds = request.DurationSeconds;
-            playback.Completed = request.Completed;
-            playback.PlaybackSpeed = request.PlaybackSpeed;
-            playback.UpdatedAt = DateTimeOffset.UtcNow;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Ok(new TtsPlaybackResponse
-        {
-            PositionSeconds = playback.PositionSeconds,
-            DurationSeconds = playback.DurationSeconds,
-            Completed = playback.Completed,
-            PlaybackSpeed = playback.PlaybackSpeed,
-            UpdatedAt = playback.UpdatedAt ?? playback.CreatedAt
-        });
+        var result = await _ttsService.UpdatePlaybackAsync(id, request, cancellationToken);
+        return result == null ? NotFound() : Ok(result);
     }
 
     /// <summary>
     /// Get playback state for a recording.
     /// </summary>
     [HttpGet("recordings/{id:guid}/playback")]
-    [ProducesResponseType<TtsPlaybackResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<TtsPlaybackV1>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPlayback(Guid id, CancellationToken cancellationToken)
     {
-        var userId = _identityContext.UserId;
-
-        var playback = await _dbContext.TtsPlayback
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(
-                p => p.RecordingId == id && p.UserId == userId,
-                cancellationToken);
-
-        if (playback == null)
-        {
-            return Ok(new TtsPlaybackResponse
-            {
-                PositionSeconds = 0,
-                DurationSeconds = 0,
-                Completed = false,
-                PlaybackSpeed = 1.0,
-                UpdatedAt = DateTimeOffset.UtcNow
-            });
-        }
-
-        return Ok(new TtsPlaybackResponse
-        {
-            PositionSeconds = playback.PositionSeconds,
-            DurationSeconds = playback.DurationSeconds,
-            Completed = playback.Completed,
-            PlaybackSpeed = playback.PlaybackSpeed,
-            UpdatedAt = playback.UpdatedAt ?? playback.CreatedAt
-        });
+        var result = await _ttsService.GetPlaybackAsync(id, cancellationToken);
+        return Ok(result);
     }
 
     /// <summary>
@@ -260,67 +96,7 @@ public class TtsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteRecording(Guid id, CancellationToken cancellationToken)
     {
-        var recording = await _dbContext.TtsRecordings
-            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-
-        if (recording == null)
-            return NotFound();
-
-        // Delete the audio file from storage
-        await _storageService.DeleteAsync(recording.FilePath, cancellationToken);
-
-        _dbContext.TtsRecordings.Remove(recording);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return NoContent();
+        var deleted = await _ttsService.DeleteRecordingAsync(id, cancellationToken);
+        return deleted ? NoContent() : NotFound();
     }
-}
-
-// ============================================================================
-// Request/Response Models
-// ============================================================================
-
-public class TtsRecordingListResponse
-{
-    public required List<TtsRecordingResponse> Items { get; init; }
-    public required int TotalCount { get; init; }
-}
-
-public class TtsRecordingResponse
-{
-    public required Guid Id { get; init; }
-    public required string Name { get; init; }
-    public required string Description { get; init; }
-    public required string FilePath { get; init; }
-    public required string Transcript { get; init; }
-    public required string ContentType { get; init; }
-    public required long SizeBytes { get; init; }
-    public string? Voice { get; init; }
-    public string? Model { get; init; }
-    public required DateTimeOffset CreatedAt { get; init; }
-    public TtsPlaybackResponse? Playback { get; init; }
-}
-
-public class TtsAudioUrlResponse
-{
-    public required string Url { get; init; }
-    public required DateTimeOffset ExpiresAt { get; init; }
-    public required string ContentType { get; init; }
-}
-
-public class TtsPlaybackResponse
-{
-    public required double PositionSeconds { get; init; }
-    public required double DurationSeconds { get; init; }
-    public required bool Completed { get; init; }
-    public required double PlaybackSpeed { get; init; }
-    public required DateTimeOffset UpdatedAt { get; init; }
-}
-
-public class UpdatePlaybackRequest
-{
-    public required double PositionSeconds { get; init; }
-    public required double DurationSeconds { get; init; }
-    public bool Completed { get; init; }
-    public double PlaybackSpeed { get; init; } = 1.0;
 }

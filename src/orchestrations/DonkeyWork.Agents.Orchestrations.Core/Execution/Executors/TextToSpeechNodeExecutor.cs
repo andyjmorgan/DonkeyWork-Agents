@@ -40,7 +40,6 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
         TextToSpeechNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        // Render the input text template
         var inputText = await _templateRenderer.RenderAsync(config.InputText, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(inputText))
@@ -48,11 +47,14 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
             throw new InvalidOperationException("Input text is empty after template rendering");
         }
 
+        var instructions = !string.IsNullOrWhiteSpace(config.Instructions)
+            ? await _templateRenderer.RenderAsync(config.Instructions, cancellationToken)
+            : null;
+
         _logger.LogDebug(
             "TTS generation: model={Model}, voice={Voice}, text length={TextLength}",
             config.Model, config.Voice, inputText.Length);
 
-        // Resolve credentials
         var credential = await _credentialService.GetByIdAsync(
             Context.UserId,
             config.CredentialId,
@@ -65,11 +67,9 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
 
         var apiKey = credential.Fields[CredentialFieldType.ApiKey];
 
-        // Map voice and format using string constructors (supports all current and future values)
         var voice = new GeneratedSpeechVoice(config.Voice);
         var format = MapResponseFormat(config.ResponseFormat);
 
-        // Call OpenAI TTS API
         var audioClient = new AudioClient(config.Model, apiKey);
 
         var options = new SpeechGenerationOptions
@@ -77,6 +77,11 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
             SpeedRatio = (float)config.Speed,
             ResponseFormat = format
         };
+
+        if (!string.IsNullOrWhiteSpace(instructions))
+        {
+            options.Instructions = instructions;
+        }
 
         var result = await audioClient.GenerateSpeechAsync(
             inputText,
@@ -88,7 +93,6 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
 
         _logger.LogDebug("TTS audio generated: {Size} bytes", audioData.ToMemory().Length);
 
-        // Upload to S3 storage
         var fileExtension = config.ResponseFormat;
         var fileName = $"{Guid.NewGuid()}.{fileExtension}";
         var contentType = GetContentType(config.ResponseFormat);

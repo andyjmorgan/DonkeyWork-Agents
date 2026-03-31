@@ -71,6 +71,7 @@ public static class DependencyInjection
 
         services.AddScoped<IOrchestrationService, OrchestrationService>();
         services.AddScoped<IOrchestrationVersionService, OrchestrationVersionService>();
+        services.AddScoped<ITtsService, TtsService>();
 
         services.AddSingleton<IExecutionStreamService>(sp =>
         {

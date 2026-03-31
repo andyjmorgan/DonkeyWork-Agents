@@ -21,7 +21,6 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
 
     /// <summary>
     /// Template expression for the recording name.
-    /// Use Scriban expressions like {{Steps.metadata.ResponseText | json_value "name"}} to extract from model output.
     /// </summary>
     [JsonPropertyName("recordingName")]
     [ConfigurableField(Label = "Recording Name", ControlType = ControlType.TextArea, Order = 10, Required = true,
@@ -79,4 +78,24 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
     [Tab("Mapping", Order = 1)]
     [SupportVariables]
     public string AudioSizeBytes { get; init; } = "0";
+
+    /// <summary>
+    /// Template expression for the voice used for generation.
+    /// </summary>
+    [JsonPropertyName("voice")]
+    [ConfigurableField(Label = "Voice", ControlType = ControlType.Text, Order = 70,
+        Description = "The voice used for generation. Use {{Steps.tts_node.Voice}}.")]
+    [Tab("Mapping", Order = 1)]
+    [SupportVariables]
+    public string? Voice { get; init; }
+
+    /// <summary>
+    /// Template expression for the TTS model used.
+    /// </summary>
+    [JsonPropertyName("model")]
+    [ConfigurableField(Label = "Model", ControlType = ControlType.Text, Order = 80,
+        Description = "The TTS model used. Use {{Steps.tts_node.Model}}.")]
+    [Tab("Mapping", Order = 1)]
+    [SupportVariables]
+    public string? Model { get; init; }
 }
