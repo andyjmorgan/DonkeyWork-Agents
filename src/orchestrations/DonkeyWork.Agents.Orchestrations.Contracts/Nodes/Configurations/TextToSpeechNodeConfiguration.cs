@@ -11,7 +11,7 @@ namespace DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 [Node(
     DisplayName = "Text to Speech",
     Description = "Generate speech audio from text using OpenAI TTS",
-    Category = "AI",
+    Category = "Audio",
     Icon = "volume-2",
     Color = "pink")]
 public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequiresCredential
