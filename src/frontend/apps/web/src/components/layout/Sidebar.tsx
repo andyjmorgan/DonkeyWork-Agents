@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, Wrench, MessageSquare, Zap, Brain } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Button,
@@ -51,13 +51,19 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    name: 'Utilities',
-    icon: Wrench,
+    name: 'Integrations',
+    icon: Plug,
     items: [
-      { name: 'Prompts', href: '/prompts', icon: File, iconColor: 'text-emerald-500' },
       { name: 'MCP Servers', href: '/mcp-servers', icon: Server, iconColor: 'text-teal-500' },
       { name: 'A2A Servers', href: '/a2a-servers', icon: Globe, iconColor: 'text-teal-500' },
       { name: 'Skills', href: '/skills', icon: Zap, iconColor: 'text-violet-500' },
+    ],
+  },
+  {
+    name: 'Toolbox',
+    icon: Hammer,
+    items: [
+      { name: 'Prompts', href: '/prompts', icon: File, iconColor: 'text-emerald-500' },
       { name: 'Sandbox Settings', href: '/sandbox-settings', icon: Server, iconColor: 'text-orange-500' },
     ],
   },
