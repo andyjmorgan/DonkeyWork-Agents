@@ -170,8 +170,11 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         if (OrchestrationToolProvider is not null)
             return;
 
+        try
+        {
         var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
         var toolEnabled = await orchestrationService.ListToolEnabledAsync(ct);
+        Logger.LogInformation("Discovered {Count} tool-enabled orchestrations", toolEnabled.Count);
 
         if (toolEnabled.Count == 0)
             return;
@@ -197,6 +200,11 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             executionRepo,
             Logger,
             ct);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to initialize orchestration tools");
+        }
     }
 
     protected override async Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
