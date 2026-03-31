@@ -215,6 +215,7 @@ export interface Orchestration {
   id: string
   name: string
   description: string
+  friendlyName?: string
   currentVersionId?: string
   createdAt: string
 }
@@ -260,7 +261,10 @@ export interface OrchestrationVersion {
   outputSchema?: JSONSchema
   reactFlowData: ReactFlowData
   nodeConfigurations: Record<string, Record<string, unknown>>
-  interfaces: InterfaceConfig[]
+  directEnabled: boolean
+  toolEnabled: boolean
+  mcpEnabled: boolean
+  naviEnabled: boolean
   createdAt: string
   publishedAt?: string
 }
@@ -275,6 +279,7 @@ export interface JSONSchema {
 export interface CreateOrchestrationRequest {
   name: string
   description: string
+  friendlyName?: string
 }
 
 export interface SaveVersionRequest {
@@ -283,13 +288,17 @@ export interface SaveVersionRequest {
   inputSchema: JSONSchema
   outputSchema?: JSONSchema | null
   credentialMappings: Array<{ nodeId: string; credentialId: string }>
-  interfaces: InterfaceConfig[]
+  directEnabled: boolean
+  toolEnabled: boolean
+  mcpEnabled: boolean
+  naviEnabled: boolean
 }
 
 export interface CreateOrchestrationResponse {
   id: string
   name: string
-  description: string | null
+  description: string
+  friendlyName?: string | null
   versionId: string
   createdAt: string
 }
@@ -408,6 +417,7 @@ export type OAuthTokenStatus = 'Active' | 'ExpiringSoon' | 'Expired'
 export interface OAuthScopeMetadata {
   name: string
   description: string
+  friendlyName?: string
   isRequired: boolean
   isDefault: boolean
 }
@@ -912,6 +922,7 @@ export interface NodeTypeInfo {
   type: string
   displayName: string
   description: string
+  friendlyName?: string
   category: string
   icon?: string
   color?: string
@@ -1692,6 +1703,7 @@ export interface A2aAgentCardSkill {
   id: string
   name: string
   description: string
+  friendlyName?: string
   tags?: string[]
 }
 
@@ -1711,6 +1723,7 @@ export interface A2aSecurityScheme {
 export interface A2aAgentCard {
   name: string
   description: string
+  friendlyName?: string
   url: string
   version: string
   skills: A2aAgentCardSkill[]
@@ -1930,6 +1943,7 @@ export interface TtsRecording {
   id: string
   name: string
   description: string
+  friendlyName?: string
   filePath: string
   transcript: string
   contentType: string

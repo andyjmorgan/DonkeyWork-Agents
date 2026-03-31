@@ -46,7 +46,10 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             existingDraft.OutputSchema = request.OutputSchema;
             existingDraft.ReactFlowData = request.ReactFlowData;
             existingDraft.NodeConfigurations = nodeConfigurations;
-            existingDraft.Interfaces = request.Interfaces;
+            existingDraft.DirectEnabled = request.DirectEnabled;
+            existingDraft.ToolEnabled = request.ToolEnabled;
+            existingDraft.McpEnabled = request.McpEnabled;
+            existingDraft.NaviEnabled = request.NaviEnabled;
             existingDraft.UpdatedAt = DateTimeOffset.UtcNow;
 
             version = existingDraft;
@@ -73,7 +76,10 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
                 OutputSchema = request.OutputSchema,
                 ReactFlowData = request.ReactFlowData,
                 NodeConfigurations = nodeConfigurations,
-                Interfaces = request.Interfaces,
+                DirectEnabled = request.DirectEnabled,
+                ToolEnabled = request.ToolEnabled,
+                McpEnabled = request.McpEnabled,
+                NaviEnabled = request.NaviEnabled,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -272,7 +278,10 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             OutputSchema = version.OutputSchema?.RootElement.Clone(),
             ReactFlowData = version.ReactFlowData,
             NodeConfigurations = JsonSerializer.SerializeToElement(version.NodeConfigurations, registry.JsonOptions),
-            Interfaces = version.Interfaces,
+            DirectEnabled = version.DirectEnabled,
+            ToolEnabled = version.ToolEnabled,
+            McpEnabled = version.McpEnabled,
+            NaviEnabled = version.NaviEnabled,
             CreatedAt = version.CreatedAt,
             PublishedAt = version.PublishedAt
         };

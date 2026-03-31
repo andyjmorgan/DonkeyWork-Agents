@@ -84,19 +84,25 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
                 v => JsonSerializer.Deserialize<Dictionary<Guid, NodeConfiguration>>(v, RegistryJsonOptions)!)
             .Metadata.SetValueComparer(nodeConfigComparer);
 
-        // Interfaces - polymorphic array stored as JSONB
-        var interfacesComparer = new ValueComparer<IList<InterfaceConfig>>(
-            (l, r) => JsonSerializer.Serialize(l, InterfaceJsonOptions) == JsonSerializer.Serialize(r, InterfaceJsonOptions),
-            v => JsonSerializer.Serialize(v, InterfaceJsonOptions).GetHashCode(),
-            v => JsonSerializer.Deserialize<List<InterfaceConfig>>(JsonSerializer.Serialize(v, InterfaceJsonOptions), InterfaceJsonOptions)!.ToList<InterfaceConfig>());
+        builder.Property(e => e.DirectEnabled)
+            .HasColumnName("direct_enabled")
+            .IsRequired()
+            .HasDefaultValue(true);
 
-        builder.Property(e => e.Interfaces)
-            .HasColumnName("interface")
-            .HasColumnType("jsonb")
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, InterfaceJsonOptions),
-                v => DeserializeInterfaces(v))
-            .Metadata.SetValueComparer(interfacesComparer);
+        builder.Property(e => e.ToolEnabled)
+            .HasColumnName("tool_enabled")
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(e => e.McpEnabled)
+            .HasColumnName("mcp_enabled")
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(e => e.NaviEnabled)
+            .HasColumnName("navi_enabled")
+            .IsRequired()
+            .HasDefaultValue(false);
 
         builder.Property(e => e.PublishedAt)
             .HasColumnName("published_at");
@@ -140,14 +146,6 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
         WriteIndented = false
     };
 
-    // Options for polymorphic InterfaceConfig serialization
-    private static readonly JsonSerializerOptions InterfaceJsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-        AllowOutOfOrderMetadataProperties = true
-    };
-
     // Use registry options for polymorphic NodeConfiguration serialization
     private static JsonSerializerOptions RegistryJsonOptions => NodeConfigurationRegistry.Instance.JsonOptions;
 
@@ -158,62 +156,5 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
         doc.WriteTo(writer);
         writer.Flush();
         return System.Text.Encoding.UTF8.GetString(stream.ToArray());
-    }
-
-    /// <summary>
-    /// Deserializes interface configs, handling three formats:
-    /// 1. Array of InterfaceConfig (new multi-select format)
-    /// 2. Single InterfaceConfig object with type discriminator
-    /// 3. Legacy OrchestrationInterfaces with mcp/chat/a2a/webhook properties
-    /// </summary>
-    private static IList<InterfaceConfig> DeserializeInterfaces(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        if (root.ValueKind == JsonValueKind.Array)
-        {
-            return JsonSerializer.Deserialize<List<InterfaceConfig>>(json, InterfaceJsonOptions)
-                ?? new List<InterfaceConfig> { new DirectInterfaceConfig() };
-        }
-
-        // Single object — wrap in list
-        return new List<InterfaceConfig> { DeserializeSingleInterface(root, json) };
-    }
-
-    private static InterfaceConfig DeserializeSingleInterface(JsonElement root, string json)
-    {
-        if (root.TryGetProperty("type", out _))
-        {
-            return JsonSerializer.Deserialize<InterfaceConfig>(json, InterfaceJsonOptions)
-                ?? new DirectInterfaceConfig();
-        }
-
-        // Legacy format
-        if (root.TryGetProperty("chat", out var chatProp) && chatProp.ValueKind != JsonValueKind.Null)
-        {
-            return JsonSerializer.Deserialize<ChatInterfaceConfig>(chatProp.GetRawText(), InterfaceJsonOptions)
-                ?? new ChatInterfaceConfig();
-        }
-
-        if (root.TryGetProperty("mcp", out var mcpProp) && mcpProp.ValueKind != JsonValueKind.Null)
-        {
-            return JsonSerializer.Deserialize<McpInterfaceConfig>(mcpProp.GetRawText(), InterfaceJsonOptions)
-                ?? new McpInterfaceConfig();
-        }
-
-        if (root.TryGetProperty("a2a", out var a2aProp) && a2aProp.ValueKind != JsonValueKind.Null)
-        {
-            return JsonSerializer.Deserialize<A2aInterfaceConfig>(a2aProp.GetRawText(), InterfaceJsonOptions)
-                ?? new A2aInterfaceConfig();
-        }
-
-        if (root.TryGetProperty("webhook", out var webhookProp) && webhookProp.ValueKind != JsonValueKind.Null)
-        {
-            return JsonSerializer.Deserialize<WebhookInterfaceConfig>(webhookProp.GetRawText(), InterfaceJsonOptions)
-                ?? new WebhookInterfaceConfig();
-        }
-
-        return new DirectInterfaceConfig();
     }
 }

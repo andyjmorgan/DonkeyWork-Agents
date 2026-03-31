@@ -1235,6 +1235,11 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<string>("FriendlyName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("friendly_name");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1594,19 +1599,32 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<bool>("DirectEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("direct_enabled");
+
                     b.Property<string>("InputSchema")
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("input_schema");
 
-                    b.Property<string>("Interfaces")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("interface");
-
                     b.Property<bool>("IsDraft")
                         .HasColumnType("boolean")
                         .HasColumnName("is_draft");
+
+                    b.Property<bool>("McpEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("mcp_enabled");
+
+                    b.Property<bool>("NaviEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("navi_enabled");
 
                     b.Property<string>("NodeConfigurations")
                         .IsRequired()
@@ -1629,6 +1647,12 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("react_flow_data");
+
+                    b.Property<bool>("ToolEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("tool_enabled");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

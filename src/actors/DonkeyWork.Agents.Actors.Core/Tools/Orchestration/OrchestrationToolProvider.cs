@@ -109,11 +109,9 @@ internal sealed partial class OrchestrationToolProvider
         string? toolNameOverride,
         string? descriptionOverride)
     {
-        var toolInterface = version.Interfaces.OfType<ToolInterfaceConfig>().FirstOrDefault();
         var toolName = toolNameOverride ?? SanitizeToolName(orchestrationName);
-        var displayName = toolInterface?.Name ?? orchestrationName;
-        var description = toolInterface?.Description
-            ?? descriptionOverride
+        var displayName = orchestrationName;
+        var description = descriptionOverride
             ?? orchestrationDescription
             ?? $"Execute the {orchestrationName} orchestration";
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
-import type { InterfaceConfig } from '@donkeywork/api-client'
+
 
 /**
  * Schema lookup for node display properties.
@@ -74,7 +74,10 @@ interface EditorState {
   // Version data
   versionId: string | null
   isDraft: boolean
-  interfaces: InterfaceConfig[]
+  directEnabled: boolean
+  toolEnabled: boolean
+  mcpEnabled: boolean
+  naviEnabled: boolean
 
   // ReactFlow state
   nodes: Node[]
@@ -113,7 +116,7 @@ interface EditorState {
     isDraft?: boolean,
     reactFlowData?: { nodes: Node[], edges: Edge[], viewport: Viewport },
     nodeConfigurations?: Record<string, NodeConfig>,
-    interfaces?: InterfaceConfig[]
+    interfaces?: { directEnabled: boolean; toolEnabled: boolean; mcpEnabled: boolean; naviEnabled: boolean }
   ) => void
 
   // Persistence
@@ -135,7 +138,7 @@ interface EditorState {
   getReachablePredecessors: (nodeId: string) => Array<{ nodeId: string; nodeName: string; nodeType: string }>
 
   // Interface
-  setInterfaces: (interfaces: InterfaceConfig[]) => void
+  setInterfaceFlags: (flags: { directEnabled: boolean; toolEnabled: boolean; mcpEnabled: boolean; naviEnabled: boolean }) => void
 }
 
 // Default input schema for Start node
@@ -165,7 +168,7 @@ const createInitialState = () => {
     orchestrationDescription: '',
     versionId: null,
     isDraft: true,
-    interfaces: [{ type: 'DirectInterfaceConfig' } as InterfaceConfig],
+    directEnabled: true, toolEnabled: false, mcpEnabled: false, naviEnabled: false,
     nodes: [
       {
         id: startId,
@@ -433,7 +436,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         orchestrationDescription,
         versionId: versionId || null,
         isDraft: isDraft ?? true,
-        interfaces: interfaces ?? [{ type: 'DirectInterfaceConfig' } as InterfaceConfig],
+        directEnabled: interfaces?.directEnabled ?? true, toolEnabled: interfaces?.toolEnabled ?? false, mcpEnabled: interfaces?.mcpEnabled ?? false, naviEnabled: interfaces?.naviEnabled ?? false,
         nodes: enrichedNodes,
         edges: reactFlowData.edges,
         viewport: reactFlowData.viewport,
@@ -690,7 +693,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       inputSchema,
       outputSchema: null,
       credentialMappings,
-      interfaces: state.interfaces
+      directEnabled: state.directEnabled, toolEnabled: state.toolEnabled, mcpEnabled: state.mcpEnabled, naviEnabled: state.naviEnabled
     })
   },
 
@@ -735,13 +738,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         reactFlowData: { nodes, edges, viewport },
         nodeConfigurations,
         inputSchema,
-        interfaces: state.interfaces,
+        directEnabled: state.directEnabled, toolEnabled: state.toolEnabled, mcpEnabled: state.mcpEnabled, naviEnabled: state.naviEnabled,
         credentialMappings: get().extractCredentialMappings()
       }
     }, null, 2)
   },
 
-  setInterfaces: (interfaces) => {
-    set({ interfaces })
+  setInterfaceFlags: (flags) => {
+    set(flags)
   }
 }))

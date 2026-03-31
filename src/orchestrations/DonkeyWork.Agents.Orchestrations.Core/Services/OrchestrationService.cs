@@ -212,12 +212,12 @@ public class OrchestrationService : IOrchestrationService
             .ToListAsync(cancellationToken);
 
         return orchestrations
-            .Where(o => o.CurrentVersion?.Interfaces.Any(i => i is ChatInterfaceConfig) == true)
+            .Where(o => o.CurrentVersion?.NaviEnabled == true)
             .Select(o => new ChatEnabledOrchestrationV1
             {
                 Id = o.Id,
                 Name = o.Name,
-                Description = o.CurrentVersion?.Interfaces.OfType<ChatInterfaceConfig>().FirstOrDefault()?.Description
+                Description = o.Description
             })
             .ToList();
     }
@@ -233,7 +233,7 @@ public class OrchestrationService : IOrchestrationService
         var registry = Orchestrations.Contracts.Nodes.Registry.NodeConfigurationRegistry.Instance;
 
         return orchestrations
-            .Where(o => o.CurrentVersion?.Interfaces.Any(i => i is ToolInterfaceConfig) == true)
+            .Where(o => o.CurrentVersion?.ToolEnabled == true)
             .Select(o => new ToolEnabledOrchestrationV1
             {
                 Orchestration = MapToResponse(o),
@@ -248,7 +248,10 @@ public class OrchestrationService : IOrchestrationService
                     ReactFlowData = o.CurrentVersion.ReactFlowData,
                     NodeConfigurations = System.Text.Json.JsonSerializer.SerializeToElement(
                         o.CurrentVersion.NodeConfigurations, registry.JsonOptions),
-                    Interfaces = o.CurrentVersion.Interfaces,
+                    DirectEnabled = o.CurrentVersion.DirectEnabled,
+                    ToolEnabled = o.CurrentVersion.ToolEnabled,
+                    McpEnabled = o.CurrentVersion.McpEnabled,
+                    NaviEnabled = o.CurrentVersion.NaviEnabled,
                     CreatedAt = o.CurrentVersion.CreatedAt,
                     PublishedAt = o.CurrentVersion.PublishedAt
                 }
@@ -263,6 +266,7 @@ public class OrchestrationService : IOrchestrationService
             Id = agent.Id,
             Name = agent.Name,
             Description = agent.Description,
+            FriendlyName = agent.FriendlyName,
             CurrentVersionId = agent.CurrentVersionId,
             CreatedAt = agent.CreatedAt,
             UpdatedAt = agent.UpdatedAt

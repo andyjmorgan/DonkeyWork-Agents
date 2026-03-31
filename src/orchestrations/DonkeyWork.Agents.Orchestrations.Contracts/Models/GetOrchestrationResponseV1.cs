@@ -25,6 +25,9 @@ public sealed class GetOrchestrationResponseV1
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
+    [JsonPropertyName("friendlyName")]
+    public string? FriendlyName { get; init; }
+
     /// <summary>
     /// Current published version ID (null if no version published yet).
     /// </summary>

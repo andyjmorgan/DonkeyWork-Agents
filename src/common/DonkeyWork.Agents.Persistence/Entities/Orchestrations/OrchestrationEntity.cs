@@ -16,6 +16,12 @@ public class OrchestrationEntity : BaseEntity
     public string? Description { get; set; }
 
     /// <summary>
+    /// Friendly display name for external-facing contexts (tool name, MCP, etc).
+    /// Falls back to Name if null.
+    /// </summary>
+    public string? FriendlyName { get; set; }
+
+    /// <summary>
     /// Points to the latest published version. Null if no version has been published yet.
     /// </summary>
     public Guid? CurrentVersionId { get; set; }

@@ -71,10 +71,15 @@ public sealed class GetOrchestrationVersionResponseV1
     [JsonPropertyName("publishedAt")]
     public DateTimeOffset? PublishedAt { get; init; }
 
-    /// <summary>
-    /// Interface configurations for this version.
-    /// An orchestration can support multiple interface types simultaneously.
-    /// </summary>
-    [JsonPropertyName("interfaces")]
-    public required IList<InterfaceConfig> Interfaces { get; init; }
+    [JsonPropertyName("directEnabled")]
+    public bool DirectEnabled { get; init; } = true;
+
+    [JsonPropertyName("toolEnabled")]
+    public bool ToolEnabled { get; init; }
+
+    [JsonPropertyName("mcpEnabled")]
+    public bool McpEnabled { get; init; }
+
+    [JsonPropertyName("naviEnabled")]
+    public bool NaviEnabled { get; init; }
 }

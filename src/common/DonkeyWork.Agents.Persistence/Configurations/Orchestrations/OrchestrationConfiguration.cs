@@ -28,6 +28,10 @@ public class OrchestrationConfiguration : IEntityTypeConfiguration<Orchestration
         builder.Property(e => e.Description)
             .HasColumnName("description");
 
+        builder.Property(e => e.FriendlyName)
+            .HasColumnName("friendly_name")
+            .HasMaxLength(255);
+
         builder.Property(e => e.CurrentVersionId)
             .HasColumnName("current_version_id");
 
