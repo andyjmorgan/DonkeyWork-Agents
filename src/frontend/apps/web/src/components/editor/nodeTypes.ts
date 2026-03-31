@@ -203,7 +203,7 @@ export const NODE_TYPES: Record<string, NodeTypeMetadata> = {
     iconBgColor: 'bg-pink-500/10',
     iconColor: 'text-pink-500',
     handleColor: '!bg-pink-500',
-    category: 'ai',
+    category: 'action',
     canDelete: true,
     schemaSource: {
       type: 'backend-action',
