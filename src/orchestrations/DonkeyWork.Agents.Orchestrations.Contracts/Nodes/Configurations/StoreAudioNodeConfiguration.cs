@@ -44,7 +44,7 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
     [JsonPropertyName("audioBase64")]
     [ConfigurableField(Label = "Audio Data (Base64)", ControlType = ControlType.Text, Order = 30, Required = true,
         Description = "Base64 audio data. Use {{Steps.tts_node.AudioBase64}}.")]
-    [Tab("Audio", Order = 2, Icon = "volume-2")]
+    [Tab("Settings", Order = 1)]
     [SupportVariables]
     public required string AudioBase64 { get; init; }
 
@@ -54,7 +54,7 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
     [JsonPropertyName("contentType")]
     [ConfigurableField(Label = "Content Type", ControlType = ControlType.Text, Order = 40, Required = true,
         Description = "MIME type of the audio. Use {{Steps.tts_node.ContentType}}.")]
-    [Tab("Audio", Order = 2)]
+    [Tab("Settings", Order = 1)]
     [SupportVariables]
     public required string ContentType { get; init; }
 }
