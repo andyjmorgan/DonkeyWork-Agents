@@ -143,17 +143,14 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
         var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
         var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
-        var executor = ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
-        var executionRepo = ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
 
         OrchestrationToolProvider = new OrchestrationToolProvider();
+        OrchestrationToolProvider.SetServiceProvider(ServiceProvider);
         await OrchestrationToolProvider.InitializeAsync(
             contract.Orchestrations,
             IdentityContext.UserId,
             orchestrationService,
             versionService,
-            executor,
-            executionRepo,
             Logger,
             ct);
     }

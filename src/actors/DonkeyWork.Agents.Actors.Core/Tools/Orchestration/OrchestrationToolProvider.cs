@@ -2,10 +2,12 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Core.Providers;
+using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
@@ -13,21 +15,19 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
 internal sealed partial class OrchestrationToolProvider
 {
     private readonly Dictionary<string, OrchestrationToolInfo> _tools = new(StringComparer.OrdinalIgnoreCase);
+    private IServiceProvider _serviceProvider = null!;
+    private ILogger _logger = null!;
 
-    /// <summary>
-    /// Initialize from OrchestrationReferences by fetching data from services.
-    /// Used by AgentGrain where DB calls are safe.
-    /// </summary>
     public async Task InitializeAsync(
         OrchestrationReference[] references,
         Guid userId,
         IOrchestrationService orchestrationService,
         IOrchestrationVersionService versionService,
-        IOrchestrationExecutor executor,
-        IOrchestrationExecutionRepository executionRepo,
         ILogger logger,
         CancellationToken ct)
     {
+        _logger = logger;
+
         foreach (var reference in references)
         {
             try
@@ -64,7 +64,7 @@ internal sealed partial class OrchestrationToolProvider
                 }
 
                 RegisterTool(orchestration.Name, orchestration.Description, version, orchestrationId,
-                    versionId.Value, userId, reference.ToolName, reference.Description, executor, executionRepo, logger);
+                    versionId.Value, userId, reference.ToolName, reference.Description);
             }
             catch (Exception ex)
             {
@@ -73,29 +73,30 @@ internal sealed partial class OrchestrationToolProvider
         }
     }
 
-    /// <summary>
-    /// Initialize from pre-fetched orchestration and version data.
-    /// Used by ConversationGrain to avoid DB calls during ExecuteTurnAsync.
-    /// </summary>
     public void InitializeFromPreloadedData(
         IReadOnlyList<(GetOrchestrationResponseV1 Orchestration, GetOrchestrationVersionResponseV1 Version)> orchestrations,
         Guid userId,
-        IOrchestrationExecutor executor,
-        IOrchestrationExecutionRepository executionRepo,
         ILogger logger)
     {
+        _logger = logger;
+
         foreach (var (orchestration, version) in orchestrations)
         {
             try
             {
                 RegisterTool(orchestration.Name, orchestration.Description, version, orchestration.Id,
-                    version.Id, userId, null, null, executor, executionRepo, logger);
+                    version.Id, userId, null, null);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to register orchestration tool '{Name}', skipping", orchestration.Name);
             }
         }
+    }
+
+    public void SetServiceProvider(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
     }
 
     private void RegisterTool(
@@ -106,10 +107,7 @@ internal sealed partial class OrchestrationToolProvider
         Guid versionId,
         Guid userId,
         string? toolNameOverride,
-        string? descriptionOverride,
-        IOrchestrationExecutor executor,
-        IOrchestrationExecutionRepository executionRepo,
-        ILogger logger)
+        string? descriptionOverride)
     {
         var toolInterface = version.Interfaces.OfType<ToolInterfaceConfig>().FirstOrDefault();
         var toolName = toolNameOverride ?? SanitizeToolName(orchestrationName);
@@ -121,7 +119,7 @@ internal sealed partial class OrchestrationToolProvider
 
         if (_tools.ContainsKey(toolName))
         {
-            logger.LogWarning("Duplicate orchestration tool name '{ToolName}', skipping", toolName);
+            _logger.LogWarning("Duplicate orchestration tool name '{ToolName}', skipping", toolName);
             return;
         }
 
@@ -134,10 +132,9 @@ internal sealed partial class OrchestrationToolProvider
             DeferLoading = false
         };
 
-        _tools[toolName] = new OrchestrationToolInfo(
-            definition, orchestrationId, versionId, userId, executor, executionRepo);
+        _tools[toolName] = new OrchestrationToolInfo(definition, orchestrationId, versionId, userId);
 
-        logger.LogInformation(
+        _logger.LogInformation(
             "Registered orchestration tool '{ToolName}' → {OrchestrationName} (version {VersionId})",
             toolName, orchestrationName, versionId);
     }
@@ -159,7 +156,14 @@ internal sealed partial class OrchestrationToolProvider
         {
             var executionId = Guid.NewGuid();
 
-            await toolInfo.Executor.ExecuteAsync(
+            using var scope = _serviceProvider.CreateScope();
+            var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
+            scopedIdentity?.SetIdentity(toolInfo.UserId);
+
+            var executor = scope.ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
+            var executionRepo = scope.ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
+
+            await executor.ExecuteAsync(
                 executionId,
                 toolInfo.UserId,
                 toolInfo.VersionId,
@@ -167,7 +171,7 @@ internal sealed partial class OrchestrationToolProvider
                 arguments,
                 ct);
 
-            var execution = await toolInfo.ExecutionRepo.GetByIdAsync(executionId, toolInfo.UserId, ct);
+            var execution = await executionRepo.GetByIdAsync(executionId, toolInfo.UserId, ct);
 
             if (execution == null)
                 return ToolResult.Error("Orchestration execution completed but result not found.");
@@ -196,6 +200,4 @@ internal sealed record OrchestrationToolInfo(
     InternalToolDefinition Definition,
     Guid OrchestrationId,
     Guid VersionId,
-    Guid UserId,
-    IOrchestrationExecutor Executor,
-    IOrchestrationExecutionRepository ExecutionRepo);
+    Guid UserId);

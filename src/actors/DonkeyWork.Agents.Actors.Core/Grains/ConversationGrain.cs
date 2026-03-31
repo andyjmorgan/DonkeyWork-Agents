@@ -185,12 +185,10 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 .Select(t => (t.Orchestration, t.Version))
                 .ToList();
 
-            var executor = ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
-            var executionRepo = ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
-
             OrchestrationToolProvider = new OrchestrationToolProvider();
+            OrchestrationToolProvider.SetServiceProvider(ServiceProvider);
             OrchestrationToolProvider.InitializeFromPreloadedData(
-                preloaded, IdentityContext.UserId, executor, executionRepo, Logger);
+                preloaded, IdentityContext.UserId, Logger);
         }
         catch (Exception ex)
         {
