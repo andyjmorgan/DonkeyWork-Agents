@@ -226,7 +226,6 @@ public class OrchestrationService : IOrchestrationService
     {
         var orchestrations = await _dbContext.Orchestrations
             .AsNoTracking()
-            .IgnoreQueryFilters()
             .Include(o => o.CurrentVersion)
             .Where(o => o.CurrentVersionId != null)
             .ToListAsync(cancellationToken);
