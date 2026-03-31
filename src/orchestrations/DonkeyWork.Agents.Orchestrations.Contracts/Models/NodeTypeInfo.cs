@@ -70,4 +70,11 @@ public sealed class NodeTypeInfo
     /// </summary>
     [JsonPropertyName("configSchema")]
     public required NodeConfigSchema ConfigSchema { get; init; }
+
+    /// <summary>
+    /// Property names available on the node's output (for template variable autocomplete).
+    /// </summary>
+    [JsonPropertyName("outputProperties")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? OutputProperties { get; init; }
 }

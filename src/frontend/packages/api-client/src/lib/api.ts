@@ -906,6 +906,7 @@ export interface NodeTypeInfo {
   hasOutputHandle: boolean
   canDelete: boolean
   configSchema: NodeConfigSchema
+  outputProperties?: string[]
 }
 
 export interface GetNodeTypesResponse {

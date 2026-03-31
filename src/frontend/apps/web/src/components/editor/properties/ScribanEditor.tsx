@@ -1,6 +1,7 @@
-import React, { useRef, useCallback, useMemo, useState, useLayoutEffect } from 'react'
+import React, { useRef, useCallback, useMemo, useState, useEffect, useLayoutEffect } from 'react'
 import { useEditorStore, type NodeConfig } from '@/store/editor'
-import { buildSuggestions, extractPathFromText, getOutputProperties, type SuggestionItem, type Predecessor } from './scribanSuggestions'
+import { nodeTypes } from '@donkeywork/api-client'
+import { buildSuggestions, extractPathFromText, type SuggestionItem, type Predecessor } from './scribanSuggestions'
 
 interface ScribanEditorProps {
   nodeId?: string
@@ -30,12 +31,25 @@ export function ScribanEditor({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [backendOutputProperties, setBackendOutputProperties] = useState<Record<string, string[]>>()
+
+  useEffect(() => {
+    nodeTypes.list()
+      .then(types => {
+        const map: Record<string, string[]> = {}
+        for (const nt of types) {
+          if (nt.outputProperties && nt.outputProperties.length > 0) {
+            map[nt.type] = nt.outputProperties
+          }
+        }
+        setBackendOutputProperties(map)
+      })
+      .catch(() => {})
+  }, [])
 
   const predecessors = useMemo(() => {
     const all = predecessorsProp ?? (nodeId ? getReachablePredecessors(nodeId) : [])
-    const filtered = all.filter(p => p.nodeType.toLowerCase() !== 'start')
-    console.log('[ScribanEditor] predecessors:', filtered.map(p => ({ name: p.nodeName, type: p.nodeType, outputs: getOutputProperties(p.nodeType) })))
-    return filtered
+    return all.filter(p => p.nodeType.toLowerCase() !== 'start')
   }, [predecessorsProp, nodeId, getReachablePredecessors])
 
   const inputProperties = useMemo(() => {
@@ -48,8 +62,8 @@ export function ScribanEditor({
   }, [nodes, nodeConfigurations])
 
   const getSuggestions = useCallback((currentPath: string): SuggestionItem[] => {
-    return buildSuggestions(currentPath, predecessors, inputProperties)
-  }, [predecessors, inputProperties])
+    return buildSuggestions(currentPath, predecessors, inputProperties, backendOutputProperties)
+  }, [predecessors, inputProperties, backendOutputProperties])
 
   const checkForSuggestions = useCallback(() => {
     const textarea = textareaRef.current

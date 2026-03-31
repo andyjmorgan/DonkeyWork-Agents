@@ -1,4 +1,4 @@
-export const NODE_OUTPUT_PROPERTIES: Record<string, string[]> = {
+const FALLBACK_OUTPUT_PROPERTIES: Record<string, string[]> = {
   Start: [],
   End: [],
   Model: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
@@ -24,31 +24,39 @@ export interface Predecessor {
   nodeType: string
 }
 
-export function getOutputProperties(nodeType: string): string[] {
-  const normalised = Object.keys(NODE_OUTPUT_PROPERTIES).find(
+export function getOutputProperties(
+  nodeType: string,
+  backendOutputProperties?: Record<string, string[]>
+): string[] {
+  if (backendOutputProperties) {
+    const backendMatch = Object.keys(backendOutputProperties).find(
+      k => k.toLowerCase() === nodeType.toLowerCase()
+    )
+    if (backendMatch) return backendOutputProperties[backendMatch]
+  }
+
+  const fallbackMatch = Object.keys(FALLBACK_OUTPUT_PROPERTIES).find(
     k => k.toLowerCase() === nodeType.toLowerCase()
   )
-  return normalised ? NODE_OUTPUT_PROPERTIES[normalised] : []
+  return fallbackMatch ? FALLBACK_OUTPUT_PROPERTIES[fallbackMatch] : []
 }
 
 export function buildSuggestions(
   currentPath: string,
   predecessors: Predecessor[],
-  inputProperties: string[]
+  inputProperties: string[],
+  backendOutputProperties?: Record<string, string[]>
 ): SuggestionItem[] {
   const endsWithDot = currentPath.endsWith('.')
   const segments = currentPath.split('.').filter(p => p.length > 0)
 
-  // The filter text is the partial segment being typed (empty if we just typed a dot)
   const filterText = endsWithDot ? '' : (segments[segments.length - 1] ?? '')
-  // The "resolved" segments are the ones before the filter text
   const resolved = endsWithDot ? segments : segments.slice(0, -1)
   const resolvedLower = resolved.map(p => p.toLowerCase())
 
   let items: SuggestionItem[] = []
 
   if (resolvedLower.length === 0) {
-    // Root level: show Input, Steps, ExecutionId, UserId
     items.push({ label: 'Input', detail: 'Workflow input', insertText: 'Input', hasChildren: inputProperties.length > 0 })
     items.push({ label: 'ExecutionId', detail: 'Execution ID', insertText: 'ExecutionId', hasChildren: false })
     items.push({ label: 'UserId', detail: 'User ID', insertText: 'UserId', hasChildren: false })
@@ -61,13 +69,13 @@ export function buildSuggestions(
     })
   } else if (resolvedLower.length === 1 && resolvedLower[0] === 'steps') {
     predecessors.forEach(pred => {
-      const outputs = getOutputProperties(pred.nodeType)
+      const outputs = getOutputProperties(pred.nodeType, backendOutputProperties)
       items.push({ label: pred.nodeName, detail: pred.nodeType, insertText: pred.nodeName, hasChildren: outputs.length > 0 })
     })
   } else if (resolvedLower.length === 2 && resolvedLower[0] === 'steps') {
     const pred = predecessors.find(p => p.nodeName.toLowerCase() === resolvedLower[1])
     if (pred) {
-      getOutputProperties(pred.nodeType).forEach(prop => {
+      getOutputProperties(pred.nodeType, backendOutputProperties).forEach(prop => {
         items.push({ label: prop, detail: 'Output', insertText: prop, hasChildren: false })
       })
     }

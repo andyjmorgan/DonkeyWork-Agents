@@ -3,28 +3,70 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Attributes;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
+using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Providers;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Schema;
+using DonkeyWork.Agents.Orchestrations.Core.Execution;
+using DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Services;
 
-/// <summary>
-/// Provides node type information and configuration schemas.
-/// Reads all metadata from NodeAttribute on configuration classes.
-/// </summary>
 public class NodeTypeSchemaService : INodeTypeSchemaService
 {
     private readonly INodeSchemaGenerator _schemaGenerator;
+    private readonly NodeMethodRegistry _methodRegistry;
     private readonly Lazy<IReadOnlyList<NodeTypeInfo>> _nodeTypes;
 
-    public NodeTypeSchemaService(INodeSchemaGenerator schemaGenerator)
+    public NodeTypeSchemaService(INodeSchemaGenerator schemaGenerator, NodeMethodRegistry methodRegistry)
     {
         _schemaGenerator = schemaGenerator;
+        _methodRegistry = methodRegistry;
         _nodeTypes = new Lazy<IReadOnlyList<NodeTypeInfo>>(GenerateNodeTypes);
     }
 
     public IReadOnlyList<NodeTypeInfo> GetNodeTypes()
     {
         return _nodeTypes.Value;
+    }
+
+    private static readonly Dictionary<NodeType, Type> DedicatedExecutors = new()
+    {
+        [NodeType.Start] = typeof(StartNodeExecutor),
+        [NodeType.End] = typeof(EndNodeExecutor),
+        [NodeType.Model] = typeof(ModelNodeExecutor),
+        [NodeType.MultimodalChatModel] = typeof(MultimodalChatNodeExecutor),
+        [NodeType.TextToSpeech] = typeof(TextToSpeechNodeExecutor),
+        [NodeType.StoreAudio] = typeof(StoreAudioNodeExecutor),
+    };
+
+    private IReadOnlyList<string>? GetOutputPropertiesForNodeType(NodeType nodeType)
+    {
+        Type? outputType = null;
+
+        if (DedicatedExecutors.TryGetValue(nodeType, out var executorType))
+        {
+            var baseType = executorType.BaseType;
+            if (baseType is { IsGenericType: true } &&
+                baseType.GetGenericTypeDefinition() == typeof(NodeExecutor<,>))
+            {
+                outputType = baseType.GetGenericArguments()[1];
+            }
+        }
+        else if (_methodRegistry.HasMethod(nodeType))
+        {
+            outputType = _methodRegistry.GetMethod(nodeType).OutputType;
+        }
+
+        if (outputType == null)
+            return null;
+
+        var properties = outputType
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(p => p.CanRead && p.Name != "ToMessageOutput")
+            .Select(p => p.Name)
+            .ToList();
+
+        return properties.Count > 0 ? properties : null;
     }
 
     private IReadOnlyList<NodeTypeInfo> GenerateNodeTypes()
@@ -39,16 +81,11 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
         {
             var nodeAttr = configType.GetCustomAttribute<NodeAttribute>();
             if (nodeAttr == null)
-            {
-                // Skip configurations without NodeAttribute
                 continue;
-            }
 
             var instance = CreateMinimalInstance(configType);
             if (instance == null)
-            {
                 continue;
-            }
 
             var nodeType = instance.NodeType;
 
@@ -63,7 +100,8 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                 HasInputHandle = nodeAttr.HasInputHandle,
                 HasOutputHandle = nodeAttr.HasOutputHandle,
                 CanDelete = nodeAttr.CanDelete,
-                ConfigSchema = _schemaGenerator.GenerateSchema(nodeType)
+                ConfigSchema = _schemaGenerator.GenerateSchema(nodeType),
+                OutputProperties = GetOutputPropertiesForNodeType(nodeType)
             });
         }
 
