@@ -36,11 +36,6 @@ public class ExecutionStreamWriter : IExecutionStreamWriter
 
     public Task InitializeAsync(Guid executionId)
     {
-        if (_initialized)
-        {
-            throw new InvalidOperationException("ExecutionStreamWriter has already been initialized");
-        }
-
         _executionId = executionId;
         _subject = $"execution.{executionId}";
         _initialized = true;
