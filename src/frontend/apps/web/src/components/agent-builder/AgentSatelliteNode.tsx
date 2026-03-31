@@ -38,6 +38,11 @@ const colorSchemes: Record<string, { border: string; bg: string; handle: string 
     bg: 'bg-gradient-to-br from-rose-500 to-pink-600 shadow-lg shadow-rose-500/25',
     handle: '!bg-rose-500',
   },
+  orange: {
+    border: 'border-orange-500',
+    bg: 'bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg shadow-orange-500/25',
+    handle: '!bg-orange-500',
+  },
 }
 
 const defaultScheme = colorSchemes.purple

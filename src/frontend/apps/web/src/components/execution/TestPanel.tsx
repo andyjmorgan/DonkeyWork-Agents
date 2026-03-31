@@ -1,5 +1,6 @@
 import { useState, useMemo, useLayoutEffect, useRef } from 'react'
-import { Play, Loader2, RefreshCw, CheckCircle2, XCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Play, Loader2, RefreshCw, CheckCircle2, XCircle, ScrollText } from 'lucide-react'
 import { Button, Label, Textarea } from '@donkeywork/ui'
 import { executions, type JSONSchema } from '@donkeywork/api-client'
 
@@ -53,6 +54,7 @@ export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
 
 // Direct JSON test interface (non-streaming)
 function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: string; inputSchema?: JSONSchema }) {
+  const navigate = useNavigate()
   const initialInput = useMemo(() => {
     if (inputSchema) {
       return JSON.stringify(generateExampleFromSchema(inputSchema), null, 2)
@@ -65,6 +67,7 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
   const [error, setError] = useState<string | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionStatus, setExecutionStatus] = useState<'Completed' | 'Failed' | null>(null)
+  const [executionId, setExecutionId] = useState<string | null>(null)
 
   const prevInputSchemaRef = useRef(inputSchema)
   useLayoutEffect(() => {
@@ -95,9 +98,11 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
     setOutput(null)
     setError(null)
     setExecutionStatus(null)
+    setExecutionId(null)
 
     try {
       const result = await executions.test(orchestrationId, parsedInput)
+      setExecutionId(result.executionId)
 
       if (result.status === 'Completed') {
         setExecutionStatus('Completed')
@@ -187,9 +192,22 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
           {/* Success output */}
           {!isExecuting && executionStatus === 'Completed' && output && (
             <div className="p-4">
-              <div className="flex items-center gap-2 mb-3 text-sm text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Execution completed</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Execution completed</span>
+                </div>
+                {executionId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => navigate(`/executions/${executionId}`)}
+                  >
+                    <ScrollText className="h-3 w-3 mr-1" />
+                    Execution Log
+                  </Button>
+                )}
               </div>
               <pre className="text-sm font-mono whitespace-pre-wrap break-all">{output}</pre>
             </div>
@@ -198,9 +216,22 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
           {/* Error output */}
           {!isExecuting && error && (
             <div className="p-4">
-              <div className="flex items-center gap-2 mb-3 text-sm text-destructive">
-                <XCircle className="h-4 w-4" />
-                <span>Execution failed</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <XCircle className="h-4 w-4" />
+                  <span>Execution failed</span>
+                </div>
+                {executionId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => navigate(`/executions/${executionId}`)}
+                  >
+                    <ScrollText className="h-3 w-3 mr-1" />
+                    Execution Log
+                  </Button>
+                )}
               </div>
               <div className="p-3 rounded-md bg-destructive/10 text-sm text-destructive">
                 {error}
