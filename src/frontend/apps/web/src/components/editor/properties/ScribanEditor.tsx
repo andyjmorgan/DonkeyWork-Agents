@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useMemo, useState, useLayoutEffect } from 'react'
 import { useEditorStore, type NodeConfig } from '@/store/editor'
+import { buildSuggestions, extractPathFromText, getOutputProperties, type SuggestionItem, type Predecessor } from './scribanSuggestions'
 
 interface ScribanEditorProps {
   nodeId?: string
@@ -8,34 +9,7 @@ interface ScribanEditorProps {
   height?: string
   placeholder?: string
   className?: string
-  predecessors?: Array<{ nodeId: string; nodeName: string; nodeType: string }>
-}
-
-const NODE_OUTPUT_PROPERTIES: Record<string, string[]> = {
-  Start: [],
-  End: [],
-  Model: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
-  MultimodalChatModel: ['ResponseText', 'TotalTokens', 'InputTokens', 'OutputTokens'],
-  Action: ['Result', 'ActionType'],
-  MessageFormatter: ['FormattedMessage'],
-  HttpRequest: ['StatusCode', 'Body', 'Headers', 'IsSuccess'],
-  Sleep: ['DurationSeconds'],
-  TextToSpeech: ['ObjectKey', 'FileName', 'ContentType', 'SizeBytes', 'Transcript', 'Voice', 'Model'],
-  StoreAudio: ['RecordingId', 'Name', 'Description', 'FilePath', 'Transcript'],
-}
-
-function getOutputProperties(nodeType: string): string[] {
-  const normalised = Object.keys(NODE_OUTPUT_PROPERTIES).find(
-    k => k.toLowerCase() === nodeType.toLowerCase()
-  )
-  return normalised ? NODE_OUTPUT_PROPERTIES[normalised] : []
-}
-
-interface SuggestionItem {
-  label: string
-  detail: string
-  insertText: string
-  hasChildren: boolean
+  predecessors?: Predecessor[]
 }
 
 export function ScribanEditor({
@@ -73,44 +47,8 @@ export function ScribanEditor({
     return Object.keys(inputSchema.properties)
   }, [nodes, nodeConfigurations])
 
-  const buildSuggestions = useCallback((currentPath: string): SuggestionItem[] => {
-    const items: SuggestionItem[] = []
-    const pathParts = currentPath.split('.').filter(p => p.length > 0)
-    const pathLower = pathParts.map(p => p.toLowerCase())
-    const rootIdentifiers = ['input', 'steps', 'executionid', 'userid']
-    const showRootItems = pathParts.length === 0 || (pathParts.length === 1 && !rootIdentifiers.includes(pathLower[0]))
-
-    if (showRootItems) {
-      items.push({ label: 'Input', detail: 'Workflow input', insertText: 'Input', hasChildren: inputProperties.length > 0 })
-      items.push({ label: 'ExecutionId', detail: 'Execution ID', insertText: 'ExecutionId', hasChildren: false })
-      items.push({ label: 'UserId', detail: 'User ID', insertText: 'UserId', hasChildren: false })
-      if (predecessors.length > 0) {
-        items.push({ label: 'Steps', detail: 'Previous steps', insertText: 'Steps', hasChildren: true })
-      }
-    } else if (pathLower.length === 1 && pathLower[0] === 'input') {
-      inputProperties.forEach(prop => {
-        items.push({ label: prop, detail: 'Input property', insertText: prop, hasChildren: false })
-      })
-    } else if (pathLower.length === 1 && pathLower[0] === 'steps') {
-      console.log('[ScribanEditor] steps branch, predecessors count:', predecessors.length, 'predecessors:', predecessors)
-      predecessors.forEach(pred => {
-        const outputs = getOutputProperties(pred.nodeType)
-        items.push({ label: pred.nodeName, detail: pred.nodeType, insertText: pred.nodeName, hasChildren: outputs.length > 0 })
-      })
-    } else if (pathLower.length === 2 && pathLower[0] === 'steps') {
-      const pred = predecessors.find(p => p.nodeName.toLowerCase() === pathParts[1].toLowerCase())
-      if (pred) {
-        getOutputProperties(pred.nodeType).forEach(prop => {
-          items.push({ label: prop, detail: 'Output', insertText: prop, hasChildren: false })
-        })
-      }
-    }
-
-    const lastPart = pathParts[pathParts.length - 1] || ''
-    if (lastPart && !showRootItems) {
-      return items.filter(i => i.label.toLowerCase().startsWith(lastPart.toLowerCase()))
-    }
-    return items
+  const getSuggestions = useCallback((currentPath: string): SuggestionItem[] => {
+    return buildSuggestions(currentPath, predecessors, inputProperties)
   }, [predecessors, inputProperties])
 
   const checkForSuggestions = useCallback(() => {
@@ -124,23 +62,13 @@ export function ScribanEditor({
       pendingCursorRef.current = null
     }
 
-    const text = value.substring(0, textarea.selectionStart)
-    const lastBrace = text.lastIndexOf('{{')
-
-    if (lastBrace === -1 || text.substring(lastBrace + 2).includes('}}')) {
+    const path = extractPathFromText(value, textarea.selectionStart)
+    if (path === null) {
       setShowSuggestions(false)
       return
     }
 
-    const afterBrace = text.substring(lastBrace + 2)
-    const match = afterBrace.match(/^\s*([\w.]*)$/)
-    if (!match) {
-      setShowSuggestions(false)
-      return
-    }
-
-    const items = buildSuggestions(match[1])
-    console.log('[ScribanEditor] suggestions for path:', match[1], 'items:', items)
+    const items = getSuggestions(path)
     if (items.length > 0) {
       setSuggestions(items)
       setSelectedIndex(0)
@@ -148,7 +76,7 @@ export function ScribanEditor({
     } else {
       setShowSuggestions(false)
     }
-  }, [value, buildSuggestions])
+  }, [value, getSuggestions])
 
   const insertSuggestion = useCallback((item: SuggestionItem) => {
     const textarea = textareaRef.current
