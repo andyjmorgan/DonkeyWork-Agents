@@ -49,7 +49,9 @@ export function ScribanEditor({
 
   const predecessors = useMemo(() => {
     const all = predecessorsProp ?? (nodeId ? getReachablePredecessors(nodeId) : [])
-    return all.filter(p => p.nodeType.toLowerCase() !== 'start')
+    const filtered = all.filter(p => p.nodeType.toLowerCase() !== 'start')
+    console.log('[ScribanEditor] predecessors:', JSON.stringify(filtered.map(p => ({ name: p.nodeName, type: p.nodeType }))))
+    return filtered
   }, [predecessorsProp, nodeId, getReachablePredecessors])
 
   const inputProperties = useMemo(() => {
@@ -83,6 +85,7 @@ export function ScribanEditor({
     }
 
     const items = getSuggestions(path)
+    console.log('[ScribanEditor] path:', JSON.stringify(path), 'items:', items.length, items.map(i => i.label))
     if (items.length > 0) {
       setSuggestions(items)
       setSelectedIndex(0)

@@ -125,6 +125,14 @@ describe('extractPathFromText', () => {
     expect(extractPathFromText('{{ @invalid', 11)).toBeNull()
   })
 
+  it('handles hyphens in node names', () => {
+    expect(extractPathFromText('{{Steps.GPT-4o_Mini_TTS.', 24)).toBe('Steps.GPT-4o_Mini_TTS.')
+  })
+
+  it('handles hyphens in partial node names', () => {
+    expect(extractPathFromText('{{Steps.GPT-4o', 14)).toBe('Steps.GPT-4o')
+  })
+
   it('uses cursor position, not end of string', () => {
     expect(extractPathFromText('{{Steps.Get_Name.ResponseText}} extra', 17)).toBe('Steps.Get_Name.')
   })
