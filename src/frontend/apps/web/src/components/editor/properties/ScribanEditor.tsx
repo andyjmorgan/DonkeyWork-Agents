@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useMemo, useState, useEffect, useLayoutEffect } from 'react'
+import React, { useRef, useCallback, useMemo, useState, useLayoutEffect } from 'react'
 import { useEditorStore, type NodeConfig } from '@/store/editor'
 
 interface ScribanEditorProps {
@@ -107,6 +107,13 @@ export function ScribanEditor({
     const textarea = textareaRef.current
     if (!textarea) return
 
+    if (pendingCursorRef.current !== null) {
+      const pos = pendingCursorRef.current
+      textarea.selectionStart = pos
+      textarea.selectionEnd = pos
+      pendingCursorRef.current = null
+    }
+
     const text = value.substring(0, textarea.selectionStart)
     const lastBrace = text.lastIndexOf('{{')
 
@@ -173,18 +180,6 @@ export function ScribanEditor({
     }
   }, [showSuggestions, suggestions, selectedIndex, insertSuggestion])
 
-  useEffect(() => {
-    if (pendingCursorRef.current !== null && textareaRef.current) {
-      const pos = pendingCursorRef.current
-      textareaRef.current.selectionStart = pos
-      textareaRef.current.selectionEnd = pos
-      textareaRef.current.focus()
-      pendingCursorRef.current = null
-    }
-  }, [value])
-
-  // Check suggestions using layout effect to avoid cascading renders
-  // This is intentionally synchronous as it updates UI state based on value
   useLayoutEffect(() => {
     checkForSuggestions()
   }, [value, checkForSuggestions])
