@@ -371,6 +371,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 }
 
                 var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
+                DelayDeactivation(TimeSpan.FromSeconds(timeoutSeconds + 60));
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                 var ct = _currentTurnCts.Token;
 
@@ -435,6 +436,8 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
                 Emit(new StreamTurnEndEvent(GrainContext.GrainKey));
                 EmitQueueStatus();
+
+                DelayDeactivation(TimeSpan.FromMinutes(35));
             }
         }
     }
