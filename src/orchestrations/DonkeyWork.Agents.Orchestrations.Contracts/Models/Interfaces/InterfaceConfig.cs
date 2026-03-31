@@ -4,13 +4,14 @@ namespace DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 
 /// <summary>
 /// Base configuration for an orchestration interface.
-/// Each orchestration supports exactly one interface type.
+/// An orchestration can support multiple interface types simultaneously.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(DirectInterfaceConfig), nameof(DirectInterfaceConfig))]
+[JsonDerivedType(typeof(ToolInterfaceConfig), nameof(ToolInterfaceConfig))]
 [JsonDerivedType(typeof(McpInterfaceConfig), nameof(McpInterfaceConfig))]
-[JsonDerivedType(typeof(A2aInterfaceConfig), nameof(A2aInterfaceConfig))]
 [JsonDerivedType(typeof(ChatInterfaceConfig), nameof(ChatInterfaceConfig))]
+[JsonDerivedType(typeof(A2aInterfaceConfig), nameof(A2aInterfaceConfig))]
 [JsonDerivedType(typeof(WebhookInterfaceConfig), nameof(WebhookInterfaceConfig))]
 public abstract class InterfaceConfig
 {

@@ -163,6 +163,11 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         GrainContext.A2aServers = _discoveredA2aServers;
     }
 
+    protected override Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
+    {
+        return Task.CompletedTask;
+    }
+
     protected override async Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
     {
         // Discover Navi-connected custom agent definitions (lazy, once per activation)
@@ -440,7 +445,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
     private async Task RunPipelineAsync(AgentContract contract, Guid turnId, CancellationToken ct)
     {
-        var (assistantMsg, contextMessages) = await ExecuteTurnAsync(contract, Messages, async msg =>
+        var (assistantMsg, contextMessages, _) = await ExecuteTurnAsync(contract, Messages, async msg =>
         {
             NextSequenceNumber = await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber, ct);

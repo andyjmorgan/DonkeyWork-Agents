@@ -46,7 +46,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             existingDraft.OutputSchema = request.OutputSchema;
             existingDraft.ReactFlowData = request.ReactFlowData;
             existingDraft.NodeConfigurations = nodeConfigurations;
-            existingDraft.Interface = request.Interface;
+            existingDraft.Interfaces = request.Interfaces;
             existingDraft.UpdatedAt = DateTimeOffset.UtcNow;
 
             version = existingDraft;
@@ -73,7 +73,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
                 OutputSchema = request.OutputSchema,
                 ReactFlowData = request.ReactFlowData,
                 NodeConfigurations = nodeConfigurations,
-                Interface = request.Interface,
+                Interfaces = request.Interfaces,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -272,7 +272,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             OutputSchema = version.OutputSchema?.RootElement.Clone(),
             ReactFlowData = version.ReactFlowData,
             NodeConfigurations = JsonSerializer.SerializeToElement(version.NodeConfigurations, registry.JsonOptions),
-            Interface = version.Interface,
+            Interfaces = version.Interfaces,
             CreatedAt = version.CreatedAt,
             PublishedAt = version.PublishedAt
         };

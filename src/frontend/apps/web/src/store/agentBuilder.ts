@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Node, Edge, Viewport, NodeChange, EdgeChange, Connection } from '@xyflow/react'
 import { agentNodeTypes } from '@/components/agent-builder/agentNodeTypes'
-import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference, A2aServerReference, ToolConfig, ToolOverride, ContextManagementConfigV1 } from '@donkeywork/api-client'
+import type { AgentContractV1, AgentDefinitionDetails, ReasoningEffort, McpServerReference, SubAgentReference, A2aServerReference, OrchestrationReference, ToolConfig, ToolOverride, ContextManagementConfigV1 } from '@donkeywork/api-client'
 
 export interface AgentNodeConfig {
   type: string
@@ -274,6 +274,16 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       if (exists) return
     }
 
+    // For orchestrations, check if this specific orchestration is already on the canvas
+    if (nodeType === 'agentOrchestration' && schemaInfo.orchestrationId) {
+      const exists = nodes.some(
+        (n) =>
+          n.data?.nodeType === 'agentOrchestration' &&
+          n.data?.orchestrationId === schemaInfo.orchestrationId
+      )
+      if (exists) return
+    }
+
     const nodeId = generateGuid()
 
     // Model node uses its own component type; everything else uses agentSatellite
@@ -295,6 +305,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         toolGroupId: schemaInfo.toolGroupId,
         subAgentId: schemaInfo.subAgentId,
         a2aServerId: schemaInfo.a2aServerId,
+        orchestrationId: schemaInfo.orchestrationId,
         promptId: schemaInfo.promptId,
       },
     }
@@ -332,6 +343,13 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
         a2aServerId: schemaInfo.a2aServerId as string,
         a2aServerName: schemaInfo.a2aServerName as string,
         a2aServerDescription: (schemaInfo.a2aServerDescription as string) || '',
+      }
+    } else if (nodeType === 'agentOrchestration') {
+      config = {
+        type: nodeType,
+        orchestrationId: schemaInfo.orchestrationId as string,
+        orchestrationName: schemaInfo.orchestrationName as string,
+        orchestrationDescription: (schemaInfo.orchestrationDescription as string) || '',
       }
     } else if (nodeType === 'agentSandbox') {
       config = { type: nodeType, enabled: true }
@@ -609,6 +627,22 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
       })
       .filter((r): r is A2aServerReference => r !== null)
     if (a2aRefs.length > 0) contract.a2aServers = a2aRefs
+
+    // Orchestrations — each node references an orchestration to use as a tool
+    const orchestrationNodes = nodes.filter((n) => n.data?.nodeType === 'agentOrchestration')
+    const orchestrationRefs = orchestrationNodes
+      .map((n) => {
+        const cfg = nodeConfigurations[n.id]
+        if (!cfg?.orchestrationId) return null
+        const ref: OrchestrationReference = {
+          id: cfg.orchestrationId as string,
+          name: (cfg.orchestrationName as string) || '',
+        }
+        if (cfg.orchestrationDescription) ref.description = cfg.orchestrationDescription as string
+        return ref
+      })
+      .filter((r): r is OrchestrationReference => r !== null)
+    if (orchestrationRefs.length > 0) contract.orchestrations = orchestrationRefs
 
     // Tool Groups — each node may contain multiple tool IDs
     const toolNodes = nodes.filter((n) => n.data?.nodeType === 'agentToolGroup')
