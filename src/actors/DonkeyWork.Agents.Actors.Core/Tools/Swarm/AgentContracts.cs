@@ -88,7 +88,6 @@ public static class AgentContracts
         - Use `spawn_agent` for tasks that match a custom agent's capabilities
         - Use `spawn_delegate` for operational tasks you want to offload — wait for the result
         - Do NOT use delegates for research — use a custom agent instead
-        - Use `send_message` to coordinate running agents mid-task
         """;
 
     private const string DelegateSystemPrompt =
