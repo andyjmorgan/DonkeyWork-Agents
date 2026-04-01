@@ -308,13 +308,14 @@ export function NodePalette() {
                     <div className="space-y-1.5">
                       {[...providerModels].sort((a, b) => a.name.localeCompare(b.name)).map((model) => {
                         const colors = getColorClasses('pink')
+                        const ttsNodeType = model.provider === 'Google' ? 'GeminiTextToSpeech' : 'TextToSpeech'
                         return (
                           <div
                             key={model.id}
                             draggable
                             onDragStart={(e) =>
                               handleDragStart(e, 'schemaNode', {
-                                nodeType: 'TextToSpeech',
+                                nodeType: ttsNodeType,
                                 displayName: model.name,
                                 icon: 'volume-2',
                                 color: 'pink',
