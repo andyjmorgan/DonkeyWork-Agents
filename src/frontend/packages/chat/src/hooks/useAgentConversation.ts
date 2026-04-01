@@ -22,6 +22,7 @@ import {
   makeAgentGroup,
   type AgentGroupEntry,
 } from "./agentBoxHelpers";
+import { getReconnectDelay, shouldAttemptReconnect } from "./reconnectUtils";
 
 export type SocketEvent = {
   id: number;
@@ -44,6 +45,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null);
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [isAutoReconnecting, setIsAutoReconnecting] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const [mcpServerStatuses, setMcpServerStatuses] = useState<McpServerStatus[]>([]);
   const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
   const [socketEvents, setSocketEvents] = useState<SocketEvent[]>([]);
@@ -59,8 +62,18 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   const eventBufferRef = useRef<Record<string, unknown>[]>([]);
   const isBufferingRef = useRef(false);
 
+  // Auto-reconnect refs
+  const intentionalCloseRef = useRef(false);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const conversationIdRef = useRef<string | null>(initialConversationId ?? null);
+  const mountedRef = useRef(true);
+
   // Track pending RPC requests for getState
   const pendingRpcRef = useRef<Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>>(new Map());
+
+  // Keep conversationIdRef in sync with state for use in closures
+  useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
 
   // --- Box update helpers ---
 
@@ -650,12 +663,77 @@ export function useAgentConversation(initialConversationId?: string, options?: U
 
     ws.onclose = () => {
       setIsConnected(false);
+      scheduleReconnect(convId);
     };
 
     ws.onerror = () => {
       setIsConnected(false);
     };
   }, []);
+
+  // --- Auto-reconnect ---
+
+  function cancelReconnectTimer() {
+    if (reconnectTimerRef.current !== null) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }
+
+  function scheduleReconnect(convId: string) {
+    if (reconnectTimerRef.current !== null) return;
+
+    const shouldRetry = shouldAttemptReconnect({
+      intentionalClose: intentionalCloseRef.current,
+      conversationId: conversationIdRef.current,
+      isAuthenticated: useAuthStore.getState().isAuthenticated,
+      attemptCount: reconnectAttemptRef.current,
+      isMounted: mountedRef.current,
+    });
+
+    if (!shouldRetry) {
+      setIsAutoReconnecting(false);
+      return;
+    }
+
+    const delay = getReconnectDelay(reconnectAttemptRef.current);
+    setIsAutoReconnecting(true);
+    setReconnectAttempt(reconnectAttemptRef.current);
+
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      attemptReconnect(convId);
+    }, delay);
+  }
+
+  async function attemptReconnect(convId: string) {
+    if (!mountedRef.current || intentionalCloseRef.current) {
+      setIsAutoReconnecting(false);
+      return;
+    }
+
+    const auth = useAuthStore.getState();
+    if (auth.shouldRefreshToken()) {
+      const refreshed = await auth.refreshTokens();
+      if (!refreshed) {
+        setIsAutoReconnecting(false);
+        return;
+      }
+    }
+
+    reconnectAttemptRef.current++;
+    setReconnectAttempt(reconnectAttemptRef.current);
+
+    try {
+      await reconnect(convId);
+      reconnectAttemptRef.current = 0;
+      setReconnectAttempt(0);
+      setIsAutoReconnecting(false);
+      intentionalCloseRef.current = false;
+    } catch {
+      // reconnect failed — onclose will fire and scheduleReconnect will retry
+    }
+  }
 
   // --- Rebuild agent group index from restored messages ---
 
@@ -755,12 +833,14 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   // --- Auto-connect on mount when conversationId is in URL ---
 
   useEffect(() => {
+    mountedRef.current = true;
+    intentionalCloseRef.current = false;
+
     if (initialConversationId) {
-      // Reconnect to existing conversation
       setConversationId(initialConversationId);
       reconnect(initialConversationId);
     } else {
-      // Fresh chat — reset everything
+      intentionalCloseRef.current = true;
       wsRef.current?.close();
       wsRef.current = null;
       setMessages([]);
@@ -769,6 +849,9 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       setPendingCount(0);
       setIsConnected(false);
       setIsReconnecting(false);
+      setIsAutoReconnecting(false);
+      setReconnectAttempt(0);
+      reconnectAttemptRef.current = 0;
       agentGroupIndexRef.current = new Map();
       currentAssistantIdRef.current = null;
       nextIdRef.current = 1;
@@ -778,10 +861,32 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     }
 
     return () => {
+      mountedRef.current = false;
+      intentionalCloseRef.current = true;
+      cancelReconnectTimer();
       wsRef.current?.close();
       wsRef.current = null;
     };
   }, [initialConversationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Reconnect on tab visibility change ---
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (
+        document.visibilityState === "visible" &&
+        !intentionalCloseRef.current &&
+        conversationIdRef.current &&
+        wsRef.current?.readyState !== WebSocket.OPEN
+      ) {
+        cancelReconnectTimer();
+        reconnectAttemptRef.current = 0;
+        scheduleReconnect(conversationIdRef.current);
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Actions ---
 
@@ -831,6 +936,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   }, []);
 
   const resetConversation = useCallback(() => {
+    intentionalCloseRef.current = true;
+    cancelReconnectTimer();
     wsRef.current?.close();
     wsRef.current = null;
     setMessages([]);
@@ -839,6 +946,9 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     setPendingCount(0);
     setIsConnected(false);
     setIsReconnecting(false);
+    setIsAutoReconnecting(false);
+    setReconnectAttempt(0);
+    reconnectAttemptRef.current = 0;
     setMcpServerStatuses([]);
     setSandboxStatus(null);
     agentGroupIndexRef.current = new Map();
@@ -857,6 +967,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     conversationId,
     isConnected,
     isReconnecting,
+    isAutoReconnecting,
+    reconnectAttempt,
     mcpServerStatuses,
     sandboxStatus,
     socketEvents,

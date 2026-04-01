@@ -189,6 +189,8 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     resetConversation,
     isConnected,
     isReconnecting,
+    isAutoReconnecting,
+    reconnectAttempt,
     mcpServerStatuses,
     sandboxStatus,
     socketEvents,
@@ -303,12 +305,22 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
               <Bubbles className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-lg font-semibold text-foreground">Navi</h1>
-            {isConnected && (
+            {isConnected ? (
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="hidden md:inline text-[10px] text-muted-foreground">Connected</span>
               </div>
-            )}
+            ) : isAutoReconnecting ? (
+              <div className="flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                <span className="hidden md:inline text-[10px] text-amber-400">Reconnecting{reconnectAttempt > 1 ? ` (${reconnectAttempt})` : ""}...</span>
+              </div>
+            ) : conversationId && !isConnected && !isReconnecting ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                <span className="hidden md:inline text-[10px] text-red-400">Disconnected</span>
+              </div>
+            ) : null}
           </div>
           <div className="flex items-center gap-0.5 md:gap-1">
             {sandboxStatus && (
