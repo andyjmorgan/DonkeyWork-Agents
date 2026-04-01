@@ -32,9 +32,11 @@ public static class NodeTypeExtensions
             nameof(NodeType.HttpRequest) => NodeType.HttpRequest,
             nameof(NodeType.Sleep) => NodeType.Sleep,
             nameof(NodeType.TextToSpeech) => NodeType.TextToSpeech,
+            nameof(NodeType.GeminiTextToSpeech) => NodeType.GeminiTextToSpeech,
             nameof(NodeType.StoreAudio) => NodeType.StoreAudio,
             // Camel case variants
             "textToSpeech" => NodeType.TextToSpeech,
+            "geminiTextToSpeech" => NodeType.GeminiTextToSpeech,
             "storeAudio" => NodeType.StoreAudio,
             _ => throw new ArgumentException($"Unknown ReactFlow node type: {reactFlowType}", nameof(reactFlowType))
         };
@@ -56,6 +58,7 @@ public static class NodeTypeExtensions
             NodeType.HttpRequest => "httpRequest",
             NodeType.Sleep => "sleep",
             NodeType.TextToSpeech => "textToSpeech",
+            NodeType.GeminiTextToSpeech => "geminiTextToSpeech",
             NodeType.StoreAudio => "storeAudio",
             _ => throw new ArgumentException($"Unknown node type: {nodeType}", nameof(nodeType))
         };
@@ -78,6 +81,7 @@ public static class NodeTypeExtensions
             NodeType.HttpRequest => nameof(NodeType.HttpRequest),
             NodeType.Sleep => nameof(NodeType.Sleep),
             NodeType.TextToSpeech => nameof(NodeType.TextToSpeech),
+            NodeType.GeminiTextToSpeech => nameof(NodeType.GeminiTextToSpeech),
             NodeType.StoreAudio => nameof(NodeType.StoreAudio),
             _ => throw new ArgumentException($"Unknown node type: {nodeType}", nameof(nodeType))
         };

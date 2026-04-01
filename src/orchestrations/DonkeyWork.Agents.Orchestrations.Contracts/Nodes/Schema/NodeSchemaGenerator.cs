@@ -148,6 +148,17 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                     InputText = ""
                 };
             }
+            if (configType == typeof(GeminiTextToSpeechNodeConfiguration))
+            {
+                return new GeminiTextToSpeechNodeConfiguration
+                {
+                    Name = name,
+                    CredentialId = Guid.Empty,
+                    Model = "gemini-2.5-flash-preview-tts",
+                    Voice = "Kore",
+                    InputText = ""
+                };
+            }
             if (configType == typeof(StoreAudioNodeConfiguration))
             {
                 return new StoreAudioNodeConfiguration

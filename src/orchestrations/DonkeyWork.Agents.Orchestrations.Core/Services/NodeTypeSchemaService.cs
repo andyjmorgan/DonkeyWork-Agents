@@ -36,6 +36,7 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
         [NodeType.Model] = typeof(ModelNodeExecutor),
         [NodeType.MultimodalChatModel] = typeof(MultimodalChatNodeExecutor),
         [NodeType.TextToSpeech] = typeof(TextToSpeechNodeExecutor),
+        [NodeType.GeminiTextToSpeech] = typeof(GeminiTextToSpeechNodeExecutor),
         [NodeType.StoreAudio] = typeof(StoreAudioNodeExecutor),
     };
 
@@ -150,6 +151,14 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     CredentialId = Guid.Empty,
                     Model = "tts-1",
                     Voice = "alloy",
+                    InputText = ""
+                },
+                nameof(GeminiTextToSpeechNodeConfiguration) => new GeminiTextToSpeechNodeConfiguration
+                {
+                    Name = "temp",
+                    CredentialId = Guid.Empty,
+                    Model = "gemini-2.5-flash-preview-tts",
+                    Voice = "Kore",
                     InputText = ""
                 },
                 nameof(StoreAudioNodeConfiguration) => new StoreAudioNodeConfiguration

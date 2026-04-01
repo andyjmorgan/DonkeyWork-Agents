@@ -49,6 +49,11 @@ public enum NodeType
     TextToSpeech,
 
     /// <summary>
+    /// Generates speech audio from text using a Google Gemini TTS model.
+    /// </summary>
+    GeminiTextToSpeech,
+
+    /// <summary>
     /// Stores generated audio with metadata to create a TTS recording.
     /// </summary>
     StoreAudio
