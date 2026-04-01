@@ -34,6 +34,7 @@ export function OrchestrationEditorPage() {
   const orchestrationId = useEditorStore((state) => state.orchestrationId)
   const orchestrationName = useEditorStore((state) => state.orchestrationName)
   const orchestrationDescription = useEditorStore((state) => state.orchestrationDescription)
+  const orchestrationFriendlyName = useEditorStore((state) => state.orchestrationFriendlyName)
   const isDraft = useEditorStore((state) => state.isDraft)
   const versionId = useEditorStore((state) => state.versionId)
   const nodes = useEditorStore((state) => state.nodes)
@@ -166,13 +167,13 @@ export function OrchestrationEditorPage() {
     setIsExportDialogOpen(true)
   }, [])
 
-  const handleMetadataSave = useCallback(async (name: string, description: string) => {
+  const handleMetadataSave = useCallback(async (name: string, description: string, friendlyName: string) => {
     if (!orchestrationId) return
 
     try {
       const { orchestrations } = await import('@donkeywork/api-client')
-      await orchestrations.update(orchestrationId, { name, description })
-      setOrchestrationMetadata(name, description)
+      await orchestrations.update(orchestrationId, { name, description, friendlyName })
+      setOrchestrationMetadata(name, description, friendlyName)
     } catch (error) {
       console.error('Failed to update metadata:', error)
       // TODO: Show error toast
@@ -414,6 +415,7 @@ export function OrchestrationEditorPage() {
         onOpenChange={setIsMetadataDialogOpen}
         name={orchestrationName}
         description={orchestrationDescription}
+        friendlyName={orchestrationFriendlyName}
         onSave={handleMetadataSave}
       />
 

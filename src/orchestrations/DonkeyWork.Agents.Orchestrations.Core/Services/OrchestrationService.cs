@@ -109,6 +109,7 @@ public class OrchestrationService : IOrchestrationService
             UserId = userId,
             Name = request.Name,
             Description = request.Description,
+            FriendlyName = request.FriendlyName,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };
@@ -175,6 +176,7 @@ public class OrchestrationService : IOrchestrationService
 
         agent.Name = request.Name;
         agent.Description = request.Description;
+        agent.FriendlyName = request.FriendlyName;
         agent.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);

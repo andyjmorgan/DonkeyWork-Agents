@@ -17,23 +17,26 @@ interface OrchestrationMetadataDialogProps {
   onOpenChange: (open: boolean) => void
   name: string
   description: string
-  onSave: (name: string, description: string) => void
+  friendlyName: string
+  onSave: (name: string, description: string, friendlyName: string) => void
 }
 
-// Inner component that resets when key changes
 function OrchestrationMetadataDialogContent({
   name,
   description,
+  friendlyName,
   onSave,
   onClose,
 }: {
   name: string
   description: string
-  onSave: (name: string, description: string) => void
+  friendlyName: string
+  onSave: (name: string, description: string, friendlyName: string) => void
   onClose: () => void
 }) {
   const [localName, setLocalName] = useState(name)
   const [localDescription, setLocalDescription] = useState(description)
+  const [localFriendlyName, setLocalFriendlyName] = useState(friendlyName)
   const [error, setError] = useState('')
 
   const validateName = (value: string): boolean => {
@@ -52,7 +55,7 @@ function OrchestrationMetadataDialogContent({
 
   const handleSave = () => {
     if (validateName(localName)) {
-      onSave(localName, localDescription)
+      onSave(localName, localDescription, localFriendlyName)
       onClose()
     }
   }
@@ -65,9 +68,9 @@ function OrchestrationMetadataDialogContent({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Orchestration Metadata</DialogTitle>
+        <DialogTitle>Orchestration Settings</DialogTitle>
         <DialogDescription>
-          Update the name and description for this orchestration.
+          Update the name, description, and display name for this orchestration.
         </DialogDescription>
       </DialogHeader>
 
@@ -86,6 +89,19 @@ function OrchestrationMetadataDialogContent({
           )}
           <p className="text-xs text-muted-foreground">
             Only lowercase letters, numbers, hyphens, and underscores
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="friendlyName">Display Name</Label>
+          <Input
+            id="friendlyName"
+            placeholder="My Orchestration"
+            value={localFriendlyName}
+            onChange={(e) => setLocalFriendlyName(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Shown when this orchestration is used as a tool or exposed via MCP
           </p>
         </div>
 
@@ -118,16 +134,17 @@ export function OrchestrationMetadataDialog({
   onOpenChange,
   name,
   description,
+  friendlyName,
   onSave,
 }: OrchestrationMetadataDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
-        {/* Use key to reset internal state when props change */}
         <OrchestrationMetadataDialogContent
-          key={`${name}-${description}-${open}`}
+          key={`${name}-${description}-${friendlyName}-${open}`}
           name={name}
           description={description}
+          friendlyName={friendlyName}
           onSave={onSave}
           onClose={() => onOpenChange(false)}
         />

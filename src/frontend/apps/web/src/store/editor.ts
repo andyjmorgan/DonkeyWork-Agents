@@ -70,6 +70,7 @@ interface EditorState {
   orchestrationId: string | null
   orchestrationName: string
   orchestrationDescription: string
+  orchestrationFriendlyName: string
 
   // Version data
   versionId: string | null
@@ -93,7 +94,7 @@ interface EditorState {
   isPropertiesOpen: boolean
 
   // Actions
-  setOrchestrationMetadata: (name: string, description: string) => void
+  setOrchestrationMetadata: (name: string, description: string, friendlyName: string) => void
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
   onNodesChange: (changes: NodeChange[]) => void
@@ -166,6 +167,7 @@ const createInitialState = () => {
     orchestrationId: null,
     orchestrationName: 'Untitled Orchestration',
     orchestrationDescription: '',
+    orchestrationFriendlyName: '',
     versionId: null,
     isDraft: true,
     directEnabled: true, toolEnabled: false, mcpEnabled: false, naviEnabled: false,
@@ -231,8 +233,8 @@ const createInitialState = () => {
 export const useEditorStore = create<EditorState>((set, get) => ({
   ...createInitialState(),
 
-  setOrchestrationMetadata: (name, description) => {
-    set({ orchestrationName: name, orchestrationDescription: description })
+  setOrchestrationMetadata: (name, description, friendlyName) => {
+    set({ orchestrationName: name, orchestrationDescription: description, orchestrationFriendlyName: friendlyName })
   },
 
   setNodes: (nodes) => {

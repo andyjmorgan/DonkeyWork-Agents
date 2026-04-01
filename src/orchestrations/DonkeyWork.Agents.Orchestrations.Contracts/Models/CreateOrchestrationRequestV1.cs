@@ -22,4 +22,8 @@ public sealed class CreateOrchestrationRequestV1
     /// </summary>
     [JsonPropertyName("description")]
     public string? Description { get; init; }
+
+    [JsonPropertyName("friendlyName")]
+    [StringLength(255)]
+    public string? FriendlyName { get; init; }
 }
