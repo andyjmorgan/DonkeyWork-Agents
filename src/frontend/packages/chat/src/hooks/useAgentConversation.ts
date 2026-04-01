@@ -23,8 +23,6 @@ import {
   type AgentGroupEntry,
 } from "./agentBoxHelpers";
 
-const SPAWN_TOOL_NAMES = new Set(["spawn_agent", "spawn_delegate"]);
-
 export type SocketEvent = {
   id: number;
   timestamp: number;
