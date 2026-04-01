@@ -123,7 +123,10 @@ internal sealed class AgentToolDescriptor
             }
         }
 
-        var instance = ActivatorUtilities.CreateInstance(serviceProvider, DeclaringType);
+        using var scope = serviceProvider.CreateScope();
+        var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
+        scopedIdentity?.SetIdentity(identityContext.UserId, identityContext.Email, identityContext.Name, identityContext.Username);
+        var instance = ActivatorUtilities.CreateInstance(scope.ServiceProvider, DeclaringType);
         var result = Method.Invoke(instance, args);
 
         if (result is Task<ToolResult> taskResult)
