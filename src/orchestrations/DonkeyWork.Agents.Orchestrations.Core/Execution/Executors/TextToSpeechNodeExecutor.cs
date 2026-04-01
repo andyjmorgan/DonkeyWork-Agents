@@ -8,11 +8,6 @@ using OpenAI.Audio;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 
-/// <summary>
-/// Executor for TextToSpeech nodes.
-/// Calls the TTS API and returns raw audio bytes with metadata.
-/// Storage is handled downstream by StoreAudioNodeExecutor.
-/// </summary>
 public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfiguration, TextToSpeechNodeOutput>
 {
     private readonly IExternalApiKeyService _credentialService;
@@ -39,9 +34,7 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
         var inputText = await _templateRenderer.RenderAsync(config.InputText, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(inputText))
-        {
             throw new InvalidOperationException("Input text is empty after template rendering");
-        }
 
         var instructions = !string.IsNullOrWhiteSpace(config.Instructions)
             ? await _templateRenderer.RenderAsync(config.Instructions, cancellationToken)
@@ -57,9 +50,7 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
             cancellationToken);
 
         if (credential == null)
-        {
             throw new InvalidOperationException($"Credential not found: {config.CredentialId}");
-        }
 
         var apiKey = credential.Fields[CredentialFieldType.ApiKey];
 
@@ -75,9 +66,7 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
         };
 
         if (!string.IsNullOrWhiteSpace(instructions))
-        {
             options.Instructions = instructions;
-        }
 
         var result = await audioClient.GenerateSpeechAsync(
             inputText,

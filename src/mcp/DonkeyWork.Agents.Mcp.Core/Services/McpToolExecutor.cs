@@ -51,14 +51,21 @@ public class McpToolExecutor : IMcpToolExecutor
             toolName,
             userId);
 
-        if (_a2aMcpToolService.CanHandle(toolName))
-        {
-            return await ExecuteA2aToolAsync(toolName, context, userId, cancellationToken);
-        }
-
+        // Check static registry first (fast, no I/O)
         var tool = _toolDiscoveryService.GetTool(toolName);
+
         if (tool is null)
         {
+            // Not a static tool — try A2A. Discover first to ensure cache is warm
+            // (handles cache expiry and multi-replica load balancing where ListTools
+            // hit a different pod than CallTool).
+            await _a2aMcpToolService.DiscoverToolsAsync(cancellationToken);
+
+            if (_a2aMcpToolService.CanHandle(toolName))
+            {
+                return await ExecuteA2aToolAsync(toolName, context, userId, cancellationToken);
+            }
+
             _logger.LogWarning(
                 "Tool not found: {ToolName} requested by user {UserId}",
                 toolName,

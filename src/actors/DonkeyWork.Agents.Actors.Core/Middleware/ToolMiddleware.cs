@@ -58,13 +58,13 @@ internal sealed class ToolMiddleware : IModelMiddleware
             _logger.LogInformation("ToolMiddleware: awaiting {ToolCount} eagerly-started tool(s)",
                 eagerTasks.Count);
 
-            // Tools were already started during streaming — just wait for stragglers
-            var results = await Task.WhenAll(eagerTasks);
-
-            context.CancellationToken.ThrowIfCancellationRequested();
-
-            foreach (var (toolCall, result, duration) in results)
+            // Yield each tool result as it completes rather than waiting for all
+            await foreach (var completedTask in Task.WhenEach(eagerTasks))
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var (toolCall, result, duration) = await completedTask;
+
                 yield return new ToolResponseMessage
                 {
                     ToolCallId = toolCall.ToolUseId,
