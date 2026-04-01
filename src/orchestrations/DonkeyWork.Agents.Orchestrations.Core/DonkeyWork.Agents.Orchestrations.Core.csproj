@@ -8,6 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="NAudio.Lame" Version="2.1.0" />
         <PackageReference Include="NJsonSchema" Version="11.1.0" />
         <PackageReference Include="NATS.Net" Version="2.7.1" />
         <PackageReference Include="Scriban" Version="5.10.0" />
