@@ -150,73 +150,43 @@ internal sealed partial class OrchestrationToolProvider
         if (!_tools.TryGetValue(toolName, out var toolInfo))
             return ToolResult.Error($"Orchestration tool '{toolName}' not found.");
 
+        var executionId = Guid.NewGuid();
+
         try
         {
-            var executionId = Guid.NewGuid();
+            _logger.LogInformation("Executing orchestration tool '{ToolName}' (execution {ExecutionId})", toolName, executionId);
 
-            // Fire-and-forget on a background thread — the executor uses DbContext, NATS,
-            // and multiple SaveChangesAsync calls that would block the Orleans scheduler
-            // if awaited directly. This mirrors how ExecutionsController handles it.
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await using var scope = _serviceProvider.CreateAsyncScope();
-                    var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
-                    scopedIdentity?.SetIdentity(toolInfo.UserId);
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            var scopedIdentity = scope.ServiceProvider.GetService<IIdentityContext>();
+            scopedIdentity?.SetIdentity(toolInfo.UserId);
 
-                    var executor = scope.ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
-                    await executor.ExecuteAsync(
-                        executionId,
-                        toolInfo.UserId,
-                        toolInfo.VersionId,
-                        ExecutionInterface.Direct,
-                        arguments,
-                        CancellationToken.None);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Orchestration execution failed for {ExecutionId}", executionId);
-                }
-            }, ct);
+            var executor = scope.ServiceProvider.GetRequiredService<IOrchestrationExecutor>();
+            await executor.ExecuteAsync(
+                executionId,
+                toolInfo.UserId,
+                toolInfo.VersionId,
+                ExecutionInterface.Direct,
+                arguments,
+                ct);
 
-            // Poll for completion
-            var timeout = TimeSpan.FromMinutes(5);
-            var pollInterval = TimeSpan.FromMilliseconds(500);
-            var elapsed = TimeSpan.Zero;
+            _logger.LogInformation("Orchestration execution {ExecutionId} completed, reading result", executionId);
 
-            while (elapsed < timeout)
-            {
-                await Task.Delay(pollInterval, ct);
-                elapsed += pollInterval;
+            var executionRepo = scope.ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
+            var execution = await executionRepo.GetByIdAsync(executionId, toolInfo.UserId, ct);
 
-                await using var readScope = _serviceProvider.CreateAsyncScope();
-                var scopedIdentity = readScope.ServiceProvider.GetService<IIdentityContext>();
-                scopedIdentity?.SetIdentity(toolInfo.UserId);
+            if (execution == null)
+                return ToolResult.Error("Orchestration execution completed but result not found.");
 
-                var executionRepo = readScope.ServiceProvider.GetRequiredService<IOrchestrationExecutionRepository>();
-                var execution = await executionRepo.GetByIdAsync(executionId, toolInfo.UserId, ct);
+            if (execution.Status == ExecutionStatus.Failed)
+                return ToolResult.Error(execution.ErrorMessage ?? "Orchestration execution failed.");
 
-                if (execution == null)
-                    continue;
-
-                if (execution.Status == ExecutionStatus.Completed)
-                {
-                    return execution.Output.HasValue
-                        ? ToolResult.Success(execution.Output.Value.GetRawText())
-                        : ToolResult.Success("Orchestration completed with no output.");
-                }
-
-                if (execution.Status == ExecutionStatus.Failed)
-                {
-                    return ToolResult.Error(execution.ErrorMessage ?? "Orchestration execution failed.");
-                }
-            }
-
-            return ToolResult.Error("Orchestration execution timed out after 5 minutes.");
+            return execution.Output.HasValue
+                ? ToolResult.Success(execution.Output.Value.GetRawText())
+                : ToolResult.Success("Orchestration completed with no output.");
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Orchestration tool '{ToolName}' execution {ExecutionId} failed", toolName, executionId);
             return ToolResult.Error($"Orchestration execution failed: {ex.Message}");
         }
     }
