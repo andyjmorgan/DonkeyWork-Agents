@@ -333,7 +333,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       newConfig.modelId = schemaInfo.modelId
       newConfig.userMessages = []
       newConfig.providerConfig = { type: schemaInfo.provider }
-    } else if (nodeType === 'TextToSpeech') {
+    } else if (nodeType === 'TextToSpeech' || nodeType === 'GeminiTextToSpeech') {
       newConfig.provider = schemaInfo.provider
       newConfig.model = schemaInfo.modelId
     }
