@@ -1,6 +1,6 @@
 import { Button } from '@donkeywork/ui'
 import { Logo } from '@/components/branding/Logo'
-import { Github } from 'lucide-react'
+import { Github, Globe, Workflow, Briefcase } from 'lucide-react'
 
 function MicrosoftIcon({ className }: { className?: string }) {
   return (
@@ -37,10 +37,71 @@ export function LoginPage() {
     window.location.href = '/api/v1/auth/login?idpHint=google'
   }
 
+  const heroCards = [
+    {
+      icon: Globe,
+      color: 'from-cyan-500 to-teal-600',
+      shadow: 'shadow-cyan-500/20',
+      title: 'Cross-Agent Interfaces',
+      description: 'Wire up MCP servers, A2A protocols, and sub-agents into a single composable graph. Your agents talk to each other so you don\'t have to.',
+    },
+    {
+      icon: Workflow,
+      color: 'from-violet-500 to-purple-600',
+      shadow: 'shadow-violet-500/20',
+      title: 'Next-Gen Swarms',
+      description: 'Visual orchestration builder for multi-step, multi-model workflows. Chain agents, fan out work, and converge results — all drag and drop.',
+    },
+    {
+      icon: Briefcase,
+      color: 'from-amber-500 to-orange-600',
+      shadow: 'shadow-amber-500/20',
+      title: 'Work Optimisation',
+      description: 'Projects, tasks, research, and notes managed by your agents. Delegate the grunt work, keep the context, ship faster.',
+    },
+  ]
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Main content */}
       <main className="flex flex-1 flex-col items-center justify-center p-4">
+        {/* Hero cards — horizontal scroll on mobile, grid on desktop */}
+        <div className="w-full max-w-3xl mb-8 px-2">
+          {/* Mobile: horizontal scroll */}
+          <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory lg:hidden">
+            {heroCards.map((card) => (
+              <div
+                key={card.title}
+                className="flex min-w-[260px] flex-1 snap-center items-center gap-3 rounded-xl border border-border/50 bg-card/50 p-3 backdrop-blur-sm"
+              >
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${card.color} shadow-lg ${card.shadow}`}>
+                  <card.icon className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{card.title}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{card.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: full cards */}
+          <div className="hidden lg:grid lg:grid-cols-3 lg:gap-4">
+            {heroCards.map((card) => (
+              <div
+                key={card.title}
+                className="rounded-2xl border border-border/50 bg-card/50 p-5 backdrop-blur-sm transition-colors hover:border-accent/30"
+              >
+                <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${card.color} shadow-lg ${card.shadow}`}>
+                  <card.icon className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-sm font-semibold mb-1">{card.title}</h3>
+                <p className="text-xs leading-relaxed text-muted-foreground">{card.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="w-full max-w-sm space-y-6 text-center">
           <div className="flex flex-col items-center space-y-4">
             <Logo size="lg" showText={false} />
