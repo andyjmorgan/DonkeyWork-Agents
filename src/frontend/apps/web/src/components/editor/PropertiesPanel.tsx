@@ -98,7 +98,7 @@ export function PropertiesPanel() {
 
     const config = nodeConfigurations[selectedNode.id]
     const isModelNode = backendNodeType === 'Model' || backendNodeType === 'MultimodalChatModel'
-    const isTtsNode = backendNodeType === 'TextToSpeech'
+    const isTtsNode = backendNodeType === 'TextToSpeech' || backendNodeType === 'GeminiTextToSpeech'
     const credentialProvider = (isModelNode || isTtsNode) ? (config?.provider as string) : undefined
     const modelId = isModelNode ? (config?.modelId as string) : undefined
 
