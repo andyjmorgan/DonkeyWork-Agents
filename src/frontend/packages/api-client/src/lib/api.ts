@@ -1195,7 +1195,7 @@ export const files = {
     api.delete(`/api/v1/files/folder/${prefix}`),
 
   download: async (fileName: string): Promise<{ blob: Blob; fileName: string; contentType: string }> => {
-    const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/${encodeURIComponent(fileName)}/download`)
+    const response = await baseFetchWithAuth(`${getPlatformConfig().apiBaseUrl}/api/v1/files/download/${fileName}`)
     if (!response.ok) {
       throw new Error(`Download failed: ${response.status}`)
     }
