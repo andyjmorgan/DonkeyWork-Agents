@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.ReactFlow;
 
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Models;

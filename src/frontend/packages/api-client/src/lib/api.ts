@@ -220,33 +220,7 @@ export interface Orchestration {
   createdAt: string
 }
 
-// Interface configuration types (polymorphic, multi-select)
-export type InterfaceType = 'DirectInterfaceConfig' | 'ToolInterfaceConfig' | 'McpInterfaceConfig' | 'ChatInterfaceConfig'
 
-export interface InterfaceConfigBase {
-  type: InterfaceType
-  name?: string
-  description?: string
-}
-
-export interface DirectInterfaceConfig extends InterfaceConfigBase {
-  type: 'DirectInterfaceConfig'
-}
-
-export interface ToolInterfaceConfig extends InterfaceConfigBase {
-  type: 'ToolInterfaceConfig'
-}
-
-export interface McpInterfaceConfig extends InterfaceConfigBase {
-  type: 'McpInterfaceConfig'
-  toolName?: string
-}
-
-export interface ChatInterfaceConfig extends InterfaceConfigBase {
-  type: 'ChatInterfaceConfig'
-}
-
-export type InterfaceConfig = DirectInterfaceConfig | ToolInterfaceConfig | McpInterfaceConfig | ChatInterfaceConfig
 
 // ReactFlow types - using 'any' to maintain compatibility with ReactFlow library types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

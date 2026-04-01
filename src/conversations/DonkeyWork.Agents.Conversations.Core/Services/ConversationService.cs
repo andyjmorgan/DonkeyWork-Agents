@@ -2,7 +2,6 @@ using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Conversations.Contracts.Models;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
-using DonkeyWork.Agents.Orchestrations.Contracts.Models.Interfaces;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Conversations;
 using DonkeyWork.Agents.Storage.Contracts.Models;
