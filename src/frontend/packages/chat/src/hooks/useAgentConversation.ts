@@ -14,10 +14,14 @@ import type {
   SandboxStatus,
 } from "@donkeywork/api-client";
 import type { InternalMessage, GetStateResponse, TrackedAgent } from "@donkeywork/api-client";
-
-type AgentGroupEntry = { messageId: string; boxIndex: number };
-
-const SPAWN_TOOL_NAMES = new Set(["spawn_agent", "spawn_delegate"]);
+import {
+  updateNestedGroup as _updateNestedGroup,
+  tryUpdateNested as _tryUpdateNested,
+  attachChildAgent,
+  attachRootAgent,
+  makeAgentGroup,
+  type AgentGroupEntry,
+} from "./agentBoxHelpers";
 
 export type SocketEvent = {
   id: number;
@@ -68,46 +72,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     );
   }
 
-  function updateNestedGroup(
-    box: ContentBox,
-    targetKey: string,
-    updater: (innerBoxes: ContentBox[]) => ContentBox[]
-  ): ContentBox | null {
-    if (box.type === "tool_use" && box.subAgent) {
-      if (box.subAgent.agentKey === targetKey) {
-        return { ...box, subAgent: { ...box.subAgent, boxes: updater(box.subAgent.boxes) } };
-      }
-      for (let i = 0; i < box.subAgent.boxes.length; i++) {
-        const result = updateNestedGroup(box.subAgent.boxes[i], targetKey, updater);
-        if (result) {
-          const newInner = [...box.subAgent.boxes];
-          newInner[i] = result;
-          return { ...box, subAgent: { ...box.subAgent, boxes: newInner } };
-        }
-      }
-    }
-    if (box.type === "agent_group") {
-      if (box.agentKey === targetKey) {
-        return { ...box, boxes: updater(box.boxes) };
-      }
-      for (let i = 0; i < box.boxes.length; i++) {
-        const result = updateNestedGroup(box.boxes[i], targetKey, updater);
-        if (result) {
-          const newInner = [...box.boxes];
-          newInner[i] = result;
-          return { ...box, boxes: newInner };
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Try to update an agent's nested boxes using the indexed boxIndex as a hint.
-   * If the hint is stale (box at that index doesn't contain the agent), falls back
-   * to scanning all boxes in the message. Returns the updated boxes and the actual
-   * boxIndex where the agent was found, or null if not found.
-   */
   function tryUpdateNested(
     boxes: ContentBox[],
     messageId: string,
@@ -115,30 +79,11 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     hintIndex: number,
     updater: (innerBoxes: ContentBox[]) => ContentBox[]
   ): { boxes: ContentBox[]; boxIndex: number } | null {
-    const newBoxes = [...boxes];
-
-    // Fast path: try the indexed position first
-    const host = newBoxes[hintIndex];
-    if (host) {
-      const updated = updateNestedGroup(host, agentKey, updater);
-      if (updated) {
-        newBoxes[hintIndex] = updated;
-        return { boxes: newBoxes, boxIndex: hintIndex };
-      }
+    const result = _tryUpdateNested(boxes, agentKey, hintIndex, updater);
+    if (result && result.boxIndex !== hintIndex) {
+      agentGroupIndexRef.current.set(agentKey, { messageId, boxIndex: result.boxIndex });
     }
-
-    // Slow path: index was stale, scan all boxes in this message
-    for (let i = 0; i < newBoxes.length; i++) {
-      if (i === hintIndex) continue;
-      const updated = updateNestedGroup(newBoxes[i], agentKey, updater);
-      if (updated) {
-        agentGroupIndexRef.current.set(agentKey, { messageId, boxIndex: i });
-        newBoxes[i] = updated;
-        return { boxes: newBoxes, boxIndex: i };
-      }
-    }
-
-    return null;
+    return result;
   }
 
   function appendOrCreate(
@@ -168,7 +113,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       setMessages((prev) => {
         for (const m of prev) {
           for (let i = 0; i < m.boxes.length; i++) {
-            const updated = updateNestedGroup(m.boxes[i], agentKey, innerUpdater);
+            const updated = _updateNestedGroup(m.boxes[i], agentKey, innerUpdater);
             if (updated) {
               const newBoxes = [...m.boxes];
               newBoxes[i] = updated;
@@ -428,69 +373,27 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         const displayName = (data.displayName as string) || undefined;
         const parentEntry = agentGroupIndexRef.current.get(agentKey);
         const targetMessageId = parentEntry?.messageId ?? assistantId;
+        const childGroup = makeAgentGroup(spawnedKey, agentType, label, icon, displayName);
 
-        const makeSubAgent = () => ({
-          type: "agent_group" as const,
-          agentKey: spawnedKey,
-          agentType,
-          label,
-          icon,
-          displayName,
-          boxes: [] as ContentBox[],
-        });
-
-        const attachToInner = (innerBoxes: ContentBox[]): { boxes: ContentBox[]; attached: boolean } => {
-          const copy = [...innerBoxes];
-          for (let i = copy.length - 1; i >= 0; i--) {
-            const b = copy[i];
-            if (b.type === "tool_use" && !b.subAgent) {
-              copy[i] = { ...b, subAgent: makeSubAgent() };
-              return { boxes: copy, attached: true };
-            }
-          }
-          copy.push(makeSubAgent());
-          return { boxes: copy, attached: false };
-        };
+        // Set a provisional ref entry synchronously so that child events
+        // arriving before React processes the setMessages callback can still
+        // find this agent via agentGroupIndexRef.
+        agentGroupIndexRef.current.set(spawnedKey, { messageId: targetMessageId, boxIndex: -1 });
 
         if (parentEntry) {
-          // Parent agent exists in index — attach child inside parent's boxes.
-          // Uses tryUpdateNested so a stale boxIndex self-heals via full scan.
-          updateBoxes(parentEntry.messageId, (boxes) => {
-            const result = tryUpdateNested(boxes, parentEntry.messageId, agentKey, parentEntry.boxIndex, (inner) => {
-              return attachToInner(inner).boxes;
-            });
-            if (result) {
-              agentGroupIndexRef.current.set(spawnedKey, { messageId: parentEntry.messageId, boxIndex: result.boxIndex });
-              setSocketEvents((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.id === socketEventId) {
-                  return [...prev.slice(0, -1), { ...last, debug: `${last.debug} | resolved at boxIndex=${result.boxIndex}` }];
-                }
-                return prev;
-              });
-              return result.boxes;
+          setMessages((prev) => {
+            const { messages: next, entry } = attachChildAgent(prev, parentEntry, agentKey, childGroup, assistantId);
+            agentGroupIndexRef.current.set(spawnedKey, entry);
+            if (entry.messageId !== parentEntry.messageId || entry.boxIndex !== parentEntry.boxIndex) {
+              agentGroupIndexRef.current.set(agentKey, entry);
             }
-            // Parent agent not found in any box — shouldn't happen, but append as standalone
-            const newIdx = boxes.length;
-            agentGroupIndexRef.current.set(spawnedKey, { messageId: parentEntry.messageId, boxIndex: newIdx });
-            return [...boxes, makeSubAgent()];
+            return next;
           });
         } else {
-          // No parent agent — this is a root-level spawn. Attach to the last
-          // unattached spawn tool_use, or create a standalone agent_group.
-          updateBoxes(targetMessageId, (boxes) => {
-            const newBoxes = [...boxes];
-            for (let i = newBoxes.length - 1; i >= 0; i--) {
-              const b = newBoxes[i];
-              if (b.type === "tool_use" && !b.subAgent && SPAWN_TOOL_NAMES.has(b.toolName)) {
-                newBoxes[i] = { ...b, subAgent: makeSubAgent() };
-                agentGroupIndexRef.current.set(spawnedKey, { messageId: targetMessageId, boxIndex: i });
-                return newBoxes;
-              }
-            }
-            const newIdx = newBoxes.length;
-            agentGroupIndexRef.current.set(spawnedKey, { messageId: targetMessageId, boxIndex: newIdx });
-            return [...newBoxes, makeSubAgent()];
+          setMessages((prev) => {
+            const { messages: next, entry } = attachRootAgent(prev, targetMessageId, childGroup);
+            agentGroupIndexRef.current.set(spawnedKey, entry);
+            return next;
           });
         }
         break;
