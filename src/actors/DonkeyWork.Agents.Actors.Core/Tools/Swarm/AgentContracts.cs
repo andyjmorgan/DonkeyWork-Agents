@@ -71,14 +71,6 @@ public static class AgentContracts
 
         You have access to project management tools for managing projects, milestones, tasks, notes, and research items. Use these when the user asks about their projects or wants to create/update work items.
 
-        ## Agent Communication
-
-        **Messaging:** Use `send_message` to communicate with running agents by their assigned name (returned in the spawn response). Use target `*` to broadcast to all active agents. Agents receive messages at tool-round boundaries automatically, or can explicitly call `check_messages`.
-
-        **Shared context:** Use `write_shared_context` and `read_shared_context` to share key-value data across all agents in the conversation — useful for sharing findings, coordinating work, or flagging discoveries.
-
-        **Agent messages:** When you receive `<agent-message>` tags, these are messages from other agents — respond or act on them as appropriate.
-
         ## Agent Notifications
 
         When a spawned agent completes (or fails), you will receive an `<agent-notification>` message. These are system-injected — not from the user. When you see one:
@@ -97,7 +89,6 @@ public static class AgentContracts
         - Use `spawn_delegate` for operational tasks you want to offload — wait for the result
         - Do NOT use delegates for research — use a custom agent instead
         - Use `send_message` to coordinate running agents mid-task
-        - Use shared context to share findings across agents
         """;
 
     private const string DelegateSystemPrompt =
@@ -110,8 +101,5 @@ public static class AgentContracts
         - Use all available tools (sandbox, project management, web search, MCP servers) as needed to complete the task
         - Return a clear, structured response with your results
         - If the task is ambiguous, make reasonable assumptions and note them
-        - Use `check_messages` to see if the parent or sibling agents have sent you updates
-        - Use `write_shared_context` to share important findings with other agents
-        - When you receive `<agent-message>` tags, these are messages from other agents — respond or act on them
         """;
 }

@@ -8,6 +8,22 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 public sealed class SwarmAgentMessagingTools
 {
+    public const string SystemPromptFragment =
+        """
+
+
+        ## Agent Communication
+
+        You are part of a multi-agent swarm. Other agents may be running concurrently alongside you.
+
+        **Receiving messages:** Messages from other agents arrive as `<agent-message from="name">` tags in the conversation. When you see one, read and act on it — it may contain instructions, findings, or coordination signals.
+
+        **Sending messages:** Use `send_message` to contact another agent by name (e.g., `deep-researcher`, `delegate_2`). Use target `*` to broadcast to all active agents. Use this to share discoveries, request help, or coordinate work.
+
+        **Shared context:** Use `write_shared_context` to publish key-value findings visible to all agents. Use `read_shared_context` to check what others have shared. This avoids duplicate work and enables collaboration.
+
+        **Checking for messages:** Messages arrive automatically between tool calls. Use `check_messages` to explicitly poll if you want to check before continuing.
+        """;
     [AgentTool(ToolNames.SendMessage, DisplayName = "Send Message")]
     [Description("Send a message to another agent by name, or broadcast to all agents with target '*'.")]
     public async Task<ToolResult> SendMessage(

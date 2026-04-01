@@ -524,6 +524,9 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             ? combinedPrompt + SandboxTools.SystemPromptFragment
             : combinedPrompt;
 
+        if (effectiveToolTypes.Contains(typeof(SwarmAgentMessagingTools)))
+            systemPrompt += SwarmAgentMessagingTools.SystemPromptFragment;
+
         if (agentCatalog is not null)
             systemPrompt += agentCatalog;
 
