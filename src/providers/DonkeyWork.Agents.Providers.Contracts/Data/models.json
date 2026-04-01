@@ -310,6 +310,52 @@
         "compaction": false
       },
       "client_types": ["AudioOutput"]
+    },
+    {
+      "id": "gemini-2.5-flash-preview-tts",
+      "name": "Gemini 2.5 Flash TTS",
+      "provider": "Google",
+      "mode": "AudioGeneration",
+      "max_input_tokens": 8192,
+      "max_output_tokens": 16384,
+      "input_cost_per_million_tokens": 0,
+      "output_cost_per_million_tokens": 0,
+      "supports": {
+        "vision": false,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": false,
+        "compaction": false
+      },
+      "client_types": ["AudioOutput"]
+    },
+    {
+      "id": "gemini-2.5-pro-preview-tts",
+      "name": "Gemini 2.5 Pro TTS",
+      "provider": "Google",
+      "mode": "AudioGeneration",
+      "max_input_tokens": 8192,
+      "max_output_tokens": 16384,
+      "input_cost_per_million_tokens": 0,
+      "output_cost_per_million_tokens": 0,
+      "supports": {
+        "vision": false,
+        "audio_input": false,
+        "audio_output": true,
+        "function_calling": false,
+        "tool_choice": false,
+        "prompt_caching": false,
+        "reasoning": false,
+        "image_output": false,
+        "streaming": false,
+        "compaction": false
+      },
+      "client_types": ["AudioOutput"]
     }
   ]
 }

@@ -10,7 +10,7 @@ namespace DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 /// </summary>
 [Node(
     DisplayName = "Text to Speech",
-    Description = "Generate speech audio from text using OpenAI TTS",
+    Description = "Generate speech audio from text using OpenAI or Gemini TTS",
     Category = "Audio",
     Icon = "volume-2",
     Color = "pink")]
@@ -43,7 +43,14 @@ public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequires
     [JsonPropertyName("voice")]
     [ConfigurableField(Label = "Voice", ControlType = ControlType.Select, Order = 30)]
     [Tab("Basic", Order = 1)]
-    [SelectOptions("alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse", Default = "alloy")]
+    [SelectOptions(
+        "alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse",
+        "Achernar", "Achird", "Algenib", "Algieba", "Alnilam", "Aoede", "Autonoe",
+        "Callirrhoe", "Charon", "Despina", "Enceladus", "Erinome", "Fenrir",
+        "Gacrux", "Iapetus", "Kore", "Laomedeia", "Leda", "Orus",
+        "Puck", "Pulcherrima", "Rasalgethi", "Sadachbia", "Sadaltager",
+        "Schedar", "Sulafat", "Umbriel", "Vindemiatrix", "Zephyr", "Zubenelgenubi",
+        Default = "alloy")]
     public required string Voice { get; init; }
 
     /// <summary>
