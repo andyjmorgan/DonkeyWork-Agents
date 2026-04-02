@@ -231,8 +231,16 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             return false;
         }
 
-        var grain = GrainFactory.GetGrain<IAgentGrain>(toAgentKey);
-        await grain.DeliverMessageAsync(message);
+        if (toAgentKey.StartsWith(AgentKeys.ConversationPrefix))
+        {
+            var convGrain = GrainFactory.GetGrain<IConversationGrain>(toAgentKey);
+            await convGrain.DeliverMessageAsync(message);
+        }
+        else
+        {
+            var grain = GrainFactory.GetGrain<IAgentGrain>(toAgentKey);
+            await grain.DeliverMessageAsync(message);
+        }
 
         _logger.LogInformation("Delivered message from {From} to {To}", fromAgentKey, toAgentKey);
         return true;

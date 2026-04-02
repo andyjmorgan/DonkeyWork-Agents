@@ -51,6 +51,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
     private CancellationTokenSource? _currentTurnCts;
     private bool _sqlRecordCreated;
     private bool _titleGenerated;
+    private bool _registeredInRegistry;
     private McpServerReference[] _discoveredMcpServers = [];
     private A2aServerReference[]? _discoveredA2aServers;
     private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
@@ -306,6 +307,16 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         return Task.CompletedTask;
     }
 
+    public Task DeliverMessageAsync(AgentMessage message)
+    {
+        var msg = new AgentMessageConversationMessage(message, DateTimeOffset.UtcNow);
+        _queue.Writer.TryWrite(msg);
+        Interlocked.Increment(ref _pendingCount);
+        EnsureProcessingLoop();
+        EmitQueueStatus();
+        return Task.CompletedTask;
+    }
+
     public Task CancelByKeyAsync(string key, string? scope = null)
     {
         var cancelScope = Enum.TryParse<CancelScope>(scope, true, out var parsed) ? parsed : CancelScope.Active;
@@ -404,6 +415,24 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                         null,
                         contract.ModelId);
                     _activatedAt = DateTimeOffset.UtcNow;
+                }
+
+                if (!_registeredInRegistry)
+                {
+                    try
+                    {
+                        var regConvId = Guid.Parse(GrainContext.ConversationId);
+                        var registryKey = AgentKeys.Conversation(IdentityContext.UserId, regConvId);
+                        var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+                        var displayName = contract.DisplayName ?? "navi";
+                        await registry.RegisterAsync(
+                            GrainContext.GrainKey, "Orchestrator", displayName, GrainContext.GrainKey);
+                        _registeredInRegistry = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to register conversation grain in registry");
+                    }
                 }
 
                 var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
@@ -574,6 +603,13 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 Content = FormatAgentResult(agentResult),
                 Origin = MessageOrigin.Agent,
                 AgentName = agentResult.Label,
+            },
+            AgentMessageConversationMessage agentMsg => new InternalContentMessage
+            {
+                Role = InternalMessageRole.User,
+                Content = $"<agent-message from=\"{agentMsg.Message.FromName}\" key=\"{agentMsg.Message.FromAgentKey}\">{agentMsg.Message.Content}</agent-message>",
+                Origin = MessageOrigin.Agent,
+                AgentName = agentMsg.Message.FromName,
             },
             _ => new InternalContentMessage
             {
