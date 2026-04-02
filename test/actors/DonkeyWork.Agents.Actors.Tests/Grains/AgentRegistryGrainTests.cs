@@ -615,7 +615,10 @@ public class AgentRegistryGrainTests
         public Task ReportIdleAsync(string agentKey)
         {
             if (_agents.TryGetValue(agentKey, out var entry))
+            {
                 entry.Info = entry.Info with { Status = AgentStatus.Idle };
+                entry.Tcs.TrySetResult(AgentResult.Empty);
+            }
             return Task.CompletedTask;
         }
 
@@ -624,7 +627,7 @@ public class AgentRegistryGrainTests
             timeout ??= TimeSpan.FromSeconds(30);
 
             var alreadyDone = _agents.Values
-                .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+                .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
                 .OrderBy(e => e.Info.SpawnedAt)
                 .FirstOrDefault();
 
@@ -649,7 +652,7 @@ public class AgentRegistryGrainTests
                 return null;
 
             var completed = _agents.Values
-                .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+                .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
                 .OrderBy(e => e.Info.SpawnedAt)
                 .FirstOrDefault();
 
@@ -665,7 +668,7 @@ public class AgentRegistryGrainTests
             if (!_agents.TryGetValue(agentKey, out var entry))
                 return null;
 
-            if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+            if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
                 return BuildWaitResult(entry);
 
             timeout ??= TimeSpan.FromSeconds(30);

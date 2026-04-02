@@ -82,6 +82,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         }
 
         entry.Info = entry.Info with { Status = AgentStatus.Idle };
+        entry.Tcs.TrySetResult(AgentResult.Empty);
         _logger.LogInformation("Agent {AgentKey} is now idle", agentKey);
         return Task.CompletedTask;
     }
@@ -95,7 +96,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         timeout ??= TimeSpan.FromSeconds(30);
 
         var alreadyDone = _agents.Values
-            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
             .OrderBy(e => e.Info.SpawnedAt)
             .FirstOrDefault();
 
@@ -120,7 +121,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             return null;
 
         var completed = _agents.Values
-            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
             .OrderBy(e => e.Info.SpawnedAt)
             .FirstOrDefault();
 
@@ -136,7 +137,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         if (!_agents.TryGetValue(agentKey, out var entry))
             return null;
 
-        if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+        if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
             return BuildWaitResult(entry);
 
         timeout ??= TimeSpan.FromSeconds(30);
