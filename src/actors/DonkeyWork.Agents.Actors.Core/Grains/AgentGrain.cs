@@ -352,24 +352,40 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
 
+        AgentResult resumeResult;
         try
         {
-            await RunPipelineAsync(contract, messages, cts.Token);
+            resumeResult = await RunPipelineAsync(contract, messages, cts.Token);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Resume from idle failed for {Key}", GrainContext.GrainKey);
             Emit(new StreamErrorEvent(GrainContext.GrainKey, $"Resume failed: {ex.Message}"));
+            resumeResult = AgentResult.Empty;
         }
 
-        // Go back to idle — grain stays alive via DelayDeactivation from ReportToRegistryAsync
+        var conversationId = Guid.Parse(GrainContext.ConversationId);
+        var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+
+        try
+        {
+            var conversationGrain = GrainFactory.GetGrain<IConversationGrain>(registryKey);
+            await conversationGrain.DeliverAgentResultAsync(
+                GrainContext.GrainKey,
+                contract.DisplayName ?? "agent",
+                resumeResult,
+                false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to deliver resume result to parent");
+        }
+
         _isIdle = true;
         DelayDeactivation(TimeSpan.FromSeconds(contract.LingerSeconds > 0 ? contract.LingerSeconds : 1800));
 
         try
         {
-            var conversationId = Guid.Parse(GrainContext.ConversationId);
-            var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
             var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
             await registry.ReportIdleAsync(GrainContext.GrainKey);
         }
@@ -458,8 +474,21 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
         if (!isError && contract.Lifecycle == AgentLifecycle.Linger)
         {
-            // Don't report completion — enter idle state so the agent can be resumed
             _isIdle = true;
+
+            try
+            {
+                var conversationGrain = GrainFactory.GetGrain<IConversationGrain>(registryKey);
+                await conversationGrain.DeliverAgentResultAsync(
+                    GrainContext.GrainKey,
+                    Contract?.DisplayName ?? "agent",
+                    result,
+                    false);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to deliver result to parent before going idle");
+            }
 
             try
             {
