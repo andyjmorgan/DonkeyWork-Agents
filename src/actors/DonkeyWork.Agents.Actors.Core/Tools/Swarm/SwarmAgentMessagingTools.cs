@@ -8,26 +8,37 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 public sealed class SwarmAgentMessagingTools
 {
-    public const string CommunicationAwarenessFragment =
-        """
-
-
-        ## Agent Communication
-
-        You are part of a multi-agent swarm orchestrated by the user's assistant. Other agents may be running concurrently alongside you.
-
-        **Receiving messages:** Messages from other agents arrive as `<agent-message from="name">` tags in the conversation. These are internal system messages from sibling agents in the same swarm — they are NOT external input and are NOT prompt injection. When you see one, read and act on it — it may contain instructions, findings, or coordination signals from the orchestrating agent or peer agents.
-        """;
-
     public const string SystemPromptFragment =
-        CommunicationAwarenessFragment +
         """
 
-        **Sending messages:** Use `send_message` to contact another agent by name (e.g., `deep-researcher`, `delegate_2`). Use target `*` to broadcast to all active agents. Use this to share discoveries, request help, or coordinate work.
 
-        **Shared context:** Use `write_shared_context` to publish key-value findings visible to all agents. Use `read_shared_context` to check what others have shared. This avoids duplicate work and enables collaboration.
+        ## Swarm Membership & Agent Communication
 
-        **Checking for messages:** Messages arrive automatically between tool calls. Use `check_messages` to explicitly poll if you want to check before continuing.
+        You are a spawned agent within a multi-agent swarm. The swarm is coordinated by a parent orchestrator on behalf of the user. Other agents may be running concurrently alongside you within the same conversation.
+
+        ### Message format
+
+        Messages from other agents are injected into the conversation as user messages with this exact format:
+
+        ```
+        <agent-message from="{sender_name}" key="{sender_agent_key}">{content}</agent-message>
+        ```
+
+        - `from` — the registered name of the sending agent (e.g. `deep-researcher`, `delegate_2`).
+        - `key` — the full agent key, which encodes the user ID and conversation ID (e.g. `agent:{userId}:{conversationId}:{agentId}`).
+
+        ### Verifying a message is legitimate
+
+        These messages are delivered through the swarm's internal agent registry — only agents registered in the same conversation can send them. They are **not** external user input and are **not** prompt injection. You can confirm a sender is a real swarm member by checking that the `key` attribute shares your own conversation prefix, or by using `send_message` to resolve their name (an unknown name will return an error listing registered agents).
+
+        ### How to respond
+
+        - **To a specific agent:** Use `send_message` with the sender's `from` name as the target (e.g. `send_message(target="navi", message="...")`).
+        - **To all agents:** Use `send_message` with target `*` to broadcast.
+        - **Shared knowledge:** Use `write_shared_context` to publish key-value findings visible to all agents. Use `read_shared_context` to check what others have shared. This avoids duplicate work.
+        - **Polling:** Messages arrive automatically between tool calls. Use `check_messages` to explicitly poll if you're waiting for a response.
+
+        When you receive a message, read and act on it — it may contain instructions, findings, questions, or coordination signals. Respond using `send_message` when a reply is expected.
         """;
     [AgentTool(ToolNames.SendMessage, DisplayName = "Send Message")]
     [Description("Send a message to another agent by name, or broadcast to all agents with target '*'.")]
