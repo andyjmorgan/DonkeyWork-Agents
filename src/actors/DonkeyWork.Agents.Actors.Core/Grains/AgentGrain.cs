@@ -208,6 +208,12 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
                 result = [..result, typeof(SwarmSharedContextTools)];
         }
 
+        if (!result.Contains(typeof(SwarmAgentMessagingTools)))
+            result = [..result, typeof(SwarmAgentMessagingTools)];
+
+        if (!result.Contains(typeof(SwarmSharedContextTools)))
+            result = [..result, typeof(SwarmSharedContextTools)];
+
         return result;
     }
 
