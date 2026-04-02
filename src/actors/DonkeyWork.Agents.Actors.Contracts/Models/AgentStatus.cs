@@ -8,5 +8,6 @@ public enum AgentStatus
     Failed,
     TimedOut,
     Cancelled,
-    Idle
+    Idle,
+    Expired
 }

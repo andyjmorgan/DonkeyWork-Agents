@@ -14,9 +14,21 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
     private readonly Dictionary<string, int> _nameCounters = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _sharedContext = new(StringComparer.OrdinalIgnoreCase);
 
+    private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan CleanupGracePeriod = TimeSpan.FromMinutes(5);
+
     public AgentRegistryGrain(ILogger<AgentRegistryGrain> logger)
     {
         _logger = logger;
+    }
+
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        this.RegisterGrainTimer(
+            static (state, _) => state.RunCleanupAsync(),
+            this,
+            new GrainTimerCreationOptions(CleanupInterval, CleanupInterval));
+        return base.OnActivateAsync(cancellationToken);
     }
 
     #region Registration
@@ -69,6 +81,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             entry.Tcs.TrySetResult(result);
         }
 
+        entry.CollectedAt = DateTimeOffset.UtcNow;
         _logger.LogInformation("Agent {AgentKey} completed (status: {Status})", agentKey, newStatus);
         await DeliverToParentAsync(entry, agentKey, result, isError);
     }
@@ -98,7 +111,23 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         entry.Info = entry.Info with { Status = AgentStatus.Pending, Result = null };
         entry.Tcs = new TaskCompletionSource<AgentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         entry.Delivered = false;
+        entry.CollectedAt = null;
         _logger.LogInformation("Agent {AgentKey} resumed from idle", agentKey);
+        return Task.CompletedTask;
+    }
+
+    public Task ReportExpiredAsync(string agentKey)
+    {
+        if (!_agents.TryGetValue(agentKey, out var entry))
+        {
+            _logger.LogWarning("ReportExpired for unknown agent {AgentKey}", agentKey);
+            return Task.CompletedTask;
+        }
+
+        entry.Info = entry.Info with { Status = AgentStatus.Expired };
+        entry.CollectedAt = DateTimeOffset.UtcNow;
+        entry.Tcs.TrySetResult(entry.Info.Result ?? AgentResult.Empty);
+        _logger.LogInformation("Agent {AgentKey} expired (grain deactivated)", agentKey);
         return Task.CompletedTask;
     }
 
@@ -118,6 +147,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         if (alreadyDone is not null)
         {
             alreadyDone.Delivered = true;
+            StampCollectedIfTerminal(alreadyDone);
             return BuildWaitResult(alreadyDone);
         }
 
@@ -144,6 +174,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             return null;
 
         completed.Delivered = true;
+        StampCollectedIfTerminal(completed);
         return BuildWaitResult(completed);
     }
 
@@ -296,6 +327,33 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         }
     }
 
+    private static void StampCollectedIfTerminal(AgentEntry entry)
+    {
+        if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Cancelled or AgentStatus.Expired)
+            entry.CollectedAt ??= DateTimeOffset.UtcNow;
+    }
+
+    private Task RunCleanupAsync()
+    {
+        var cutoff = DateTimeOffset.UtcNow - CleanupGracePeriod;
+        var toRemove = _agents
+            .Where(kv => kv.Value.CollectedAt is not null && kv.Value.CollectedAt.Value < cutoff)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        foreach (var key in toRemove)
+        {
+            if (_agents.TryGetValue(key, out var entry))
+            {
+                _nameIndex.Remove(entry.Info.Name);
+                _agents.Remove(key);
+                _logger.LogInformation("Cleaned up agent {AgentKey} (name: {Name})", key, entry.Info.Name);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
     private static AgentWaitResult BuildWaitResult(AgentEntry entry)
     {
         AgentResult result;
@@ -318,6 +376,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         public TrackedAgent Info { get; set; } = null!;
         public TaskCompletionSource<AgentResult> Tcs { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool Delivered { get; set; }
+        public DateTimeOffset? CollectedAt { get; set; }
     }
 
     #endregion

@@ -66,6 +66,26 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
     private readonly Channel<AgentMessage> _inbox = Channel.CreateUnbounded<AgentMessage>();
 
+    protected override async Task OnBeforeDeactivateAsync(CancellationToken ct)
+    {
+        if (_isIdle && GrainContext.ConversationId is not null)
+        {
+            try
+            {
+                var conversationId = Guid.Parse(GrainContext.ConversationId);
+                var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+                var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+                await registry.ReportExpiredAsync(GrainContext.GrainKey);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Failed to report expired to registry on deactivation");
+            }
+        }
+
+        await base.OnBeforeDeactivateAsync(ct);
+    }
+
     #region Abstract Method Implementations
 
     protected override McpServerReference[] GetMcpServerReferences(AgentContract contract)

@@ -553,6 +553,9 @@ public class AgentRegistryGrainTests
         public Task ReportResumedAsync(string agentKey)
             => _logic.ReportResumedAsync(agentKey);
 
+        public Task ReportExpiredAsync(string agentKey)
+            => _logic.ReportExpiredAsync(agentKey);
+
         public Task WriteSharedContextAsync(string key, string value)
             => _logic.WriteSharedContextAsync(key, value);
 
@@ -632,6 +635,18 @@ public class AgentRegistryGrainTests
                 entry.Info = entry.Info with { Status = AgentStatus.Pending, Result = null };
                 entry.Tcs = new TaskCompletionSource<AgentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
                 entry.Delivered = false;
+                entry.CollectedAt = null;
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task ReportExpiredAsync(string agentKey)
+        {
+            if (_agents.TryGetValue(agentKey, out var entry))
+            {
+                entry.Info = entry.Info with { Status = AgentStatus.Expired };
+                entry.CollectedAt = DateTimeOffset.UtcNow;
+                entry.Tcs.TrySetResult(entry.Info.Result ?? AgentResult.Empty);
             }
             return Task.CompletedTask;
         }
@@ -765,6 +780,7 @@ public class AgentRegistryGrainTests
             public TrackedAgent Info { get; set; } = null!;
             public TaskCompletionSource<AgentResult> Tcs { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
             public bool Delivered { get; set; }
+            public DateTimeOffset? CollectedAt { get; set; }
         }
     }
 
