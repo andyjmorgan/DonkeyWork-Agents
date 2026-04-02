@@ -152,7 +152,7 @@ public class McpToolProviderTests : IAsyncDisposable
     [Fact]
     public async Task InitializeAsync_MultipleCancelledServers_InvokesCallbackForEach()
     {
-        var callbackNames = new List<string>();
+        var callbackNames = new System.Collections.Concurrent.ConcurrentBag<string>();
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
