@@ -87,6 +87,21 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         return Task.CompletedTask;
     }
 
+    public Task ReportResumedAsync(string agentKey)
+    {
+        if (!_agents.TryGetValue(agentKey, out var entry))
+        {
+            _logger.LogWarning("ReportResumed for unknown agent {AgentKey}", agentKey);
+            return Task.CompletedTask;
+        }
+
+        entry.Info = entry.Info with { Status = AgentStatus.Pending, Result = null };
+        entry.Tcs = new TaskCompletionSource<AgentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        entry.Delivered = false;
+        _logger.LogInformation("Agent {AgentKey} resumed from idle", agentKey);
+        return Task.CompletedTask;
+    }
+
     #endregion
 
     #region Waiting
@@ -301,7 +316,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
     private sealed class AgentEntry
     {
         public TrackedAgent Info { get; set; } = null!;
-        public TaskCompletionSource<AgentResult> Tcs { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<AgentResult> Tcs { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool Delivered { get; set; }
     }
 

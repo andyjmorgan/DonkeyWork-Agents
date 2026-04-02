@@ -22,6 +22,8 @@ public interface IAgentRegistryGrain : IGrainWithStringKey
 
     Task ReportIdleAsync(string agentKey, AgentResult? result = null);
 
+    Task ReportResumedAsync(string agentKey);
+
     Task WriteSharedContextAsync(string key, string value);
 
     Task<string?> ReadSharedContextAsync(string key);

@@ -334,10 +334,22 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     private async Task ResumeFromIdleAsync()
     {
         var contract = Contract!;
+        var conversationId = Guid.Parse(GrainContext.ConversationId);
+        var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
 
         var inboxMessages = DrainInboxMessages();
         if (inboxMessages.Count == 0)
             return;
+
+        try
+        {
+            var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+            await registry.ReportResumedAsync(GrainContext.GrainKey);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to report resumed to registry");
+        }
 
         var messages = new List<InternalMessage>(Messages);
 
@@ -363,9 +375,6 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             Emit(new StreamErrorEvent(GrainContext.GrainKey, $"Resume failed: {ex.Message}"));
             resumeResult = AgentResult.Empty;
         }
-
-        var conversationId = Guid.Parse(GrainContext.ConversationId);
-        var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
 
         try
         {

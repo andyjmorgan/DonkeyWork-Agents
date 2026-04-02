@@ -550,6 +550,9 @@ public class AgentRegistryGrainTests
         public Task ReportIdleAsync(string agentKey, AgentResult? result = null)
             => _logic.ReportIdleAsync(agentKey, result);
 
+        public Task ReportResumedAsync(string agentKey)
+            => _logic.ReportResumedAsync(agentKey);
+
         public Task WriteSharedContextAsync(string key, string value)
             => _logic.WriteSharedContextAsync(key, value);
 
@@ -618,6 +621,17 @@ public class AgentRegistryGrainTests
             {
                 entry.Info = entry.Info with { Status = AgentStatus.Idle, Result = result };
                 entry.Tcs.TrySetResult(result ?? AgentResult.Empty);
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task ReportResumedAsync(string agentKey)
+        {
+            if (_agents.TryGetValue(agentKey, out var entry))
+            {
+                entry.Info = entry.Info with { Status = AgentStatus.Pending, Result = null };
+                entry.Tcs = new TaskCompletionSource<AgentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+                entry.Delivered = false;
             }
             return Task.CompletedTask;
         }
@@ -749,7 +763,7 @@ public class AgentRegistryGrainTests
         private sealed class AgentEntry
         {
             public TrackedAgent Info { get; set; } = null!;
-            public TaskCompletionSource<AgentResult> Tcs { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            public TaskCompletionSource<AgentResult> Tcs { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
             public bool Delivered { get; set; }
         }
     }
