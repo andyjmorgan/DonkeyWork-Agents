@@ -17,7 +17,7 @@ public class AgentRegistryGrainTests
         var grain = CreateGrain();
 
         // Act
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
 
         // Assert
         var agents = await grain.ListAsync();
@@ -33,10 +33,10 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
 
         // Act
-        await grain.RegisterAsync("agent-1", "different-label", "parent-1");
+        await grain.RegisterAsync("agent-1", "different-label", "researcher", "parent-1");
 
         // Assert
         var agents = await grain.ListAsync();
@@ -51,9 +51,9 @@ public class AgentRegistryGrainTests
         var grain = CreateGrain();
 
         // Act
-        await grain.RegisterAsync("agent-1", "researcher-1", "parent-1");
-        await grain.RegisterAsync("agent-2", "researcher-2", "parent-1");
-        await grain.RegisterAsync("agent-3", "researcher-3", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher-1", "r1", "parent-1");
+        await grain.RegisterAsync("agent-2", "researcher-2", "r2", "parent-1");
+        await grain.RegisterAsync("agent-3", "researcher-3", "r3", "parent-1");
 
         // Assert
         var agents = await grain.ListAsync();
@@ -69,7 +69,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
         var result = AgentResult.FromText("research done");
 
         // Act
@@ -86,7 +86,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
         var result = AgentResult.FromText("error occurred");
 
         // Act
@@ -117,7 +117,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
         await grain.ReportCompletionAsync("agent-1", AgentResult.FromText("done"));
 
         // Act
@@ -148,7 +148,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
 
         // Act - very short timeout, agent hasn't completed
         var result = await grain.WaitForNextAsync(TimeSpan.FromMilliseconds(50));
@@ -162,7 +162,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
 
         // Act - complete the agent in parallel
         var waitTask = grain.WaitForNextAsync(TimeSpan.FromSeconds(5));
@@ -181,7 +181,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
         await grain.ReportCompletionAsync("agent-1", AgentResult.FromText("done"));
 
         // Act - first wait gets the result
@@ -217,7 +217,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
         await grain.ReportCompletionAsync("agent-1", AgentResult.FromText("done"));
 
         // Act
@@ -234,7 +234,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
 
         // Act
         var result = await grain.WaitForSpecificAsync("agent-1", TimeSpan.FromMilliseconds(50));
@@ -248,7 +248,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
 
         // Act
         var waitTask = grain.WaitForSpecificAsync("agent-1", TimeSpan.FromSeconds(5));
@@ -267,7 +267,7 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-1", "researcher", "researcher", "parent-1");
         await grain.ReportCompletionAsync("agent-1", AgentResult.FromText("error"), isError: true);
 
         // Act
@@ -300,9 +300,9 @@ public class AgentRegistryGrainTests
     {
         // Arrange
         var grain = CreateGrain();
-        await grain.RegisterAsync("agent-1", "first", "parent-1");
+        await grain.RegisterAsync("agent-1", "first", "first", "parent-1");
         await Task.Delay(10);
-        await grain.RegisterAsync("agent-2", "second", "parent-1");
+        await grain.RegisterAsync("agent-2", "second", "second", "parent-1");
 
         // Act
         var agents = await grain.ListAsync();
@@ -315,6 +315,204 @@ public class AgentRegistryGrainTests
 
     #endregion
 
+    #region Named Addressing Tests
+
+    [Fact]
+    public async Task RegisterAsync_AssignsUniqueName()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        var name = await grain.RegisterAsync("agent-1", "research task", "researcher", "parent-1");
+
+        // Assert
+        Assert.Equal("researcher", name);
+        var agents = await grain.ListAsync();
+        Assert.Equal("researcher", agents[0].Name);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_DuplicateNames_GetsSuffix()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        var name1 = await grain.RegisterAsync("agent-1", "task 1", "researcher", "parent-1");
+        var name2 = await grain.RegisterAsync("agent-2", "task 2", "researcher", "parent-1");
+        var name3 = await grain.RegisterAsync("agent-3", "task 3", "researcher", "parent-1");
+
+        // Assert
+        Assert.Equal("researcher", name1);
+        Assert.Equal("researcher_2", name2);
+        Assert.Equal("researcher_3", name3);
+    }
+
+    [Fact]
+    public async Task ResolveAgentKeyByNameAsync_KnownName_ReturnsKey()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+
+        // Act
+        var key = await grain.ResolveAgentKeyByNameAsync("researcher");
+
+        // Assert
+        Assert.Equal("agent-1", key);
+    }
+
+    [Fact]
+    public async Task ResolveAgentKeyByNameAsync_UnknownName_ReturnsNull()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        var key = await grain.ResolveAgentKeyByNameAsync("unknown");
+
+        // Assert
+        Assert.Null(key);
+    }
+
+    [Fact]
+    public async Task ResolveAgentKeyByNameAsync_CaseInsensitive()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "Researcher", "parent-1");
+
+        // Act
+        var key = await grain.ResolveAgentKeyByNameAsync("researcher");
+
+        // Assert
+        Assert.Equal("agent-1", key);
+    }
+
+    #endregion
+
+    #region ReportIdleAsync Tests
+
+    [Fact]
+    public async Task ReportIdleAsync_SetsStatusToIdle()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+
+        // Act
+        await grain.ReportIdleAsync("agent-1");
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Equal(AgentStatus.Idle, agents[0].Status);
+    }
+
+    [Fact]
+    public async Task ReportIdleAsync_UnknownAgent_DoesNotThrow()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act & Assert
+        await grain.ReportIdleAsync("unknown");
+    }
+
+    #endregion
+
+    #region Shared Context Tests
+
+    [Fact]
+    public async Task WriteAndReadSharedContext_RoundTrips()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        await grain.WriteSharedContextAsync("findings", "important data");
+        var value = await grain.ReadSharedContextAsync("findings");
+
+        // Assert
+        Assert.Equal("important data", value);
+    }
+
+    [Fact]
+    public async Task ReadSharedContext_MissingKey_ReturnsNull()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        var value = await grain.ReadSharedContextAsync("missing");
+
+        // Assert
+        Assert.Null(value);
+    }
+
+    [Fact]
+    public async Task ReadAllSharedContext_ReturnsAllEntries()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.WriteSharedContextAsync("key1", "value1");
+        await grain.WriteSharedContextAsync("key2", "value2");
+
+        // Act
+        var all = await grain.ReadAllSharedContextAsync();
+
+        // Assert
+        Assert.Equal(2, all.Count);
+        Assert.Equal("value1", all["key1"]);
+        Assert.Equal("value2", all["key2"]);
+    }
+
+    [Fact]
+    public async Task WriteSharedContext_OverwritesExisting()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.WriteSharedContextAsync("key", "original");
+
+        // Act
+        await grain.WriteSharedContextAsync("key", "updated");
+        var value = await grain.ReadSharedContextAsync("key");
+
+        // Assert
+        Assert.Equal("updated", value);
+    }
+
+    [Fact]
+    public async Task RemoveSharedContext_RemovesEntry()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.WriteSharedContextAsync("key", "value");
+
+        // Act
+        var removed = await grain.RemoveSharedContextAsync("key");
+        var value = await grain.ReadSharedContextAsync("key");
+
+        // Assert
+        Assert.True(removed);
+        Assert.Null(value);
+    }
+
+    [Fact]
+    public async Task RemoveSharedContext_MissingKey_ReturnsFalse()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        var removed = await grain.RemoveSharedContextAsync("missing");
+
+        // Assert
+        Assert.False(removed);
+    }
+
+    #endregion
+
     #region Helpers
 
     private static TestableAgentRegistryGrain CreateGrain()
@@ -322,10 +520,6 @@ public class AgentRegistryGrainTests
         return new TestableAgentRegistryGrain(NullLogger<AgentRegistryGrain>.Instance);
     }
 
-    /// <summary>
-    /// Testable wrapper that exposes the grain methods without requiring Orleans activation.
-    /// We test the core logic directly since the grain methods are simple delegations.
-    /// </summary>
     private sealed class TestableAgentRegistryGrain
     {
         private readonly AgentRegistryGrainLogic _logic;
@@ -335,8 +529,8 @@ public class AgentRegistryGrainTests
             _logic = new AgentRegistryGrainLogic(logger);
         }
 
-        public Task RegisterAsync(string agentKey, string label, string parentAgentKey, TimeSpan? timeout = null)
-            => _logic.RegisterAsync(agentKey, label, parentAgentKey, timeout);
+        public Task<string> RegisterAsync(string agentKey, string label, string name, string parentAgentKey, TimeSpan? timeout = null)
+            => _logic.RegisterAsync(agentKey, label, name, parentAgentKey, timeout);
 
         public Task ReportCompletionAsync(string agentKey, AgentResult result, bool isError = false)
             => _logic.ReportCompletionAsync(agentKey, result, isError);
@@ -349,32 +543,52 @@ public class AgentRegistryGrainTests
 
         public Task<IReadOnlyList<TrackedAgent>> ListAsync()
             => _logic.ListAsync();
+
+        public Task<string?> ResolveAgentKeyByNameAsync(string name)
+            => _logic.ResolveAgentKeyByNameAsync(name);
+
+        public Task ReportIdleAsync(string agentKey)
+            => _logic.ReportIdleAsync(agentKey);
+
+        public Task WriteSharedContextAsync(string key, string value)
+            => _logic.WriteSharedContextAsync(key, value);
+
+        public Task<string?> ReadSharedContextAsync(string key)
+            => _logic.ReadSharedContextAsync(key);
+
+        public Task<IReadOnlyDictionary<string, string>> ReadAllSharedContextAsync()
+            => _logic.ReadAllSharedContextAsync();
+
+        public Task<bool> RemoveSharedContextAsync(string key)
+            => _logic.RemoveSharedContextAsync(key);
     }
 
-    /// <summary>
-    /// Extracted logic from AgentRegistryGrain for unit testing without Orleans infrastructure.
-    /// Mirrors the grain's behavior exactly.
-    /// </summary>
     private sealed class AgentRegistryGrainLogic
     {
         private readonly Microsoft.Extensions.Logging.ILogger _logger;
         private readonly Dictionary<string, AgentEntry> _agents = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _nameIndex = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _nameCounters = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _sharedContext = new(StringComparer.OrdinalIgnoreCase);
 
         public AgentRegistryGrainLogic(Microsoft.Extensions.Logging.ILogger logger)
         {
             _logger = logger;
         }
 
-        public Task RegisterAsync(string agentKey, string label, string parentAgentKey, TimeSpan? timeout = null)
+        public Task<string> RegisterAsync(string agentKey, string label, string name, string parentAgentKey, TimeSpan? timeout = null)
         {
             if (_agents.ContainsKey(agentKey))
-                return Task.CompletedTask;
+                return Task.FromResult(_agents[agentKey].Info.Name);
+
+            var uniqueName = AssignUniqueName(name);
 
             _agents[agentKey] = new AgentEntry
             {
-                Info = new TrackedAgent(agentKey, label, parentAgentKey, AgentStatus.Pending, null, DateTime.UtcNow),
+                Info = new TrackedAgent(agentKey, label, parentAgentKey, AgentStatus.Pending, null, DateTime.UtcNow, uniqueName),
             };
-            return Task.CompletedTask;
+            _nameIndex[uniqueName] = agentKey;
+            return Task.FromResult(uniqueName);
         }
 
         public Task ReportCompletionAsync(string agentKey, AgentResult result, bool isError = false)
@@ -395,6 +609,13 @@ public class AgentRegistryGrainTests
                 entry.Tcs.TrySetResult(result);
             }
 
+            return Task.CompletedTask;
+        }
+
+        public Task ReportIdleAsync(string agentKey)
+        {
+            if (_agents.TryGetValue(agentKey, out var entry))
+                entry.Info = entry.Info with { Status = AgentStatus.Idle };
             return Task.CompletedTask;
         }
 
@@ -465,6 +686,48 @@ public class AgentRegistryGrainTests
                 .Select(e => e.Info)
                 .ToList();
             return Task.FromResult<IReadOnlyList<TrackedAgent>>(agents);
+        }
+
+        public Task<string?> ResolveAgentKeyByNameAsync(string name)
+        {
+            _nameIndex.TryGetValue(name, out var agentKey);
+            return Task.FromResult(agentKey);
+        }
+
+        public Task WriteSharedContextAsync(string key, string value)
+        {
+            _sharedContext[key] = value;
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> ReadSharedContextAsync(string key)
+        {
+            _sharedContext.TryGetValue(key, out var value);
+            return Task.FromResult(value);
+        }
+
+        public Task<IReadOnlyDictionary<string, string>> ReadAllSharedContextAsync()
+        {
+            return Task.FromResult<IReadOnlyDictionary<string, string>>(
+                new Dictionary<string, string>(_sharedContext, StringComparer.OrdinalIgnoreCase));
+        }
+
+        public Task<bool> RemoveSharedContextAsync(string key)
+        {
+            return Task.FromResult(_sharedContext.Remove(key));
+        }
+
+        private string AssignUniqueName(string baseName)
+        {
+            if (!_nameCounters.TryGetValue(baseName, out var count))
+            {
+                _nameCounters[baseName] = 1;
+                return baseName;
+            }
+
+            var next = count + 1;
+            _nameCounters[baseName] = next;
+            return $"{baseName}_{next}";
         }
 
         private static AgentWaitResult BuildWaitResult(AgentEntry entry)

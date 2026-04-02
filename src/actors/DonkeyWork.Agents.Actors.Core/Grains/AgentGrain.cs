@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Threading.Channels;
 using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
@@ -62,6 +63,8 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             executionRepository)
     {
     }
+
+    private readonly Channel<AgentMessage> _inbox = Channel.CreateUnbounded<AgentMessage>();
 
     #region Abstract Method Implementations
 
@@ -196,10 +199,21 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
                 result = [..result, typeof(SwarmAgentManagementTools)];
         }
 
+        if (result.Contains(typeof(SwarmAgentManagementTools)))
+        {
+            if (!result.Contains(typeof(SwarmAgentMessagingTools)))
+                result = [..result, typeof(SwarmAgentMessagingTools)];
+
+            if (!result.Contains(typeof(SwarmSharedContextTools)))
+                result = [..result, typeof(SwarmSharedContextTools)];
+        }
+
         return result;
     }
 
     #endregion
+
+    private bool _isIdle;
 
     #region IAgentGrain
 
@@ -208,8 +222,10 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         Contract = contract;
         Observer = observer;
         ExplicitCancel = false;
+        _isIdle = false;
 
         SetupGrainContext();
+        GrainContext.MessageInbox = _inbox;
 
         var executionIdStr = RequestContext.Get(GrainCallContextKeys.ExecutionId) as string;
         if (Guid.TryParse(executionIdStr, out var execId))
@@ -264,6 +280,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     public Task CancelAsync()
     {
         ExplicitCancel = true;
+        _isIdle = false;
         Cts?.Cancel();
         return Task.CompletedTask;
     }
@@ -271,6 +288,19 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
     {
         return Task.FromResult<IReadOnlyList<InternalMessage>>(Messages);
+    }
+
+    public Task DeliverMessageAsync(AgentMessage message)
+    {
+        _inbox.Writer.TryWrite(message);
+
+        if (_isIdle && Contract is not null)
+        {
+            _isIdle = false;
+            _ = ResumeFromIdleAsync();
+        }
+
+        return Task.CompletedTask;
     }
 
     #endregion
@@ -287,12 +317,89 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             Messages.Add(msg);
             await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++, ct);
-        }, ct);
+        }, ct, drainPendingMessages: DrainInboxAsync);
 
         if (pipelineError is not null)
             throw new InvalidOperationException(pipelineError);
 
         return BuildAgentResult(assistantMsg);
+    }
+
+    private async Task ResumeFromIdleAsync()
+    {
+        var contract = Contract!;
+
+        var inboxMessages = DrainInboxMessages();
+        if (inboxMessages.Count == 0)
+            return;
+
+        var messages = new List<InternalMessage>(Messages);
+
+        foreach (var msg in inboxMessages)
+        {
+            Messages.Add(msg);
+            await MessageStore.AppendMessageAsync(
+                GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++);
+            messages.Add(msg);
+        }
+
+        var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+
+        try
+        {
+            await RunPipelineAsync(contract, messages, cts.Token);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Resume from idle failed for {Key}", GrainContext.GrainKey);
+            Emit(new StreamErrorEvent(GrainContext.GrainKey, $"Resume failed: {ex.Message}"));
+        }
+
+        // Go back to idle — grain stays alive via DelayDeactivation from ReportToRegistryAsync
+        _isIdle = true;
+        DelayDeactivation(TimeSpan.FromSeconds(contract.LingerSeconds > 0 ? contract.LingerSeconds : 1800));
+
+        try
+        {
+            var conversationId = Guid.Parse(GrainContext.ConversationId);
+            var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+            var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+            await registry.ReportIdleAsync(GrainContext.GrainKey);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to report idle after resume");
+        }
+
+        Emit(new StreamAgentIdleEvent(GrainContext.GrainKey));
+    }
+
+    #endregion
+
+    #region Inbox
+
+    private Task<IReadOnlyList<InternalMessage>> DrainInboxAsync()
+    {
+        var messages = DrainInboxMessages();
+        return Task.FromResult<IReadOnlyList<InternalMessage>>(messages);
+    }
+
+    private List<InternalMessage> DrainInboxMessages()
+    {
+        var messages = new List<InternalMessage>();
+
+        while (_inbox.Reader.TryRead(out var agentMsg))
+        {
+            messages.Add(new InternalContentMessage
+            {
+                Role = InternalMessageRole.User,
+                Content = $"<agent-message from=\"{agentMsg.FromName}\" key=\"{agentMsg.FromAgentKey}\">{agentMsg.Content}</agent-message>",
+                Origin = MessageOrigin.Agent,
+            });
+        }
+
+        return messages;
     }
 
     #endregion
@@ -339,11 +446,31 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
     private async Task ReportToRegistryAsync(AgentContract contract, AgentResult result, bool isError)
     {
+        var conversationId = Guid.Parse(GrainContext.ConversationId);
+        var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+        var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+
+        if (!isError && contract.Lifecycle == AgentLifecycle.Linger)
+        {
+            // Don't report completion — enter idle state so the agent can be resumed
+            _isIdle = true;
+
+            try
+            {
+                await registry.ReportIdleAsync(GrainContext.GrainKey);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to report idle to registry");
+            }
+
+            Emit(new StreamAgentIdleEvent(GrainContext.GrainKey));
+            DelayDeactivation(TimeSpan.FromSeconds(contract.LingerSeconds > 0 ? contract.LingerSeconds : 1800));
+            return;
+        }
+
         try
         {
-            var conversationId = Guid.Parse(GrainContext.ConversationId);
-            var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
-            var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
             await registry.ReportCompletionAsync(GrainContext.GrainKey, result, isError);
         }
         catch (Exception ex)

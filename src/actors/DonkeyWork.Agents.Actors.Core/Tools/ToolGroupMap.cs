@@ -20,6 +20,8 @@ internal static class ToolGroupMap
             typeof(ResearchAgentTools),
         ],
         [Actors.Contracts.Models.ToolGroupNames.Sandbox] = [typeof(SandboxTools)],
+        [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = [typeof(SwarmAgentMessagingTools)],
+        [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = [typeof(SwarmSharedContextTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public static readonly FrozenDictionary<string, string> DisplayNames = new Dictionary<string, string>
@@ -28,5 +30,7 @@ internal static class ToolGroupMap
         [Actors.Contracts.Models.ToolGroupNames.SwarmManagement] = "Swarm Management",
         [Actors.Contracts.Models.ToolGroupNames.ProjectManagement] = "Project Management",
         [Actors.Contracts.Models.ToolGroupNames.Sandbox] = "Sandbox",
+        [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = "Swarm Messaging",
+        [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = "Swarm Context",
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 }
