@@ -48,6 +48,9 @@ public class SwarmAgentMessagingToolsTests
         var targetKey = "agent:key:123";
         _registry.Setup(x => x.ResolveAgentKeyByNameAsync("researcher"))
             .ReturnsAsync(targetKey);
+        _registry.Setup(x => x.SendMessageAsync(
+                _grainContext.GrainKey, targetKey, It.IsAny<AgentMessage>()))
+            .ReturnsAsync(true);
 
         // Act
         var result = await _tools.SendMessage("researcher", "hello", _grainContext, _identityContext.Object, CancellationToken.None);

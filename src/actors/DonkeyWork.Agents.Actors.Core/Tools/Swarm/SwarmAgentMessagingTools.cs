@@ -63,7 +63,15 @@ public sealed class SwarmAgentMessagingTools
             return ToolResult.Error($"Agent '{target}' not found. Available agents: {string.Join(", ", available)}");
         }
 
-        await registry.SendMessageAsync(context.GrainKey, targetKey, agentMsg);
+        var delivered = await registry.SendMessageAsync(context.GrainKey, targetKey, agentMsg);
+        if (!delivered)
+        {
+            var agents = await registry.ListAsync();
+            var targetAgent = agents.FirstOrDefault(a => a.AgentKey == targetKey);
+            var status = targetAgent?.Status.ToString() ?? "unknown";
+            return ToolResult.Error($"Agent '{target}' is in status '{status}' and cannot receive messages. Only agents in Pending or Idle status can receive messages.");
+        }
+
         return ToolResult.Success(JsonSerializer.Serialize(new
         {
             status = "sent",

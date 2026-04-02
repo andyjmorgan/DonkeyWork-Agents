@@ -170,24 +170,25 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         return Task.FromResult(agentKey);
     }
 
-    public async Task SendMessageAsync(string fromAgentKey, string toAgentKey, AgentMessage message)
+    public async Task<bool> SendMessageAsync(string fromAgentKey, string toAgentKey, AgentMessage message)
     {
         if (!_agents.TryGetValue(toAgentKey, out var entry))
         {
             _logger.LogWarning("SendMessage to unknown agent {ToAgentKey}", toAgentKey);
-            return;
+            return false;
         }
 
         if (entry.Info.Status is not (AgentStatus.Pending or AgentStatus.Idle))
         {
             _logger.LogWarning("SendMessage to agent {ToAgentKey} in status {Status}, skipping", toAgentKey, entry.Info.Status);
-            return;
+            return false;
         }
 
         var grain = GrainFactory.GetGrain<IAgentGrain>(toAgentKey);
         await grain.DeliverMessageAsync(message);
 
         _logger.LogInformation("Delivered message from {From} to {To}", fromAgentKey, toAgentKey);
+        return true;
     }
 
     public async Task BroadcastMessageAsync(string fromAgentKey, AgentMessage message)

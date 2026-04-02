@@ -16,7 +16,7 @@ public interface IAgentRegistryGrain : IGrainWithStringKey
 
     Task<string?> ResolveAgentKeyByNameAsync(string name);
 
-    Task SendMessageAsync(string fromAgentKey, string toAgentKey, AgentMessage message);
+    Task<bool> SendMessageAsync(string fromAgentKey, string toAgentKey, AgentMessage message);
 
     Task BroadcastMessageAsync(string fromAgentKey, AgentMessage message);
 

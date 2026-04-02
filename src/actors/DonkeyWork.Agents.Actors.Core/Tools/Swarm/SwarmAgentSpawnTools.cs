@@ -102,7 +102,7 @@ public sealed class SwarmAgentSpawnTools
             WebSearch = contract.WebSearch,
             WebFetch = contract.WebFetch,
             PersistMessages = contract.PersistMessages,
-            Lifecycle = AgentLifecycle.Task,
+            Lifecycle = contract.Lifecycle,
             LingerSeconds = contract.LingerSeconds,
             AgentType = AgentTypes.Agent,
             KeyPrefix = AgentKeys.AgentPrefix,
