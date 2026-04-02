@@ -129,3 +129,6 @@ samples/
 
 # Local data (docker volumes)
 /data/
+
+# Local docs
+docs/
