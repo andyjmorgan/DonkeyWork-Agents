@@ -547,8 +547,8 @@ public class AgentRegistryGrainTests
         public Task<string?> ResolveAgentKeyByNameAsync(string name)
             => _logic.ResolveAgentKeyByNameAsync(name);
 
-        public Task ReportIdleAsync(string agentKey)
-            => _logic.ReportIdleAsync(agentKey);
+        public Task ReportIdleAsync(string agentKey, AgentResult? result = null)
+            => _logic.ReportIdleAsync(agentKey, result);
 
         public Task WriteSharedContextAsync(string key, string value)
             => _logic.WriteSharedContextAsync(key, value);
@@ -612,12 +612,12 @@ public class AgentRegistryGrainTests
             return Task.CompletedTask;
         }
 
-        public Task ReportIdleAsync(string agentKey)
+        public Task ReportIdleAsync(string agentKey, AgentResult? result = null)
         {
             if (_agents.TryGetValue(agentKey, out var entry))
             {
-                entry.Info = entry.Info with { Status = AgentStatus.Idle };
-                entry.Tcs.TrySetResult(AgentResult.Empty);
+                entry.Info = entry.Info with { Status = AgentStatus.Idle, Result = result };
+                entry.Tcs.TrySetResult(result ?? AgentResult.Empty);
             }
             return Task.CompletedTask;
         }

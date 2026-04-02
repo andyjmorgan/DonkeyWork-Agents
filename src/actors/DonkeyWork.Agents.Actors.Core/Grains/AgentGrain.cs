@@ -387,7 +387,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         try
         {
             var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
-            await registry.ReportIdleAsync(GrainContext.GrainKey);
+            await registry.ReportIdleAsync(GrainContext.GrainKey, resumeResult);
         }
         catch (Exception ex)
         {
@@ -492,7 +492,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
             try
             {
-                await registry.ReportIdleAsync(GrainContext.GrainKey);
+                await registry.ReportIdleAsync(GrainContext.GrainKey, result);
             }
             catch (Exception ex)
             {

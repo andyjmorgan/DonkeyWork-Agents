@@ -20,7 +20,7 @@ public interface IAgentRegistryGrain : IGrainWithStringKey
 
     Task BroadcastMessageAsync(string fromAgentKey, AgentMessage message);
 
-    Task ReportIdleAsync(string agentKey);
+    Task ReportIdleAsync(string agentKey, AgentResult? result = null);
 
     Task WriteSharedContextAsync(string key, string value);
 

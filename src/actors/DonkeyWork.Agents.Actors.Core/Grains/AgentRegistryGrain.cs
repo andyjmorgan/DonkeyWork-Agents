@@ -73,7 +73,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         await DeliverToParentAsync(entry, agentKey, result, isError);
     }
 
-    public Task ReportIdleAsync(string agentKey)
+    public Task ReportIdleAsync(string agentKey, AgentResult? result = null)
     {
         if (!_agents.TryGetValue(agentKey, out var entry))
         {
@@ -81,8 +81,8 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             return Task.CompletedTask;
         }
 
-        entry.Info = entry.Info with { Status = AgentStatus.Idle };
-        entry.Tcs.TrySetResult(AgentResult.Empty);
+        entry.Info = entry.Info with { Status = AgentStatus.Idle, Result = result };
+        entry.Tcs.TrySetResult(result ?? AgentResult.Empty);
         _logger.LogInformation("Agent {AgentKey} is now idle", agentKey);
         return Task.CompletedTask;
     }
