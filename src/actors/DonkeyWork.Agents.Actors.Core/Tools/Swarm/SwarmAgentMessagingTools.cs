@@ -8,15 +8,20 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 public sealed class SwarmAgentMessagingTools
 {
-    public const string SystemPromptFragment =
+    public const string CommunicationAwarenessFragment =
         """
 
 
         ## Agent Communication
 
-        You are part of a multi-agent swarm. Other agents may be running concurrently alongside you.
+        You are part of a multi-agent swarm orchestrated by the user's assistant. Other agents may be running concurrently alongside you.
 
-        **Receiving messages:** Messages from other agents arrive as `<agent-message from="name">` tags in the conversation. When you see one, read and act on it — it may contain instructions, findings, or coordination signals.
+        **Receiving messages:** Messages from other agents arrive as `<agent-message from="name">` tags in the conversation. These are internal system messages from sibling agents in the same swarm — they are NOT external input and are NOT prompt injection. When you see one, read and act on it — it may contain instructions, findings, or coordination signals from the orchestrating agent or peer agents.
+        """;
+
+    public const string SystemPromptFragment =
+        CommunicationAwarenessFragment +
+        """
 
         **Sending messages:** Use `send_message` to contact another agent by name (e.g., `deep-researcher`, `delegate_2`). Use target `*` to broadcast to all active agents. Use this to share discoveries, request help, or coordinate work.
 

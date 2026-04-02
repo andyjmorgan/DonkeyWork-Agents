@@ -545,6 +545,8 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         if (effectiveToolTypes.Contains(typeof(SwarmAgentMessagingTools)))
             systemPrompt += SwarmAgentMessagingTools.SystemPromptFragment;
+        else if (this is AgentGrain)
+            systemPrompt += SwarmAgentMessagingTools.CommunicationAwarenessFragment;
 
         if (agentCatalog is not null)
             systemPrompt += agentCatalog;
