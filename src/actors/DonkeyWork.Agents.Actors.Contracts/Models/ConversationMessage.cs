@@ -15,3 +15,8 @@ public sealed record AgentResultConversationMessage(
     [property: Id(3)] AgentResult? Result,
     [property: Id(4)] bool IsError,
     DateTimeOffset Timestamp) : ConversationMessage(Timestamp);
+
+[GenerateSerializer]
+public sealed record AgentMessageConversationMessage(
+    [property: Id(1)] AgentMessage Message,
+    DateTimeOffset Timestamp) : ConversationMessage(Timestamp);

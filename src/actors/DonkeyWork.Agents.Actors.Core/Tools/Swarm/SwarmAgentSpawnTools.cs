@@ -102,7 +102,7 @@ public sealed class SwarmAgentSpawnTools
             WebSearch = contract.WebSearch,
             WebFetch = contract.WebFetch,
             PersistMessages = contract.PersistMessages,
-            Lifecycle = AgentLifecycle.Task,
+            Lifecycle = contract.Lifecycle,
             LingerSeconds = contract.LingerSeconds,
             AgentType = AgentTypes.Agent,
             KeyPrefix = AgentKeys.AgentPrefix,
@@ -121,6 +121,6 @@ public sealed class SwarmAgentSpawnTools
 
         contract = contract.WithParentContext(context);
 
-        return await _spawner.SpawnAsync(contract, task, label, context, identityContext, ct);
+        return await _spawner.SpawnAsync(contract, task, label, agent_name, context, identityContext, ct);
     }
 }

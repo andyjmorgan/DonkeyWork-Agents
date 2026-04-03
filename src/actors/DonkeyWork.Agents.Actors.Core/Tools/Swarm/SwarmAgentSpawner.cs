@@ -33,6 +33,7 @@ public sealed class SwarmAgentSpawner
         AgentContract contract,
         string query,
         string label,
+        string name,
         GrainContext context,
         IIdentityContext identityContext,
         CancellationToken ct)
@@ -95,15 +96,16 @@ public sealed class SwarmAgentSpawner
             ? TimeSpan.FromSeconds(contract.TimeoutSeconds)
             : (TimeSpan?)null;
 
-        await registry.RegisterAsync(agentKey, label, context.GrainKey, timeout);
+        var assignedName = await registry.RegisterAsync(agentKey, label, name, context.GrainKey, timeout);
 
         var response = new
         {
             agent_key = agentKey,
             agent_type = contract.AgentType,
+            name = assignedName,
             label,
             status = "spawned",
-            message = $"Agent '{label}' has been spawned and is working on the task.",
+            message = $"Agent '{assignedName}' has been spawned and is working on the task. Use send_message with target '{assignedName}' to communicate.",
         };
 
         return ToolResult.Success(JsonSerializer.Serialize(response));

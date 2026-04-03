@@ -21,6 +21,8 @@ internal static class ToolGroupMap
             typeof(ResearchAgentTools),
         ],
         [Actors.Contracts.Models.ToolGroupNames.Sandbox] = [typeof(SandboxTools)],
+        [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = [typeof(SwarmAgentMessagingTools)],
+        [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = [typeof(SwarmSharedContextTools)],
         [Actors.Contracts.Models.ToolGroupNames.Scheduling] = [typeof(SchedulingAgentTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
@@ -30,6 +32,8 @@ internal static class ToolGroupMap
         [Actors.Contracts.Models.ToolGroupNames.SwarmManagement] = "Swarm Management",
         [Actors.Contracts.Models.ToolGroupNames.ProjectManagement] = "Project Management",
         [Actors.Contracts.Models.ToolGroupNames.Sandbox] = "Sandbox",
+        [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = "Swarm Messaging",
+        [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = "Swarm Context",
         [Actors.Contracts.Models.ToolGroupNames.Scheduling] = "Scheduling",
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 }

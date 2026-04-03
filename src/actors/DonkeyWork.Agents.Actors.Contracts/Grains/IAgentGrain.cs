@@ -14,4 +14,7 @@ public interface IAgentGrain : IGrainWithStringKey
 
     [AlwaysInterleave]
     Task<IReadOnlyList<InternalMessage>> GetMessagesAsync();
+
+    [AlwaysInterleave]
+    Task DeliverMessageAsync(AgentMessage message);
 }

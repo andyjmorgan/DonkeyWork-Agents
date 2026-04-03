@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Threading.Channels;
 using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
@@ -9,12 +10,8 @@ using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Tools;
-using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
-using DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
-using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
-using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.A2a.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
@@ -63,143 +60,29 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     {
     }
 
-    #region Abstract Method Implementations
+    private readonly Channel<AgentMessage> _inbox = Channel.CreateUnbounded<AgentMessage>();
 
-    protected override McpServerReference[] GetMcpServerReferences(AgentContract contract)
+    protected override async Task OnBeforeDeactivateAsync(CancellationToken ct)
     {
-        return contract.McpServers;
-    }
-
-    protected override async Task InitializeMcpToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
-    {
-        if (McpToolProvider is not null || contract.McpServers is not { Length: > 0 })
-            return;
-
-        var allowedIds = new HashSet<Guid>(
-            contract.McpServers
-                .Select(s => Guid.TryParse(s.Id, out var id) ? id : (Guid?)null)
-                .Where(id => id.HasValue)
-                .Select(id => id!.Value));
-
-        var httpConfigs = (await McpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
-            .Where(c => allowedIds.Contains(c.Id))
-            .ToList();
-        var stdioConfigs = (await McpServerConfigService.GetEnabledStdioConfigsAsync(ct))
-            .Where(c => allowedIds.Contains(c.Id))
-            .ToList();
-
-        if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
+        if (_isIdle && GrainContext.ConversationId is not null)
         {
-            McpToolProvider = new McpToolProvider();
-            await McpToolProvider.InitializeAsync(
-                httpConfigs,
-                stdioConfigs,
-                McpSandboxManagerClient,
-                IdentityContext.UserId.ToString(),
-                Logger,
-                (name, success, ms, toolCount, error) =>
-                {
-                    Emit(new StreamMcpServerStatusEvent(GrainContext.GrainKey, name, success, ms, toolCount, error));
-                },
-                ct);
-
-            // Provision sandbox for MCP servers only if sandbox is already enabled on the contract
-            if (contract.EnableSandbox
-                && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
+            try
             {
-                HasMcpSandbox = true;
-                SandboxHandle = new SandboxProvisioningHandle();
-                GrainContext.SandboxHandle = SandboxHandle;
-                _ = ProvisionSandboxInternalAsync(SandboxHandle);
+                var conversationId = Guid.Parse(GrainContext.ConversationId);
+                var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+                var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+                await registry.ReportExpiredAsync(GrainContext.GrainKey);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Failed to report expired to registry on deactivation");
             }
         }
+
+        await base.OnBeforeDeactivateAsync(ct);
     }
 
-    protected override A2aServerReference[] GetA2aServerReferences(AgentContract contract)
-    {
-        return contract.A2aServers;
-    }
-
-    protected override async Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
-    {
-        if (A2aToolProvider is not null || contract.A2aServers is not { Length: > 0 })
-            return;
-
-        var allowedIds = contract.A2aServers.Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var allConfigs = await A2aServerConfigService.GetEnabledConnectionConfigsAsync(ct);
-        var configs = allConfigs.Where(c => allowedIds.Contains(c.Id.ToString())).ToList();
-
-        if (configs.Count == 0)
-            return;
-
-        A2aToolProvider = new A2aToolProvider();
-        await A2aToolProvider.InitializeAsync(configs, Logger, ct);
-    }
-
-    protected override async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
-    {
-        if (OrchestrationToolProvider is not null || contract.Orchestrations is not { Length: > 0 })
-            return;
-
-        var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
-        var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
-
-        OrchestrationToolProvider = new OrchestrationToolProvider();
-        OrchestrationToolProvider.SetServiceProvider(ServiceProvider);
-        await OrchestrationToolProvider.InitializeAsync(
-            contract.Orchestrations,
-            IdentityContext.UserId,
-            orchestrationService,
-            versionService,
-            Logger,
-            ct);
-    }
-
-    protected override Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
-    {
-        if (contract.SubAgents is not { Length: > 0 })
-            return Task.FromResult<string?>(null);
-
-        var catalog = $"\n\n## Sub-Agents\n\nAvailable via `{ToolNames.SpawnAgent}` (use agent name):\n";
-        foreach (var sa in contract.SubAgents)
-        {
-            var desc = !string.IsNullOrEmpty(sa.Description) ? sa.Description : "No description";
-            catalog += $"- **{sa.Name}**: {desc}\n";
-        }
-
-        return Task.FromResult<string?>(catalog);
-    }
-
-    protected override McpServerReference[]? GetDeferredToolsServers(AgentContract contract)
-    {
-        return contract.McpServers;
-    }
-
-    protected override Type[] GetAdditionalSwarmToolTypes(AgentContract contract, Type[] currentTypes)
-    {
-        var result = currentTypes;
-
-        if (contract.SubAgents is { Length: > 0 }
-            && !result.Contains(typeof(SwarmAgentSpawnTools)))
-        {
-            result = [..result, typeof(SwarmAgentSpawnTools)];
-
-            if (!result.Contains(typeof(SwarmAgentManagementTools)))
-                result = [..result, typeof(SwarmAgentManagementTools)];
-        }
-
-        if (contract.AllowDelegation && !result.Contains(typeof(SwarmDelegateSpawnTools)))
-        {
-            result = [..result, typeof(SwarmDelegateSpawnTools)];
-
-            if (!result.Contains(typeof(SwarmAgentManagementTools)))
-                result = [..result, typeof(SwarmAgentManagementTools)];
-        }
-
-        return result;
-    }
-
-    #endregion
+    private bool _isIdle;
 
     #region IAgentGrain
 
@@ -208,8 +91,10 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         Contract = contract;
         Observer = observer;
         ExplicitCancel = false;
+        _isIdle = false;
 
         SetupGrainContext();
+        GrainContext.MessageInbox = _inbox;
 
         var executionIdStr = RequestContext.Get(GrainCallContextKeys.ExecutionId) as string;
         if (Guid.TryParse(executionIdStr, out var execId))
@@ -264,6 +149,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     public Task CancelAsync()
     {
         ExplicitCancel = true;
+        _isIdle = false;
         Cts?.Cancel();
         return Task.CompletedTask;
     }
@@ -271,6 +157,19 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
     {
         return Task.FromResult<IReadOnlyList<InternalMessage>>(Messages);
+    }
+
+    public Task DeliverMessageAsync(AgentMessage message)
+    {
+        _inbox.Writer.TryWrite(message);
+
+        if (_isIdle && Contract is not null)
+        {
+            _isIdle = false;
+            _ = ResumeFromIdleAsync();
+        }
+
+        return Task.CompletedTask;
     }
 
     #endregion
@@ -287,12 +186,117 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             Messages.Add(msg);
             await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++, ct);
-        }, ct);
+        }, ct, drainPendingMessages: DrainInboxAsync);
 
         if (pipelineError is not null)
             throw new InvalidOperationException(pipelineError);
 
         return BuildAgentResult(assistantMsg);
+    }
+
+    private async Task ResumeFromIdleAsync()
+    {
+        var contract = Contract!;
+        var conversationId = Guid.Parse(GrainContext.ConversationId);
+        var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+
+        var inboxMessages = DrainInboxMessages();
+        if (inboxMessages.Count == 0)
+            return;
+
+        try
+        {
+            var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+            await registry.ReportResumedAsync(GrainContext.GrainKey);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to report resumed to registry");
+        }
+
+        var messages = new List<InternalMessage>(Messages);
+
+        foreach (var msg in inboxMessages)
+        {
+            Messages.Add(msg);
+            await MessageStore.AppendMessageAsync(
+                GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++);
+            messages.Add(msg);
+        }
+
+        var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+
+        AgentResult resumeResult;
+        try
+        {
+            resumeResult = await RunPipelineAsync(contract, messages, cts.Token);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Resume from idle failed for {Key}", GrainContext.GrainKey);
+            Emit(new StreamErrorEvent(GrainContext.GrainKey, $"Resume failed: {ex.Message}"));
+            resumeResult = AgentResult.Empty;
+        }
+
+        try
+        {
+            var conversationGrain = GrainFactory.GetGrain<IConversationGrain>(registryKey);
+            await conversationGrain.DeliverAgentResultAsync(
+                GrainContext.GrainKey,
+                contract.DisplayName ?? "agent",
+                resumeResult,
+                false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to deliver resume result to parent");
+        }
+
+        _isIdle = true;
+        DelayDeactivation(TimeSpan.FromSeconds(contract.LingerSeconds > 0 ? contract.LingerSeconds : 1800));
+
+        try
+        {
+            var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+            await registry.ReportIdleAsync(GrainContext.GrainKey, resumeResult);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to report idle after resume");
+        }
+
+        Emit(new StreamAgentIdleEvent(GrainContext.GrainKey));
+    }
+
+    #endregion
+
+    #region Inbox
+
+    private Task<IReadOnlyList<InternalMessage>> DrainInboxAsync()
+    {
+        if (Contract?.Lifecycle == AgentLifecycle.Linger)
+            DelayDeactivation(TimeSpan.FromSeconds(Contract.LingerSeconds > 0 ? Contract.LingerSeconds : 1800));
+
+        var messages = DrainInboxMessages();
+        return Task.FromResult<IReadOnlyList<InternalMessage>>(messages);
+    }
+
+    private List<InternalMessage> DrainInboxMessages()
+    {
+        var messages = new List<InternalMessage>();
+
+        while (_inbox.Reader.TryRead(out var agentMsg))
+        {
+            messages.Add(new InternalContentMessage
+            {
+                Role = InternalMessageRole.User,
+                Content = $"<agent-message from=\"{agentMsg.FromName}\" key=\"{agentMsg.FromAgentKey}\">{agentMsg.Content}</agent-message>",
+                Origin = MessageOrigin.Agent,
+            });
+        }
+
+        return messages;
     }
 
     #endregion
@@ -339,11 +343,44 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
     private async Task ReportToRegistryAsync(AgentContract contract, AgentResult result, bool isError)
     {
+        var conversationId = Guid.Parse(GrainContext.ConversationId);
+        var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+        var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+
+        if (!isError && contract.Lifecycle == AgentLifecycle.Linger)
+        {
+            _isIdle = true;
+
+            try
+            {
+                var conversationGrain = GrainFactory.GetGrain<IConversationGrain>(registryKey);
+                await conversationGrain.DeliverAgentResultAsync(
+                    GrainContext.GrainKey,
+                    Contract?.DisplayName ?? "agent",
+                    result,
+                    false);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to deliver result to parent before going idle");
+            }
+
+            try
+            {
+                await registry.ReportIdleAsync(GrainContext.GrainKey, result);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to report idle to registry");
+            }
+
+            Emit(new StreamAgentIdleEvent(GrainContext.GrainKey));
+            DelayDeactivation(TimeSpan.FromSeconds(contract.LingerSeconds > 0 ? contract.LingerSeconds : 1800));
+            return;
+        }
+
         try
         {
-            var conversationId = Guid.Parse(GrainContext.ConversationId);
-            var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
-            var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
             await registry.ReportCompletionAsync(GrainContext.GrainKey, result, isError);
         }
         catch (Exception ex)

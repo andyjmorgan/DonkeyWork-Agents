@@ -110,11 +110,12 @@ public sealed class SwarmAgentManagementTools
         }
 
         var registry = GetRegistry(context, identityContext);
-        var agents = await registry.ListAsync();
+        var agents = await registry.ListScopedAsync(context.GrainKey);
 
         var agentList = agents.Select(a => new
         {
             agent_key = a.AgentKey,
+            name = a.Name,
             label = a.Label,
             status = a.Status.ToString().ToLowerInvariant(),
             spawned_at = a.SpawnedAt.ToString("O"),

@@ -67,7 +67,7 @@ export function LoginCallbackPage() {
     window.history.replaceState(null, '', window.location.pathname)
 
     // Redirect to the app
-    navigate('/orchestrations', { replace: true })
+    navigate('/agent-chat', { replace: true })
   }, [navigate, setTokens, setUser, initialState])
 
   if (error) {

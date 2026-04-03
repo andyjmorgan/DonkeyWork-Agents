@@ -13,6 +13,8 @@ const EVENT_COLORS: Record<string, string> = {
   tool_complete: "text-amber-400",
   agent_spawn: "text-blue-400",
   agent_complete: "text-blue-400",
+  agent_idle: "text-slate-400",
+  agent_message: "text-blue-400",
   agent_result_data: "text-blue-400",
   usage: "text-muted-foreground",
   web_search: "text-cyan-400",

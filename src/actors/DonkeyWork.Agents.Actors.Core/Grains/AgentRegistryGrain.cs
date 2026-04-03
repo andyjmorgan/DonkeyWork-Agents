@@ -10,31 +10,55 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
 {
     private readonly ILogger<AgentRegistryGrain> _logger;
     private readonly Dictionary<string, AgentEntry> _agents = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _nameIndex = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _nameCounters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _sharedContext = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan CleanupGracePeriod = TimeSpan.FromMinutes(5);
 
     public AgentRegistryGrain(ILogger<AgentRegistryGrain> logger)
     {
         _logger = logger;
     }
 
-    #region IAgentRegistryGrain
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
+    {
+        this.RegisterGrainTimer(
+            static (state, _) => state.RunCleanupAsync(),
+            this,
+            new GrainTimerCreationOptions(CleanupInterval, CleanupInterval));
+        return base.OnActivateAsync(cancellationToken);
+    }
 
-    public Task RegisterAsync(string agentKey, string label, string parentAgentKey, TimeSpan? timeout = null)
+    #region Registration
+
+    public Task<string> RegisterAsync(string agentKey, string label, string name, string parentAgentKey, TimeSpan? timeout = null)
     {
         if (_agents.ContainsKey(agentKey))
         {
             _logger.LogWarning("Agent {AgentKey} already registered, ignoring duplicate", agentKey);
-            return Task.CompletedTask;
+            var existing = _agents[agentKey].Info.Name;
+            return Task.FromResult(existing);
         }
+
+        var uniqueName = AssignUniqueName(name);
 
         var entry = new AgentEntry
         {
-            Info = new TrackedAgent(agentKey, label, parentAgentKey, AgentStatus.Pending, null, DateTime.UtcNow),
+            Info = new TrackedAgent(agentKey, label, parentAgentKey, AgentStatus.Pending, null, DateTime.UtcNow, uniqueName),
         };
 
         _agents[agentKey] = entry;
-        _logger.LogInformation("Registered agent {AgentKey} (label: {Label})", agentKey, label);
-        return Task.CompletedTask;
+        _nameIndex[uniqueName] = agentKey;
+
+        _logger.LogInformation("Registered agent {AgentKey} (name: {Name}, label: {Label})", agentKey, uniqueName, label);
+        return Task.FromResult(uniqueName);
     }
+
+    #endregion
+
+    #region Completion
 
     public async Task ReportCompletionAsync(string agentKey, AgentResult result, bool isError = false)
     {
@@ -57,23 +81,73 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             entry.Tcs.TrySetResult(result);
         }
 
+        entry.CollectedAt = DateTimeOffset.UtcNow;
         _logger.LogInformation("Agent {AgentKey} completed (status: {Status})", agentKey, newStatus);
         await DeliverToParentAsync(entry, agentKey, result, isError);
     }
+
+    public Task ReportIdleAsync(string agentKey, AgentResult? result = null)
+    {
+        if (!_agents.TryGetValue(agentKey, out var entry))
+        {
+            _logger.LogWarning("ReportIdle for unknown agent {AgentKey}", agentKey);
+            return Task.CompletedTask;
+        }
+
+        entry.Info = entry.Info with { Status = AgentStatus.Idle, Result = result };
+        entry.Tcs.TrySetResult(result ?? AgentResult.Empty);
+        _logger.LogInformation("Agent {AgentKey} is now idle", agentKey);
+        return Task.CompletedTask;
+    }
+
+    public Task ReportResumedAsync(string agentKey)
+    {
+        if (!_agents.TryGetValue(agentKey, out var entry))
+        {
+            _logger.LogWarning("ReportResumed for unknown agent {AgentKey}", agentKey);
+            return Task.CompletedTask;
+        }
+
+        entry.Info = entry.Info with { Status = AgentStatus.Pending, Result = null };
+        entry.Tcs = new TaskCompletionSource<AgentResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        entry.Delivered = false;
+        entry.CollectedAt = null;
+        _logger.LogInformation("Agent {AgentKey} resumed from idle", agentKey);
+        return Task.CompletedTask;
+    }
+
+    public Task ReportExpiredAsync(string agentKey)
+    {
+        if (!_agents.TryGetValue(agentKey, out var entry))
+        {
+            _logger.LogWarning("ReportExpired for unknown agent {AgentKey}", agentKey);
+            return Task.CompletedTask;
+        }
+
+        entry.Info = entry.Info with { Status = AgentStatus.Expired };
+        entry.CollectedAt = DateTimeOffset.UtcNow;
+        entry.Tcs.TrySetResult(entry.Info.Result ?? AgentResult.Empty);
+        _logger.LogInformation("Agent {AgentKey} expired (grain deactivated)", agentKey);
+        return Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Waiting
 
     public async Task<AgentWaitResult?> WaitForNextAsync(TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromSeconds(30);
 
-        // Check for already-completed, undelivered agents (oldest first)
         var alreadyDone = _agents.Values
-            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
             .OrderBy(e => e.Info.SpawnedAt)
             .FirstOrDefault();
 
         if (alreadyDone is not null)
         {
             alreadyDone.Delivered = true;
+            StampCollectedIfTerminal(alreadyDone);
             return BuildWaitResult(alreadyDone);
         }
 
@@ -92,7 +166,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             return null;
 
         var completed = _agents.Values
-            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+            .Where(e => !e.Delivered && e.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
             .OrderBy(e => e.Info.SpawnedAt)
             .FirstOrDefault();
 
@@ -100,6 +174,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
             return null;
 
         completed.Delivered = true;
+        StampCollectedIfTerminal(completed);
         return BuildWaitResult(completed);
     }
 
@@ -108,7 +183,7 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         if (!_agents.TryGetValue(agentKey, out var entry))
             return null;
 
-        if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed)
+        if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Idle)
             return BuildWaitResult(entry);
 
         timeout ??= TimeSpan.FromSeconds(30);
@@ -132,9 +207,127 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         return Task.FromResult<IReadOnlyList<TrackedAgent>>(agents);
     }
 
+    public Task<IReadOnlyList<TrackedAgent>> ListScopedAsync(string agentKey)
+    {
+        var visible = GetVisibleAgents(agentKey);
+        return Task.FromResult<IReadOnlyList<TrackedAgent>>(visible);
+    }
+
+    public Task<string> GetScopedRosterAsync(string agentKey)
+    {
+        var allEntries = _agents.Values.Select(e => e.Info).ToList();
+        if (allEntries.Count == 0)
+            return Task.FromResult(string.Empty);
+
+        var roster = BuildRosterTree(agentKey, allEntries);
+        return Task.FromResult(roster);
+    }
+
+    #endregion
+
+    #region Messaging
+
+    public Task<string?> ResolveAgentKeyByNameAsync(string name)
+    {
+        _nameIndex.TryGetValue(name, out var agentKey);
+        return Task.FromResult(agentKey);
+    }
+
+    public async Task<bool> SendMessageAsync(string fromAgentKey, string toAgentKey, AgentMessage message)
+    {
+        if (!_agents.TryGetValue(toAgentKey, out var entry))
+        {
+            _logger.LogWarning("SendMessage to unknown agent {ToAgentKey}", toAgentKey);
+            return false;
+        }
+
+        if (entry.Info.Status is not (AgentStatus.Pending or AgentStatus.Idle))
+        {
+            _logger.LogWarning("SendMessage to agent {ToAgentKey} in status {Status}, skipping", toAgentKey, entry.Info.Status);
+            return false;
+        }
+
+        if (toAgentKey.StartsWith(AgentKeys.ConversationPrefix))
+        {
+            var convGrain = GrainFactory.GetGrain<IConversationGrain>(toAgentKey);
+            await convGrain.DeliverMessageAsync(message);
+        }
+        else
+        {
+            var grain = GrainFactory.GetGrain<IAgentGrain>(toAgentKey);
+            await grain.DeliverMessageAsync(message);
+        }
+
+        _logger.LogInformation("Delivered message from {From} to {To}", fromAgentKey, toAgentKey);
+        return true;
+    }
+
+    public async Task BroadcastMessageAsync(string fromAgentKey, AgentMessage message)
+    {
+        var targets = _agents
+            .Where(kv => !string.Equals(kv.Key, fromAgentKey, StringComparison.OrdinalIgnoreCase)
+                         && kv.Value.Info.Status is AgentStatus.Pending or AgentStatus.Idle)
+            .ToList();
+
+        foreach (var (agentKey, _) in targets)
+        {
+            try
+            {
+                var grain = GrainFactory.GetGrain<IAgentGrain>(agentKey);
+                await grain.DeliverMessageAsync(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to broadcast message to {AgentKey}", agentKey);
+            }
+        }
+
+        _logger.LogInformation("Broadcast message from {From} to {Count} agent(s)", fromAgentKey, targets.Count);
+    }
+
+    #endregion
+
+    #region Shared Context
+
+    public Task WriteSharedContextAsync(string key, string value)
+    {
+        _sharedContext[key] = value;
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> ReadSharedContextAsync(string key)
+    {
+        _sharedContext.TryGetValue(key, out var value);
+        return Task.FromResult(value);
+    }
+
+    public Task<IReadOnlyDictionary<string, string>> ReadAllSharedContextAsync()
+    {
+        return Task.FromResult<IReadOnlyDictionary<string, string>>(
+            new Dictionary<string, string>(_sharedContext, StringComparer.OrdinalIgnoreCase));
+    }
+
+    public Task<bool> RemoveSharedContextAsync(string key)
+    {
+        return Task.FromResult(_sharedContext.Remove(key));
+    }
+
     #endregion
 
     #region Private Methods
+
+    private string AssignUniqueName(string baseName)
+    {
+        if (!_nameCounters.TryGetValue(baseName, out var count))
+        {
+            _nameCounters[baseName] = 1;
+            return baseName;
+        }
+
+        var next = count + 1;
+        _nameCounters[baseName] = next;
+        return $"{baseName}_{next}";
+    }
 
     private async Task DeliverToParentAsync(AgentEntry entry, string agentKey, AgentResult result, bool isError)
     {
@@ -142,7 +335,6 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         {
             var parentKey = entry.Info.ParentAgentKey;
 
-            // Only deliver to conversation grains (they accept agent results via queue)
             if (!parentKey.StartsWith(AgentKeys.ConversationPrefix))
                 return;
 
@@ -157,6 +349,115 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         {
             _logger.LogError(ex, "Failed to deliver completion for {AgentKey} to parent", agentKey);
         }
+    }
+
+    private List<TrackedAgent> GetVisibleAgents(string agentKey)
+    {
+        if (!_agents.TryGetValue(agentKey, out var self))
+            return [];
+
+        var visible = new List<TrackedAgent>();
+
+        // Include parent (one level up)
+        if (_agents.TryGetValue(self.Info.ParentAgentKey, out var parent)
+            && parent.Info.AgentKey != agentKey)
+        {
+            visible.Add(parent.Info);
+        }
+
+        // Include self
+        visible.Add(self.Info);
+
+        // Include all descendants
+        AddDescendants(agentKey, visible);
+
+        return visible;
+    }
+
+    private void AddDescendants(string parentKey, List<TrackedAgent> result)
+    {
+        foreach (var entry in _agents.Values)
+        {
+            if (string.Equals(entry.Info.ParentAgentKey, parentKey, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(entry.Info.AgentKey, parentKey, StringComparison.OrdinalIgnoreCase))
+            {
+                result.Add(entry.Info);
+                AddDescendants(entry.Info.AgentKey, result);
+            }
+        }
+    }
+
+    private static string BuildRosterTree(string selfKey, List<TrackedAgent> allAgents)
+    {
+        var byParent = allAgents
+            .Where(a => !string.Equals(a.AgentKey, a.ParentAgentKey, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(a => a.ParentAgentKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(a => a.SpawnedAt).ToList(), StringComparer.OrdinalIgnoreCase);
+
+        var roots = allAgents
+            .Where(a => string.Equals(a.AgentKey, a.ParentAgentKey, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(a => a.SpawnedAt)
+            .ToList();
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("\n\n## Swarm");
+
+        foreach (var root in roots)
+        {
+            RenderNode(sb, root, selfKey, byParent, 0);
+        }
+
+        return sb.ToString();
+    }
+
+    private static void RenderNode(
+        System.Text.StringBuilder sb,
+        TrackedAgent agent,
+        string selfKey,
+        Dictionary<string, List<TrackedAgent>> byParent,
+        int depth)
+    {
+        var indent = new string(' ', depth * 2);
+        var youMarker = string.Equals(agent.AgentKey, selfKey, StringComparison.OrdinalIgnoreCase) ? " (you)" : "";
+        var status = agent.Status.ToString().ToLowerInvariant();
+        var label = !string.IsNullOrEmpty(agent.Label) ? $" — \"{agent.Label}\"" : "";
+
+        sb.AppendLine($"{indent}- {agent.Name} ({status}{youMarker}){label}");
+
+        if (byParent.TryGetValue(agent.AgentKey, out var children))
+        {
+            foreach (var child in children)
+            {
+                RenderNode(sb, child, selfKey, byParent, depth + 1);
+            }
+        }
+    }
+
+    private static void StampCollectedIfTerminal(AgentEntry entry)
+    {
+        if (entry.Info.Status is AgentStatus.Completed or AgentStatus.Failed or AgentStatus.Cancelled or AgentStatus.Expired)
+            entry.CollectedAt ??= DateTimeOffset.UtcNow;
+    }
+
+    private Task RunCleanupAsync()
+    {
+        var cutoff = DateTimeOffset.UtcNow - CleanupGracePeriod;
+        var toRemove = _agents
+            .Where(kv => kv.Value.CollectedAt is not null && kv.Value.CollectedAt.Value < cutoff)
+            .Select(kv => kv.Key)
+            .ToList();
+
+        foreach (var key in toRemove)
+        {
+            if (_agents.TryGetValue(key, out var entry))
+            {
+                _nameIndex.Remove(entry.Info.Name);
+                _agents.Remove(key);
+                _logger.LogInformation("Cleaned up agent {AgentKey} (name: {Name})", key, entry.Info.Name);
+            }
+        }
+
+        return Task.CompletedTask;
     }
 
     private static AgentWaitResult BuildWaitResult(AgentEntry entry)
@@ -179,8 +480,9 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
     private sealed class AgentEntry
     {
         public TrackedAgent Info { get; set; } = null!;
-        public TaskCompletionSource<AgentResult> Tcs { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<AgentResult> Tcs { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool Delivered { get; set; }
+        public DateTimeOffset? CollectedAt { get; set; }
     }
 
     #endregion
