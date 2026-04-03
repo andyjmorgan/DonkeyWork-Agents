@@ -1,8 +1,11 @@
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Scheduling.Api.Options;
+using DonkeyWork.Agents.Scheduling.Contracts.Enums;
+using DonkeyWork.Agents.Scheduling.Contracts.Models;
 using DonkeyWork.Agents.Scheduling.Contracts.Services;
 using DonkeyWork.Agents.Scheduling.Core.Quartz;
 using DonkeyWork.Agents.Scheduling.Core.Services;
+using DonkeyWork.Agents.Scheduling.Core.SystemJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
@@ -36,11 +39,31 @@ public static class DependencyInjection
         services.AddSingleton(new SchedulingServiceOptions
         {
             DefaultTimeZone = schedulingOptions.DefaultTimeZone,
-            MinimumCronIntervalHours = schedulingOptions.MinimumCronIntervalHours
+            MinimumCronIntervalHours = schedulingOptions.MinimumCronIntervalHours,
+            ExecutionHistoryRetentionDays = schedulingOptions.ExecutionHistoryRetentionDays,
+            CompletedOneOffRetentionDays = schedulingOptions.CompletedOneOffRetentionDays,
         });
         services.AddScoped<ISchedulingService, SchedulingService>();
 
         services.AddSingleton<ScheduledJobListener>();
+
+        services.AddScoped<ExecutionHistoryPruningHandler>();
+        services.AddScoped<CompletedOneOffCleanupHandler>();
+
+        services.AddSingleton<SystemJobDefinition>(new SystemJobDefinition
+        {
+            Name = "Execution History Pruning",
+            CronExpression = "0 0 3 * * ?",
+            JobType = ScheduleJobType.Cleanup,
+            HandlerType = typeof(ExecutionHistoryPruningHandler),
+        });
+        services.AddSingleton<SystemJobDefinition>(new SystemJobDefinition
+        {
+            Name = "Completed One-Off Cleanup",
+            CronExpression = "0 0 4 * * ?",
+            JobType = ScheduleJobType.Cleanup,
+            HandlerType = typeof(CompletedOneOffCleanupHandler),
+        });
 
         services.AddQuartz(q =>
         {
@@ -74,6 +97,7 @@ public static class DependencyInjection
         });
 
         services.AddHostedService<ScheduleReconciliationService>();
+        services.AddHostedService<SystemJobRegistrar>();
 
         return services;
     }
