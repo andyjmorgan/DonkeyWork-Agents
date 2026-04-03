@@ -12,6 +12,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Quartz;
+
 namespace DonkeyWork.Agents.Integration.Tests.Infrastructure.Factories;
 
 public class IntegrationTestWebApplicationFactory : WebApplicationFactory<DonkeyWork.Agents.Api.Program>
@@ -60,7 +62,10 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 ["OAuth:RefreshRetryDelay"] = "00:01:00",
 
                 // Anthropic options (actors module - not used in tests but validation runs)
-                ["Anthropic:ApiKey"] = "test-api-key"
+                ["Anthropic:ApiKey"] = "test-api-key",
+
+                // Scheduling - use same Postgres connection for Quartz persistent store
+                ["Persistence:ConnectionString"] = _infrastructure.Postgres.ConnectionString,
             };
 
             config.AddInMemoryCollection(testConfig);
@@ -99,6 +104,12 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                     TestAuthenticationHandler.SchemeName, _ => { })
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                     "McpAuth", _ => { });
+
+            // Replace Quartz persistent store with RAMJobStore for tests
+            services.AddQuartz(q =>
+            {
+                q.UseInMemoryStore();
+            });
 
             // NATS connection uses test container URL from config override above
             // No need to re-register - the Nats:Url config points to the test container
