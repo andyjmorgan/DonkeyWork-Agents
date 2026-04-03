@@ -200,6 +200,32 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     );
   }
 
+  function clearIdleState(forAgent: string) {
+    const markResumed = (boxes: ContentBox[]): ContentBox[] =>
+      boxes.map((b) => {
+        if (b.type === "tool_use" && b.subAgent?.agentKey === forAgent && b.subAgent.completeReason === "idle") {
+          return { ...b, isComplete: false, completeReason: undefined, subAgent: { ...b.subAgent, isComplete: false, completeReason: undefined } };
+        }
+        if (b.type === "tool_use" && b.subAgent) {
+          return { ...b, subAgent: { ...b.subAgent, boxes: markResumed(b.subAgent.boxes) } };
+        }
+        if (b.type === "agent_group" && b.agentKey === forAgent && b.completeReason === "idle") {
+          return { ...b, isComplete: false, completeReason: undefined };
+        }
+        if (b.type === "agent_group") {
+          return { ...b, boxes: markResumed(b.boxes) };
+        }
+        return b;
+      });
+
+    setMessages((prev) =>
+      prev.map((m) => {
+        const newBoxes = markResumed(m.boxes);
+        return newBoxes !== m.boxes ? { ...m, boxes: newBoxes } : m;
+      })
+    );
+  }
+
   // --- Event handling ---
 
   function handleEvent(data: Record<string, unknown>) {
@@ -221,6 +247,10 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const next = [...prev, evt];
       return next.length > 500 ? next.slice(-500) : next;
     });
+
+    if (eventType !== "agent_idle" && eventType !== "agent_complete" && agentGroupIndexRef.current.has(agentKey)) {
+      clearIdleState(agentKey);
+    }
 
     if (eventType === "turn_start") {
       const newId = crypto.randomUUID();
@@ -435,6 +465,15 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       case "agent_complete": {
         const completeReason = (data.reason as AgentCompleteReason) ?? "completed";
         markAgentCompleteGlobal(agentKey, completeReason);
+        break;
+      }
+
+      case "agent_idle": {
+        markAgentCompleteGlobal(agentKey, "idle");
+        break;
+      }
+
+      case "agent_message": {
         break;
       }
 

@@ -1,7 +1,7 @@
 import { PulseDots } from "./PulseDots";
 import { AgentIcon } from "./AgentIcon";
 import type { ContentBox, AgentCompleteReason } from "@donkeywork/api-client";
-import { Check, X, Ban, AlertTriangle } from "lucide-react";
+import { Check, X, Ban, AlertTriangle, Moon } from "lucide-react";
 
 const AGENT_COLORS: Record<string, { bg: string; border: string; text: string; dotBg: string; glow: string }> = {
   agent: { bg: "bg-blue-500/10", border: "border-blue-500/25", text: "text-blue-400", dotBg: "bg-blue-400", glow: "hover:shadow-blue-500/10" },
@@ -91,7 +91,9 @@ export function AgentCard({
           </span>
         )}
         {isComplete ? (
-          completeReason === "cancelled" ? (
+          completeReason === "idle" ? (
+            <Moon className="w-4 h-4 text-slate-400" strokeWidth={2.5} />
+          ) : completeReason === "cancelled" ? (
             <Ban className="w-4 h-4 text-red-400" strokeWidth={2.5} />
           ) : completeReason === "failed" ? (
             <AlertTriangle className="w-4 h-4 text-amber-400" strokeWidth={2.5} />

@@ -5,7 +5,7 @@ import { ScrollArea } from "@donkeywork/ui";
 import type { ChatMessage } from "@donkeywork/api-client";
 import type { SidePanelAgent } from "./agentTreeUtils";
 import { extractAgentTree, countAll, countActive } from "./agentTreeUtils";
-import { Check, ChevronRight, PanelRightClose, Ban, AlertTriangle } from "lucide-react";
+import { Check, ChevronRight, PanelRightClose, Ban, AlertTriangle, Moon } from "lucide-react";
 
 const AGENT_COLORS: Record<string, { bg: string; border: string; text: string; dotBg: string }> = {
   agent: { bg: "bg-blue-500/10", border: "border-blue-500/25", text: "text-blue-400", dotBg: "bg-blue-400" },
@@ -70,7 +70,9 @@ function AgentTreeNode({
             {agent.icon ? (
               <AgentIcon icon={agent.icon} className="w-3.5 h-3.5" fallbackClassName={color.text} />
             ) : agent.isComplete ? (
-              agent.completeReason === "cancelled" ? (
+              agent.completeReason === "idle" ? (
+                <Moon className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
+              ) : agent.completeReason === "cancelled" ? (
                 <Ban className="w-3 h-3 text-red-400" strokeWidth={2.5} />
               ) : agent.completeReason === "failed" ? (
                 <AlertTriangle className="w-3 h-3 text-amber-400" strokeWidth={2.5} />
@@ -101,7 +103,9 @@ function AgentTreeNode({
           {agent.icon && (
             <div className="shrink-0">
               {agent.isComplete ? (
-                agent.completeReason === "cancelled" ? (
+                agent.completeReason === "idle" ? (
+                  <Moon className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
+                ) : agent.completeReason === "cancelled" ? (
                   <Ban className="w-3 h-3 text-red-400" strokeWidth={2.5} />
                 ) : agent.completeReason === "failed" ? (
                   <AlertTriangle className="w-3 h-3 text-amber-400" strokeWidth={2.5} />
