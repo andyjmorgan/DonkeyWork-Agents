@@ -162,6 +162,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   function markNestedComplete(box: ContentBox, forAgent: string, reason: AgentCompleteReason = "completed"): ContentBox | null {
     if (box.type === "tool_use" && box.subAgent) {
       if (box.subAgent.agentKey === forAgent) {
+        console.log("[swarm-debug] markNestedComplete matched:", forAgent, "reason:", reason);
         return {
           ...box,
           isComplete: true,
@@ -249,6 +250,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     });
 
     if (eventType !== "agent_idle" && eventType !== "agent_complete" && agentGroupIndexRef.current.has(agentKey)) {
+      console.log("[swarm-debug] clearIdleState triggered by:", eventType, "for:", agentKey);
       clearIdleState(agentKey);
     }
 
@@ -469,6 +471,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       }
 
       case "agent_idle": {
+        console.log("[swarm-debug] agent_idle received for:", agentKey);
         markAgentCompleteGlobal(agentKey, "idle");
         break;
       }
