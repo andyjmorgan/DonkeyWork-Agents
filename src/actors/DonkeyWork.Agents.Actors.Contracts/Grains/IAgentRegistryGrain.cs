@@ -14,6 +14,10 @@ public interface IAgentRegistryGrain : IGrainWithStringKey
 
     Task<IReadOnlyList<TrackedAgent>> ListAsync();
 
+    Task<IReadOnlyList<TrackedAgent>> ListScopedAsync(string agentKey);
+
+    Task<string> GetScopedRosterAsync(string agentKey);
+
     Task<string?> ResolveAgentKeyByNameAsync(string name);
 
     Task<bool> SendMessageAsync(string fromAgentKey, string toAgentKey, AgentMessage message);

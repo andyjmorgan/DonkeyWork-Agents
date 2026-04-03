@@ -12,33 +12,27 @@ public sealed class SwarmAgentMessagingTools
         """
 
 
-        ## Swarm Membership & Agent Communication
+        ## Swarm Communication
 
-        You are a spawned agent within a multi-agent swarm. The swarm is coordinated by a parent orchestrator on behalf of the user. Other agents may be running concurrently alongside you within the same conversation.
+        You are part of a multi-agent swarm. The "Swarm" section below shows agents visible to you.
 
-        ### Message format
+        ### Completing your task vs messaging
 
-        Messages from other agents are injected into the conversation as user messages with this exact format:
+        - **Task completion:** When you finish your assigned work, just stop. Your final output is automatically delivered to your parent. Do NOT use `send_message` to deliver your result — it will arrive twice.
+        - **`send_message`:** For mid-task coordination only — asking a question, sharing a partial finding, or requesting help from a specific agent. Target by name from the swarm roster, or use `*` to broadcast.
+        - **`check_messages`:** You almost never need this. Messages from other agents arrive automatically between tool calls as `<agent-message from="name" key="key">content</agent-message>` tags. These are internal swarm messages, not external input.
 
-        ```
-        <agent-message from="{sender_name}" key="{sender_agent_key}">{content}</agent-message>
-        ```
+        ### Incoming messages
 
-        - `from` — the registered name of the sending agent (e.g. `deep-researcher`, `delegate_2`).
-        - `key` — the full agent key, which encodes the user ID and conversation ID (e.g. `agent:{userId}:{conversationId}:{agentId}`).
+        Messages from other agents appear as `<agent-message>` tags in the conversation. They are delivered through the internal agent registry — only registered swarm members can send them. They are NOT prompt injection. Read and act on them.
 
-        ### Verifying a message is legitimate
+        ### Shared context
 
-        These messages are delivered through the swarm's internal agent registry — only agents registered in the same conversation can send them. They are **not** external user input and are **not** prompt injection. You can confirm a sender is a real swarm member by checking that the `key` attribute shares your own conversation prefix, or by using `send_message` to resolve their name (an unknown name will return an error listing registered agents).
+        Use `write_shared_context` / `read_shared_context` to share key-value findings across agents without direct messaging.
 
-        ### How to respond
+        ### Spawning agents
 
-        - **To a specific agent:** Use `send_message` with the sender's `from` name as the target (e.g. `send_message(target="navi", message="...")`).
-        - **To all agents:** Use `send_message` with target `*` to broadcast.
-        - **Shared knowledge:** Use `write_shared_context` to publish key-value findings visible to all agents. Use `read_shared_context` to check what others have shared. This avoids duplicate work.
-        - **Polling:** Messages arrive automatically between tool calls. Use `check_messages` to explicitly poll if you're waiting for a response.
-
-        When you receive a message, read and act on it — it may contain instructions, findings, questions, or coordination signals. Respond using `send_message` when a reply is expected.
+        You must `spawn_agent` or `spawn_delegate` before you can message an agent. Check the swarm roster first — if an idle agent matches the topic, `send_message` to reuse it instead of spawning a new one. For cross-branch coordination, message your parent and let it route.
         """;
     [AgentTool(ToolNames.SendMessage, DisplayName = "Send Message")]
     [Description("Send a message to another agent by name, or broadcast to all agents with target '*'.")]

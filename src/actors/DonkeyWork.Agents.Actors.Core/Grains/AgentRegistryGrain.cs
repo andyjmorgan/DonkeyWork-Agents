@@ -207,6 +207,22 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         return Task.FromResult<IReadOnlyList<TrackedAgent>>(agents);
     }
 
+    public Task<IReadOnlyList<TrackedAgent>> ListScopedAsync(string agentKey)
+    {
+        var visible = GetVisibleAgents(agentKey);
+        return Task.FromResult<IReadOnlyList<TrackedAgent>>(visible);
+    }
+
+    public Task<string> GetScopedRosterAsync(string agentKey)
+    {
+        var allEntries = _agents.Values.Select(e => e.Info).ToList();
+        if (allEntries.Count == 0)
+            return Task.FromResult(string.Empty);
+
+        var roster = BuildRosterTree(agentKey, allEntries);
+        return Task.FromResult(roster);
+    }
+
     #endregion
 
     #region Messaging
@@ -332,6 +348,88 @@ public sealed class AgentRegistryGrain : Grain, IAgentRegistryGrain
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to deliver completion for {AgentKey} to parent", agentKey);
+        }
+    }
+
+    private List<TrackedAgent> GetVisibleAgents(string agentKey)
+    {
+        if (!_agents.TryGetValue(agentKey, out var self))
+            return [];
+
+        var visible = new List<TrackedAgent>();
+
+        // Include parent (one level up)
+        if (_agents.TryGetValue(self.Info.ParentAgentKey, out var parent)
+            && parent.Info.AgentKey != agentKey)
+        {
+            visible.Add(parent.Info);
+        }
+
+        // Include self
+        visible.Add(self.Info);
+
+        // Include all descendants
+        AddDescendants(agentKey, visible);
+
+        return visible;
+    }
+
+    private void AddDescendants(string parentKey, List<TrackedAgent> result)
+    {
+        foreach (var entry in _agents.Values)
+        {
+            if (string.Equals(entry.Info.ParentAgentKey, parentKey, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(entry.Info.AgentKey, parentKey, StringComparison.OrdinalIgnoreCase))
+            {
+                result.Add(entry.Info);
+                AddDescendants(entry.Info.AgentKey, result);
+            }
+        }
+    }
+
+    private static string BuildRosterTree(string selfKey, List<TrackedAgent> allAgents)
+    {
+        var byParent = allAgents
+            .Where(a => !string.Equals(a.AgentKey, a.ParentAgentKey, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(a => a.ParentAgentKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(a => a.SpawnedAt).ToList(), StringComparer.OrdinalIgnoreCase);
+
+        var roots = allAgents
+            .Where(a => string.Equals(a.AgentKey, a.ParentAgentKey, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(a => a.SpawnedAt)
+            .ToList();
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("\n\n## Swarm");
+
+        foreach (var root in roots)
+        {
+            RenderNode(sb, root, selfKey, byParent, 0);
+        }
+
+        return sb.ToString();
+    }
+
+    private static void RenderNode(
+        System.Text.StringBuilder sb,
+        TrackedAgent agent,
+        string selfKey,
+        Dictionary<string, List<TrackedAgent>> byParent,
+        int depth)
+    {
+        var indent = new string(' ', depth * 2);
+        var youMarker = string.Equals(agent.AgentKey, selfKey, StringComparison.OrdinalIgnoreCase) ? " (you)" : "";
+        var status = agent.Status.ToString().ToLowerInvariant();
+        var label = !string.IsNullOrEmpty(agent.Label) ? $" — \"{agent.Label}\"" : "";
+
+        sb.AppendLine($"{indent}- {agent.Name} ({status}{youMarker}){label}");
+
+        if (byParent.TryGetValue(agent.AgentKey, out var children))
+        {
+            foreach (var child in children)
+            {
+                RenderNode(sb, child, selfKey, byParent, depth + 1);
+            }
         }
     }
 

@@ -544,7 +544,23 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             : combinedPrompt;
 
         if (effectiveToolTypes.Contains(typeof(SwarmAgentMessagingTools)))
+        {
             systemPrompt += SwarmAgentMessagingTools.SystemPromptFragment;
+
+            try
+            {
+                var rosterConvId = Guid.Parse(GrainContext.ConversationId);
+                var rosterRegistryKey = AgentKeys.Conversation(IdentityContext.UserId, rosterConvId);
+                var rosterRegistry = GrainFactory.GetGrain<IAgentRegistryGrain>(rosterRegistryKey);
+                var roster = await rosterRegistry.GetScopedRosterAsync(GrainContext.GrainKey);
+                if (!string.IsNullOrEmpty(roster))
+                    systemPrompt += roster;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Failed to inject swarm roster");
+            }
+        }
 
         if (agentCatalog is not null)
             systemPrompt += agentCatalog;
