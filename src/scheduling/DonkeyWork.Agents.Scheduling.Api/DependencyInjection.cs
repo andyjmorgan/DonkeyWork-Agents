@@ -28,7 +28,10 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        var persistenceConnectionString = configuration[$"{PersistenceOptions.SectionName}:ConnectionString"] ?? string.Empty;
+        var persistenceOptions = configuration
+            .GetSection(PersistenceOptions.SectionName)
+            .Get<PersistenceOptions>() ?? new PersistenceOptions();
+        var persistenceConnectionString = persistenceOptions.ConnectionString;
 
         services.AddScoped<IScheduledJobRepository, ScheduledJobRepository>();
         services.AddScoped<IScheduledJobExecutionRepository, ScheduledJobExecutionRepository>();
