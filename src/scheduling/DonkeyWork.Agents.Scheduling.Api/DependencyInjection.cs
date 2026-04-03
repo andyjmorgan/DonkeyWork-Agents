@@ -28,10 +28,7 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        var persistenceConnectionString = configuration
-            .GetSection(PersistenceOptions.SectionName)
-            .Get<PersistenceOptions>()?.ConnectionString
-            ?? throw new InvalidOperationException("Persistence connection string is required for scheduling.");
+        var persistenceConnectionString = configuration[$"{PersistenceOptions.SectionName}:ConnectionString"] ?? string.Empty;
 
         services.AddScoped<IScheduledJobRepository, ScheduledJobRepository>();
         services.AddScoped<IScheduledJobExecutionRepository, ScheduledJobExecutionRepository>();
