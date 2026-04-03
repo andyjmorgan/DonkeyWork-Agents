@@ -22,6 +22,7 @@ using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
+using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
 using DonkeyWork.Agents.Providers.Contracts.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,49 +98,155 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         ExecutionRepository = executionRepository;
     }
 
-    #region Abstract Methods
+    #region Virtual Methods — Contract-Driven Defaults
 
-    /// <summary>
-    /// Returns the MCP server references for the given contract.
-    /// AgentGrain uses contract.McpServers; ConversationGrain discovers them from Navi config.
-    /// </summary>
-    protected abstract McpServerReference[] GetMcpServerReferences(AgentContract contract);
+    protected virtual McpServerReference[] GetMcpServerReferences(AgentContract contract)
+    {
+        return contract.McpServers;
+    }
 
-    /// <summary>
-    /// Initializes MCP tools for this grain. Called once per activation when MCP servers are present.
-    /// </summary>
-    protected abstract Task InitializeMcpToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct);
+    protected virtual async Task InitializeMcpToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
+    {
+        if (McpToolProvider is not null || contract.McpServers is not { Length: > 0 })
+            return;
 
-    /// <summary>
-    /// Returns the A2A server references for the given contract.
-    /// AgentGrain uses contract.A2aServers; ConversationGrain discovers them from Navi config.
-    /// </summary>
-    protected abstract A2aServerReference[] GetA2aServerReferences(AgentContract contract);
+        var allowedIds = new HashSet<Guid>(
+            contract.McpServers
+                .Select(s => Guid.TryParse(s.Id, out var id) ? id : (Guid?)null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value));
 
-    /// <summary>
-    /// Initializes A2A tools for this grain. Called once per activation when A2A servers are present.
-    /// </summary>
-    protected abstract Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct);
+        var httpConfigs = (await McpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
+            .Where(c => allowedIds.Contains(c.Id))
+            .ToList();
+        var stdioConfigs = (await McpServerConfigService.GetEnabledStdioConfigsAsync(ct))
+            .Where(c => allowedIds.Contains(c.Id))
+            .ToList();
 
-    /// <summary>
-    /// Initializes orchestration tools for this grain. Called once per activation when orchestrations are attached.
-    /// </summary>
-    protected abstract Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct);
+        if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
+        {
+            McpToolProvider = new McpToolProvider();
+            await McpToolProvider.InitializeAsync(
+                httpConfigs,
+                stdioConfigs,
+                McpSandboxManagerClient,
+                IdentityContext.UserId.ToString(),
+                Logger,
+                (name, success, ms, toolCount, error) =>
+                {
+                    Emit(new StreamMcpServerStatusEvent(GrainContext.GrainKey, name, success, ms, toolCount, error));
+                },
+                ct);
 
-    /// <summary>
-    /// Returns the agent catalog prompt fragment (e.g., sub-agents or Navi-connected agents).
-    /// </summary>
-    protected abstract Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct);
+            if (contract.EnableSandbox
+                && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
+            {
+                HasMcpSandbox = true;
+                SandboxHandle = new SandboxProvisioningHandle();
+                GrainContext.SandboxHandle = SandboxHandle;
+                _ = ProvisionSandboxInternalAsync(SandboxHandle);
+            }
+        }
+    }
 
-    /// <summary>
-    /// Returns MCP server references for deferred tools prompt, or null if not applicable.
-    /// </summary>
-    protected abstract McpServerReference[]? GetDeferredToolsServers(AgentContract contract);
+    protected virtual A2aServerReference[] GetA2aServerReferences(AgentContract contract)
+    {
+        return contract.A2aServers;
+    }
 
-    /// <summary>
-    /// Allows subclasses to add additional swarm tool types beyond the base logic.
-    /// </summary>
-    protected abstract Type[] GetAdditionalSwarmToolTypes(AgentContract contract, Type[] currentTypes);
+    protected virtual async Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
+    {
+        if (A2aToolProvider is not null || contract.A2aServers is not { Length: > 0 })
+            return;
+
+        var allowedIds = contract.A2aServers.Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allConfigs = await A2aServerConfigService.GetEnabledConnectionConfigsAsync(ct);
+        var configs = allConfigs.Where(c => allowedIds.Contains(c.Id.ToString())).ToList();
+
+        if (configs.Count == 0)
+            return;
+
+        A2aToolProvider = new A2aToolProvider();
+        await A2aToolProvider.InitializeAsync(configs, Logger, ct);
+    }
+
+    protected virtual async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
+    {
+        if (OrchestrationToolProvider is not null || contract.Orchestrations is not { Length: > 0 })
+            return;
+
+        var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
+        var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
+
+        OrchestrationToolProvider = new OrchestrationToolProvider();
+        OrchestrationToolProvider.SetServiceProvider(ServiceProvider);
+        await OrchestrationToolProvider.InitializeAsync(
+            contract.Orchestrations,
+            IdentityContext.UserId,
+            orchestrationService,
+            versionService,
+            Logger,
+            ct);
+    }
+
+    protected virtual Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
+    {
+        if (contract.SubAgents is not { Length: > 0 })
+            return Task.FromResult<string?>(null);
+
+        var catalog = $"\n\n## Sub-Agents\n\nAvailable via `{ToolNames.SpawnAgent}` (use agent name):\n";
+        foreach (var sa in contract.SubAgents)
+        {
+            var desc = !string.IsNullOrEmpty(sa.Description) ? sa.Description : "No description";
+            catalog += $"- **{sa.Name}**: {desc}\n";
+        }
+
+        return Task.FromResult<string?>(catalog);
+    }
+
+    protected virtual McpServerReference[]? GetDeferredToolsServers(AgentContract contract)
+    {
+        return contract.McpServers;
+    }
+
+    protected virtual Type[] GetAdditionalSwarmToolTypes(AgentContract contract, Type[] currentTypes)
+    {
+        var result = currentTypes;
+
+        if (contract.SubAgents is { Length: > 0 }
+            && !result.Contains(typeof(SwarmAgentSpawnTools)))
+        {
+            result = [..result, typeof(SwarmAgentSpawnTools)];
+
+            if (!result.Contains(typeof(SwarmAgentManagementTools)))
+                result = [..result, typeof(SwarmAgentManagementTools)];
+        }
+
+        if (contract.AllowDelegation && !result.Contains(typeof(SwarmDelegateSpawnTools)))
+        {
+            result = [..result, typeof(SwarmDelegateSpawnTools)];
+
+            if (!result.Contains(typeof(SwarmAgentManagementTools)))
+                result = [..result, typeof(SwarmAgentManagementTools)];
+        }
+
+        if (result.Contains(typeof(SwarmAgentManagementTools)))
+        {
+            if (!result.Contains(typeof(SwarmAgentMessagingTools)))
+                result = [..result, typeof(SwarmAgentMessagingTools)];
+
+            if (!result.Contains(typeof(SwarmSharedContextTools)))
+                result = [..result, typeof(SwarmSharedContextTools)];
+        }
+
+        if (!result.Contains(typeof(SwarmAgentMessagingTools)))
+            result = [..result, typeof(SwarmAgentMessagingTools)];
+
+        if (!result.Contains(typeof(SwarmSharedContextTools)))
+            result = [..result, typeof(SwarmSharedContextTools)];
+
+        return result;
+    }
 
     #endregion
 

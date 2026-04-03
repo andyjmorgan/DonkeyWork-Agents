@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddTransient<ModelPipeline>();
         services.AddScoped<GrainContext>();
         services.AddSingleton<SwarmAgentSpawner>();
+        services.AddScoped<IConversationContractHydrator, ConversationContractHydrator>();
 
         return services;
     }

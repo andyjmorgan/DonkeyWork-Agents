@@ -10,15 +10,9 @@ using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
 using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Tools;
-using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
-using DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
-using DonkeyWork.Agents.Orchestrations.Contracts.Services;
-using OrchestrationModels = DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
-using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
-using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Conversations.Contracts.Services;
 using DonkeyWork.Agents.A2a.Contracts.Services;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
@@ -41,7 +35,7 @@ namespace DonkeyWork.Agents.Actors.Core.Grains;
 public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 {
     private readonly AgentContractRegistry _contractRegistry;
-    private readonly IAgentDefinitionService _agentDefinitionService;
+    private readonly IConversationContractHydrator _contractHydrator;
 
     private readonly Channel<ConversationMessage> _queue =
         Channel.CreateUnbounded<ConversationMessage>(new UnboundedChannelOptions { SingleReader = true });
@@ -52,9 +46,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
     private bool _sqlRecordCreated;
     private bool _titleGenerated;
     private bool _registeredInRegistry;
-    private McpServerReference[] _discoveredMcpServers = [];
-    private A2aServerReference[]? _discoveredA2aServers;
-    private IReadOnlyList<NaviAgentDefinitionV1>? _naviAgentDefinitions;
+    private AgentContract? _hydratedContract;
     private DateTimeOffset _activatedAt;
 
     public ConversationGrain(
@@ -71,7 +63,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         McpSandboxManagerClient mcpSandboxManagerClient,
         IGrainMessageStore messageStore,
         IPromptService promptService,
-        IAgentDefinitionService agentDefinitionService,
+        IConversationContractHydrator contractHydrator,
         IModelCatalogService modelCatalogService,
         IAgentExecutionRepository executionRepository)
         : base(
@@ -91,162 +83,24 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             executionRepository)
     {
         _contractRegistry = contractRegistry;
-        _agentDefinitionService = agentDefinitionService;
+        _contractHydrator = contractHydrator;
     }
 
-    #region Abstract Method Implementations
+    #region Overrides
 
-    protected override McpServerReference[] GetMcpServerReferences(AgentContract contract)
+    protected override Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
     {
-        return _discoveredMcpServers;
-    }
-
-    protected override async Task InitializeMcpToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
-    {
-        if (McpToolProvider is not null)
-            return;
-
-        var httpConfigs = await McpServerConfigService.GetNaviConnectionConfigsAsync(ct);
-        var stdioConfigs = await McpServerConfigService.GetNaviStdioConfigsAsync(ct);
-
-        if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
-        {
-            McpToolProvider = new McpToolProvider();
-            await McpToolProvider.InitializeAsync(
-                httpConfigs,
-                stdioConfigs,
-                McpSandboxManagerClient,
-                IdentityContext.UserId.ToString(),
-                Logger,
-                (name, success, ms, toolCount, error) =>
-                {
-                    Emit(new StreamMcpServerStatusEvent(GrainContext.GrainKey, name, success, ms, toolCount, error));
-                },
-                ct);
-
-            _discoveredMcpServers = httpConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description })
-                .Concat(stdioConfigs.Select(c => new McpServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description }))
-                .ToArray();
-            GrainContext.McpServers = _discoveredMcpServers;
-
-            // Auto-include sandbox tools when MCP servers are connected
-            if (!contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
-            {
-                HasMcpSandbox = true;
-                SandboxHandle = new SandboxProvisioningHandle();
-                GrainContext.SandboxHandle = SandboxHandle;
-                _ = ProvisionSandboxInternalAsync(SandboxHandle);
-            }
-        }
-    }
-
-    protected override A2aServerReference[] GetA2aServerReferences(AgentContract contract)
-    {
-        return _discoveredA2aServers ?? [];
-    }
-
-    protected override async Task InitializeA2aToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
-    {
-        if (A2aToolProvider is not null)
-            return;
-
-        var configs = await A2aServerConfigService.GetNaviConnectionConfigsAsync(ct);
-
-        if (configs.Count == 0)
-        {
-            _discoveredA2aServers = [];
-            return;
-        }
-
-        A2aToolProvider = new A2aToolProvider();
-        await A2aToolProvider.InitializeAsync(configs, Logger, ct);
-
-        _discoveredA2aServers = configs
-            .Select(c => new A2aServerReference { Id = c.Id.ToString(), Name = c.Name, Description = c.Description })
-            .ToArray();
-        GrainContext.A2aServers = _discoveredA2aServers;
-    }
-
-    protected override async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
-    {
-        if (OrchestrationToolProvider is not null)
-            return;
-
-        try
-        {
-            var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
-            var toolEnabled = await orchestrationService.ListToolEnabledAsync(ct);
-
-            if (toolEnabled.Count == 0)
-                return;
-
-            Logger.LogInformation("Discovered {Count} tool-enabled orchestrations", toolEnabled.Count);
-
-            var preloaded = toolEnabled
-                .Select(t => (t.Orchestration, t.Version))
-                .ToList();
-
-            OrchestrationToolProvider = new OrchestrationToolProvider();
-            OrchestrationToolProvider.SetServiceProvider(ServiceProvider);
-            OrchestrationToolProvider.InitializeFromPreloadedData(
-                preloaded, IdentityContext.UserId, Logger);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to initialize orchestration tools");
-        }
-    }
-
-    protected override async Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
-    {
-        // Discover Navi-connected custom agent definitions (lazy, once per activation)
-        if (_naviAgentDefinitions is null)
-        {
-            _naviAgentDefinitions = await _agentDefinitionService.GetNaviConnectedAsync(ct);
-        }
-
-        if (_naviAgentDefinitions is not { Count: > 0 })
-            return null;
+        if (contract.SubAgents is not { Length: > 0 })
+            return Task.FromResult<string?>(null);
 
         var catalog = $"\n\n## Custom Agents\n\nAvailable via `{ToolNames.SpawnAgent}` (use agent name):\n";
-        foreach (var agent in _naviAgentDefinitions)
+        foreach (var sa in contract.SubAgents)
         {
-            var desc = !string.IsNullOrEmpty(agent.Description) ? agent.Description : "No description";
-            catalog += $"- **{agent.Name}** (agent_id: `{agent.Id}`): {desc}\n";
+            var desc = !string.IsNullOrEmpty(sa.Description) ? sa.Description : "No description";
+            catalog += $"- **{sa.Name}** (agent_id: `{sa.Id}`): {desc}\n";
         }
 
-        return catalog;
-    }
-
-    protected override McpServerReference[]? GetDeferredToolsServers(AgentContract contract)
-    {
-        return _discoveredMcpServers;
-    }
-
-    protected override Type[] GetAdditionalSwarmToolTypes(AgentContract contract, Type[] currentTypes)
-    {
-        var result = currentTypes;
-
-        // Auto-include custom agent spawn tools when Navi-connected agents exist
-        if (_naviAgentDefinitions is { Count: > 0 }
-            && !result.Contains(typeof(SwarmAgentSpawnTools)))
-        {
-            result = [..result, typeof(SwarmAgentSpawnTools)];
-
-            if (!result.Contains(typeof(SwarmAgentManagementTools)))
-                result = [..result, typeof(SwarmAgentManagementTools)];
-        }
-
-        if (result.Contains(typeof(SwarmAgentManagementTools)))
-        {
-            if (!result.Contains(typeof(SwarmAgentMessagingTools)))
-                result = [..result, typeof(SwarmAgentMessagingTools)];
-
-            if (!result.Contains(typeof(SwarmSharedContextTools)))
-                result = [..result, typeof(SwarmSharedContextTools)];
-        }
-
-        return result;
+        return Task.FromResult<string?>(catalog);
     }
 
     #endregion
@@ -397,7 +251,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             {
                 Interlocked.Decrement(ref _pendingCount);
 
-                var contract = ResolveContract();
+                var contract = await ResolveContractAsync(CancellationToken.None);
                 Contract = contract;
 
                 if (ExecutionId == Guid.Empty)
@@ -581,10 +435,19 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
     #region Helpers
 
-    private AgentContract ResolveContract()
+    private async Task<AgentContract> ResolveContractAsync(CancellationToken ct)
     {
+        if (_hydratedContract is not null)
+            return _hydratedContract;
+
         var descriptor = _contractRegistry.GetContract("conversation");
-        return descriptor?.Contract ?? AgentContracts.Conversation();
+        var baseContract = descriptor?.Contract ?? AgentContracts.Conversation();
+        _hydratedContract = await _contractHydrator.HydrateAsync(baseContract, ct);
+
+        GrainContext.McpServers = _hydratedContract.McpServers;
+        GrainContext.A2aServers = _hydratedContract.A2aServers;
+
+        return _hydratedContract;
     }
 
     private static InternalMessage FormatMessage(ConversationMessage message)
