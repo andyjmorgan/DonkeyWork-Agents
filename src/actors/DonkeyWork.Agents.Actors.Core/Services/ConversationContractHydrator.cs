@@ -33,17 +33,10 @@ public sealed class ConversationContractHydrator : IConversationContractHydrator
 
     public async Task<AgentContract> HydrateAsync(AgentContract baseContract, CancellationToken ct = default)
     {
-        var mcpTask = DiscoverMcpServersAsync(ct);
-        var a2aTask = DiscoverA2aServersAsync(ct);
-        var agentsTask = DiscoverSubAgentsAsync(ct);
-        var orchestrationsTask = DiscoverOrchestrationsAsync(ct);
-
-        await Task.WhenAll(mcpTask, a2aTask, agentsTask, orchestrationsTask);
-
-        var mcpServers = await mcpTask;
-        var a2aServers = await a2aTask;
-        var subAgents = await agentsTask;
-        var orchestrations = await orchestrationsTask;
+        var mcpServers = await DiscoverMcpServersAsync(ct);
+        var a2aServers = await DiscoverA2aServersAsync(ct);
+        var subAgents = await DiscoverSubAgentsAsync(ct);
+        var orchestrations = await DiscoverOrchestrationsAsync(ct);
 
         var enableSandbox = mcpServers.Length > 0
             || baseContract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase);
