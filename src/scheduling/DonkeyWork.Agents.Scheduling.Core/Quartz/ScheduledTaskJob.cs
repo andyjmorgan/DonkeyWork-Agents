@@ -56,7 +56,10 @@ public class ScheduledTaskJob : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        var scheduleIdStr = context.MergedJobDataMap.GetString(ScheduleDataMapKeys.ScheduleId);
+        var dataMap = context.MergedJobDataMap;
+        var scheduleIdStr = dataMap.ContainsKey(ScheduleDataMapKeys.ScheduleId)
+            ? dataMap.GetString(ScheduleDataMapKeys.ScheduleId)
+            : null;
         if (!Guid.TryParse(scheduleIdStr, out var scheduleId))
         {
             _logger.LogError("ScheduledTaskJob fired without valid ScheduleId in JobDataMap");

@@ -199,6 +199,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Schedulin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Scheduling.Api", "src\scheduling\DonkeyWork.Agents.Scheduling.Api\DonkeyWork.Agents.Scheduling.Api.csproj", "{1F0AF889-A887-4829-A65C-1E67132F3A4D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test-Scheduling", "test-Scheduling", "{167F4640-D6D4-AFE0-02EC-1E9AE7F55420}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DonkeyWork.Agents.Scheduling.Core.Tests", "test\scheduling\DonkeyWork.Agents.Scheduling.Core.Tests\DonkeyWork.Agents.Scheduling.Core.Tests.csproj", "{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1013,6 +1017,18 @@ Global
 		{1F0AF889-A887-4829-A65C-1E67132F3A4D}.Release|x64.Build.0 = Release|Any CPU
 		{1F0AF889-A887-4829-A65C-1E67132F3A4D}.Release|x86.ActiveCfg = Release|Any CPU
 		{1F0AF889-A887-4829-A65C-1E67132F3A4D}.Release|x86.Build.0 = Release|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Debug|x64.Build.0 = Debug|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Debug|x86.Build.0 = Debug|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Release|x64.ActiveCfg = Release|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Release|x64.Build.0 = Release|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Release|x86.ActiveCfg = Release|Any CPU
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1111,5 +1127,6 @@ Global
 		{787F70A9-6DF9-44D2-8764-4DE77632FABF} = {E3D57140-7D09-C4AB-8032-BDA2F5B734C7}
 		{4F4ADEF6-6499-492F-82AF-9BA778FF0CBB} = {E3D57140-7D09-C4AB-8032-BDA2F5B734C7}
 		{1F0AF889-A887-4829-A65C-1E67132F3A4D} = {E3D57140-7D09-C4AB-8032-BDA2F5B734C7}
+		{CC49D19B-8FBC-4D4D-8A0C-F63E7AEF2ECB} = {167F4640-D6D4-AFE0-02EC-1E9AE7F55420}
 	EndGlobalSection
 EndGlobal
