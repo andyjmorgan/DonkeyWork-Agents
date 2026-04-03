@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -25,21 +26,31 @@ public class AgentExecutionsController : ControllerBase
     }
 
     /// <summary>
-    /// Lists all agent executions for a conversation, ordered by start time.
+    /// Lists agent executions. When conversationId is provided, returns executions for that conversation.
+    /// Otherwise returns all executions for the current user with pagination.
     /// </summary>
     [HttpGet]
-    [ProducesResponseType<IReadOnlyList<AgentExecutionSummaryV1>>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<PaginatedResponse<AgentExecutionSummaryV1>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> ListByConversation(
-        [FromQuery] Guid conversationId,
+    public async Task<IActionResult> List(
+        [FromQuery] Guid? conversationId,
+        [FromQuery] PaginationRequest pagination,
         CancellationToken ct)
     {
-        if (conversationId == Guid.Empty)
-            return BadRequest("conversationId is required.");
+        if (conversationId.HasValue)
+        {
+            var executions = await _executionService.ListByConversationAsync(conversationId.Value, ct);
+            return Ok(new PaginatedResponse<AgentExecutionSummaryV1>
+            {
+                Items = executions,
+                Offset = 0,
+                Limit = executions.Count,
+                TotalCount = executions.Count,
+            });
+        }
 
-        var executions = await _executionService.ListByConversationAsync(conversationId, ct);
-        return Ok(executions);
+        var result = await _executionService.ListAsync(pagination.Offset, pagination.GetLimit(), ct);
+        return Ok(result);
     }
 
     /// <summary>

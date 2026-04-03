@@ -124,7 +124,7 @@ export function ExecutionSidePanel({
     setError(null);
     agentExecutions
       .listByConversation(conversationId)
-      .then(setExecutions)
+      .then(r => setExecutions(r.items))
       .catch(() => setError("Failed to load executions"))
       .finally(() => setIsLoading(false));
   }, [isOpen, conversationId]);

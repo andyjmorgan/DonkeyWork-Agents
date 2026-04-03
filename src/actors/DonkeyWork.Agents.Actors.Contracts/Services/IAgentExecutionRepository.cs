@@ -62,4 +62,10 @@ public interface IAgentExecutionRepository
     /// </summary>
     Task<IReadOnlyList<AgentExecutionSummaryV1>> ListByConversationAsync(
         Guid conversationId, Guid userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Lists all executions for a user with pagination, ordered by started_at descending.
+    /// </summary>
+    Task<(IReadOnlyList<AgentExecutionSummaryV1> Items, int TotalCount)> ListAsync(
+        Guid userId, int offset, int limit, CancellationToken ct = default);
 }

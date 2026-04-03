@@ -1,5 +1,6 @@
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 
 namespace DonkeyWork.Agents.Actors.Core.Services;
@@ -33,6 +34,19 @@ public sealed class AgentExecutionService : IAgentExecutionService
         Guid conversationId, CancellationToken ct = default)
     {
         return _repository.ListByConversationAsync(conversationId, _identityContext.UserId, ct);
+    }
+
+    public async Task<PaginatedResponse<AgentExecutionSummaryV1>> ListAsync(
+        int offset, int limit, CancellationToken ct = default)
+    {
+        var (items, totalCount) = await _repository.ListAsync(_identityContext.UserId, offset, limit, ct);
+        return new PaginatedResponse<AgentExecutionSummaryV1>
+        {
+            Items = items,
+            Offset = offset,
+            Limit = limit,
+            TotalCount = totalCount,
+        };
     }
 
     public async Task<GetAgentExecutionMessagesResponseV1?> GetMessagesAsync(Guid executionId, CancellationToken ct = default)

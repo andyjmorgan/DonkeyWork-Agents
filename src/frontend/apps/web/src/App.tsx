@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, A2aServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, RecordingsPage, SchedulesPage, ScheduleDetailPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, A2aServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, RecordingsPage, SchedulesPage, ScheduleDetailPage, AgentExecutionsPage, AgentExecutionDetailPage } from '@/pages'
 import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -92,6 +92,8 @@ export default function App() {
             <Route path="/agent-chat/:conversationId" element={<AgentChatPage />} />
             <Route path="/executions" element={<ExecutionsPage />} />
             <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
+            <Route path="/agent-executions" element={<AgentExecutionsPage />} />
+            <Route path="/agent-executions/:id" element={<AgentExecutionDetailPage />} />
             <Route path="/workspace" element={<ProjectsPage />} />
             <Route path="/workspace/:id" element={<ProjectDetailPage />} />
             <Route path="/workspace/:projectId/milestones/:milestoneId" element={<MilestoneDetailPage />} />
