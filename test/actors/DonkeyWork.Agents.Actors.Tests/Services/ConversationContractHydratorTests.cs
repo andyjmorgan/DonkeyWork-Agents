@@ -177,7 +177,7 @@ public class ConversationContractHydratorTests
         Assert.Single(result.Orchestrations);
         Assert.Equal(orchId.ToString(), result.Orchestrations[0].Id);
         Assert.Equal("data-pipeline", result.Orchestrations[0].Name);
-        Assert.Equal("run_pipeline", result.Orchestrations[0].ToolName);
+        Assert.Equal("data-pipeline", result.Orchestrations[0].ToolName);
         Assert.Equal(versionId.ToString(), result.Orchestrations[0].VersionId);
     }
 
