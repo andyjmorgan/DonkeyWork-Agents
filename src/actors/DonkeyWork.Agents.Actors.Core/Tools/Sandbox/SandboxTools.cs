@@ -138,8 +138,12 @@ public sealed class SandboxTools
 
         ### Skills
 
-        The sandbox has skills at `/home/sandbox/skills/`. To discover available skills:
-        `sandbox_exec("ls /home/sandbox/skills/")`
+        Skills are stored in two locations:
+        - `/home/sandbox/skills/` — system skills (read-only)
+        - `/home/sandbox/files/skills/` — user skills (read-write, persisted)
+
+        To discover available skills:
+        `sandbox_exec("ls /home/sandbox/skills/ /home/sandbox/files/skills/ 2>/dev/null")`
 
         Before using a skill, read its instructions:
         `sandbox_exec("cat /home/sandbox/skills/{name}/SKILL.md")`
