@@ -11,7 +11,7 @@ public class ConversationRpcTargetTests
     #region Message Tests
 
     [Fact]
-    public async Task Message_SubscribesAndPostsMessage()
+    public async Task Message_PostsMessageWithoutResubscribing()
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
@@ -19,10 +19,10 @@ public class ConversationRpcTargetTests
         var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
 
         // Act
-        var result = await target.Message("Hello");
+        await target.Message("Hello");
 
         // Assert
-        grain.Verify(g => g.SubscribeAsync(observer.Object), Times.Once);
+        grain.Verify(g => g.SubscribeAsync(It.IsAny<IAgentResponseObserver>()), Times.Never);
         grain.Verify(g => g.PostUserMessageAsync("Hello"), Times.Once);
     }
 
@@ -40,22 +40,6 @@ public class ConversationRpcTargetTests
         // Assert
         var status = result.GetType().GetProperty("status")?.GetValue(result)?.ToString();
         Assert.Equal("queued", status);
-    }
-
-    [Fact]
-    public async Task Message_ResubscribesOnEachCall()
-    {
-        // Arrange
-        var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
-
-        // Act
-        await target.Message("First");
-        await target.Message("Second");
-
-        // Assert
-        grain.Verify(g => g.SubscribeAsync(observer.Object), Times.Exactly(2));
     }
 
     #endregion
