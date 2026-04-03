@@ -28,11 +28,13 @@ import {
 } from '@donkeywork/ui'
 import {
   schedules,
+  agentDefinitions,
   type ScheduledJobSummary,
   type ScheduleMode,
   type ScheduleJobType,
   type ScheduleTargetType,
   type CreateScheduleRequest,
+  type AgentDefinitionSummary,
 } from '@donkeywork/api-client'
 
 const jobTypeLabels: Record<ScheduleJobType, string> = {
@@ -95,6 +97,7 @@ export function SchedulesPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [agentList, setAgentList] = useState<AgentDefinitionSummary[]>([])
   const [newSchedule, setNewSchedule] = useState<CreateScheduleRequest>({
     name: '',
     scheduleMode: 'Recurring',
@@ -105,8 +108,12 @@ export function SchedulesPage() {
 
   const loadSchedules = useCallback(async () => {
     try {
-      const data = await schedules.list()
+      const [data, agents] = await Promise.all([
+        schedules.list(),
+        agentDefinitions.list(),
+      ])
       setSchedulesList(data.items)
+      setAgentList(agents)
     } catch (error) {
       console.error('Failed to load schedules:', error)
     }
@@ -417,7 +424,7 @@ export function SchedulesPage() {
               <Label>Target</Label>
               <Select
                 value={newSchedule.targetType}
-                onValueChange={(v) => setNewSchedule({ ...newSchedule, targetType: v as ScheduleTargetType })}
+                onValueChange={(v) => setNewSchedule({ ...newSchedule, targetType: v as ScheduleTargetType, targetAgentDefinitionId: undefined })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -426,6 +433,25 @@ export function SchedulesPage() {
                 </SelectContent>
               </Select>
             </div>
+            {newSchedule.targetType === 'CustomAgent' && (
+              <div>
+                <Label>Agent</Label>
+                <Select
+                  value={newSchedule.targetAgentDefinitionId ?? ''}
+                  onValueChange={(v) => setNewSchedule({ ...newSchedule, targetAgentDefinitionId: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select an agent" /></SelectTrigger>
+                  <SelectContent>
+                    {agentList.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {agentList.length === 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">No agent definitions found</p>
+                )}
+              </div>
+            )}
             <div>
               <Label>Prompt</Label>
               <Textarea
