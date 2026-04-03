@@ -291,6 +291,9 @@ importers:
       react:
         specifier: ^19.2.0
         version: 19.2.4
+      react-cron-generator:
+        specifier: ^2.3.0
+        version: 2.3.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react-dom:
         specifier: ^19.2.0
         version: 19.2.4(react@19.2.4)
@@ -4065,6 +4068,12 @@ packages:
 
   react-base16-styling@0.10.0:
     resolution: {integrity: sha512-H1k2eFB6M45OaiRru3PBXkuCcn2qNmx+gzLb4a9IPMR7tMH8oBRXU5jGbPDYG1Hz+82d88ED0vjR8BmqU3pQdg==}
+
+  react-cron-generator@2.3.0:
+    resolution: {integrity: sha512-bf56ymmpNdSdyW50W0TY2k7t6tT+Q7CDRpAPnRWjDSdd0TIs6qc+Iwj1Dhp9btEKisIZplLu0FZ5Rq87UiqTSg==}
+    peerDependencies:
+      react: '>=16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0'
+      react-dom: '>=16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0'
 
   react-dom@19.2.4:
     resolution: {integrity: sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==}
@@ -8598,6 +8607,12 @@ snapshots:
       color: 4.2.3
       csstype: 3.2.3
       lodash-es: 4.17.23
+
+  react-cron-generator@2.3.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      cronstrue: 3.14.0
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
 
   react-dom@19.2.4(react@19.2.4):
     dependencies:
