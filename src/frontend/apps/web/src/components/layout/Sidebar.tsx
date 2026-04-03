@@ -40,7 +40,6 @@ const navigationGroups: NavGroup[] = [
       { name: 'Research', href: '/research', icon: FlaskConical, iconColor: 'text-cyan-500' },
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
       { name: 'Listen', href: '/recordings', icon: Volume2, iconColor: 'text-pink-500' },
-      { name: 'Schedules', href: '/schedules', icon: Calendar, iconColor: 'text-orange-500' },
     ],
   },
   {
@@ -49,6 +48,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       { name: 'Orchestrations', href: '/orchestrations', icon: List, iconColor: 'text-cyan-500' },
       { name: 'Agent Definitions', href: '/agent-definitions', icon: Brain, iconColor: 'text-blue-500' },
+      { name: 'Schedules', href: '/schedules', icon: Calendar, iconColor: 'text-orange-500' },
       { name: 'Executions', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
     ],
   },
