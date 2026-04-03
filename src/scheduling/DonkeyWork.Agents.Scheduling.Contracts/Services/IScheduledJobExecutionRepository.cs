@@ -10,6 +10,8 @@ public interface IScheduledJobExecutionRepository
 
     Task UpdateCompletionAsync(Guid id, ScheduleExecutionStatus status, string? errorDetails, string? outputSummary, Guid? correlationId, CancellationToken ct = default);
 
+    Task SetCorrelationIdAsync(Guid id, Guid correlationId, CancellationToken ct = default);
+
     Task<ScheduledJobExecutionV1?> GetAsync(Guid id, CancellationToken ct = default);
 
     Task<PaginatedResponse<ScheduledJobExecutionV1>> ListByScheduleIdAsync(Guid scheduledJobId, PaginationRequest? pagination = null, CancellationToken ct = default);

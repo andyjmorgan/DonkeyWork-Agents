@@ -35,6 +35,7 @@ public class SchedulingService : ISchedulingService
     public async Task<CreateScheduleResponseV1> CreateAsync(CreateScheduleRequestV1 request, CancellationToken ct = default)
     {
         request.TimeZoneId ??= _defaultTimeZone;
+        ValidateTimeZone(request.TimeZoneId);
 
         if (request.ScheduleMode == ScheduleMode.Recurring)
         {
@@ -46,6 +47,7 @@ public class SchedulingService : ISchedulingService
         var triggerKey = QuartzKeyFactory.CreateTriggerKey(scheduleId);
 
         var detail = await _jobRepository.CreateAsync(
+            scheduleId,
             request,
             QuartzKeyFactory.FormatJobKey(jobKey),
             QuartzKeyFactory.FormatTriggerKey(triggerKey),
@@ -53,7 +55,7 @@ public class SchedulingService : ISchedulingService
 
         var scheduler = await _schedulerFactory.GetScheduler(ct);
 
-        var job = BuildJobDetail(detail.Id, jobKey);
+        var job = BuildJobDetail(scheduleId, jobKey);
         var trigger = BuildTrigger(request, triggerKey, jobKey, request.TimeZoneId);
 
         await scheduler.ScheduleJob(job, trigger, ct);
@@ -108,6 +110,11 @@ public class SchedulingService : ISchedulingService
         if (request.CronExpression is not null)
         {
             ValidateCronExpression(request.CronExpression);
+        }
+
+        if (request.TimeZoneId is not null)
+        {
+            ValidateTimeZone(request.TimeZoneId);
         }
 
         var existing = await _jobRepository.GetAsync(id, ct);
@@ -228,6 +235,22 @@ public class SchedulingService : ISchedulingService
 
         if (!CronHelper.MeetsMinimumInterval(normalized, _minimumCronIntervalHours))
             throw new ArgumentException($"Cron interval must be at least {_minimumCronIntervalHours} hours.");
+    }
+
+    private static void ValidateTimeZone(string timeZoneId)
+    {
+        try
+        {
+            TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            throw new ArgumentException($"Unknown timezone: {timeZoneId}");
+        }
+        catch (InvalidTimeZoneException)
+        {
+            throw new ArgumentException($"Invalid timezone: {timeZoneId}");
+        }
     }
 
     private static IJobDetail BuildJobDetail(Guid scheduleId, JobKey jobKey)

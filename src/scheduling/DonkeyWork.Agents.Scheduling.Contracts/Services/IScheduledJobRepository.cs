@@ -6,7 +6,7 @@ namespace DonkeyWork.Agents.Scheduling.Contracts.Services;
 
 public interface IScheduledJobRepository
 {
-    Task<ScheduledJobDetailV1> CreateAsync(CreateScheduleRequestV1 request, string quartzJobKey, string quartzTriggerKey, CancellationToken ct = default);
+    Task<ScheduledJobDetailV1> CreateAsync(Guid scheduleId, CreateScheduleRequestV1 request, string quartzJobKey, string quartzTriggerKey, CancellationToken ct = default);
 
     Task<ScheduledJobDetailV1?> GetAsync(Guid id, CancellationToken ct = default);
 

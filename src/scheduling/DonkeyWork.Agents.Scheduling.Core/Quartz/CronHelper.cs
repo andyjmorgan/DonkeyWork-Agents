@@ -93,8 +93,13 @@ public static class CronHelper
     /// </summary>
     private static string TranslateDayOfWeek(string dow)
     {
+        if (dow.Contains(',') || dow.Contains('-') || dow.Contains('/'))
+        {
+            return TranslateDayOfWeekComplex(dow);
+        }
+
         if (int.TryParse(dow, out var numeric))
-            return (numeric + 1).ToString();
+            return TranslateSingleDayNumber(numeric).ToString();
 
         return dow.ToUpperInvariant() switch
         {
@@ -107,5 +112,39 @@ public static class CronHelper
             "SAT" => "7",
             _ => dow
         };
+    }
+
+    private static string TranslateDayOfWeekComplex(string dow)
+    {
+        var result = new System.Text.StringBuilder();
+        var i = 0;
+        while (i < dow.Length)
+        {
+            if (char.IsDigit(dow[i]))
+            {
+                var start = i;
+                while (i < dow.Length && char.IsDigit(dow[i])) i++;
+                var num = int.Parse(dow[start..i]);
+                result.Append(TranslateSingleDayNumber(num));
+            }
+            else if (char.IsLetter(dow[i]))
+            {
+                var start = i;
+                while (i < dow.Length && char.IsLetter(dow[i])) i++;
+                result.Append(dow[start..i].ToUpperInvariant());
+            }
+            else
+            {
+                result.Append(dow[i]);
+                i++;
+            }
+        }
+        return result.ToString();
+    }
+
+    private static int TranslateSingleDayNumber(int linuxDay)
+    {
+        if (linuxDay == 7) return 1;
+        return linuxDay + 1;
     }
 }

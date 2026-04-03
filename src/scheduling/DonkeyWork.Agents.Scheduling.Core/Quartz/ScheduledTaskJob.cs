@@ -127,11 +127,8 @@ public class ScheduledTaskJob : IJob
         var scheduleExecutionIdStr = context.Get(ScheduleDataMapKeys.ScheduleExecutionId) as string;
         if (Guid.TryParse(scheduleExecutionIdStr, out var scheduleExecutionId))
         {
-            await _scheduledJobExecutionRepository.UpdateCompletionAsync(
+            await _scheduledJobExecutionRepository.SetCorrelationIdAsync(
                 scheduleExecutionId,
-                ScheduleExecutionStatus.Running,
-                null,
-                null,
                 agentExecutionId,
                 context.CancellationToken);
         }

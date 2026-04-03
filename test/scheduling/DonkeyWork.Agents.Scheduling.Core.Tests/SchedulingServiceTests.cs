@@ -57,11 +57,13 @@ public class SchedulingServiceTests
             UserPrompt = "Do something",
         };
 
+        Guid capturedId = Guid.Empty;
         _jobRepoMock
-            .Setup(r => r.CreateAsync(It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ScheduledJobDetailV1
+            .Setup(r => r.CreateAsync(It.IsAny<Guid>(), It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, CreateScheduleRequestV1, string, string, CancellationToken>((id, _, _, _, _) => capturedId = id)
+            .ReturnsAsync((Guid id, CreateScheduleRequestV1 _, string _, string _, CancellationToken _) => new ScheduledJobDetailV1
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 Name = request.Name,
                 CreatedAt = DateTimeOffset.UtcNow,
             });
@@ -70,8 +72,11 @@ public class SchedulingServiceTests
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result.Name);
-        _jobRepoMock.Verify(r => r.CreateAsync(It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        _schedulerMock.Verify(s => s.ScheduleJob(It.IsAny<IJobDetail>(), It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(capturedId, result.Id);
+        _jobRepoMock.Verify(r => r.CreateAsync(It.IsAny<Guid>(), It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _schedulerMock.Verify(s => s.ScheduleJob(
+            It.Is<IJobDetail>(j => j.Key.Name.Contains(capturedId.ToString())),
+            It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -88,10 +93,10 @@ public class SchedulingServiceTests
         };
 
         _jobRepoMock
-            .Setup(r => r.CreateAsync(It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ScheduledJobDetailV1
+            .Setup(r => r.CreateAsync(It.IsAny<Guid>(), It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CreateScheduleRequestV1 _, string _, string _, CancellationToken _) => new ScheduledJobDetailV1
             {
-                Id = Guid.NewGuid(),
+                Id = id,
                 Name = request.Name,
                 CreatedAt = DateTimeOffset.UtcNow,
             });
@@ -148,12 +153,13 @@ public class SchedulingServiceTests
         };
 
         _jobRepoMock
-            .Setup(r => r.CreateAsync(It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ScheduledJobDetailV1 { Id = Guid.NewGuid(), Name = request.Name, CreatedAt = DateTimeOffset.UtcNow });
+            .Setup(r => r.CreateAsync(It.IsAny<Guid>(), It.IsAny<CreateScheduleRequestV1>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CreateScheduleRequestV1 _, string _, string _, CancellationToken _) => new ScheduledJobDetailV1 { Id = id, Name = request.Name, CreatedAt = DateTimeOffset.UtcNow });
 
         await _service.CreateAsync(request);
 
         _jobRepoMock.Verify(r => r.CreateAsync(
+            It.IsAny<Guid>(),
             It.Is<CreateScheduleRequestV1>(req => req.TimeZoneId == "Europe/Dublin"),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()));
     }

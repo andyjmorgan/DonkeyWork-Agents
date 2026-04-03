@@ -21,6 +21,7 @@ public class ScheduledJobRepository : IScheduledJobRepository
     }
 
     public async Task<ScheduledJobDetailV1> CreateAsync(
+        Guid scheduleId,
         CreateScheduleRequestV1 request,
         string quartzJobKey,
         string quartzTriggerKey,
@@ -31,7 +32,7 @@ public class ScheduledJobRepository : IScheduledJobRepository
 
         var entity = new ScheduledJobEntity
         {
-            Id = Guid.NewGuid(),
+            Id = scheduleId,
             UserId = userId,
             Name = request.Name,
             Description = request.Description,

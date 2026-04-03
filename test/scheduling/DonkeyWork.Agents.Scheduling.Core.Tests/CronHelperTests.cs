@@ -28,6 +28,27 @@ public class CronHelperTests
     }
 
     [Fact]
+    public void NormalizeToQuartzCron_Linux5Field_TranslatesDowRange()
+    {
+        var result = CronHelper.NormalizeToQuartzCron("0 8 * * 1-5");
+        Assert.Equal("0 0 8 ? * 2-6", result);
+    }
+
+    [Fact]
+    public void NormalizeToQuartzCron_Linux5Field_TranslatesDowSunday7()
+    {
+        var result = CronHelper.NormalizeToQuartzCron("0 8 * * 7");
+        Assert.Contains("1", result);
+    }
+
+    [Fact]
+    public void NormalizeToQuartzCron_Linux5Field_TranslatesDowSunday0()
+    {
+        var result = CronHelper.NormalizeToQuartzCron("0 8 * * 0");
+        Assert.Contains("1", result);
+    }
+
+    [Fact]
     public void NormalizeToQuartzCron_Linux5Field_HandlesWildcardDow()
     {
         var result = CronHelper.NormalizeToQuartzCron("0 8 * * *");

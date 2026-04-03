@@ -113,8 +113,9 @@ public class ScheduleReconciliationService : BackgroundService
 
             if (schedule.ScheduleMode == Contracts.Enums.ScheduleMode.Recurring && schedule.CronExpression is not null)
             {
+                var normalized = CronHelper.NormalizeToQuartzCron(schedule.CronExpression);
                 var tz = TimeZoneInfo.FindSystemTimeZoneById(schedule.TimeZoneId);
-                triggerBuilder.WithCronSchedule(schedule.CronExpression, x => x
+                triggerBuilder.WithCronSchedule(normalized, x => x
                     .InTimeZone(tz)
                     .WithMisfireHandlingInstructionFireAndProceed());
             }

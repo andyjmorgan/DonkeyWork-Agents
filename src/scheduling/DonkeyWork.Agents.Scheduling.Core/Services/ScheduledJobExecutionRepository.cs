@@ -62,9 +62,28 @@ public class ScheduledJobExecutionRepository : IScheduledJobExecutionRepository
             return;
 
         entity.Status = status;
-        entity.CompletedAtUtc = DateTimeOffset.UtcNow;
         entity.ErrorDetails = errorDetails;
         entity.OutputSummary = outputSummary;
+        entity.CorrelationId = correlationId;
+        entity.UpdatedAt = DateTimeOffset.UtcNow;
+
+        if (status is ScheduleExecutionStatus.Succeeded or ScheduleExecutionStatus.Failed or ScheduleExecutionStatus.Cancelled)
+        {
+            entity.CompletedAtUtc = DateTimeOffset.UtcNow;
+        }
+
+        await _dbContext.SaveChangesAsync(ct);
+    }
+
+    public async Task SetCorrelationIdAsync(Guid id, Guid correlationId, CancellationToken ct = default)
+    {
+        var entity = await _dbContext.ScheduledJobExecutions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.Id == id, ct);
+
+        if (entity is null)
+            return;
+
         entity.CorrelationId = correlationId;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
