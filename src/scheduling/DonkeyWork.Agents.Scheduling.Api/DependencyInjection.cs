@@ -67,23 +67,26 @@ public static class DependencyInjection
             q.SchedulerId = "AUTO";
             q.SchedulerName = "DonkeyWorkScheduler";
 
-            q.UsePersistentStore(store =>
+            if (!string.IsNullOrEmpty(persistenceConnectionString))
             {
-                store.UsePostgres(pg =>
+                q.UsePersistentStore(store =>
                 {
-                    pg.ConnectionString = persistenceConnectionString;
-                    pg.TablePrefix = "scheduling.qrtz_";
-                });
+                    store.UsePostgres(pg =>
+                    {
+                        pg.ConnectionString = persistenceConnectionString;
+                        pg.TablePrefix = "scheduling.qrtz_";
+                    });
 
-                store.UseSystemTextJsonSerializer();
-                store.UseProperties = true;
+                    store.UseSystemTextJsonSerializer();
+                    store.UseProperties = true;
 
-                store.UseClustering(cluster =>
-                {
-                    cluster.CheckinInterval = TimeSpan.FromSeconds(15);
-                    cluster.CheckinMisfireThreshold = TimeSpan.FromSeconds(20);
+                    store.UseClustering(cluster =>
+                    {
+                        cluster.CheckinInterval = TimeSpan.FromSeconds(15);
+                        cluster.CheckinMisfireThreshold = TimeSpan.FromSeconds(20);
+                    });
                 });
-            });
+            }
 
             q.AddJobListener<ScheduledJobListener>(GroupMatcher<JobKey>.AnyGroup());
         });

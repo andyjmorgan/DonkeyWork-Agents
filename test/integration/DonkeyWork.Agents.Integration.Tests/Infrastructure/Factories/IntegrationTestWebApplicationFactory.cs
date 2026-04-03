@@ -105,12 +105,6 @@ public class IntegrationTestWebApplicationFactory : WebApplicationFactory<Donkey
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                     "McpAuth", _ => { });
 
-            // Replace Quartz persistent store with RAMJobStore for tests
-            services.AddQuartz(q =>
-            {
-                q.UseInMemoryStore();
-            });
-
             // NATS connection uses test container URL from config override above
             // No need to re-register - the Nats:Url config points to the test container
         });
