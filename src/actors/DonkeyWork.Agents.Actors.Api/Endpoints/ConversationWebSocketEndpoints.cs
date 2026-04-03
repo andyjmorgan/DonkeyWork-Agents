@@ -77,15 +77,9 @@ public static class ConversationWebSocketEndpoints
 
 internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResponseObserver observer, string userId, string conversationId, string grainKey)
 {
-    /// <summary>
-    /// Client request: { jsonrpc: "2.0", id: N, method: "message", params: { text: "..." } }
-    /// Re-subscribes the observer on every call so that if the grain deactivated during
-    /// idle and lost its in-memory observer reference, events will flow again.
-    /// </summary>
     public async Task<object> Message(string text)
     {
         SetCallContext();
-        await grain.SubscribeAsync(observer);
         await grain.PostUserMessageAsync(text);
         return new { status = "queued" };
     }
