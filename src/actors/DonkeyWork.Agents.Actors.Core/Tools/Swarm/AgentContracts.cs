@@ -1,5 +1,6 @@
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Common.Contracts.Enums;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
@@ -21,6 +22,7 @@ public static class AgentContracts
         PersistMessages = true,
         DisplayName = "Navi",
         Icon = "bot",
+        ReasoningEffort = ReasoningEffort.High,
         ContextManagement = new ContextManagementConfig
         {
             CompactionEnabled = true,
