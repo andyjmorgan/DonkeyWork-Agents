@@ -135,7 +135,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         Observer = observer;
         EnsureProcessingLoop();
         EmitQueueStatus();
-        EmitMcpServerStatus();
         return Task.CompletedTask;
     }
 
@@ -509,17 +508,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             GrainContext.GrainKey,
             _pendingCount,
             _currentTurnCts is not null));
-    }
-
-    private void EmitMcpServerStatus()
-    {
-        if (McpToolProvider is null) return;
-
-        foreach (var (serverName, toolCount) in McpToolProvider.GetConnectedServerSummaries())
-        {
-            Emit(new StreamMcpServerStatusEvent(
-                GrainContext.GrainKey, serverName, true, 0, toolCount, null));
-        }
     }
 
     private async Task EnsureSqlRecordAsync()
