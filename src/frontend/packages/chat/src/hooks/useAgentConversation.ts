@@ -497,7 +497,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
             appendOrCreate(assistantId, targetKey, "", box);
           }
         }
-        markAgentCompleteGlobal(subKey);
         break;
       }
 
