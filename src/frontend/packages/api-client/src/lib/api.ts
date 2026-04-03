@@ -1981,3 +1981,154 @@ export const tts = {
   deleteRecording: (id: string) =>
     api.delete(`/api/v1/tts/recordings/${id}`),
 }
+
+// Scheduling Types
+export type ScheduleMode = 'OneOff' | 'Recurring'
+export type ScheduleJobType = 'AgentInvocation' | 'Reminder' | 'Maintenance' | 'Cleanup' | 'Archival' | 'ReportGeneration' | 'WorkflowExecution'
+export type ScheduleTargetType = 'Navi' | 'CustomAgent' | 'Orchestration'
+export type ScheduleExecutionStatus = 'Running' | 'Succeeded' | 'Failed' | 'Cancelled'
+export type ScheduleTriggerSource = 'Cron' | 'OneOff' | 'Manual' | 'Webhook'
+
+export interface ScheduledJobSummary {
+  id: string
+  name: string
+  jobType: ScheduleJobType
+  scheduleMode: ScheduleMode
+  cronExpression?: string
+  runAtUtc?: string
+  timeZoneId: string
+  isEnabled: boolean
+  targetType: ScheduleTargetType
+  targetName?: string
+  nextFireTimeUtc?: string
+  prevFireTimeUtc?: string
+  createdAt: string
+}
+
+export interface ScheduledJobPayload {
+  userPrompt: string
+  inputContext?: string
+  version: number
+}
+
+export interface ScheduledJobDetail {
+  id: string
+  name: string
+  description?: string
+  jobType: ScheduleJobType
+  scheduleMode: ScheduleMode
+  cronExpression?: string
+  runAtUtc?: string
+  timeZoneId: string
+  isEnabled: boolean
+  targetType: ScheduleTargetType
+  targetAgentDefinitionId?: string
+  targetOrchestrationId?: string
+  targetName?: string
+  quartzJobKey?: string
+  quartzTriggerKey?: string
+  payload?: ScheduledJobPayload
+  nextFireTimeUtc?: string
+  prevFireTimeUtc?: string
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface ScheduledJobExecution {
+  id: string
+  scheduledJobId: string
+  quartzFireInstanceId?: string
+  triggerSource: ScheduleTriggerSource
+  startedAtUtc: string
+  completedAtUtc?: string
+  status: ScheduleExecutionStatus
+  errorDetails?: string
+  outputSummary?: string
+  executingNodeId?: string
+  correlationId?: string
+}
+
+export interface CreateScheduleRequest {
+  name: string
+  description?: string
+  jobType: ScheduleJobType
+  scheduleMode: ScheduleMode
+  cronExpression?: string
+  runAtUtc?: string
+  timeZoneId?: string
+  targetType: ScheduleTargetType
+  targetAgentDefinitionId?: string
+  targetOrchestrationId?: string
+  userPrompt: string
+  inputContext?: string
+}
+
+export interface CreateScheduleResponse {
+  id: string
+  name: string
+  nextFireTimeUtc?: string
+  createdAt: string
+}
+
+export interface UpdateScheduleRequest {
+  name?: string
+  description?: string
+  jobType?: ScheduleJobType
+  cronExpression?: string
+  runAtUtc?: string
+  timeZoneId?: string
+  targetType?: ScheduleTargetType
+  targetAgentDefinitionId?: string
+  targetOrchestrationId?: string
+  userPrompt?: string
+  inputContext?: string
+}
+
+export interface UpdateScheduleResponse {
+  id: string
+  name: string
+  nextFireTimeUtc?: string
+  updatedAt?: string
+}
+
+// Scheduling API
+export const schedules = {
+  list: (params?: { jobType?: ScheduleJobType; targetType?: ScheduleTargetType; scheduleMode?: ScheduleMode; isEnabled?: boolean; offset?: number; limit?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.jobType) searchParams.set('jobType', params.jobType)
+    if (params?.targetType) searchParams.set('targetType', params.targetType)
+    if (params?.scheduleMode) searchParams.set('scheduleMode', params.scheduleMode)
+    if (params?.isEnabled !== undefined) searchParams.set('isEnabled', String(params.isEnabled))
+    if (params?.offset !== undefined) searchParams.set('offset', String(params.offset))
+    if (params?.limit !== undefined) searchParams.set('limit', String(params.limit))
+    const qs = searchParams.toString()
+    return api.get<PaginatedResponse<ScheduledJobSummary>>(`/api/v1/schedules${qs ? `?${qs}` : ''}`)
+  },
+
+  get: (id: string) =>
+    api.get<ScheduledJobDetail>(`/api/v1/schedules/${id}`),
+
+  create: (data: CreateScheduleRequest) =>
+    api.post<CreateScheduleResponse>('/api/v1/schedules', data),
+
+  update: (id: string, data: UpdateScheduleRequest) =>
+    api.put<UpdateScheduleResponse>(`/api/v1/schedules/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/api/v1/schedules/${id}`),
+
+  enable: (id: string) =>
+    api.post(`/api/v1/schedules/${id}/enable`, {}),
+
+  disable: (id: string) =>
+    api.post(`/api/v1/schedules/${id}/disable`, {}),
+
+  trigger: (id: string) =>
+    api.post(`/api/v1/schedules/${id}/trigger`, {}),
+
+  listExecutions: (id: string, offset = 0, limit = 20) =>
+    api.get<PaginatedResponse<ScheduledJobExecution>>(`/api/v1/schedules/${id}/executions?offset=${offset}&limit=${limit}`),
+
+  getExecution: (executionId: string) =>
+    api.get<ScheduledJobExecution>(`/api/v1/schedules/executions/${executionId}`),
+}

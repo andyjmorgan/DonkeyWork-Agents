@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+        <PackageReference Include="Quartz.AspNetCore" Version="3.17.1" />
+        <PackageReference Include="Quartz.Serialization.SystemTextJson" Version="3.17.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DonkeyWork.Agents.Scheduling.Contracts\DonkeyWork.Agents.Scheduling.Contracts.csproj" />
+        <ProjectReference Include="..\DonkeyWork.Agents.Scheduling.Core\DonkeyWork.Agents.Scheduling.Core.csproj" />
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+        <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+</Project>
