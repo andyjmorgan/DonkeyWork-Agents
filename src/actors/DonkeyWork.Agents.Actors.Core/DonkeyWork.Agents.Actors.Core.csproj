@@ -33,6 +33,7 @@
         <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Notifications.Contracts\DonkeyWork.Agents.Notifications.Contracts.csproj" />
         <ProjectReference Include="..\..\orchestrations\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />
+        <ProjectReference Include="..\..\scheduling\DonkeyWork.Agents.Scheduling.Contracts\DonkeyWork.Agents.Scheduling.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

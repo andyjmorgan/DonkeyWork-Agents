@@ -35,6 +35,7 @@
         <ProjectReference Include="..\agentdefinitions\DonkeyWork.Agents.AgentDefinitions.Api\DonkeyWork.Agents.AgentDefinitions.Api.csproj" />
         <ProjectReference Include="..\prompts\DonkeyWork.Agents.Prompts.Api\DonkeyWork.Agents.Prompts.Api.csproj" />
         <ProjectReference Include="..\a2a\DonkeyWork.Agents.A2a.Api\DonkeyWork.Agents.A2a.Api.csproj" />
+        <ProjectReference Include="..\scheduling\DonkeyWork.Agents.Scheduling.Api\DonkeyWork.Agents.Scheduling.Api.csproj" />
     </ItemGroup>
 
 </Project>

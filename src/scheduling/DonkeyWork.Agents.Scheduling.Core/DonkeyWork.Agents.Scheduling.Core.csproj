@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Quartz" Version="3.17.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DonkeyWork.Agents.Scheduling.Contracts\DonkeyWork.Agents.Scheduling.Contracts.csproj" />
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+        <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
+        <ProjectReference Include="..\..\actors\DonkeyWork.Agents.Actors.Contracts\DonkeyWork.Agents.Actors.Contracts.csproj" />
+        <ProjectReference Include="..\..\agentdefinitions\DonkeyWork.Agents.AgentDefinitions.Contracts\DonkeyWork.Agents.AgentDefinitions.Contracts.csproj" />
+        <ProjectReference Include="..\..\actors\DonkeyWork.Agents.Actors.Core\DonkeyWork.Agents.Actors.Core.csproj" />
+    </ItemGroup>
+
+</Project>

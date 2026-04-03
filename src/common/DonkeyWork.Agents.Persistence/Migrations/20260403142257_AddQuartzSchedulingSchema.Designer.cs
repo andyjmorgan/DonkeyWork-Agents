@@ -3,6 +3,7 @@ using System;
 using DonkeyWork.Agents.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DonkeyWork.Agents.Persistence.Migrations
 {
     [DbContext(typeof(AgentsDbContext))]
-    partial class AgentsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403142257_AddQuartzSchedulingSchema")]
+    partial class AddQuartzSchedulingSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2423,262 +2426,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.ToTable("research_tags", "research");
                 });
 
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("CreatorEmail")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("creator_email");
-
-                    b.Property<string>("CreatorName")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("creator_name");
-
-                    b.Property<string>("CreatorUsername")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("creator_username");
-
-                    b.Property<string>("CronExpression")
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)")
-                        .HasColumnName("cron_expression");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.Property<bool>("IsEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("is_enabled");
-
-                    b.Property<bool>("IsSystem")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_system");
-
-                    b.Property<string>("JobType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("job_type");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("QuartzJobKey")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("quartz_job_key");
-
-                    b.Property<string>("QuartzTriggerKey")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("quartz_trigger_key");
-
-                    b.Property<DateTimeOffset?>("RunAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("run_at_utc");
-
-                    b.Property<string>("ScheduleMode")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("schedule_mode");
-
-                    b.Property<Guid?>("TargetAgentDefinitionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("target_agent_definition_id");
-
-                    b.Property<Guid?>("TargetOrchestrationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("target_orchestration_id");
-
-                    b.Property<string>("TargetType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("target_type");
-
-                    b.Property<string>("TimeZoneId")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasDefaultValue("Europe/Dublin")
-                        .HasColumnName("time_zone_id");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsEnabled")
-                        .HasDatabaseName("ix_scheduled_jobs_is_enabled");
-
-                    b.HasIndex("IsSystem")
-                        .HasDatabaseName("ix_scheduled_jobs_is_system");
-
-                    b.HasIndex("JobType")
-                        .HasDatabaseName("ix_scheduled_jobs_job_type");
-
-                    b.HasIndex("TargetType")
-                        .HasDatabaseName("ix_scheduled_jobs_target_type");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_scheduled_jobs_user_id");
-
-                    b.ToTable("scheduled_jobs", "scheduling");
-                });
-
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobExecutionEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset?>("CompletedAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at_utc");
-
-                    b.Property<Guid?>("CorrelationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("correlation_id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("ErrorDetails")
-                        .HasColumnType("text")
-                        .HasColumnName("error_details");
-
-                    b.Property<string>("ExecutingNodeId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("executing_node_id");
-
-                    b.Property<string>("OutputSummary")
-                        .HasColumnType("text")
-                        .HasColumnName("output_summary");
-
-                    b.Property<string>("QuartzFireInstanceId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("quartz_fire_instance_id");
-
-                    b.Property<Guid>("ScheduledJobId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("scheduled_job_id");
-
-                    b.Property<DateTimeOffset>("StartedAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("started_at_utc");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("status");
-
-                    b.Property<string>("TriggerSource")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("trigger_source");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CorrelationId")
-                        .HasDatabaseName("ix_scheduled_job_executions_correlation_id");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_scheduled_job_executions_status");
-
-                    b.HasIndex("ScheduledJobId", "StartedAtUtc")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_scheduled_job_executions_job_started");
-
-                    b.ToTable("scheduled_job_executions", "scheduling");
-                });
-
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobPayloadEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("InputContext")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("input_context");
-
-                    b.Property<Guid>("ScheduledJobId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("scheduled_job_id");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("UserPrompt")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("user_prompt");
-
-                    b.Property<int>("Version")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("version");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ScheduledJobId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_scheduled_job_payloads_scheduled_job_id");
-
-                    b.ToTable("scheduled_job_payloads", "scheduling");
-                });
-
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsPlaybackEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3118,28 +2865,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.Navigation("Research");
                 });
 
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobExecutionEntity", b =>
-                {
-                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobEntity", "ScheduledJob")
-                        .WithMany("Executions")
-                        .HasForeignKey("ScheduledJobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ScheduledJob");
-                });
-
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobPayloadEntity", b =>
-                {
-                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobEntity", "ScheduledJob")
-                        .WithOne("Payload")
-                        .HasForeignKey("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobPayloadEntity", "ScheduledJobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ScheduledJob");
-                });
-
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsPlaybackEntity", b =>
                 {
                     b.HasOne("DonkeyWork.Agents.Persistence.Entities.Tts.TtsRecordingEntity", "Recording")
@@ -3236,13 +2961,6 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.Navigation("Notes");
 
                     b.Navigation("Tags");
-                });
-
-            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Scheduling.ScheduledJobEntity", b =>
-                {
-                    b.Navigation("Executions");
-
-                    b.Navigation("Payload");
                 });
 
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsRecordingEntity", b =>

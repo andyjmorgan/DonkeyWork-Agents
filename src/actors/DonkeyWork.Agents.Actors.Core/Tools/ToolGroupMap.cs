@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
+using DonkeyWork.Agents.Actors.Core.Tools.Scheduling;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools;
@@ -20,6 +21,7 @@ internal static class ToolGroupMap
             typeof(ResearchAgentTools),
         ],
         [Actors.Contracts.Models.ToolGroupNames.Sandbox] = [typeof(SandboxTools)],
+        [Actors.Contracts.Models.ToolGroupNames.Scheduling] = [typeof(SchedulingAgentTools)],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public static readonly FrozenDictionary<string, string> DisplayNames = new Dictionary<string, string>
@@ -28,5 +30,6 @@ internal static class ToolGroupMap
         [Actors.Contracts.Models.ToolGroupNames.SwarmManagement] = "Swarm Management",
         [Actors.Contracts.Models.ToolGroupNames.ProjectManagement] = "Project Management",
         [Actors.Contracts.Models.ToolGroupNames.Sandbox] = "Sandbox",
+        [Actors.Contracts.Models.ToolGroupNames.Scheduling] = "Scheduling",
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 }

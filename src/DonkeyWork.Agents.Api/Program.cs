@@ -23,6 +23,7 @@ using DonkeyWork.Agents.Storage.Api;
 using DonkeyWork.Agents.Actors.Api;
 using DonkeyWork.Agents.AgentDefinitions.Api;
 using DonkeyWork.Agents.Prompts.Api;
+using DonkeyWork.Agents.Scheduling.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authorization;
@@ -98,6 +99,8 @@ builder.Services.AddStorageApi(builder.Configuration);
 
 builder.Host.AddActorsApi(builder.Configuration);
 builder.Services.AddActorsServices(builder.Configuration);
+
+builder.Services.AddSchedulingApi(builder.Configuration);
 
 builder.Services.AddNotificationsCore();
 

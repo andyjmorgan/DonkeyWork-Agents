@@ -10,6 +10,7 @@ using DonkeyWork.Agents.Persistence.Entities.AgentDefinitions;
 using DonkeyWork.Agents.Persistence.Entities.A2a;
 using DonkeyWork.Agents.Persistence.Entities.Prompts;
 using DonkeyWork.Agents.Persistence.Entities.Research;
+using DonkeyWork.Agents.Persistence.Entities.Scheduling;
 using DonkeyWork.Agents.Persistence.Entities.Tts;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -96,6 +97,11 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     // TTS module
     public DbSet<TtsRecordingEntity> TtsRecordings => Set<TtsRecordingEntity>();
     public DbSet<TtsPlaybackEntity> TtsPlayback => Set<TtsPlaybackEntity>();
+
+    // Scheduling module
+    public DbSet<ScheduledJobEntity> ScheduledJobs => Set<ScheduledJobEntity>();
+    public DbSet<ScheduledJobPayloadEntity> ScheduledJobPayloads => Set<ScheduledJobPayloadEntity>();
+    public DbSet<ScheduledJobExecutionEntity> ScheduledJobExecutions => Set<ScheduledJobExecutionEntity>();
 
     // Data Protection keys (system-level, no user scoping)
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
