@@ -320,6 +320,18 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       return;
     }
 
+    if (eventType === "agent_idle") {
+      console.log("[swarm-debug] agent_idle received for:", agentKey);
+      markAgentCompleteGlobal(agentKey, "idle");
+      return;
+    }
+
+    if (eventType === "agent_complete") {
+      const completeReason = (data.reason as AgentCompleteReason) ?? "completed";
+      markAgentCompleteGlobal(agentKey, completeReason);
+      return;
+    }
+
     if (!assistantId) return;
 
     switch (eventType) {
@@ -461,18 +473,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
           });
         const wsEntry = agentGroupIndexRef.current.get(agentKey);
         updateBoxes(wsEntry?.messageId ?? assistantId, markSearchComplete);
-        break;
-      }
-
-      case "agent_complete": {
-        const completeReason = (data.reason as AgentCompleteReason) ?? "completed";
-        markAgentCompleteGlobal(agentKey, completeReason);
-        break;
-      }
-
-      case "agent_idle": {
-        console.log("[swarm-debug] agent_idle received for:", agentKey);
-        markAgentCompleteGlobal(agentKey, "idle");
         break;
       }
 
