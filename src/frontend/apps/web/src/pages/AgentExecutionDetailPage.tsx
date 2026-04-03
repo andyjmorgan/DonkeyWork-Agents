@@ -320,7 +320,7 @@ export function AgentExecutionDetailPage() {
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/agent-executions')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/agent-executions')} aria-label="Back to agent executions" title="Back to agent executions">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1 min-w-0">

@@ -39,6 +39,9 @@ public class AgentExecutionsController : ControllerBase
     {
         if (conversationId.HasValue)
         {
+            if (conversationId.Value == Guid.Empty)
+                return BadRequest("conversationId must not be empty.");
+
             var executions = await _executionService.ListByConversationAsync(conversationId.Value, ct);
             return Ok(new PaginatedResponse<AgentExecutionSummaryV1>
             {
@@ -49,7 +52,9 @@ public class AgentExecutionsController : ControllerBase
             });
         }
 
-        var result = await _executionService.ListAsync(pagination.Offset, pagination.GetLimit(), ct);
+        var offset = Math.Max(0, pagination.Offset);
+        var limit = Math.Max(1, pagination.GetLimit());
+        var result = await _executionService.ListAsync(offset, limit, ct);
         return Ok(result);
     }
 

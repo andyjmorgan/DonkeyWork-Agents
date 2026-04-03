@@ -156,9 +156,9 @@ export function AgentExecutionsPage() {
                       </span>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="shrink-0">
+                  <span className="shrink-0 inline-flex items-center justify-center" aria-hidden="true">
                     <Eye className="h-4 w-4" />
-                  </Button>
+                  </span>
                 </div>
               </div>
             ))}
@@ -209,9 +209,9 @@ export function AgentExecutionsPage() {
                       {formatTokens(exec.inputTokensUsed, exec.outputTokensUsed)}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-md">
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
