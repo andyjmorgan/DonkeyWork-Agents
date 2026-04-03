@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Loader2, Trash2, Calendar, RefreshCw, Play, Pause, Zap, Clock } from 'lucide-react'
 import cronstrue from 'cronstrue'
-import Cron from 'react-cron-generator'
-import 'react-cron-generator/build/cron-builder.css'
 import {
   Button,
   Badge,
@@ -352,7 +350,7 @@ export function SchedulesPage() {
 
       {/* Create Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Create Schedule</DialogTitle>
             <DialogDescription>
@@ -400,17 +398,14 @@ export function SchedulesPage() {
             </div>
             {newSchedule.scheduleMode === 'Recurring' ? (
               <div>
-                <Label>Schedule</Label>
-                <div className="rounded-lg border border-border p-3 [&_.cron-builder]:bg-transparent [&_.cron-builder]:text-foreground [&_.cron-builder]:border-none [&_.cron-builder]:p-0 [&_.cron-builder]:shadow-none [&_select]:rounded-md [&_select]:border-border [&_select]:bg-background [&_select]:text-foreground [&_select]:text-sm [&_.nav-tabs]:border-border [&_.nav-link]:text-muted-foreground [&_.nav-link.active]:text-foreground [&_.nav-link.active]:border-accent [&_.tab-content]:pt-3 [&_input[type=checkbox]]:accent-accent">
-                  <Cron
-                    onChange={(val: string) => setNewSchedule({ ...newSchedule, cronExpression: val })}
-                    value={newSchedule.cronExpression ?? '0 0 8 1/1 * ? *'}
-                    showResultText={false}
-                    showResultCron={false}
-                  />
-                </div>
+                <Label>Cron Expression</Label>
+                <Input
+                  value={newSchedule.cronExpression ?? ''}
+                  onChange={(e) => setNewSchedule({ ...newSchedule, cronExpression: e.target.value })}
+                  placeholder="0 0 8 ? * MON-FRI"
+                />
                 {newSchedule.cronExpression && (
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {formatCron(newSchedule.cronExpression)}
                   </p>
                 )}
