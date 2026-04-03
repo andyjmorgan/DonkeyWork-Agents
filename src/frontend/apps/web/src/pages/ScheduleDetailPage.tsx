@@ -197,47 +197,76 @@ export function ScheduleDetailPage() {
             <p className="mt-2 text-sm text-muted-foreground">No executions yet</p>
           </div>
         ) : (
-          <div className="rounded-xl border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Started</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Trigger</TableHead>
-                  <TableHead>Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {executions.map((exec) => {
-                  const config = executionStatusConfig[exec.status]
-                  const StatusIcon = config.icon
-                  return (
-                    <TableRow key={exec.id}>
-                      <TableCell>
-                        <Badge variant="outline" className={config.color}>
-                          <StatusIcon className={`h-3 w-3 mr-1 ${exec.status === 'Running' ? 'animate-spin' : ''}`} />
-                          {config.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatLocalTime(exec.startedAtUtc)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDuration(exec.startedAtUtc, exec.completedAtUtc)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {exec.triggerSource}
-                      </TableCell>
-                      <TableCell className="text-sm text-destructive max-w-xs truncate">
-                        {exec.errorDetails}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {/* Mobile cards */}
+            <div className="space-y-3 md:hidden">
+              {executions.map((exec) => {
+                const config = executionStatusConfig[exec.status]
+                const StatusIcon = config.icon
+                return (
+                  <div key={exec.id} className="rounded-xl border border-border p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className={config.color}>
+                        <StatusIcon className={`h-3 w-3 mr-1 ${exec.status === 'Running' ? 'animate-spin' : ''}`} />
+                        {config.label}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{exec.triggerSource}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{formatLocalTime(exec.startedAtUtc)}</span>
+                      <span className="text-muted-foreground">{formatDuration(exec.startedAtUtc, exec.completedAtUtc)}</span>
+                    </div>
+                    {exec.errorDetails && (
+                      <p className="text-xs text-destructive truncate">{exec.errorDetails}</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-xl border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Started</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Trigger</TableHead>
+                    <TableHead>Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {executions.map((exec) => {
+                    const config = executionStatusConfig[exec.status]
+                    const StatusIcon = config.icon
+                    return (
+                      <TableRow key={exec.id}>
+                        <TableCell>
+                          <Badge variant="outline" className={config.color}>
+                            <StatusIcon className={`h-3 w-3 mr-1 ${exec.status === 'Running' ? 'animate-spin' : ''}`} />
+                            {config.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatLocalTime(exec.startedAtUtc)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDuration(exec.startedAtUtc, exec.completedAtUtc)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {exec.triggerSource}
+                        </TableCell>
+                        <TableCell className="text-sm text-destructive max-w-xs truncate">
+                          {exec.errorDetails}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
     </div>
