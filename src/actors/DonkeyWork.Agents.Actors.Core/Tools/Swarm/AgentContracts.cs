@@ -39,7 +39,8 @@ public static class AgentContracts
         ThinkingBudgetTokens = 8_000,
         AgentType = AgentTypes.Delegate,
         KeyPrefix = AgentKeys.DelegatePrefix,
-        Lifecycle = AgentLifecycle.Task,
+        Lifecycle = AgentLifecycle.Linger,
+        LingerSeconds = 600,
         TimeoutSeconds = 300,
         DisplayName = "Navi",
         Icon = "bot",
@@ -57,7 +58,7 @@ public static class AgentContracts
 
         **Use `spawn_agent`** to spawn a custom agent by name for specialized tasks — research, deep research, analysis, or any capability defined in the agent's configuration. The agent runs in the background. Check the custom agents catalog (appended to this prompt when available) for agent names and descriptions.
 
-        **Use `spawn_delegate`** for discrete operational tasks — things like running health checks, performing actions, or executing multi-step procedures. Delegates have access to the same MCP tools you do. Wait for delegate results since they don't persist their own output.
+        **Use `spawn_delegate`** for discrete operational tasks — things like running health checks, performing actions, or executing multi-step procedures. Delegates have access to the same MCP tools you do.
 
         ## When NOT to Spawn Agents
 

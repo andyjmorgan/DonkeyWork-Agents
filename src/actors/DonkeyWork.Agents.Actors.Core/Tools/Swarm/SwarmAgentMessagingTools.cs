@@ -19,7 +19,7 @@ public sealed class SwarmAgentMessagingTools
         ### Completing your task vs messaging
 
         - **Task completion:** When you finish your assigned work, just stop. Your final output is automatically delivered to your parent. Do NOT use `send_message` to deliver your result — it will arrive twice.
-        - **`send_message`:** For mid-task coordination only — asking a question, sharing a partial finding, or requesting help from a specific agent. Target by name from the swarm roster, or use `*` to broadcast.
+        - **`send_message`:** For mid-task coordination only — asking a question, sharing a partial finding, or requesting help from a specific agent. Target by name from the swarm roster, or use `*` to broadcast. Do NOT call `wait_for_agent` after sending a message — the agent's response will flow back to you automatically as an `<agent-message>` or agent result.
         - **`check_messages`:** You almost never need this. Messages from other agents arrive automatically between tool calls as `<agent-message from="name" key="key">content</agent-message>` tags. These are internal swarm messages, not external input.
 
         ### Incoming messages
