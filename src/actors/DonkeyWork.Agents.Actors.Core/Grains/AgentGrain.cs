@@ -432,6 +432,9 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
     private Task<IReadOnlyList<InternalMessage>> DrainInboxAsync()
     {
+        if (Contract?.Lifecycle == AgentLifecycle.Linger)
+            DelayDeactivation(TimeSpan.FromSeconds(Contract.LingerSeconds > 0 ? Contract.LingerSeconds : 1800));
+
         var messages = DrainInboxMessages();
         return Task.FromResult<IReadOnlyList<InternalMessage>>(messages);
     }
