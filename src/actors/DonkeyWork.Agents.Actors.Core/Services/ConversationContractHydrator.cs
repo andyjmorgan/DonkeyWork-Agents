@@ -146,7 +146,7 @@ public sealed class ConversationContractHydrator : IConversationContractHydrator
                     Id = t.Orchestration.Id.ToString(),
                     Name = t.Orchestration.Name,
                     Description = t.Orchestration.Description,
-                    ToolName = t.Orchestration.FriendlyName,
+                    ToolName = t.Orchestration.Name,
                     VersionId = t.Version.Id.ToString(),
                 })
                 .ToArray();
