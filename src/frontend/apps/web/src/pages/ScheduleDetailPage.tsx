@@ -127,17 +127,17 @@ export function ScheduleDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/schedules')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/schedules')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <h1 className="text-2xl font-bold">{schedule.name}</h1>
-          {schedule.description && (
-            <p className="text-muted-foreground">{schedule.description}</p>
-          )}
         </div>
-        <div className="flex items-center gap-2">
+        {schedule.description && (
+          <p className="text-muted-foreground">{schedule.description}</p>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleTrigger} disabled={!schedule.isEnabled}>
             <Zap className="h-4 w-4" />
             Run Now
