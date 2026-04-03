@@ -16,22 +16,29 @@ public sealed class SchedulingAgentTools
 
     [AgentTool("create_schedule", DisplayName = "Create Schedule")]
     [Description("""
-        Create a one-off or recurring scheduled job. For recurring schedules, provide a Quartz 7-field cron expression
-        (seconds minute hour day-of-month month day-of-week [year]). Example: "0 0 8 ? * MON-FRI" for 8am weekdays.
-        5-field Linux cron will be auto-translated. Minimum interval is 4 hours.
-        For one-off schedules, provide runAtUtc as an ISO 8601 timestamp.
+        Create a one-off or recurring scheduled job.
+
+        For recurring schedules: set scheduleMode to "Recurring" and provide cronExpression as a Quartz 7-field cron string.
+        Format: "seconds minute hour day-of-month month day-of-week year". Example: "0 0 8 ? * MON-FRI *" for 8am weekdays.
+        5-field Linux cron (e.g. "0 8 * * 1-5") is also accepted and will be auto-translated. Minimum interval is 4 hours.
+
+        For one-off schedules: set scheduleMode to "OneOff" and provide runAtUtc as a raw ISO 8601 datetime string
+        WITHOUT quotes (e.g. 2026-04-03T21:00:00Z, NOT "2026-04-03T21:00:00Z"). The value must be a bare datetime, not a quoted string.
+
+        Calculate runAtUtc from the user's intent relative to the current time. If the user says "in 2 hours", compute the
+        absolute UTC timestamp. If they say "tomorrow at 9am", compute the UTC equivalent using Europe/Dublin timezone.
         """)]
     public async Task<ToolResult> CreateSchedule(
         [Description("Name for the schedule")] string name,
         [Description("The prompt/instruction to send to the agent when it runs")] string userPrompt,
         [Description("Schedule mode: OneOff or Recurring")] ScheduleMode scheduleMode,
         [Description("Job type: AgentInvocation, Reminder, ReportGeneration, etc.")] ScheduleJobType jobType = ScheduleJobType.AgentInvocation,
-        [Description("Quartz 7-field cron expression for recurring schedules")] string? cronExpression = null,
-        [Description("ISO 8601 timestamp for one-off schedules")] DateTimeOffset? runAtUtc = null,
+        [Description("Quartz 7-field cron expression for recurring schedules. Example: 0 0 8 ? * MON-FRI *")] string? cronExpression = null,
+        [Description("UTC datetime for one-off schedules as bare ISO 8601 (e.g. 2026-04-03T21:00:00Z). Do NOT wrap in quotes.")] DateTimeOffset? runAtUtc = null,
         [Description("Target type: Navi, CustomAgent, or Orchestration")] ScheduleTargetType targetType = ScheduleTargetType.Navi,
-        [Description("Agent definition ID when targeting a custom agent")] Guid? targetAgentDefinitionId = null,
-        [Description("IANA timezone (e.g., Europe/Dublin). Defaults to Europe/Dublin.")] string? timezone = null,
-        [Description("Optional description")] string? description = null,
+        [Description("Agent definition ID (GUID) when targeting a custom agent")] Guid? targetAgentDefinitionId = null,
+        [Description("IANA timezone (e.g. Europe/Dublin). Defaults to Europe/Dublin.")] string? timezone = null,
+        [Description("Optional description of what this schedule does")] string? description = null,
         CancellationToken ct = default)
     {
         try
