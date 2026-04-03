@@ -21,7 +21,7 @@ public static class AgentContracts
         LingerSeconds = 1800,
         PersistMessages = true,
         DisplayName = "Navi",
-        Icon = "bot",
+        Icon = "bubbles",
         ReasoningEffort = ReasoningEffort.High,
         ContextManagement = new ContextManagementConfig
         {
