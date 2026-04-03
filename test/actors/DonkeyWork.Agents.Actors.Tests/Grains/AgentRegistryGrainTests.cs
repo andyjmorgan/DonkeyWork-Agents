@@ -419,6 +419,547 @@ public class AgentRegistryGrainTests
         await grain.ReportIdleAsync("unknown");
     }
 
+    [Fact]
+    public async Task ReportIdleAsync_WithResult_SetsResultOnTrackedAgent()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        var result = AgentResult.FromText("partial findings");
+
+        // Act
+        await grain.ReportIdleAsync("agent-1", result);
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.NotNull(agents[0].Result);
+        var textPart = Assert.IsType<AgentTextPart>(agents[0].Result!.Parts[0]);
+        Assert.Equal("partial findings", textPart.Text);
+    }
+
+    [Fact]
+    public async Task ReportIdleAsync_WithResult_WaitForSpecificReturnsActualResult()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        var result = AgentResult.FromText("partial findings");
+
+        // Act
+        await grain.ReportIdleAsync("agent-1", result);
+        var waitResult = await grain.WaitForSpecificAsync("agent-1", TimeSpan.FromSeconds(1));
+
+        // Assert
+        Assert.NotNull(waitResult);
+        var textPart = Assert.IsType<AgentTextPart>(waitResult.Result.Parts[0]);
+        Assert.Equal("partial findings", textPart.Text);
+    }
+
+    [Fact]
+    public async Task ReportIdleAsync_WithoutResult_WaitForSpecificReturnsEmptyResult()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+
+        // Act
+        await grain.ReportIdleAsync("agent-1");
+        var waitResult = await grain.WaitForSpecificAsync("agent-1", TimeSpan.FromSeconds(1));
+
+        // Assert
+        Assert.NotNull(waitResult);
+        Assert.Empty(waitResult.Result.Parts);
+    }
+
+    #endregion
+
+    #region ReportResumedAsync Tests
+
+    [Fact]
+    public async Task ReportResumedAsync_ResetsStatusToPending()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        await grain.ReportIdleAsync("agent-1");
+
+        // Act
+        await grain.ReportResumedAsync("agent-1");
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Equal(AgentStatus.Pending, agents[0].Status);
+    }
+
+    [Fact]
+    public async Task ReportResumedAsync_ClearsResult()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        await grain.ReportIdleAsync("agent-1", AgentResult.FromText("old data"));
+
+        // Act
+        await grain.ReportResumedAsync("agent-1");
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Null(agents[0].Result);
+    }
+
+    [Fact]
+    public async Task ReportResumedAsync_ResetsDelivered_AllowsRedelivery()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        await grain.ReportIdleAsync("agent-1");
+        await grain.WaitForNextAsync(TimeSpan.FromSeconds(1)); // marks as delivered
+
+        // Act
+        await grain.ReportResumedAsync("agent-1");
+        await grain.ReportIdleAsync("agent-1", AgentResult.FromText("new data"));
+        var result = await grain.WaitForNextAsync(TimeSpan.FromSeconds(1));
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("agent-1", result.AgentKey);
+    }
+
+    [Fact]
+    public async Task ReportResumedAsync_CreatesNewTcs_SubsequentIdleReturnsNewResult()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+
+        // First idle/wait cycle
+        await grain.ReportIdleAsync("agent-1", AgentResult.FromText("result-1"));
+        var first = await grain.WaitForSpecificAsync("agent-1", TimeSpan.FromSeconds(1));
+        Assert.NotNull(first);
+        var firstText = Assert.IsType<AgentTextPart>(first.Result.Parts[0]);
+        Assert.Equal("result-1", firstText.Text);
+
+        // Act - resume then idle with different result
+        await grain.ReportResumedAsync("agent-1");
+        await grain.ReportIdleAsync("agent-1", AgentResult.FromText("result-2"));
+        var second = await grain.WaitForSpecificAsync("agent-1", TimeSpan.FromSeconds(1));
+
+        // Assert
+        Assert.NotNull(second);
+        var secondText = Assert.IsType<AgentTextPart>(second.Result.Parts[0]);
+        Assert.Equal("result-2", secondText.Text);
+    }
+
+    [Fact]
+    public async Task ReportResumedAsync_FullRoundTrip()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+
+        // Round 1: idle with result1 -> wait gets result1
+        await grain.ReportIdleAsync("agent-1", AgentResult.FromText("first"));
+        var wait1 = await grain.WaitForSpecificAsync("agent-1", TimeSpan.FromSeconds(1));
+        Assert.NotNull(wait1);
+        Assert.Equal(AgentStatus.Idle, wait1.Status);
+        var text1 = Assert.IsType<AgentTextPart>(wait1.Result.Parts[0]);
+        Assert.Equal("first", text1.Text);
+
+        // Round 2: resume -> idle with result2 -> wait gets result2
+        await grain.ReportResumedAsync("agent-1");
+        await grain.ReportIdleAsync("agent-1", AgentResult.FromText("second"));
+        var wait2 = await grain.WaitForSpecificAsync("agent-1", TimeSpan.FromSeconds(1));
+        Assert.NotNull(wait2);
+        Assert.Equal(AgentStatus.Idle, wait2.Status);
+        var text2 = Assert.IsType<AgentTextPart>(wait2.Result.Parts[0]);
+        Assert.Equal("second", text2.Text);
+    }
+
+    [Fact]
+    public async Task ReportResumedAsync_UnknownAgent_DoesNotThrow()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act & Assert
+        await grain.ReportResumedAsync("unknown");
+    }
+
+    #endregion
+
+    #region ReportExpiredAsync Tests
+
+    [Fact]
+    public async Task ReportExpiredAsync_SetsStatusToExpired()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+
+        // Act
+        await grain.ReportExpiredAsync("agent-1");
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Equal(AgentStatus.Expired, agents[0].Status);
+    }
+
+    [Fact]
+    public async Task ReportExpiredAsync_StampsCollectedAt()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        var before = DateTimeOffset.UtcNow;
+
+        // Act
+        await grain.ReportExpiredAsync("agent-1");
+
+        // Assert
+        var collectedAt = grain.GetCollectedAt("agent-1");
+        Assert.NotNull(collectedAt);
+        Assert.True(collectedAt.Value >= before);
+    }
+
+    [Fact]
+    public async Task ReportExpiredAsync_UnknownAgent_DoesNotThrow()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act & Assert
+        await grain.ReportExpiredAsync("unknown");
+    }
+
+    #endregion
+
+    #region Cleanup Tests
+
+    [Fact]
+    public async Task RunCleanupAsync_RemovesEntriesOlderThanGracePeriod()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        await grain.ReportExpiredAsync("agent-1");
+        grain.SetCollectedAt("agent-1", DateTimeOffset.UtcNow.AddMinutes(-6));
+
+        // Act
+        await grain.RunCleanupAsync();
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Empty(agents);
+    }
+
+    [Fact]
+    public async Task RunCleanupAsync_KeepsEntriesWithinGracePeriod()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        await grain.ReportExpiredAsync("agent-1");
+        grain.SetCollectedAt("agent-1", DateTimeOffset.UtcNow.AddMinutes(-3));
+
+        // Act
+        await grain.RunCleanupAsync();
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Single(agents);
+    }
+
+    [Fact]
+    public async Task RunCleanupAsync_DoesNotRemoveIdleAgentsWithoutCollectedAt()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        await grain.ReportIdleAsync("agent-1");
+
+        // Act
+        await grain.RunCleanupAsync();
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Single(agents);
+    }
+
+    [Fact]
+    public async Task RunCleanupAsync_DoesNotRemovePendingAgents()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+
+        // Act
+        await grain.RunCleanupAsync();
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Single(agents);
+    }
+
+    [Fact]
+    public async Task RunCleanupAsync_RemovesFromNameIndex()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "task", "researcher", "parent-1");
+        await grain.ReportExpiredAsync("agent-1");
+        grain.SetCollectedAt("agent-1", DateTimeOffset.UtcNow.AddMinutes(-6));
+
+        // Act
+        await grain.RunCleanupAsync();
+
+        // Assert
+        var key = await grain.ResolveAgentKeyByNameAsync("researcher");
+        Assert.Null(key);
+    }
+
+    [Fact]
+    public async Task RunCleanupAsync_MixedEntries_OnlyRemovesExpired()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("agent-1", "old-expired", "researcher", "parent-1");
+        await grain.RegisterAsync("agent-2", "fresh-expired", "writer", "parent-1");
+        await grain.RegisterAsync("agent-3", "still-pending", "coder", "parent-1");
+
+        await grain.ReportExpiredAsync("agent-1");
+        grain.SetCollectedAt("agent-1", DateTimeOffset.UtcNow.AddMinutes(-10));
+
+        await grain.ReportExpiredAsync("agent-2");
+        grain.SetCollectedAt("agent-2", DateTimeOffset.UtcNow.AddMinutes(-2));
+
+        // Act
+        await grain.RunCleanupAsync();
+
+        // Assert
+        var agents = await grain.ListAsync();
+        Assert.Equal(2, agents.Count);
+        Assert.Contains(agents, a => a.AgentKey == "agent-2");
+        Assert.Contains(agents, a => a.AgentKey == "agent-3");
+    }
+
+    #endregion
+
+    #region ListScopedAsync Tests
+
+    [Fact]
+    public async Task ListScopedAsync_UnknownAgent_ReturnsEmpty()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        var result = await grain.ListScopedAsync("unknown");
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ListScopedAsync_RootAgent_ReturnsSelfAndDirectChildren()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root"); // root: parent == self
+        await grain.RegisterAsync("child-1", "researcher", "researcher", "root");
+        await grain.RegisterAsync("child-2", "writer", "writer", "root");
+
+        // Act
+        var result = await grain.ListScopedAsync("root");
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Contains(result, a => a.AgentKey == "root");
+        Assert.Contains(result, a => a.AgentKey == "child-1");
+        Assert.Contains(result, a => a.AgentKey == "child-2");
+    }
+
+    [Fact]
+    public async Task ListScopedAsync_ChildAgent_ReturnsSelfParentAndDescendants()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root");
+        await grain.RegisterAsync("child", "researcher", "researcher", "root");
+        await grain.RegisterAsync("grandchild", "sub-task", "subtask", "child");
+
+        // Act
+        var result = await grain.ListScopedAsync("child");
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Contains(result, a => a.AgentKey == "root");
+        Assert.Contains(result, a => a.AgentKey == "child");
+        Assert.Contains(result, a => a.AgentKey == "grandchild");
+    }
+
+    [Fact]
+    public async Task ListScopedAsync_DoesNotReturnSiblings()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root");
+        await grain.RegisterAsync("child-1", "researcher", "researcher", "root");
+        await grain.RegisterAsync("child-2", "writer", "writer", "root");
+
+        // Act
+        var result = await grain.ListScopedAsync("child-1");
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, a => a.AgentKey == "root");
+        Assert.Contains(result, a => a.AgentKey == "child-1");
+        Assert.DoesNotContain(result, a => a.AgentKey == "child-2");
+    }
+
+    [Fact]
+    public async Task ListScopedAsync_LeafAgent_ReturnsSelfAndParent()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root");
+        await grain.RegisterAsync("child", "researcher", "researcher", "root");
+        await grain.RegisterAsync("leaf", "sub-task", "subtask", "child");
+
+        // Act
+        var result = await grain.ListScopedAsync("leaf");
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, a => a.AgentKey == "child");
+        Assert.Contains(result, a => a.AgentKey == "leaf");
+    }
+
+    [Fact]
+    public async Task ListScopedAsync_IncludesDeepDescendants()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root");
+        await grain.RegisterAsync("child", "researcher", "researcher", "root");
+        await grain.RegisterAsync("grandchild", "sub-researcher", "sub", "child");
+        await grain.RegisterAsync("great-grandchild", "detail", "detail", "grandchild");
+
+        // Act
+        var result = await grain.ListScopedAsync("child");
+
+        // Assert
+        Assert.Equal(4, result.Count);
+        Assert.Contains(result, a => a.AgentKey == "root");
+        Assert.Contains(result, a => a.AgentKey == "child");
+        Assert.Contains(result, a => a.AgentKey == "grandchild");
+        Assert.Contains(result, a => a.AgentKey == "great-grandchild");
+    }
+
+    #endregion
+
+    #region GetScopedRosterAsync Tests
+
+    [Fact]
+    public async Task GetScopedRosterAsync_NoAgents_ReturnsEmptyString()
+    {
+        // Arrange
+        var grain = CreateGrain();
+
+        // Act
+        var roster = await grain.GetScopedRosterAsync("agent-1");
+
+        // Assert
+        Assert.Equal(string.Empty, roster);
+    }
+
+    [Fact]
+    public async Task GetScopedRosterAsync_ContainsYouMarkerForSelf()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root");
+
+        // Act
+        var roster = await grain.GetScopedRosterAsync("root");
+
+        // Assert
+        Assert.Contains("(you)", roster);
+    }
+
+    [Fact]
+    public async Task GetScopedRosterAsync_DoesNotMarkOtherAgentsAsYou()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root");
+        await grain.RegisterAsync("child", "researcher", "researcher", "root");
+
+        // Act
+        var roster = await grain.GetScopedRosterAsync("root");
+
+        // Assert
+        var lines = roster.Split('\n');
+        var childLine = Array.Find(lines, l => l.Contains("researcher") && !l.Contains("orchestrator"));
+        Assert.NotNull(childLine);
+        Assert.DoesNotContain("(you)", childLine);
+    }
+
+    [Fact]
+    public async Task GetScopedRosterAsync_ContainsAgentNames()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator task", "orchestrator", "root");
+        await grain.RegisterAsync("child", "research task", "researcher", "root");
+
+        // Act
+        var roster = await grain.GetScopedRosterAsync("root");
+
+        // Assert
+        Assert.Contains("orchestrator", roster);
+        Assert.Contains("researcher", roster);
+    }
+
+    [Fact]
+    public async Task GetScopedRosterAsync_ContainsAgentStatus()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "task", "orchestrator", "root");
+        await grain.RegisterAsync("child", "task", "researcher", "root");
+        await grain.ReportIdleAsync("child");
+
+        // Act
+        var roster = await grain.GetScopedRosterAsync("root");
+
+        // Assert
+        Assert.Contains("pending", roster);
+        Assert.Contains("idle", roster);
+    }
+
+    [Fact]
+    public async Task GetScopedRosterAsync_ShowsIndentationForNestedAgents()
+    {
+        // Arrange
+        var grain = CreateGrain();
+        await grain.RegisterAsync("root", "orchestrator", "orchestrator", "root");
+        await grain.RegisterAsync("child", "researcher", "researcher", "root");
+        await grain.RegisterAsync("grandchild", "sub-task", "subtask", "child");
+
+        // Act
+        var roster = await grain.GetScopedRosterAsync("root");
+
+        // Assert
+        var lines = roster.Split('\n');
+        var childLine = Array.Find(lines, l => l.Contains("researcher") && !l.Contains("subtask"));
+        var grandchildLine = Array.Find(lines, l => l.Contains("subtask"));
+        Assert.NotNull(childLine);
+        Assert.NotNull(grandchildLine);
+        Assert.StartsWith("  ", childLine);
+        Assert.StartsWith("    ", grandchildLine);
+    }
+
     #endregion
 
     #region Shared Context Tests
@@ -555,6 +1096,21 @@ public class AgentRegistryGrainTests
 
         public Task ReportExpiredAsync(string agentKey)
             => _logic.ReportExpiredAsync(agentKey);
+
+        public Task<IReadOnlyList<TrackedAgent>> ListScopedAsync(string agentKey)
+            => _logic.ListScopedAsync(agentKey);
+
+        public Task<string> GetScopedRosterAsync(string agentKey)
+            => _logic.GetScopedRosterAsync(agentKey);
+
+        public Task RunCleanupAsync()
+            => _logic.RunCleanupAsync();
+
+        public DateTimeOffset? GetCollectedAt(string agentKey)
+            => _logic.GetCollectedAt(agentKey);
+
+        public void SetCollectedAt(string agentKey, DateTimeOffset value)
+            => _logic.SetCollectedAt(agentKey, value);
 
         public Task WriteSharedContextAsync(string key, string value)
             => _logic.WriteSharedContextAsync(key, value);
@@ -726,6 +1282,53 @@ public class AgentRegistryGrainTests
             return Task.FromResult(agentKey);
         }
 
+        public Task<IReadOnlyList<TrackedAgent>> ListScopedAsync(string agentKey)
+        {
+            var visible = GetVisibleAgents(agentKey);
+            return Task.FromResult<IReadOnlyList<TrackedAgent>>(visible);
+        }
+
+        public Task<string> GetScopedRosterAsync(string agentKey)
+        {
+            var allEntries = _agents.Values.Select(e => e.Info).ToList();
+            if (allEntries.Count == 0)
+                return Task.FromResult(string.Empty);
+
+            var roster = BuildRosterTree(agentKey, allEntries);
+            return Task.FromResult(roster);
+        }
+
+        public Task RunCleanupAsync()
+        {
+            var cutoff = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(5);
+            var toRemove = _agents
+                .Where(kv => kv.Value.CollectedAt is not null && kv.Value.CollectedAt.Value < cutoff)
+                .Select(kv => kv.Key)
+                .ToList();
+
+            foreach (var key in toRemove)
+            {
+                if (_agents.TryGetValue(key, out var entry))
+                {
+                    _nameIndex.Remove(entry.Info.Name);
+                    _agents.Remove(key);
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public DateTimeOffset? GetCollectedAt(string agentKey)
+        {
+            return _agents.TryGetValue(agentKey, out var entry) ? entry.CollectedAt : null;
+        }
+
+        public void SetCollectedAt(string agentKey, DateTimeOffset value)
+        {
+            if (_agents.TryGetValue(agentKey, out var entry))
+                entry.CollectedAt = value;
+        }
+
         public Task WriteSharedContextAsync(string key, string value)
         {
             _sharedContext[key] = value;
@@ -747,6 +1350,85 @@ public class AgentRegistryGrainTests
         public Task<bool> RemoveSharedContextAsync(string key)
         {
             return Task.FromResult(_sharedContext.Remove(key));
+        }
+
+        private List<TrackedAgent> GetVisibleAgents(string agentKey)
+        {
+            if (!_agents.TryGetValue(agentKey, out var self))
+                return [];
+
+            var visible = new List<TrackedAgent>();
+
+            if (_agents.TryGetValue(self.Info.ParentAgentKey, out var parent)
+                && parent.Info.AgentKey != agentKey)
+            {
+                visible.Add(parent.Info);
+            }
+
+            visible.Add(self.Info);
+
+            AddDescendants(agentKey, visible);
+
+            return visible;
+        }
+
+        private void AddDescendants(string parentKey, List<TrackedAgent> result)
+        {
+            foreach (var entry in _agents.Values)
+            {
+                if (string.Equals(entry.Info.ParentAgentKey, parentKey, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(entry.Info.AgentKey, parentKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Add(entry.Info);
+                    AddDescendants(entry.Info.AgentKey, result);
+                }
+            }
+        }
+
+        private static string BuildRosterTree(string selfKey, List<TrackedAgent> allAgents)
+        {
+            var byParent = allAgents
+                .Where(a => !string.Equals(a.AgentKey, a.ParentAgentKey, StringComparison.OrdinalIgnoreCase))
+                .GroupBy(a => a.ParentAgentKey, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.OrderBy(a => a.SpawnedAt).ToList(), StringComparer.OrdinalIgnoreCase);
+
+            var roots = allAgents
+                .Where(a => string.Equals(a.AgentKey, a.ParentAgentKey, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(a => a.SpawnedAt)
+                .ToList();
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("\n\n## Swarm");
+
+            foreach (var root in roots)
+            {
+                RenderNode(sb, root, selfKey, byParent, 0);
+            }
+
+            return sb.ToString();
+        }
+
+        private static void RenderNode(
+            System.Text.StringBuilder sb,
+            TrackedAgent agent,
+            string selfKey,
+            Dictionary<string, List<TrackedAgent>> byParent,
+            int depth)
+        {
+            var indent = new string(' ', depth * 2);
+            var youMarker = string.Equals(agent.AgentKey, selfKey, StringComparison.OrdinalIgnoreCase) ? " (you)" : "";
+            var status = agent.Status.ToString().ToLowerInvariant();
+            var label = !string.IsNullOrEmpty(agent.Label) ? $" — \"{agent.Label}\"" : "";
+
+            sb.AppendLine($"{indent}- {agent.Name} ({status}{youMarker}){label}");
+
+            if (byParent.TryGetValue(agent.AgentKey, out var children))
+            {
+                foreach (var child in children)
+                {
+                    RenderNode(sb, child, selfKey, byParent, depth + 1);
+                }
+            }
         }
 
         private string AssignUniqueName(string baseName)
