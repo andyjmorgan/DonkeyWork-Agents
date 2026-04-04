@@ -408,14 +408,10 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
     private void EmitAgentResultData(string agentKey, string label, AgentResult? result, bool isError)
     {
-        string? text = null;
         List<StreamAgentCitation>? citations = null;
 
         if (result is not null)
         {
-            var textParts = result.Parts.OfType<AgentTextPart>().Select(p => p.Text);
-            text = string.Join("\n", textParts);
-
             var citationParts = result.Parts.OfType<AgentCitationPart>().ToList();
             if (citationParts.Count > 0)
             {
@@ -433,7 +429,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         };
 
         Emit(new StreamAgentResultDataEvent(
-            GrainContext.GrainKey, agentKey, agentType, label, text, citations, isError));
+            GrainContext.GrainKey, agentKey, agentType, label, null, citations, isError));
     }
 
     #endregion
