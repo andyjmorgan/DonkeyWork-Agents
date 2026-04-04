@@ -288,6 +288,9 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                     }
                 }
 
+                if (ExecutionId != Guid.Empty)
+                    await ExecutionRepository.UpdateStatusAsync(ExecutionId, IdentityContext.UserId, "Running");
+
                 var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
                 DelayDeactivation(TimeSpan.FromSeconds(timeoutSeconds + 60));
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
@@ -354,6 +357,9 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
                 Emit(new StreamTurnEndEvent(GrainContext.GrainKey));
                 EmitQueueStatus();
+
+                if (ExecutionId != Guid.Empty)
+                    await ExecutionRepository.UpdateStatusAsync(ExecutionId, IdentityContext.UserId, "Idle");
 
                 DelayDeactivation(TimeSpan.FromMinutes(35));
             }

@@ -64,18 +64,29 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
     protected override async Task OnBeforeDeactivateAsync(CancellationToken ct)
     {
-        if (_isIdle && GrainContext.ConversationId is not null)
+        if (_isIdle)
         {
-            try
+            if (ExecutionId != Guid.Empty)
             {
-                var conversationId = Guid.Parse(GrainContext.ConversationId);
-                var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
-                var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
-                await registry.ReportExpiredAsync(GrainContext.GrainKey);
+                var durationMs = (long)(DateTimeOffset.UtcNow - ExecutionStartedAt).TotalMilliseconds;
+                await ExecutionRepository.UpdateCompletionAsync(
+                    ExecutionId, IdentityContext.UserId, "Completed", null, null,
+                    durationMs, TotalInputTokens, TotalOutputTokens, ct);
             }
-            catch (Exception ex)
+
+            if (GrainContext.ConversationId is not null)
             {
-                Logger.LogDebug(ex, "Failed to report expired to registry on deactivation");
+                try
+                {
+                    var conversationId = Guid.Parse(GrainContext.ConversationId);
+                    var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
+                    var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
+                    await registry.ReportExpiredAsync(GrainContext.GrainKey);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogDebug(ex, "Failed to report expired to registry on deactivation");
+                }
             }
         }
 
@@ -355,25 +366,31 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
         if (ExecutionId != Guid.Empty)
         {
-            var status = goingIdle
-                ? "Idle"
-                : reason switch
+            if (goingIdle)
+            {
+                await ExecutionRepository.UpdateStatusAsync(
+                    ExecutionId, IdentityContext.UserId, "Idle");
+            }
+            else
+            {
+                var status = reason switch
                 {
                     AgentCompleteReason.Completed => "Completed",
                     AgentCompleteReason.Cancelled => "Cancelled",
                     _ => "Failed",
                 };
-            var durationMs = (long)(DateTimeOffset.UtcNow - ExecutionStartedAt).TotalMilliseconds;
-            var outputJson = result != AgentResult.Empty
-                ? JsonSerializer.Serialize(result)
-                : null;
-            var errorMsg = isError && !ExplicitCancel
-                ? result.Parts.OfType<AgentTextPart>().FirstOrDefault()?.Text
-                : null;
+                var durationMs = (long)(DateTimeOffset.UtcNow - ExecutionStartedAt).TotalMilliseconds;
+                var outputJson = result != AgentResult.Empty
+                    ? JsonSerializer.Serialize(result)
+                    : null;
+                var errorMsg = isError && !ExplicitCancel
+                    ? result.Parts.OfType<AgentTextPart>().FirstOrDefault()?.Text
+                    : null;
 
-            await ExecutionRepository.UpdateCompletionAsync(
-                ExecutionId, IdentityContext.UserId, status, outputJson, errorMsg,
-                durationMs, TotalInputTokens, TotalOutputTokens);
+                await ExecutionRepository.UpdateCompletionAsync(
+                    ExecutionId, IdentityContext.UserId, status, outputJson, errorMsg,
+                    durationMs, TotalInputTokens, TotalOutputTokens);
+            }
         }
 
         if (goingIdle)

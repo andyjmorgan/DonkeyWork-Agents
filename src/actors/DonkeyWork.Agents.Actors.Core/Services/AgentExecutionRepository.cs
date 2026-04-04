@@ -122,6 +122,31 @@ public sealed class AgentExecutionRepository : IAgentExecutionRepository
         }
     }
 
+    public async Task UpdateStatusAsync(
+        Guid executionId,
+        Guid userId,
+        string status,
+        CancellationToken ct = default)
+    {
+        if (executionId == Guid.Empty) return;
+
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
+
+            await dbContext.AgentExecutions
+                .IgnoreQueryFilters()
+                .Where(e => e.Id == executionId && e.UserId == userId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.Status, status)
+                    .SetProperty(e => e.UpdatedAt, DateTimeOffset.UtcNow), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update status for execution {ExecutionId}", executionId);
+        }
+    }
+
     public async Task UpdateTokensAsync(
         Guid executionId,
         Guid userId,

@@ -38,6 +38,15 @@ public interface IAgentExecutionRepository
         CancellationToken ct = default);
 
     /// <summary>
+    /// Updates the execution status and timestamps without setting completion data.
+    /// </summary>
+    Task UpdateStatusAsync(
+        Guid executionId,
+        Guid userId,
+        string status,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Updates token counters incrementally during execution.
     /// </summary>
     Task UpdateTokensAsync(
