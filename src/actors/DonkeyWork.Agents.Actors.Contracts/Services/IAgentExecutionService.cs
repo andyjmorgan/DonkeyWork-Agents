@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Common.Contracts.Models.Pagination;
 
 namespace DonkeyWork.Agents.Actors.Contracts.Services;
 
@@ -17,6 +18,12 @@ public interface IAgentExecutionService
     /// </summary>
     Task<IReadOnlyList<AgentExecutionSummaryV1>> ListByConversationAsync(
         Guid conversationId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Lists all executions for the current user with pagination.
+    /// </summary>
+    Task<PaginatedResponse<AgentExecutionSummaryV1>> ListAsync(
+        int offset, int limit, CancellationToken ct = default);
 
     /// <summary>
     /// Gets the message history for an execution.

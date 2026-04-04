@@ -192,6 +192,27 @@ public sealed class AgentExecutionRepository : IAgentExecutionRepository
         return entities.Select(MapToSummary).ToList();
     }
 
+    public async Task<(IReadOnlyList<AgentExecutionSummaryV1> Items, int TotalCount)> ListAsync(
+        Guid userId, int offset, int limit, CancellationToken ct = default)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
+
+        var query = dbContext.AgentExecutions
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(e => e.UserId == userId);
+
+        var totalCount = await query.CountAsync(ct);
+
+        var entities = await query
+            .OrderByDescending(e => e.StartedAt)
+            .Skip(offset)
+            .Take(limit)
+            .ToListAsync(ct);
+
+        return (entities.Select(MapToSummary).ToList(), totalCount);
+    }
+
     private static AgentExecutionDetailV1 MapToDetail(AgentExecutionEntity entity) => new()
     {
         Id = entity.Id,

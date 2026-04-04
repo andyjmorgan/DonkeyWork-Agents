@@ -1075,8 +1075,10 @@ export interface GetAgentExecutionMessagesResponse {
 }
 
 export const agentExecutions = {
+  list: (offset = 0, limit = 20) =>
+    api.get<PaginatedResponse<AgentExecutionSummary>>(`/api/v1/agent-executions?offset=${offset}&limit=${limit}`),
   listByConversation: (conversationId: string) =>
-    api.get<AgentExecutionSummary[]>(`/api/v1/agent-executions?conversationId=${conversationId}`),
+    api.get<PaginatedResponse<AgentExecutionSummary>>(`/api/v1/agent-executions?conversationId=${conversationId}`),
   get: (id: string) =>
     api.get<AgentExecutionDetail>(`/api/v1/agent-executions/${id}`),
   getMessages: (id: string) =>
