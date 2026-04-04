@@ -347,7 +347,36 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         var registryKey = AgentKeys.Conversation(IdentityContext.UserId, conversationId);
         var registry = GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);
 
-        if (!isError && contract.Lifecycle == AgentLifecycle.Linger)
+        var reason = isError
+            ? (ExplicitCancel ? AgentCompleteReason.Cancelled : AgentCompleteReason.Failed)
+            : AgentCompleteReason.Completed;
+
+        var goingIdle = !isError && contract.Lifecycle == AgentLifecycle.Linger;
+
+        if (ExecutionId != Guid.Empty)
+        {
+            var status = goingIdle
+                ? "Idle"
+                : reason switch
+                {
+                    AgentCompleteReason.Completed => "Completed",
+                    AgentCompleteReason.Cancelled => "Cancelled",
+                    _ => "Failed",
+                };
+            var durationMs = (long)(DateTimeOffset.UtcNow - ExecutionStartedAt).TotalMilliseconds;
+            var outputJson = result != AgentResult.Empty
+                ? JsonSerializer.Serialize(result)
+                : null;
+            var errorMsg = isError && !ExplicitCancel
+                ? result.Parts.OfType<AgentTextPart>().FirstOrDefault()?.Text
+                : null;
+
+            await ExecutionRepository.UpdateCompletionAsync(
+                ExecutionId, IdentityContext.UserId, status, outputJson, errorMsg,
+                durationMs, TotalInputTokens, TotalOutputTokens);
+        }
+
+        if (goingIdle)
         {
             _isIdle = true;
 
@@ -386,31 +415,6 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to report completion to registry");
-        }
-
-        var reason = isError
-            ? (ExplicitCancel ? AgentCompleteReason.Cancelled : AgentCompleteReason.Failed)
-            : AgentCompleteReason.Completed;
-
-        if (ExecutionId != Guid.Empty)
-        {
-            var status = reason switch
-            {
-                AgentCompleteReason.Completed => "Completed",
-                AgentCompleteReason.Cancelled => "Cancelled",
-                _ => "Failed",
-            };
-            var durationMs = (long)(DateTimeOffset.UtcNow - ExecutionStartedAt).TotalMilliseconds;
-            var outputJson = result != AgentResult.Empty
-                ? JsonSerializer.Serialize(result)
-                : null;
-            var errorMsg = isError && !ExplicitCancel
-                ? result.Parts.OfType<AgentTextPart>().FirstOrDefault()?.Text
-                : null;
-
-            await ExecutionRepository.UpdateCompletionAsync(
-                ExecutionId, IdentityContext.UserId, status, outputJson, errorMsg,
-                durationMs, TotalInputTokens, TotalOutputTokens);
         }
 
         Emit(new StreamAgentCompleteEvent(GrainContext.GrainKey) { Reason = reason });

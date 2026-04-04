@@ -20,6 +20,8 @@ import {
   User,
   Bot,
   Settings,
+  Pause,
+  Skull,
 } from 'lucide-react'
 import {
   Button,
@@ -45,6 +47,10 @@ function StatusIcon({ status, size = 'h-4 w-4' }: { status: string; size?: strin
       return <Loader2 className={`${size} animate-spin text-blue-600`} />
     case 'cancelled':
       return <Ban className={`${size} text-amber-500`} />
+    case 'idle':
+      return <Pause className={`${size} text-cyan-500`} />
+    case 'stale':
+      return <Skull className={`${size} text-orange-500`} />
     default:
       return <Clock className={`${size} text-muted-foreground`} />
   }
@@ -55,6 +61,8 @@ function getStatusVariant(status: string): 'default' | 'secondary' | 'destructiv
     case 'completed': return 'outline'
     case 'failed': return 'destructive'
     case 'running': return 'secondary'
+    case 'idle': return 'secondary'
+    case 'stale': return 'destructive'
     default: return 'default'
   }
 }

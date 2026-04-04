@@ -49,6 +49,7 @@ public static class DependencyInjection
 
         services.AddScoped<ExecutionHistoryPruningHandler>();
         services.AddScoped<CompletedOneOffCleanupHandler>();
+        services.AddScoped<StaleAgentExecutionReaperHandler>();
 
         services.AddSingleton<SystemJobDefinition>(new SystemJobDefinition
         {
@@ -63,6 +64,13 @@ public static class DependencyInjection
             CronExpression = "0 0 4 * * ?",
             JobType = ScheduleJobType.Cleanup,
             HandlerType = typeof(CompletedOneOffCleanupHandler),
+        });
+        services.AddSingleton<SystemJobDefinition>(new SystemJobDefinition
+        {
+            Name = "Stale Agent Execution Reaper",
+            CronExpression = "0 0 * * * ?",
+            JobType = ScheduleJobType.Cleanup,
+            HandlerType = typeof(StaleAgentExecutionReaperHandler),
         });
 
         services.AddQuartz(q =>

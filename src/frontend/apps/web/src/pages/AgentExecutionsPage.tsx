@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, CheckCircle2, XCircle, Loader2, ChevronLeft, ChevronRight, Eye, Cpu, Timer, Ban } from 'lucide-react'
+import { Clock, CheckCircle2, XCircle, Loader2, ChevronLeft, ChevronRight, Eye, Cpu, Timer, Ban, Pause, Skull } from 'lucide-react'
 import {
   Button,
   Badge,
@@ -31,6 +31,10 @@ function getStatusIcon(status: string) {
       return <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
     case 'cancelled':
       return <Ban className="h-4 w-4 text-amber-500" />
+    case 'idle':
+      return <Pause className="h-4 w-4 text-cyan-500" />
+    case 'stale':
+      return <Skull className="h-4 w-4 text-orange-500" />
     default:
       return <Clock className="h-4 w-4 text-muted-foreground" />
   }
@@ -44,6 +48,10 @@ function getStatusVariant(status: string): 'default' | 'secondary' | 'destructiv
       return 'destructive'
     case 'running':
       return 'secondary'
+    case 'idle':
+      return 'secondary'
+    case 'stale':
+      return 'destructive'
     default:
       return 'default'
   }
