@@ -110,6 +110,14 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         var executionIdStr = RequestContext.Get(GrainCallContextKeys.ExecutionId) as string;
         if (Guid.TryParse(executionIdStr, out var execId))
             ExecutionId = execId;
+
+        Guid? parentTurnId = null;
+        var parentTurnIdStr = RequestContext.Get(GrainCallContextKeys.ParentTurnId) as string;
+        if (Guid.TryParse(parentTurnIdStr, out var ptId))
+            parentTurnId = ptId;
+
+        var parentGrainKey = RequestContext.Get(GrainCallContextKeys.ParentGrainKey) as string;
+
         ExecutionStartedAt = DateTimeOffset.UtcNow;
         TotalInputTokens = 0;
         TotalOutputTokens = 0;
@@ -121,7 +129,9 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             Role = InternalMessageRole.User,
             Content = input,
             Origin = MessageOrigin.User,
+            AgentName = contract.DisplayName,
         };
+        userMsg.ParentTurnId = parentTurnId;
         Messages.Add(userMsg);
         await MessageStore.AppendMessageAsync(
             GrainContext.GrainKey, IdentityContext.UserId, userMsg, NextSequenceNumber++);
@@ -134,7 +144,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
         try
         {
-            result = await RunPipelineAsync(contract, messages, Cts.Token);
+            result = await RunPipelineAsync(contract, messages, Cts.Token, parentTurnId);
         }
         catch (OperationCanceledException)
         {
@@ -190,14 +200,15 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     private async Task<AgentResult> RunPipelineAsync(
         AgentContract contract,
         List<InternalMessage> messages,
-        CancellationToken ct)
+        CancellationToken ct,
+        Guid? parentTurnId = null)
     {
         var (assistantMsg, _, pipelineError) = await ExecuteTurnAsync(contract, messages, async msg =>
         {
             Messages.Add(msg);
             await MessageStore.AppendMessageAsync(
                 GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber++, ct);
-        }, ct, drainPendingMessages: DrainInboxAsync);
+        }, ct, parentTurnId: parentTurnId, drainPendingMessages: DrainInboxAsync);
 
         if (pipelineError is not null)
             throw new InvalidOperationException(pipelineError);

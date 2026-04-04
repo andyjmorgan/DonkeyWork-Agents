@@ -85,6 +85,9 @@ public sealed class SwarmAgentSpawner
         RequestContext.Set(GrainCallContextKeys.ConversationId, context.ConversationId);
         if (executionId != Guid.Empty)
             RequestContext.Set(GrainCallContextKeys.ExecutionId, executionId.ToString());
+        if (context.CurrentTurnId != Guid.Empty)
+            RequestContext.Set(GrainCallContextKeys.ParentTurnId, context.CurrentTurnId.ToString());
+        RequestContext.Set(GrainCallContextKeys.ParentGrainKey, context.GrainKey);
 
         var grain = context.GrainFactory.GetGrain<IAgentGrain>(agentKey);
         _ = grain.RunAsync(contract, query, context.Observer);

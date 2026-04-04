@@ -75,6 +75,10 @@ export interface InternalContentMessage {
   role: InternalMessageRole;
   content: string;
   origin?: MessageOrigin;
+  agentId?: string | null;
+  agentName?: string | null;
+  turnId?: string;
+  parentTurnId?: string | null;
 }
 
 export interface InternalAssistantMessage {
@@ -83,6 +87,8 @@ export interface InternalAssistantMessage {
   textContent?: string | null;
   toolUses: ToolUseRecord[];
   contentBlocks: InternalContentBlock[];
+  turnId?: string;
+  parentTurnId?: string | null;
 }
 
 export interface InternalToolResultMessage {
@@ -91,6 +97,8 @@ export interface InternalToolResultMessage {
   toolUseId: string;
   content: string;
   isError: boolean;
+  turnId?: string;
+  parentTurnId?: string | null;
 }
 
 export type InternalMessage =

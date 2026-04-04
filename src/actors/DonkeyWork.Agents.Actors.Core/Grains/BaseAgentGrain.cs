@@ -495,6 +495,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         Func<InternalMessage, Task> persistMessage,
         CancellationToken ct,
         Guid? turnId = null,
+        Guid? parentTurnId = null,
         Func<Task<IReadOnlyList<InternalMessage>>>? drainPendingMessages = null)
     {
         // Ensure ToolGroupNames.Sandbox is in tool groups when EnableSandbox is set
@@ -676,6 +677,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         systemPrompt += BuildDeferredToolsPrompt(mcpDefer, deferredToolsServers);
 
         var effectiveTurnId = turnId ?? Guid.NewGuid();
+        GrainContext.CurrentTurnId = effectiveTurnId;
 
         var context = new ModelMiddlewareContext
         {
@@ -717,9 +719,11 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             ToolExecutor = this,
             CancellationToken = ct,
             TurnId = effectiveTurnId,
+            ParentTurnId = parentTurnId,
             PersistMessage = async msg =>
             {
                 msg.TurnId = effectiveTurnId;
+                msg.ParentTurnId ??= parentTurnId;
                 await persistMessage(msg);
             },
             DrainPendingMessages = drainPendingMessages,

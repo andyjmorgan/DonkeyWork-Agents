@@ -24,6 +24,7 @@ public class GrainContext
     public string? Icon { get; set; }
     public string? DisplayName { get; set; }
     public Channel<AgentMessage>? MessageInbox { get; set; }
+    public Guid CurrentTurnId { get; set; }
 
     public void ReportProgress(string breadcrumb) => ProgressCallback?.Invoke(breadcrumb);
 }

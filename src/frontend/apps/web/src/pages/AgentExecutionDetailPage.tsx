@@ -178,10 +178,19 @@ function MessageRenderer({ message, index }: { message: InternalMessage; index: 
         {expanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
         <RoleIcon role={role} />
         <span className="text-xs font-semibold uppercase tracking-wider">{message.role}</span>
+        {'agentName' in message && message.agentName && (
+          <span className="text-[10px] text-cyan-400 font-medium">{message.agentName}</span>
+        )}
         <span className="text-[10px] text-muted-foreground font-mono ml-auto">{message.$type}</span>
       </button>
       {expanded && (
         <div className="px-3 pb-3 border-t border-border space-y-2 pt-2">
+          {(message.turnId || message.parentTurnId) && (
+            <div className="flex gap-3 text-[10px] font-mono text-muted-foreground">
+              {message.turnId && <span>turn: {message.turnId.slice(0, 8)}</span>}
+              {message.parentTurnId && <span>parent: {message.parentTurnId.slice(0, 8)}</span>}
+            </div>
+          )}
           {message.$type === 'InternalContentMessage' && (
             <div className="whitespace-pre-wrap text-sm">{message.content}</div>
           )}
