@@ -11,12 +11,15 @@ public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
 {
     private static readonly HttpClient FallbackHttpClient = new();
     private readonly IAmazonS3 _s3Client;
+    private readonly string _serviceUrl;
 
     public S3ClientWrapper(IOptions<StorageOptions> options)
     {
+        _serviceUrl = options.Value.ServiceUrl;
+
         var config = new AmazonS3Config
         {
-            ServiceURL = options.Value.ServiceUrl,
+            ServiceURL = _serviceUrl,
             ForcePathStyle = options.Value.UsePathStyleAddressing
         };
 
@@ -85,6 +88,13 @@ public sealed class S3ClientWrapper : IS3ClientWrapper, IDisposable
     private async Task<Stream?> DownloadViaPresignedUrlAsync(string bucketName, string objectKey, CancellationToken cancellationToken)
     {
         var url = GetPreSignedUrl(bucketName, objectKey, TimeSpan.FromMinutes(5));
+
+        if (_serviceUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            url = string.Concat("http://", url.AsSpan("https://".Length));
+        }
+
         var response = await FallbackHttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
