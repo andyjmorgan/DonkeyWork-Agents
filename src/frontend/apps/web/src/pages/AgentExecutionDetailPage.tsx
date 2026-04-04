@@ -31,7 +31,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  ScrollArea,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@donkeywork/ui'
 import { JsonViewer } from '@/components/ui/json-viewer'
 import { agentExecutions, type AgentExecutionDetail } from '@donkeywork/api-client'
@@ -440,17 +443,33 @@ export function AgentExecutionDetailPage() {
       </div>
 
       {/* Raw Message Exchange */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Raw Message Exchange
-          </CardTitle>
-          <CardDescription>
-            {messages !== null ? `${messages.length} message${messages.length !== 1 ? 's' : ''}` : 'Loading...'}
-          </CardDescription>
+      <Card className="flex flex-col min-h-0" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
+        <CardHeader className="shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Raw Message Exchange
+              </CardTitle>
+              <CardDescription>
+                {messages !== null ? `${messages.length} message${messages.length !== 1 ? 's' : ''}` : 'Loading...'}
+              </CardDescription>
+            </div>
+            <div className="text-right text-xs text-muted-foreground space-y-0.5">
+              <div className="flex items-center gap-1 justify-end">
+                <Clock className="h-3 w-3" />
+                {new Date(execution.startedAt).toLocaleString()}
+              </div>
+              {execution.completedAt && (
+                <div className="flex items-center gap-1 justify-end">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {new Date(execution.completedAt).toLocaleString()}
+                </div>
+              )}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 min-h-0">
           {messagesLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -460,13 +479,36 @@ export function AgentExecutionDetailPage() {
               No messages recorded for this execution
             </div>
           ) : messages !== null ? (
-            <ScrollArea className="max-h-[600px]">
-              <div className="space-y-2">
-                {messages.map((msg, i) => (
-                  <MessageRenderer key={i} message={msg} index={i} />
-                ))}
-              </div>
-            </ScrollArea>
+            <Tabs defaultValue="interpreted" className="flex flex-col h-full">
+              <TabsList className="shrink-0">
+                <TabsTrigger value="interpreted">Interpreted</TabsTrigger>
+                <TabsTrigger value="json">JSON</TabsTrigger>
+              </TabsList>
+              <TabsContent value="interpreted" className="flex-1 min-h-0 overflow-y-auto mt-2">
+                <div className="space-y-2">
+                  {messages.map((msg, i) => (
+                    <MessageRenderer key={i} message={msg} index={i} />
+                  ))}
+                </div>
+              </TabsContent>
+              <TabsContent value="json" className="flex-1 min-h-0 overflow-y-auto mt-2">
+                <div className="space-y-2">
+                  {messages.map((msg, i) => (
+                    <div key={i} className="rounded-lg border border-border overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+                        <span className="text-xs font-mono text-muted-foreground w-6">{i + 1}</span>
+                        <RoleIcon role={msg.role?.toLowerCase() ?? 'unknown'} />
+                        <span className="text-xs font-semibold uppercase tracking-wider">{msg.role}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono ml-auto">{msg.$type}</span>
+                      </div>
+                      <div className="p-3">
+                        <JsonViewer data={msg} collapsed={2} className="text-xs" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           ) : null}
         </CardContent>
       </Card>
