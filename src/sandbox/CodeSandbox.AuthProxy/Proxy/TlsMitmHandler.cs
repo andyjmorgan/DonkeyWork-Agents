@@ -113,7 +113,7 @@ public class TlsMitmHandler
     /// Relays HTTP requests from client to upstream, parsing each request for audit logging
     /// and optionally injecting headers into every request.
     /// </summary>
-    private async Task RelayRequestsAsync(
+    internal async Task RelayRequestsAsync(
         Stream source, Stream destination, string host,
         Dictionary<string, string>? headersToInject, CancellationToken cancellationToken)
     {
@@ -183,11 +183,11 @@ public class TlsMitmHandler
                         // === AUDIT: Log the request ===
                         LogAuditMessage(host, "REQUEST", requestCount, headerText, headersToInject);
 
-                        await destination.WriteAsync(
-                            workingData.AsMemory(offset, markerIdx - offset), cancellationToken);
-
                         if (injectionBytes.Length > 0)
                         {
+                            var filtered = StripHeaders(headerText, headersToInject!.Keys);
+                            await destination.WriteAsync(
+                                Encoding.ASCII.GetBytes(filtered), cancellationToken);
                             await destination.WriteAsync(
                                 Encoding.ASCII.GetBytes("\r\n"), cancellationToken);
                             await destination.WriteAsync(injectionBytes, cancellationToken);
@@ -196,7 +196,8 @@ public class TlsMitmHandler
                         }
                         else
                         {
-                            // No injection — write the original \r\n\r\n terminator
+                            await destination.WriteAsync(
+                                workingData.AsMemory(offset, markerIdx - offset), cancellationToken);
                             await destination.WriteAsync(
                                 Encoding.ASCII.GetBytes("\r\n\r\n"), cancellationToken);
                         }
@@ -270,7 +271,7 @@ public class TlsMitmHandler
     /// Handles Content-Length delimited bodies. Falls back to raw copy for chunked responses
     /// after logging the initial response headers.
     /// </summary>
-    private async Task RelayResponsesAsync(
+    internal async Task RelayResponsesAsync(
         Stream source, Stream destination, string host, CancellationToken cancellationToken)
     {
         var headerEndMarker = Encoding.ASCII.GetBytes("\r\n\r\n");
@@ -420,7 +421,7 @@ public class TlsMitmHandler
         }
     }
 
-    private static string RedactIfSensitive(string headerName, string headerValue)
+    internal static string RedactIfSensitive(string headerName, string headerValue)
     {
         if (!SensitiveHeaders.Contains(headerName))
             return headerValue;
@@ -433,9 +434,35 @@ public class TlsMitmHandler
         return "[REDACTED]";
     }
 
+    // ─── Header manipulation ───────────────────────────────────────────
+
+    internal static string StripHeaders(string headerText, IEnumerable<string> headerNames)
+    {
+        var namesToStrip = new HashSet<string>(headerNames, StringComparer.OrdinalIgnoreCase);
+        var lines = headerText.Split("\r\n");
+        var sb = new StringBuilder();
+
+        foreach (var line in lines)
+        {
+            var colonIdx = line.IndexOf(':');
+            if (colonIdx > 0)
+            {
+                var name = line[..colonIdx].Trim();
+                if (namesToStrip.Contains(name))
+                    continue;
+            }
+
+            if (sb.Length > 0)
+                sb.Append("\r\n");
+            sb.Append(line);
+        }
+
+        return sb.ToString();
+    }
+
     // ─── Parsing helpers ────────────────────────────────────────────────
 
-    private static int FindSequence(byte[] haystack, byte[] needle, int startIndex = 0)
+    internal static int FindSequence(byte[] haystack, byte[] needle, int startIndex = 0)
     {
         for (var i = startIndex; i <= haystack.Length - needle.Length; i++)
         {
@@ -445,7 +472,7 @@ public class TlsMitmHandler
         return -1;
     }
 
-    private static long ParseContentLength(string headerText)
+    internal static long ParseContentLength(string headerText)
     {
         foreach (var line in headerText.Split("\r\n"))
         {
@@ -459,7 +486,7 @@ public class TlsMitmHandler
         return 0;
     }
 
-    private static bool HasChunkedTransferEncoding(string headerText)
+    internal static bool HasChunkedTransferEncoding(string headerText)
     {
         foreach (var line in headerText.Split("\r\n"))
         {

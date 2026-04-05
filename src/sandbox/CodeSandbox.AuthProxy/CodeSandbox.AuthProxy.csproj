@@ -7,6 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="CodeSandbox.AuthProxy.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
