@@ -10,6 +10,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IMcpServerConfigurationService, McpServerConfigurationService>();
         services.AddScoped<IMcpServerTestService, McpServerTestService>();
+        services.AddScoped<IMcpTraceService, McpTraceService>();
         return services;
     }
 }

@@ -1085,6 +1085,35 @@ export const agentExecutions = {
     api.get<GetAgentExecutionMessagesResponse>(`/api/v1/agent-executions/${id}/messages`),
 }
 
+// MCP Traces API
+export interface McpTraceSummary {
+  id: string
+  method: string
+  httpStatusCode: number
+  isSuccess: boolean
+  durationMs?: number
+  startedAt: string
+  clientIpAddress?: string
+  userAgent?: string
+}
+
+export interface McpTraceDetail extends McpTraceSummary {
+  userId?: string
+  jsonRpcId?: string
+  requestBody: string
+  responseBody?: string
+  errorMessage?: string
+  completedAt?: string
+  createdAt: string
+}
+
+export const mcpTraces = {
+  list: (offset = 0, limit = 20) =>
+    api.get<PaginatedResponse<McpTraceSummary>>(`/api/v1/mcp-traces?offset=${offset}&limit=${limit}`),
+  get: (id: string) =>
+    api.get<McpTraceDetail>(`/api/v1/mcp-traces/${id}`),
+}
+
 // Conversations API
 export const conversations = {
   list: (offset = 0, limit = 20) =>

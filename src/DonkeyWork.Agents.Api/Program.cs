@@ -11,6 +11,7 @@ using DonkeyWork.Agents.Identity.Api.Options;
 using DonkeyWork.Agents.A2a.Api;
 using DonkeyWork.Agents.Mcp.Api;
 using DonkeyWork.Agents.Mcp.Core;
+using DonkeyWork.Agents.Mcp.Core.Middleware;
 using DonkeyWork.Agents.Notifications.Core;
 using DonkeyWork.Agents.Notifications.Core.Hubs;
 using DonkeyWork.Agents.Persistence;
@@ -238,6 +239,7 @@ app.UseWebSockets();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<McpTraceMiddleware>();
 app.MapControllers();
 
 app.MapActorsEndpoints();

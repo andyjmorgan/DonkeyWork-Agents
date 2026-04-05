@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IA2aMcpToolService, A2aMcpToolService>();
         services.AddScoped<IMcpToolDiscoveryService, McpToolDiscoveryService>();
         services.AddScoped<IMcpToolExecutor, McpToolExecutor>();
+        services.AddScoped<IMcpTraceRepository, McpTraceRepository>();
 
         services.AddScoped<IListToolsHandler, ListToolsHandler>();
         services.AddScoped<ICallToolHandler, CallToolHandler>();
