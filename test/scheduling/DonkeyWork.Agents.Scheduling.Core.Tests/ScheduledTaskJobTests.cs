@@ -25,6 +25,7 @@ public class ScheduledTaskJobTests : IDisposable
     private readonly Mock<IAgentExecutionRepository> _agentExecRepoMock;
     private readonly Mock<IScheduledJobExecutionRepository> _schedExecRepoMock;
     private readonly Mock<IAgentDefinitionService> _agentDefServiceMock;
+    private readonly Mock<IConversationContractHydrator> _contractHydratorMock;
     private readonly AgentContractRegistry _contractRegistry;
     private readonly Mock<IGrainFactory> _grainFactoryMock;
     private readonly ScheduledTaskJob _job;
@@ -45,6 +46,11 @@ public class ScheduledTaskJobTests : IDisposable
         _agentDefServiceMock = new Mock<IAgentDefinitionService>();
         _grainFactoryMock = new Mock<IGrainFactory>();
 
+        _contractHydratorMock = new Mock<IConversationContractHydrator>();
+        _contractHydratorMock
+            .Setup(h => h.HydrateAsync(It.IsAny<AgentContract>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentContract c, CancellationToken _) => c);
+
         _contractRegistry = new AgentContractRegistry(
             Mock.Of<ILogger<AgentContractRegistry>>());
 
@@ -54,6 +60,7 @@ public class ScheduledTaskJobTests : IDisposable
             _agentExecRepoMock.Object,
             _schedExecRepoMock.Object,
             _agentDefServiceMock.Object,
+            _contractHydratorMock.Object,
             _contractRegistry,
             _grainFactoryMock.Object,
             Mock.Of<ILogger<ScheduledTaskJob>>());

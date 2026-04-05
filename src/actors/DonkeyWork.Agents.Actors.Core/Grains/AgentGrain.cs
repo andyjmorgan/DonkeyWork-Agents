@@ -409,7 +409,12 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         {
             _isIdle = true;
 
-            if (_parentGrainKey is null || _parentGrainKey.StartsWith(AgentKeys.ConversationPrefix))
+            var hasConversationParent = _parentGrainKey != null
+                ? _parentGrainKey.StartsWith(AgentKeys.ConversationPrefix)
+                : GrainContext.GrainKey.StartsWith(AgentKeys.ConversationPrefix)
+                  || GrainContext.GrainKey.StartsWith(AgentKeys.DelegatePrefix)
+                  || GrainContext.GrainKey.StartsWith(AgentKeys.AgentPrefix);
+            if (hasConversationParent)
             {
                 try
                 {

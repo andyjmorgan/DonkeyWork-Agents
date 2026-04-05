@@ -30,6 +30,7 @@ public class ScheduledTaskJob : IJob
     private readonly IAgentExecutionRepository _agentExecutionRepository;
     private readonly IScheduledJobExecutionRepository _scheduledJobExecutionRepository;
     private readonly IAgentDefinitionService _agentDefinitionService;
+    private readonly IConversationContractHydrator _contractHydrator;
     private readonly AgentContractRegistry _contractRegistry;
     private readonly IGrainFactory _grainFactory;
     private readonly ILogger<ScheduledTaskJob> _logger;
@@ -40,6 +41,7 @@ public class ScheduledTaskJob : IJob
         IAgentExecutionRepository agentExecutionRepository,
         IScheduledJobExecutionRepository scheduledJobExecutionRepository,
         IAgentDefinitionService agentDefinitionService,
+        IConversationContractHydrator contractHydrator,
         AgentContractRegistry contractRegistry,
         IGrainFactory grainFactory,
         ILogger<ScheduledTaskJob> logger)
@@ -49,6 +51,7 @@ public class ScheduledTaskJob : IJob
         _agentExecutionRepository = agentExecutionRepository;
         _scheduledJobExecutionRepository = scheduledJobExecutionRepository;
         _agentDefinitionService = agentDefinitionService;
+        _contractHydrator = contractHydrator;
         _contractRegistry = contractRegistry;
         _grainFactory = grainFactory;
         _logger = logger;
@@ -171,51 +174,8 @@ public class ScheduledTaskJob : IJob
     {
         var descriptor = _contractRegistry.GetContract("conversation")
             ?? throw new InvalidOperationException("Conversation contract not found in registry.");
-        var naviContract = descriptor.Contract;
 
-        var naviAgents = await _agentDefinitionService.GetNaviConnectedAsync(ct);
-        if (naviAgents.Count > 0)
-        {
-            var catalog = "\n\n## Custom Agents\n\nAvailable via `spawn_agent` (use agent name):\n";
-            foreach (var agent in naviAgents)
-            {
-                var desc = !string.IsNullOrEmpty(agent.Description) ? agent.Description : "No description";
-                catalog += $"- **{agent.Name}** (agent_id: `{agent.Id}`): {desc}\n";
-            }
-
-            var extendedPrompt = naviContract.SystemPrompt.Append(catalog).ToArray();
-            naviContract = new AgentContract
-            {
-                SystemPrompt = extendedPrompt,
-                ToolGroups = naviContract.ToolGroups,
-                MaxTokens = naviContract.MaxTokens,
-                ThinkingBudgetTokens = naviContract.ThinkingBudgetTokens,
-                Stream = naviContract.Stream,
-                WebSearch = naviContract.WebSearch,
-                WebFetch = naviContract.WebFetch,
-                PersistMessages = naviContract.PersistMessages,
-                Lifecycle = naviContract.Lifecycle,
-                LingerSeconds = naviContract.LingerSeconds,
-                AgentType = naviContract.AgentType,
-                KeyPrefix = naviContract.KeyPrefix,
-                TimeoutSeconds = naviContract.TimeoutSeconds,
-                McpServers = naviContract.McpServers,
-                EnableSandbox = naviContract.EnableSandbox,
-                ModelId = naviContract.ModelId,
-                Prompts = naviContract.Prompts,
-                SubAgents = naviContract.SubAgents,
-                ReasoningEffort = naviContract.ReasoningEffort,
-                ToolConfiguration = naviContract.ToolConfiguration,
-                DisplayName = naviContract.DisplayName,
-                Icon = naviContract.Icon,
-                AllowDelegation = naviContract.AllowDelegation,
-                ContextManagement = naviContract.ContextManagement,
-                A2aServers = naviContract.A2aServers,
-                Orchestrations = naviContract.Orchestrations,
-            };
-        }
-
-        return naviContract;
+        return await _contractHydrator.HydrateAsync(descriptor.Contract, ct);
     }
 
     private async Task<AgentContract> ResolveCustomAgentContractAsync(
