@@ -75,6 +75,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
 
     // MCP module (system-level logging, no user scoping)
     public DbSet<McpToolInvocationLogEntity> McpToolInvocationLogs => Set<McpToolInvocationLogEntity>();
+    public DbSet<McpTraceEntity> McpTraces => Set<McpTraceEntity>();
 
     // MCP server configurations module
     public DbSet<McpServerConfigurationEntity> McpServerConfigurations => Set<McpServerConfigurationEntity>();

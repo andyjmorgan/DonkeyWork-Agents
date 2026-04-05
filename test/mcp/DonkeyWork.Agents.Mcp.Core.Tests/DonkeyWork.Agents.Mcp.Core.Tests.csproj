@@ -23,6 +23,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\mcp\DonkeyWork.Agents.Mcp.Core\DonkeyWork.Agents.Mcp.Core.csproj" />
     <ProjectReference Include="..\..\..\src\mcp\DonkeyWork.Agents.Mcp.Contracts\DonkeyWork.Agents.Mcp.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\src\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\src\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

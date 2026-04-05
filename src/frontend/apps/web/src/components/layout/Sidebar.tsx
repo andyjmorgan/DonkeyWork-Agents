@@ -57,6 +57,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       { name: 'Orchestration Traces', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
       { name: 'Agent Traces', href: '/agent-executions', icon: Cpu, iconColor: 'text-rose-500' },
+      { name: 'MCP Traces', href: '/mcp-traces', icon: Server, iconColor: 'text-teal-500' },
     ],
   },
   {
