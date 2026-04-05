@@ -1,7 +1,9 @@
 import { useState, useMemo, useLayoutEffect, useRef } from 'react'
-import { Play, Loader2, RefreshCw, CheckCircle2, XCircle, ScrollText } from 'lucide-react'
+import { Play, Loader2, RefreshCw, ScrollText, StopCircle } from 'lucide-react'
 import { Button, Label, Textarea } from '@donkeywork/ui'
-import { executions, type JSONSchema } from '@donkeywork/api-client'
+import type { JSONSchema } from '@donkeywork/api-client'
+import { useExecutionStream } from '@/hooks/useExecutionStream'
+import { StreamingOutput } from './StreamingOutput'
 import { ExecutionDetailDialog } from './ExecutionDetailDialog'
 
 interface TestPanelProps {
@@ -49,12 +51,9 @@ function generateExampleFromSchema(schema: JSONSchema): Record<string, unknown> 
 }
 
 export function TestPanel({ orchestrationId, inputSchema }: TestPanelProps) {
-  return <DirectTestPanel orchestrationId={orchestrationId} inputSchema={inputSchema} />
-}
-
-// Direct JSON test interface (non-streaming)
-function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: string; inputSchema?: JSONSchema }) {
   const [showExecutionLog, setShowExecutionLog] = useState(false)
+  const [completedOutput, setCompletedOutput] = useState<unknown>(undefined)
+
   const initialInput = useMemo(() => {
     if (inputSchema) {
       return JSON.stringify(generateExampleFromSchema(inputSchema), null, 2)
@@ -63,11 +62,11 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
   }, [inputSchema])
 
   const [input, setInput] = useState(initialInput)
-  const [output, setOutput] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isExecuting, setIsExecuting] = useState(false)
-  const [executionStatus, setExecutionStatus] = useState<'Completed' | 'Failed' | null>(null)
-  const [executionId, setExecutionId] = useState<string | null>(null)
+
+  const { events, isStreaming, error, executionId, startStream, stopStream } = useExecutionStream({
+    onComplete: (output) => setCompletedOutput(output),
+    onError: () => {},
+  })
 
   const prevInputSchemaRef = useRef(inputSchema)
   useLayoutEffect(() => {
@@ -85,51 +84,16 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
     }
   }
 
-  const handleTest = async () => {
+  const handleTest = () => {
     let parsedInput: unknown
     try {
       parsedInput = JSON.parse(input)
     } catch {
-      setError('Invalid JSON input')
       return
     }
 
-    setIsExecuting(true)
-    setOutput(null)
-    setError(null)
-    setExecutionStatus(null)
-    setExecutionId(null)
-
-    try {
-      const result = await executions.test(orchestrationId, parsedInput)
-      setExecutionId(result.executionId)
-
-      if (result.status === 'Completed') {
-        setExecutionStatus('Completed')
-        // Output is a JSON string from backend, format it nicely
-        if (result.output) {
-          try {
-            const parsed = typeof result.output === 'string' ? JSON.parse(result.output) : result.output
-            setOutput(JSON.stringify(parsed, null, 2))
-          } catch {
-            setOutput(String(result.output))
-          }
-        } else {
-          setOutput('(no output)')
-        }
-      } else if (result.status === 'Failed') {
-        setExecutionStatus('Failed')
-        setError(result.error || 'Execution failed')
-      } else {
-        setExecutionStatus('Failed')
-        setError(`Unexpected status: ${result.status}`)
-      }
-    } catch (err) {
-      setExecutionStatus('Failed')
-      setError(err instanceof Error ? err.message : 'Execution failed')
-    } finally {
-      setIsExecuting(false)
-    }
+    setCompletedOutput(undefined)
+    startStream(orchestrationId, parsedInput, true)
   }
 
   return (
@@ -142,7 +106,7 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
               variant="ghost"
               size="sm"
               onClick={handleResetTemplate}
-              disabled={isExecuting}
+              disabled={isStreaming}
               className="h-7 text-xs"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
@@ -154,98 +118,62 @@ function DirectTestPanel({ orchestrationId, inputSchema }: { orchestrationId: st
           value={input}
           onChange={(e) => setInput(e.target.value)}
           className="font-mono text-sm"
-          rows={12}
+          rows={8}
           placeholder='{\n  "input": "Hello"\n}'
         />
-        <Button
-          onClick={handleTest}
-          disabled={isExecuting}
-          className="w-full"
-        >
-          {isExecuting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Running...
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4" />
-              Test Orchestration
-            </>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleTest}
+            disabled={isStreaming}
+            className="flex-1"
+          >
+            {isStreaming ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Test Orchestration
+              </>
+            )}
+          </Button>
+          {isStreaming && (
+            <Button variant="destructive" size="icon" onClick={stopStream}>
+              <StopCircle className="h-4 w-4" />
+            </Button>
           )}
-        </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <Label className="mb-2 block">Output</Label>
-        <div className="h-full rounded-lg border border-border bg-muted/30 overflow-auto">
-          {/* Loading state */}
-          {isExecuting && (
-            <div className="flex items-center justify-center h-full p-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Executing orchestration...</span>
-              </div>
-            </div>
+        <div className="flex items-center justify-between mb-2">
+          <Label>Output</Label>
+          {executionId && !isStreaming && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setShowExecutionLog(true)}
+            >
+              <ScrollText className="h-3 w-3 mr-1" />
+              Execution Log
+            </Button>
           )}
-
-          {/* Success output */}
-          {!isExecuting && executionStatus === 'Completed' && output && (
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Execution completed</span>
-                </div>
-                {executionId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => setShowExecutionLog(true)}
-                  >
-                    <ScrollText className="h-3 w-3 mr-1" />
-                    Execution Log
-                  </Button>
-                )}
-              </div>
-              <pre className="text-sm font-mono whitespace-pre-wrap break-all">{output}</pre>
+        </div>
+        <div className="h-[calc(100%-2rem)]">
+          {error && !isStreaming && events.length === 0 ? (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+              {error}
             </div>
-          )}
-
-          {/* Error output */}
-          {!isExecuting && error && (
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <XCircle className="h-4 w-4" />
-                  <span>Execution failed</span>
-                </div>
-                {executionId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => setShowExecutionLog(true)}
-                  >
-                    <ScrollText className="h-3 w-3 mr-1" />
-                    Execution Log
-                  </Button>
-                )}
-              </div>
-              <div className="p-3 rounded-md bg-destructive/10 text-sm text-destructive">
-                {error}
-              </div>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!isExecuting && !output && !error && (
-            <div className="flex items-center justify-center h-full p-4">
-              <p className="text-sm text-muted-foreground">
-                Click "Test Orchestration" to see results
-              </p>
-            </div>
+          ) : (
+            <StreamingOutput
+              events={events}
+              output={completedOutput}
+              error={error}
+              isStreaming={isStreaming}
+            />
           )}
         </div>
       </div>

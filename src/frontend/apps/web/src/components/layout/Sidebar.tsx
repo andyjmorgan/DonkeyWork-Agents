@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer, Volume2, Calendar, Cpu } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, FolderKanban, CheckSquare, StickyNote, Folder, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, FlaskConical, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer, Volume2, Calendar, Cpu, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Button,
@@ -49,7 +49,13 @@ const navigationGroups: NavGroup[] = [
       { name: 'Orchestrations', href: '/orchestrations', icon: List, iconColor: 'text-cyan-500' },
       { name: 'Agent Definitions', href: '/agent-definitions', icon: Brain, iconColor: 'text-blue-500' },
       { name: 'Schedules', href: '/schedules', icon: Calendar, iconColor: 'text-orange-500' },
-      { name: 'Executions', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
+    ],
+  },
+  {
+    name: 'Traces',
+    icon: Activity,
+    items: [
+      { name: 'Orchestration Traces', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
       { name: 'Agent Traces', href: '/agent-executions', icon: Cpu, iconColor: 'text-rose-500' },
     ],
   },
