@@ -1,14 +1,19 @@
 using System.Text.Json;
 using Asp.Versioning;
+using DonkeyWork.Agents.Orchestrations.Contracts;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
+using DonkeyWork.Agents.Orchestrations.Contracts.Messages;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using DonkeyWork.Agents.Persistence;
+using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Providers.Contracts.Models.Pipeline;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wolverine;
 
 namespace DonkeyWork.Agents.Orchestrations.Api.Controllers;
 
@@ -24,26 +29,32 @@ public class ExecutionsController : ControllerBase
 {
     private readonly IOrchestrationService _agentService;
     private readonly IOrchestrationVersionService _versionService;
-    private readonly IOrchestrationExecutor _orchestrator;
+    private readonly IMessageBus _messageBus;
     private readonly IExecutionStreamService _streamService;
     private readonly IOrchestrationExecutionRepository _executionRepository;
+    private readonly IUserStreamManager _userStreamManager;
     private readonly IIdentityContext _identityContext;
+    private readonly AgentsDbContext _dbContext;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public ExecutionsController(
         IOrchestrationService agentService,
         IOrchestrationVersionService versionService,
-        IOrchestrationExecutor orchestrator,
+        IMessageBus messageBus,
         IExecutionStreamService streamService,
         IOrchestrationExecutionRepository executionRepository,
-        IIdentityContext identityContext)
+        IUserStreamManager userStreamManager,
+        IIdentityContext identityContext,
+        AgentsDbContext dbContext)
     {
         _agentService = agentService;
         _versionService = versionService;
-        _orchestrator = orchestrator;
+        _messageBus = messageBus;
         _streamService = streamService;
         _executionRepository = executionRepository;
+        _userStreamManager = userStreamManager;
         _identityContext = identityContext;
+        _dbContext = dbContext;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -66,12 +77,10 @@ public class ExecutionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Execute(Guid orchestrationId, [FromBody] ExecuteOrchestrationRequestV1 request)
     {
-        // 1. Load agent
         var agent = await _agentService.GetByIdAsync(orchestrationId, _identityContext.UserId);
         if (agent == null)
             return NotFound(new { message = "Agent not found" });
 
-        // 2. Determine version
         GetOrchestrationVersionResponseV1? version;
         if (request.VersionId.HasValue)
         {
@@ -81,7 +90,6 @@ public class ExecutionsController : ControllerBase
         }
         else
         {
-            // Use latest published (CurrentVersionId)
             if (agent.CurrentVersionId == null)
                 return BadRequest(new { message = "No published version available" });
 
@@ -90,17 +98,14 @@ public class ExecutionsController : ControllerBase
                 return NotFound(new { message = "Published version not found" });
         }
 
-        // 3. Check Accept header for streaming vs non-streaming
         var acceptHeader = Request.Headers["Accept"].ToString();
         if (acceptHeader.Contains("text/event-stream"))
         {
-            // Streaming response
-            return await StreamExecutionAsync(version.Id, request.Input);
+            return await StreamExecutionAsync(orchestrationId, version.Id, ExecutionInterface.Direct, request.Input);
         }
         else
         {
-            // Non-streaming response
-            return await ExecuteAndWaitAsync(version.Id, request.Input);
+            return await ExecuteAndWaitAsync(orchestrationId, version.Id, ExecutionInterface.Direct, request.Input);
         }
     }
 
@@ -119,12 +124,10 @@ public class ExecutionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Test(Guid orchestrationId, [FromBody] ExecuteOrchestrationRequestV1 request)
     {
-        // 1. Load agent
         var agent = await _agentService.GetByIdAsync(orchestrationId, _identityContext.UserId);
         if (agent == null)
             return NotFound(new { message = "Agent not found" });
 
-        // 2. Determine version - prefer draft, fallback to latest published
         GetOrchestrationVersionResponseV1? version;
         if (request.VersionId.HasValue)
         {
@@ -142,17 +145,14 @@ public class ExecutionsController : ControllerBase
                 return BadRequest(new { message = "No version available for testing" });
         }
 
-        // 3. Check Accept header for streaming vs non-streaming
         var acceptHeader = Request.Headers["Accept"].ToString();
         if (acceptHeader.Contains("text/event-stream"))
         {
-            // Streaming response
-            return await StreamExecutionAsync(version.Id, request.Input);
+            return await StreamExecutionAsync(orchestrationId, version.Id, ExecutionInterface.Direct, request.Input);
         }
         else
         {
-            // Non-streaming response
-            return await ExecuteAndWaitAsync(version.Id, request.Input);
+            return await ExecuteAndWaitAsync(orchestrationId, version.Id, ExecutionInterface.Direct, request.Input);
         }
     }
 
@@ -171,12 +171,10 @@ public class ExecutionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Chat(Guid orchestrationId, [FromBody] ChatExecuteRequestV1 request)
     {
-        // 1. Load agent
         var agent = await _agentService.GetByIdAsync(orchestrationId, _identityContext.UserId);
         if (agent == null)
             return NotFound(new { message = "Agent not found" });
 
-        // 2. Determine version
         GetOrchestrationVersionResponseV1? version;
         if (request.VersionId.HasValue)
         {
@@ -186,7 +184,6 @@ public class ExecutionsController : ControllerBase
         }
         else
         {
-            // Use latest published (CurrentVersionId)
             if (agent.CurrentVersionId == null)
                 return BadRequest(new { message = "No published version available" });
 
@@ -195,18 +192,16 @@ public class ExecutionsController : ControllerBase
                 return NotFound(new { message = "Published version not found" });
         }
 
-        // 3. Build conversation context
         var conversation = BuildConversationContext(request.Messages);
 
-        // 4. Check Accept header for streaming vs non-streaming
         var acceptHeader = Request.Headers["Accept"].ToString();
         if (acceptHeader.Contains("text/event-stream"))
         {
-            return await StreamChatExecutionAsync(version.Id, conversation);
+            return await StreamChatExecutionAsync(orchestrationId, version.Id, conversation);
         }
         else
         {
-            return await ExecuteChatAndWaitAsync(version.Id, conversation);
+            return await ExecuteChatAndWaitAsync(orchestrationId, version.Id, conversation);
         }
     }
 
@@ -225,12 +220,10 @@ public class ExecutionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> TestChat(Guid orchestrationId, [FromBody] ChatExecuteRequestV1 request)
     {
-        // 1. Load agent
         var agent = await _agentService.GetByIdAsync(orchestrationId, _identityContext.UserId);
         if (agent == null)
             return NotFound(new { message = "Agent not found" });
 
-        // 2. Determine version - prefer draft, fallback to latest published
         GetOrchestrationVersionResponseV1? version;
         if (request.VersionId.HasValue)
         {
@@ -248,18 +241,16 @@ public class ExecutionsController : ControllerBase
                 return BadRequest(new { message = "No version available for testing" });
         }
 
-        // 3. Build conversation context
         var conversation = BuildConversationContext(request.Messages);
 
-        // 4. Check Accept header for streaming vs non-streaming
         var acceptHeader = Request.Headers["Accept"].ToString();
         if (acceptHeader.Contains("text/event-stream"))
         {
-            return await StreamChatExecutionAsync(version.Id, conversation);
+            return await StreamChatExecutionAsync(orchestrationId, version.Id, conversation);
         }
         else
         {
-            return await ExecuteChatAndWaitAsync(version.Id, conversation);
+            return await ExecuteChatAndWaitAsync(orchestrationId, version.Id, conversation);
         }
     }
 
@@ -294,17 +285,18 @@ public class ExecutionsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ReconnectStream(Guid executionId, [FromQuery] long offset = 0)
     {
-        // Verify user owns this execution
         var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
         if (execution == null)
             return NotFound(new { message = "Execution not found" });
 
-        // Stream events from offset
+        var userId = _identityContext.UserId;
+        await _userStreamManager.EnsureStreamAsync(userId);
+
         Response.Headers["Content-Type"] = "text/event-stream";
         Response.Headers["Cache-Control"] = "no-cache";
         Response.Headers["Connection"] = "keep-alive";
 
-        await foreach (var evt in _streamService.ReadEventsAsync(executionId, offset))
+        await foreach (var evt in _streamService.ReadEventsAsync(userId, executionId, offset))
         {
             var json = JsonSerializer.Serialize(evt, _jsonOptions);
             await Response.WriteAsync($"event: {evt.GetType().Name}\n");
@@ -332,7 +324,6 @@ public class ExecutionsController : ControllerBase
         [FromQuery] int offset = 0,
         [FromQuery] int limit = 20)
     {
-        // Enforce max limit
         limit = Math.Min(limit, 100);
 
         var (executions, totalCount) = await _executionRepository.ListAsync(
@@ -364,7 +355,6 @@ public class ExecutionsController : ControllerBase
         [FromQuery] int offset = 0,
         [FromQuery] int limit = 100)
     {
-        // Enforce max limit
         limit = Math.Min(limit, 1000);
 
         var (logs, totalCount) = await _executionRepository.GetLogsAsync(
@@ -375,7 +365,6 @@ public class ExecutionsController : ControllerBase
 
         if (totalCount == 0 && logs.Count == 0)
         {
-            // Verify execution exists
             var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
             if (execution == null)
                 return NotFound(new { message = "Execution not found" });
@@ -405,7 +394,6 @@ public class ExecutionsController : ControllerBase
         [FromQuery] int offset = 0,
         [FromQuery] int limit = 100)
     {
-        // Enforce max limit
         limit = Math.Min(limit, 1000);
 
         var (nodeExecutions, totalCount) = await _executionRepository.GetNodeExecutionsAsync(
@@ -416,7 +404,6 @@ public class ExecutionsController : ControllerBase
 
         if (totalCount == 0 && nodeExecutions.Count == 0)
         {
-            // Verify execution exists
             var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
             if (execution == null)
                 return NotFound(new { message = "Execution not found" });
@@ -429,26 +416,69 @@ public class ExecutionsController : ControllerBase
         });
     }
 
-    private async Task<IActionResult> StreamExecutionAsync(
+    private async Task<ExecuteOrchestrationCommand> CreateExecutionAndPublishAsync(
+        Guid orchestrationId,
         Guid versionId,
+        ExecutionInterface executionInterface,
+        JsonElement input,
+        ConversationContext? conversation = null)
+    {
+        var executionId = Guid.NewGuid();
+        var userId = _identityContext.UserId;
+
+        var inputJson = conversation != null
+            ? JsonSerializer.Serialize(new { conversationId = conversation.Id })
+            : input.GetRawText();
+
+        var execution = new OrchestrationExecutionEntity
+        {
+            Id = executionId,
+            UserId = userId,
+            OrchestrationId = orchestrationId,
+            OrchestrationVersionId = versionId,
+            Interface = executionInterface,
+            Status = ExecutionStatus.Pending,
+            Input = inputJson,
+            StartedAt = DateTimeOffset.UtcNow,
+            StreamName = NatsSubjects.ExecutionSubject(userId, executionId)
+        };
+
+        _dbContext.OrchestrationExecutions.Add(execution);
+        await _dbContext.SaveChangesAsync();
+
+        await _userStreamManager.EnsureStreamAsync(userId);
+
+        var command = new ExecuteOrchestrationCommand
+        {
+            ExecutionId = executionId,
+            UserId = userId,
+            UserEmail = _identityContext.Email,
+            UserName = _identityContext.Name,
+            UserUsername = _identityContext.Username,
+            VersionId = versionId,
+            ExecutionInterface = executionInterface,
+            InputJson = conversation != null ? null : input.GetRawText(),
+            ConversationJson = conversation != null ? JsonSerializer.Serialize(conversation) : null
+        };
+
+        await _messageBus.PublishAsync(command);
+
+        return command;
+    }
+
+    private async Task<IActionResult> StreamExecutionAsync(
+        Guid orchestrationId,
+        Guid versionId,
+        ExecutionInterface executionInterface,
         JsonElement input)
     {
         Response.Headers["Content-Type"] = "text/event-stream";
         Response.Headers["Cache-Control"] = "no-cache";
         Response.Headers["Connection"] = "keep-alive";
-        var executionId = Guid.NewGuid();
-        await _streamService.CreateStreamAsync(executionId);
 
-        _ = _orchestrator.ExecuteAsync(
-            executionId,
-            _identityContext.UserId,
-            versionId,
-            ExecutionInterface.Direct,
-            input,
-            HttpContext.RequestAborted);
+        var command = await CreateExecutionAndPublishAsync(orchestrationId, versionId, executionInterface, input);
 
-        // Stream events from NATS in real-time
-        await foreach (var evt in _streamService.ReadEventsAsync(executionId))
+        await foreach (var evt in _streamService.ReadEventsAsync(command.UserId, command.ExecutionId))
         {
             var json = JsonSerializer.Serialize(evt, _jsonOptions);
             await Response.WriteAsync($"event: {evt.GetType().Name}\n");
@@ -463,21 +493,20 @@ public class ExecutionsController : ControllerBase
     }
 
     private async Task<IActionResult> ExecuteAndWaitAsync(
+        Guid orchestrationId,
         Guid versionId,
+        ExecutionInterface executionInterface,
         JsonElement input)
     {
-        var executionId = Guid.NewGuid();
+        var command = await CreateExecutionAndPublishAsync(orchestrationId, versionId, executionInterface, input);
 
-        await _streamService.CreateStreamAsync(executionId);
-        await _orchestrator.ExecuteAsync(
-            executionId,
-            _identityContext.UserId,
-            versionId,
-            ExecutionInterface.Direct,
-            input,
-            HttpContext.RequestAborted);
+        await foreach (var evt in _streamService.ReadEventsAsync(command.UserId, command.ExecutionId))
+        {
+            if (evt is ExecutionCompletedEvent || evt is ExecutionFailedEvent)
+                break;
+        }
 
-        var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
+        var execution = await _executionRepository.GetByIdAsync(command.ExecutionId, _identityContext.UserId);
 
         if (execution == null)
         {
@@ -492,7 +521,7 @@ public class ExecutionsController : ControllerBase
 
             return Ok(new ExecuteOrchestrationResponseV1
             {
-                ExecutionId = executionId,
+                ExecutionId = command.ExecutionId,
                 Status = ExecutionStatus.Completed,
                 Output = output
             });
@@ -502,7 +531,7 @@ public class ExecutionsController : ControllerBase
         {
             return Ok(new ExecuteOrchestrationResponseV1
             {
-                ExecutionId = executionId,
+                ExecutionId = command.ExecutionId,
                 Status = ExecutionStatus.Failed,
                 Error = execution.ErrorMessage
             });
@@ -517,7 +546,7 @@ public class ExecutionsController : ControllerBase
         var currentMessageText = lastUserMessage?.Content ?? string.Empty;
 
         var historyMessages = messages
-            .Take(messages.Count - 1) // Exclude last message (current user message)
+            .Take(messages.Count - 1)
             .Select(m => new ConversationMessage
             {
                 Role = m.Role.Equals("user", StringComparison.OrdinalIgnoreCase)
@@ -529,31 +558,24 @@ public class ExecutionsController : ControllerBase
 
         return new ConversationContext
         {
-            Id = Guid.NewGuid(), // Ephemeral conversation ID for playground
+            Id = Guid.NewGuid(),
             Messages = historyMessages,
             CurrentMessage = new List<ChatContentPart> { new TextChatContentPart { Text = currentMessageText } }
         };
     }
 
     private async Task<IActionResult> StreamChatExecutionAsync(
+        Guid orchestrationId,
         Guid versionId,
         ConversationContext conversation)
     {
         Response.Headers["Content-Type"] = "text/event-stream";
         Response.Headers["Cache-Control"] = "no-cache";
         Response.Headers["Connection"] = "keep-alive";
-        var executionId = Guid.NewGuid();
-        await _streamService.CreateStreamAsync(executionId);
 
-        _ = _orchestrator.ExecuteChatAsync(
-            executionId,
-            _identityContext.UserId,
-            versionId,
-            conversation,
-            HttpContext.RequestAborted);
+        var command = await CreateExecutionAndPublishAsync(orchestrationId, versionId, ExecutionInterface.Chat, default, conversation);
 
-        // Stream events from NATS in real-time
-        await foreach (var evt in _streamService.ReadEventsAsync(executionId))
+        await foreach (var evt in _streamService.ReadEventsAsync(command.UserId, command.ExecutionId))
         {
             var json = JsonSerializer.Serialize(evt, _jsonOptions);
             await Response.WriteAsync($"event: {evt.GetType().Name}\n");
@@ -568,20 +590,19 @@ public class ExecutionsController : ControllerBase
     }
 
     private async Task<IActionResult> ExecuteChatAndWaitAsync(
+        Guid orchestrationId,
         Guid versionId,
         ConversationContext conversation)
     {
-        var executionId = Guid.NewGuid();
+        var command = await CreateExecutionAndPublishAsync(orchestrationId, versionId, ExecutionInterface.Chat, default, conversation);
 
-        await _streamService.CreateStreamAsync(executionId);
-        await _orchestrator.ExecuteChatAsync(
-            executionId,
-            _identityContext.UserId,
-            versionId,
-            conversation,
-            HttpContext.RequestAborted);
+        await foreach (var evt in _streamService.ReadEventsAsync(command.UserId, command.ExecutionId))
+        {
+            if (evt is ExecutionCompletedEvent || evt is ExecutionFailedEvent)
+                break;
+        }
 
-        var execution = await _executionRepository.GetByIdAsync(executionId, _identityContext.UserId);
+        var execution = await _executionRepository.GetByIdAsync(command.ExecutionId, _identityContext.UserId);
 
         if (execution == null)
         {
@@ -596,7 +617,7 @@ public class ExecutionsController : ControllerBase
 
             return Ok(new ExecuteOrchestrationResponseV1
             {
-                ExecutionId = executionId,
+                ExecutionId = command.ExecutionId,
                 Status = ExecutionStatus.Completed,
                 Output = output
             });
@@ -606,7 +627,7 @@ public class ExecutionsController : ControllerBase
         {
             return Ok(new ExecuteOrchestrationResponseV1
             {
-                ExecutionId = executionId,
+                ExecutionId = command.ExecutionId,
                 Status = ExecutionStatus.Failed,
                 Error = execution.ErrorMessage
             });

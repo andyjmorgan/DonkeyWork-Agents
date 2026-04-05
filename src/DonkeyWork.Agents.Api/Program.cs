@@ -30,8 +30,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.AspNetCore.Authentication;
+using DonkeyWork.Agents.Orchestrations.Contracts;
+using DonkeyWork.Agents.Orchestrations.Contracts.Messages;
+using DonkeyWork.Agents.Orchestrations.Core.Handlers;
 using Scalar.AspNetCore;
 using Serilog;
+using Wolverine;
+using Wolverine.Nats;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(
@@ -99,6 +104,27 @@ builder.Services.AddStorageApi(builder.Configuration);
 
 builder.Host.AddActorsApi(builder.Configuration);
 builder.Services.AddActorsServices(builder.Configuration);
+
+builder.Host.UseWolverine(opts =>
+{
+    var natsUrl = builder.Configuration["Nats:Url"] ?? "nats://localhost:4222";
+    opts.UseNats(natsUrl)
+        .AutoProvision()
+        .UseJetStream(_ => { })
+        .DefineWorkQueueStream(NatsSubjects.CommandStream, NatsSubjects.CommandSubject);
+
+    opts.PublishMessage<ExecuteOrchestrationCommand>()
+        .ToNatsSubject(NatsSubjects.CommandSubject)
+        .UseJetStream(NatsSubjects.CommandStream);
+
+    opts.ListenToNatsSubject(NatsSubjects.CommandSubject)
+        .UseJetStream(NatsSubjects.CommandStream, NatsSubjects.CommandConsumer)
+        .Sequential();
+
+    opts.Discovery.IncludeAssembly(typeof(ExecuteOrchestrationHandler).Assembly);
+
+    opts.Policies.Failures.MaximumAttempts = 1;
+});
 
 builder.Services.AddSchedulingApi(builder.Configuration);
 

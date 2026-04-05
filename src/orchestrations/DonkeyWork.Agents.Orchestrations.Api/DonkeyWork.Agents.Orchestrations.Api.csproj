@@ -8,6 +8,7 @@
         <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
         <PackageReference Include="NJsonSchema" Version="11.1.0" />
         <PackageReference Include="NATS.Net" Version="2.7.1" />
+        <PackageReference Include="WolverineFx.Nats" Version="5.27.0" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\DonkeyWork.Agents.Orchestrations.Contracts\DonkeyWork.Agents.Orchestrations.Contracts.csproj" />

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
+using DonkeyWork.Agents.Orchestrations.Contracts;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using Microsoft.Extensions.Logging;
@@ -9,25 +10,18 @@ using NATS.Client.JetStream.Models;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Services;
 
-/// <summary>
-/// Singleton service for managing execution streams.
-/// Uses a shared NATS JetStream stream with per-execution subject filtering.
-/// </summary>
 public class ExecutionStreamService : IExecutionStreamService
 {
     private readonly ILogger<ExecutionStreamService> _logger;
     private readonly INatsJSContext _jsContext;
-    private readonly string _streamName;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public ExecutionStreamService(
         ILogger<ExecutionStreamService> logger,
-        INatsJSContext jsContext,
-        string streamName)
+        INatsJSContext jsContext)
     {
         _logger = logger;
         _jsContext = jsContext;
-        _streamName = streamName;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -36,45 +30,38 @@ public class ExecutionStreamService : IExecutionStreamService
         };
     }
 
-    public Task CreateStreamAsync(Guid executionId)
+    public async IAsyncEnumerable<ExecutionEvent> ReadEventsAsync(Guid userId, Guid executionId, long offset = 0)
     {
-        // No-op: the shared JetStream stream with wildcard subject "execution.>"
-        // is created at startup. Individual execution subjects are created implicitly
-        // when the first message is published.
-        _logger.LogDebug("Stream ready for execution {ExecutionId} (shared stream: {StreamName})",
-            executionId, _streamName);
-        return Task.CompletedTask;
-    }
-
-    public async IAsyncEnumerable<ExecutionEvent> ReadEventsAsync(Guid executionId, long offset = 0)
-    {
-        var subject = $"execution.{executionId}";
+        var streamName = NatsSubjects.UserStream(userId);
+        var subject = NatsSubjects.ExecutionSubject(userId, executionId);
         var eventQueue = new ConcurrentQueue<ExecutionEvent>();
         var completionSource = new TaskCompletionSource<bool>();
         var newEventSignal = new SemaphoreSlim(0);
 
-        _logger.LogInformation("Starting to read events from subject {Subject} with offset {Offset}",
-            subject, offset);
+        _logger.LogInformation("Starting to read events from subject {Subject} on stream {StreamName} with offset {Offset}",
+            subject, streamName, offset);
 
         var consumerConfig = new ConsumerConfig
         {
+            Name = $"reader-{executionId}",
             FilterSubject = subject,
             AckPolicy = ConsumerConfigAckPolicy.None,
-            DeliverPolicy = ConsumerConfigDeliverPolicy.All
+            DeliverPolicy = ConsumerConfigDeliverPolicy.All,
+            InactiveThreshold = TimeSpan.FromMinutes(15)
         };
 
         INatsJSConsumer consumer;
         try
         {
-            consumer = await _jsContext.CreateOrUpdateConsumerAsync(_streamName, consumerConfig);
+            consumer = await _jsContext.CreateConsumerAsync(streamName, consumerConfig);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create consumer for subject {Subject}", subject);
+            _logger.LogError(ex, "Failed to create consumer for subject {Subject} on stream {StreamName}", subject, streamName);
             throw;
         }
 
-        _logger.LogInformation("Consumer created for subject {Subject}", subject);
+        _logger.LogInformation("Consumer created for subject {Subject} on stream {StreamName}", subject, streamName);
 
         var cts = new CancellationTokenSource();
         var fetchTask = Task.Run(async () =>
@@ -113,7 +100,6 @@ public class ExecutionStreamService : IExecutionStreamService
                         }
                     }
 
-                    // Brief pause between fetches when no messages available
                     await Task.Delay(50, cts.Token);
                 }
             }
@@ -125,14 +111,12 @@ public class ExecutionStreamService : IExecutionStreamService
 
         try
         {
-            // Yield events as they arrive
             var timeout = TimeSpan.FromMinutes(10);
             var startTime = DateTime.UtcNow;
             var yieldCount = 0;
 
             while (DateTime.UtcNow - startTime < timeout)
             {
-                // Dequeue and yield all available events
                 while (eventQueue.TryDequeue(out var evt))
                 {
                     _logger.LogDebug("Yielding event {EventType} (total yielded: {Count})",
@@ -147,11 +131,9 @@ public class ExecutionStreamService : IExecutionStreamService
                     break;
                 }
 
-                // Wait for new event signal or short timeout
                 await newEventSignal.WaitAsync(TimeSpan.FromMilliseconds(100));
             }
 
-            // Yield any remaining events
             while (eventQueue.TryDequeue(out var evt))
             {
                 _logger.LogDebug("Yielding remaining event {EventType}", evt.GetType().Name);
@@ -176,15 +158,16 @@ public class ExecutionStreamService : IExecutionStreamService
         }
     }
 
-    public async Task DeleteStreamAsync(Guid executionId)
+    public async Task DeleteStreamAsync(Guid userId, Guid executionId)
     {
-        var subject = $"execution.{executionId}";
+        var streamName = NatsSubjects.UserStream(userId);
+        var subject = NatsSubjects.ExecutionSubject(userId, executionId);
 
         try
         {
-            await _jsContext.PurgeStreamAsync(_streamName, new StreamPurgeRequest { Filter = subject });
+            await _jsContext.PurgeStreamAsync(streamName, new StreamPurgeRequest { Filter = subject });
             _logger.LogInformation("Purged messages for subject {Subject} in stream {StreamName}",
-                subject, _streamName);
+                subject, streamName);
         }
         catch (Exception ex)
         {

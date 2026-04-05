@@ -515,7 +515,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         Logger.LogInformation("Resolved {ToolTypeCount} tool types from {GroupCount} groups",
             toolTypes.Length, effectiveToolGroups.Length);
         var modelId = contract.ModelId ?? AnthropicOptions.DefaultModelId;
-        GrainContext.ResolvedModelId = modelId;
 
         var modelDefinition = ModelCatalogService.GetModelById(modelId);
         ContextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
