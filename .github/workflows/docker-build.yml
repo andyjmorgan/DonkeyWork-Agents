@@ -1,12 +1,10 @@
-name: Docker Build & Release
+name: Docker Build
 
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
-    tags: ['v*']
-
 permissions:
   contents: read
   pull-requests: read
@@ -500,73 +498,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
 
-  release:
-    name: Create GitHub Release
-    needs: [changes, build-backend, build-frontend, build-sandbox-manager, build-sandbox-executor, build-sandbox-authproxy]
-    if: |
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
-      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped') &&
-      (needs.build-sandbox-manager.result == 'success' || needs.build-sandbox-manager.result == 'skipped') &&
-      (needs.build-sandbox-executor.result == 'success' || needs.build-sandbox-executor.result == 'skipped') &&
-      (needs.build-sandbox-authproxy.result == 'success' || needs.build-sandbox-authproxy.result == 'skipped') &&
-      (needs.build-backend.result == 'success' || needs.build-frontend.result == 'success' || needs.build-sandbox-manager.result == 'success' || needs.build-sandbox-executor.result == 'success' || needs.build-sandbox-authproxy.result == 'success')
-    runs-on: [self-hosted, Linux, X64]
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get version info
-        id: version
-        run: |
-          # Generate version based on date and short SHA
-          VERSION="v$(date +'%Y.%m.%d')-${GITHUB_SHA::7}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Generated version: $VERSION"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
-          generate_release_notes: true
-          body: |
-            ## Docker Images
-
-            ### Backend API
-            ```bash
-            docker pull ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-            ```
-
-            ### Frontend
-            ```bash
-            docker pull ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-            ```
-
-            ### Sandbox Manager
-            ```bash
-            docker pull ${{ env.REGISTRY }}/${{ env.SANDBOX_MANAGER_IMAGE }}:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.SANDBOX_MANAGER_IMAGE }}:${{ github.sha }}
-            ```
-
-            ### Sandbox Executor
-            ```bash
-            docker pull ${{ env.REGISTRY }}/${{ env.SANDBOX_EXECUTOR_IMAGE }}:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.SANDBOX_EXECUTOR_IMAGE }}:${{ github.sha }}
-            ```
-
-            ### Sandbox AuthProxy
-            ```bash
-            docker pull ${{ env.REGISTRY }}/${{ env.SANDBOX_AUTHPROXY_IMAGE }}:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.SANDBOX_AUTHPROXY_IMAGE }}:${{ github.sha }}
-            ```
-
-          draft: false
-          prerelease: false
