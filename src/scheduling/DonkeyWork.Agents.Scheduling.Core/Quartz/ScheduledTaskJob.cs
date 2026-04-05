@@ -106,7 +106,7 @@ public class ScheduledTaskJob : IJob
         var syntheticConversationId = Guid.NewGuid();
         var taskId = Guid.NewGuid();
         var agentKey = AgentKeys.Create(
-            contract.KeyPrefix,
+            AgentKeys.ScheduledPrefix,
             schedule.UserId,
             syntheticConversationId,
             taskId);
@@ -115,7 +115,7 @@ public class ScheduledTaskJob : IJob
         var agentExecutionId = await _agentExecutionRepository.CreateAsync(
             schedule.UserId,
             syntheticConversationId,
-            contract.AgentType,
+            "scheduled",
             $"Scheduled: {schedule.Name}",
             agentKey,
             null,

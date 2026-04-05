@@ -94,6 +94,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
     }
 
     private bool _isIdle;
+    private string? _parentGrainKey;
 
     #region IAgentGrain
 
@@ -116,7 +117,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         if (Guid.TryParse(parentTurnIdStr, out var ptId))
             parentTurnId = ptId;
 
-        var parentGrainKey = RequestContext.Get(GrainCallContextKeys.ParentGrainKey) as string;
+        _parentGrainKey = RequestContext.Get(GrainCallContextKeys.ParentGrainKey) as string;
 
         ExecutionStartedAt = DateTimeOffset.UtcNow;
         TotalInputTokens = 0;
@@ -408,18 +409,21 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         {
             _isIdle = true;
 
-            try
+            if (_parentGrainKey is null || _parentGrainKey.StartsWith(AgentKeys.ConversationPrefix))
             {
-                var conversationGrain = GrainFactory.GetGrain<IConversationGrain>(registryKey);
-                await conversationGrain.DeliverAgentResultAsync(
-                    GrainContext.GrainKey,
-                    Contract?.DisplayName ?? "agent",
-                    result,
-                    false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Failed to deliver result to parent before going idle");
+                try
+                {
+                    var conversationGrain = GrainFactory.GetGrain<IConversationGrain>(registryKey);
+                    await conversationGrain.DeliverAgentResultAsync(
+                        GrainContext.GrainKey,
+                        Contract?.DisplayName ?? "agent",
+                        result,
+                        false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to deliver result to parent before going idle");
+                }
             }
 
             try
