@@ -7,10 +7,11 @@ public class InfrastructureFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        // Start containers in parallel for faster startup
         await Task.WhenAll(
             Postgres.InitializeAsync(),
             Nats.InitializeAsync());
+
+        Environment.SetEnvironmentVariable("Nats__Url", Nats.Url);
     }
 
     public async Task DisposeAsync()

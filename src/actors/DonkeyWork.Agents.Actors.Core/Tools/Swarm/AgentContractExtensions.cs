@@ -110,7 +110,7 @@ internal static class AgentContractExtensions
             A2aServers = context.A2aServers,
             EnableSandbox = contract.EnableSandbox,
             SandboxPodName = contract.SandboxPodName,
-            ModelId = contract.ModelId ?? context.ResolvedModelId,
+            ModelId = contract.ModelId,
             Prompts = contract.Prompts,
             SubAgents = subAgents,
             ReasoningEffort = contract.ReasoningEffort,

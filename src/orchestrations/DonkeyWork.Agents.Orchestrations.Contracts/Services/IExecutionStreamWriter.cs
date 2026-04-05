@@ -12,7 +12,7 @@ public interface IExecutionStreamWriter : IAsyncDisposable
     /// Initializes the writer for a specific execution.
     /// Must be called before writing events.
     /// </summary>
-    Task InitializeAsync(Guid executionId);
+    Task InitializeAsync(Guid userId, Guid executionId);
 
     /// <summary>
     /// Writes an event to the execution stream.

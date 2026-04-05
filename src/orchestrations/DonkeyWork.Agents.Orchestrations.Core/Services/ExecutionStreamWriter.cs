@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DonkeyWork.Agents.Orchestrations.Contracts;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using Microsoft.Extensions.Logging;
@@ -34,13 +35,13 @@ public class ExecutionStreamWriter : IExecutionStreamWriter
         };
     }
 
-    public Task InitializeAsync(Guid executionId)
+    public Task InitializeAsync(Guid userId, Guid executionId)
     {
         _executionId = executionId;
-        _subject = $"execution.{executionId}";
+        _subject = NatsSubjects.ExecutionSubject(userId, executionId);
         _initialized = true;
 
-        _logger.LogDebug("Initialized stream writer for execution {ExecutionId}", executionId);
+        _logger.LogDebug("Initialized stream writer for execution {ExecutionId} (user {UserId})", executionId, userId);
         return Task.CompletedTask;
     }
 

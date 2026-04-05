@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using DonkeyWork.Agents.Orchestrations.Contracts;
 using DonkeyWork.Agents.Orchestrations.Contracts.Enums;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models;
 using DonkeyWork.Agents.Orchestrations.Contracts.Models.Events;
@@ -93,8 +94,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         ConversationContext? conversation,
         CancellationToken cancellationToken)
     {
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(_options.Value.ExecutionTimeout);
+        using var timeoutCts = new CancellationTokenSource(_options.Value.ExecutionTimeout);
 
         try
         {
@@ -107,33 +107,37 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 throw new InvalidOperationException($"Orchestration version not found: {versionId}");
             }
 
-            // Note: Interface validation removed - the interface config determines how the orchestration
-            // is exposed (API, MCP, etc.), not how it can be executed internally. Playground and
-            // internal testing should work regardless of interface setting.
+            // Load existing execution record (pre-created by controller via pub/sub path)
+            // or create one for direct callers (e.g., OrchestrationToolProvider from Orleans grains)
+            var execution = await _dbContext.OrchestrationExecutions
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(e => e.Id == executionId, timeoutCts.Token);
 
-            var inputJson = conversation != null
-                ? JsonSerializer.Serialize(new { conversationId = conversation.Id })
-                : input.GetRawText();
-
-            // 1. Create OrchestrationExecution record (Status: Pending)
-            var execution = new OrchestrationExecutionEntity
+            if (execution == null)
             {
-                Id = executionId,
-                UserId = userId,
-                OrchestrationId = version.OrchestrationId,
-                OrchestrationVersionId = versionId,
-                Interface = executionInterface,
-                Status = ExecutionStatus.Pending,
-                Input = inputJson,
-                StartedAt = DateTimeOffset.UtcNow,
-                StreamName = $"execution-{executionId}"
-            };
+                var inputJson = conversation != null
+                    ? JsonSerializer.Serialize(new { conversationId = conversation.Id })
+                    : input.GetRawText();
 
-            _dbContext.OrchestrationExecutions.Add(execution);
-            await _dbContext.SaveChangesAsync(timeoutCts.Token);
+                execution = new OrchestrationExecutionEntity
+                {
+                    Id = executionId,
+                    UserId = userId,
+                    OrchestrationId = version.OrchestrationId,
+                    OrchestrationVersionId = versionId,
+                    Interface = executionInterface,
+                    Status = ExecutionStatus.Pending,
+                    Input = inputJson,
+                    StartedAt = DateTimeOffset.UtcNow,
+                    StreamName = NatsSubjects.ExecutionSubject(userId, executionId)
+                };
 
-            // 2. Initialize the stream writer and emit ExecutionStarted event
-            await _streamWriter.InitializeAsync(executionId);
+                _dbContext.OrchestrationExecutions.Add(execution);
+                await _dbContext.SaveChangesAsync(timeoutCts.Token);
+            }
+
+            // Initialize the stream writer and emit ExecutionStarted event
+            await _streamWriter.InitializeAsync(userId, executionId);
             await _streamWriter.WriteEventAsync(new ExecutionStartedEvent());
 
             // 3. Set Status: Running
@@ -194,7 +198,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 string? nodeInput = null;
                 if (nodeTypeEnum == NodeType.Start)
                 {
-                    nodeInput = inputJson;
+                    nodeInput = execution.Input;
                 }
                 else
                 {
@@ -301,9 +305,8 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                     Output = messageOutput
                 });
         }
-        catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {
-            // Timeout occurred
             _logger.LogWarning("Execution timeout: {ExecutionId}", executionId);
 
             await HandleExecutionFailureAsync(
@@ -332,6 +335,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         try
         {
             var execution = await _dbContext.OrchestrationExecutions
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(e => e.Id == executionId, cancellationToken);
 
             if (execution != null)

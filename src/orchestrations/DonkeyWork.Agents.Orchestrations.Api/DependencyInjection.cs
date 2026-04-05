@@ -12,7 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
-using NATS.Client.JetStream.Models;
 
 namespace DonkeyWork.Agents.Orchestrations.Api;
 
@@ -41,45 +40,16 @@ public static class DependencyInjection
         services.AddSingleton<INatsJSContext>(sp =>
         {
             var connection = sp.GetRequiredService<NatsConnection>();
-            var options = sp.GetRequiredService<IOptions<NatsOptions>>().Value;
-            var jsContext = new NatsJSContext(connection);
-
-            var config = new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
-            {
-                MaxAge = options.MaxAge
-            };
-
-            try
-            {
-                jsContext.CreateStreamAsync(config).GetAwaiter().GetResult();
-            }
-            catch (NatsJSApiException ex) when (ex.Error.ErrCode == 10058)
-            {
-                // Stream already exists — update config
-                try
-                {
-                    jsContext.UpdateStreamAsync(config).GetAwaiter().GetResult();
-                }
-                catch
-                {
-                    // Config update not critical
-                }
-            }
-
-            return jsContext;
+            return new NatsJSContext(connection);
         });
+
+        services.AddSingleton<IUserStreamManager, UserStreamManager>();
 
         services.AddScoped<IOrchestrationService, OrchestrationService>();
         services.AddScoped<IOrchestrationVersionService, OrchestrationVersionService>();
         services.AddScoped<ITtsService, TtsService>();
 
-        services.AddSingleton<IExecutionStreamService>(sp =>
-        {
-            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ExecutionStreamService>>();
-            var jsContext = sp.GetRequiredService<INatsJSContext>();
-            var options = sp.GetRequiredService<IOptions<NatsOptions>>().Value;
-            return new ExecutionStreamService(logger, jsContext, options.StreamName);
-        });
+        services.AddSingleton<IExecutionStreamService, ExecutionStreamService>();
 
         services.AddScoped<IOrchestrationExecutor, OrchestrationExecutor>();
 

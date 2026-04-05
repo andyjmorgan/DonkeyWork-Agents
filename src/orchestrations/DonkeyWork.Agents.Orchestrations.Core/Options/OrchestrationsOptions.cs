@@ -11,4 +11,6 @@ public class OrchestrationsOptions
 
     [Required]
     public TimeSpan StreamRetention { get; set; } = TimeSpan.FromHours(24);
+
+    public long StreamMaxBytes { get; set; } = 1_073_741_824;
 }
