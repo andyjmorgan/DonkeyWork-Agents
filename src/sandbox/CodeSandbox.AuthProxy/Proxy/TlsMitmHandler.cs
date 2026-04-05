@@ -10,7 +10,7 @@ public class TlsMitmHandler
     private readonly ILogger<TlsMitmHandler> _logger;
     private const int BufferSize = 8192;
 
-    private static readonly HashSet<string> SensitiveHeaders = new(StringComparer.OrdinalIgnoreCase)
+    internal static readonly HashSet<string> SensitiveHeaders = new(StringComparer.OrdinalIgnoreCase)
     {
         "Authorization", "Proxy-Authorization", "Cookie", "Set-Cookie",
         "X-Api-Key", "X-Auth-Token", "X-Access-Token"
@@ -186,6 +186,33 @@ public class TlsMitmHandler
                         if (injectionBytes.Length > 0)
                         {
                             var filtered = StripHeaders(headerText, headersToInject!.Keys);
+
+                            _logger.LogInformation(
+                                "[TRACE] REQUEST #{Num} {Host} | Original header count: {OrigCount}, After strip: {StripCount}, Headers stripped: [{Stripped}]",
+                                requestCount, host,
+                                headerText.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length - 1,
+                                filtered.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length - 1,
+                                string.Join(", ", headersToInject!.Keys));
+
+                            // Log the exact bytes being sent upstream so we can verify correctness
+                            var composedRequest = filtered + "\r\n"
+                                + Encoding.ASCII.GetString(injectionBytes) + "\r\n";
+
+                            foreach (var line in composedRequest.Split("\r\n", StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                var colonIdx = line.IndexOf(':');
+                                if (colonIdx > 0)
+                                {
+                                    var name = line[..colonIdx].Trim();
+                                    var value = line[(colonIdx + 1)..].Trim();
+                                    _logger.LogInformation("[TRACE]   >> {Name}: {Value}", name, RedactIfSensitive(name, value));
+                                }
+                                else
+                                {
+                                    _logger.LogInformation("[TRACE]   >> {Line}", line);
+                                }
+                            }
+
                             await destination.WriteAsync(
                                 Encoding.ASCII.GetBytes(filtered), cancellationToken);
                             await destination.WriteAsync(
@@ -323,6 +350,18 @@ public class TlsMitmHandler
 
                         // === AUDIT: Log the response ===
                         LogAuditMessage(host, "RESPONSE", responseCount, headerText, null);
+
+                        var statusLine = headerText.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+                        if (statusLine.Contains("401") || statusLine.Contains("403"))
+                        {
+                            _logger.LogWarning(
+                                "[TRACE] RESPONSE #{Num} {Host} returned {StatusLine} — dumping all response headers for diagnosis",
+                                responseCount, host, statusLine);
+                            foreach (var line in headerText.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Skip(1))
+                            {
+                                _logger.LogWarning("[TRACE]   << {Line}", line);
+                            }
+                        }
 
                         await destination.WriteAsync(
                             workingData.AsMemory(offset, markerIdx - offset + headerEndMarker.Length),

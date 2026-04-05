@@ -96,9 +96,15 @@ public class ProxyServer : BackgroundService
                 var headersToInject = await _credentialProvider.GetHeadersForDomainAsync(host, cancellationToken);
                 if (headersToInject is not null && headersToInject.Count > 0)
                 {
-                    // MITM + header injection for credential domains
                     _logger.LogInformation("CONNECT {Host}:{Port} - MITM | injecting {Count} header(s)",
                         host, port, headersToInject.Count);
+                    foreach (var (name, value) in headersToInject)
+                    {
+                        var display = TlsMitmHandler.SensitiveHeaders.Contains(name)
+                            ? TlsMitmHandler.RedactIfSensitive(name, value)
+                            : value;
+                        _logger.LogInformation("[TRACE] Credential provider will inject: {Name}: {Value}", name, display);
+                    }
                     await _mitmHandler.HandleMitmConnectionAsync(stream, host, port, cancellationToken, headersToInject);
                 }
                 else
