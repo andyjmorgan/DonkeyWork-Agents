@@ -31,11 +31,11 @@ public class McpTraceConfiguration : IEntityTypeConfiguration<McpTraceEntity>
         builder.Property(e => e.RequestBody)
             .HasColumnName("request_body")
             .IsRequired()
-            .HasColumnType("jsonb");
+            .HasColumnType("text");
 
         builder.Property(e => e.ResponseBody)
             .HasColumnName("response_body")
-            .HasColumnType("jsonb");
+            .HasColumnType("text");
 
         builder.Property(e => e.HttpStatusCode)
             .HasColumnName("http_status_code")
