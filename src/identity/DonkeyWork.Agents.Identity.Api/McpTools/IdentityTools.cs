@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts;
 using ModelContextProtocol.Server;
@@ -24,13 +25,8 @@ public class IdentityTools
     /// <summary>
     /// Returns the current authenticated user's ID.
     /// </summary>
-    [McpServerTool(Name = "identity_whoami")]
-    [McpTool(
-        Name = "identity_whoami",
-        Title = "Who Am I",
-        Description = "Returns the current authenticated user's unique identifier (user ID). Use this to identify the current user context.",
-        Icon = "user",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "identity_whoami", Title = "Who Am I", ReadOnly = true)]
+    [Description("Returns the current authenticated user's unique identifier (user ID). Use this to identify the current user context.")]
     public string WhoAmI()
     {
         return _identityContext.UserId.ToString();

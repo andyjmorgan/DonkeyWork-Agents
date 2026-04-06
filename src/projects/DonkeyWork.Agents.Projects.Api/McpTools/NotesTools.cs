@@ -27,13 +27,8 @@ public class NotesTools
     /// Lists all notes for the current user.
     /// Returns summary models without content - use notes_get for full details.
     /// </summary>
-    [McpServerTool(Name = "notes_list")]
-    [McpTool(
-        Name = "notes_list",
-        Title = "List Notes",
-        Description = "List all notes for the current user. Notes can be standalone, or optionally associated with a project or milestone. Returns summary models - use notes_get for full note content.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "notes_list", Title = "List Notes", ReadOnly = true)]
+    [Description("List all notes for the current user. Notes can be standalone, or optionally associated with a project or milestone. Returns summary models - use notes_get for full note content.")]
     public async Task<IReadOnlyList<NoteSummaryV1>> ListNotes(CancellationToken ct)
     {
         return await _noteService.ListAsync(ct);
@@ -42,13 +37,8 @@ public class NotesTools
     /// <summary>
     /// Gets a note by ID.
     /// </summary>
-    [McpServerTool(Name = "notes_get")]
-    [McpTool(
-        Name = "notes_get",
-        Title = "Get Note",
-        Description = "Get a note by ID",
-        Icon = "file",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "notes_get", Title = "Get Note", ReadOnly = true)]
+    [Description("Get a note by ID")]
     public async Task<NoteV1?> GetNote(
         [Description("The unique identifier of the note")] Guid id,
         [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
@@ -61,12 +51,8 @@ public class NotesTools
     /// <summary>
     /// Creates a new note.
     /// </summary>
-    [McpServerTool(Name = "notes_create")]
-    [McpTool(
-        Name = "notes_create",
-        Title = "Create Note",
-        Description = "Create a new note. Notes can be standalone, or associated with a project, milestone, or research item. Provide projectId for project-level notes, milestoneId for milestone-level notes, or researchId for research-level notes.",
-        Icon = "plus")]
+    [McpServerTool(Name = "notes_create", Title = "Create Note")]
+    [Description("Create a new note. Notes can be standalone, or associated with a project, milestone, or research item. Provide projectId for project-level notes, milestoneId for milestone-level notes, or researchId for research-level notes.")]
     public async Task<NoteV1> CreateNote(
         [Description("The title of the note")] string title,
         [Description("Optional content of the note (supports markdown and mermaid diagrams)")] string? content,
@@ -92,12 +78,8 @@ public class NotesTools
     /// <summary>
     /// Updates an existing note. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
-    [McpServerTool(Name = "notes_update")]
-    [McpTool(
-        Name = "notes_update",
-        Title = "Update Note",
-        Description = "Update an existing note. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the title, pass just `id` and `title`. You can move notes between standalone/project/milestone/research associations by setting projectId, milestoneId, or researchId.",
-        Icon = "edit")]
+    [McpServerTool(Name = "notes_update", Title = "Update Note")]
+    [Description("Update an existing note. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the title, pass just `id` and `title`. You can move notes between standalone/project/milestone/research associations by setting projectId, milestoneId, or researchId.")]
     public async Task<UpdateAcknowledgmentV1?> UpdateNote(
         [Description("The unique identifier of the note to update")] Guid id,
         [Description("New title for the note (omit to keep current)")] string? title = null,
@@ -136,14 +118,8 @@ public class NotesTools
     /// <summary>
     /// Permanently deletes a note.
     /// </summary>
-    [McpServerTool(Name = "notes_delete")]
-    [McpTool(
-        Name = "notes_delete",
-        Title = "Delete Note",
-        Description = "Permanently delete a note",
-        Icon = "trash",
-        DestructiveHint = true,
-        IdempotentHint = true)]
+    [McpServerTool(Name = "notes_delete", Title = "Delete Note", Destructive = true, Idempotent = true)]
+    [Description("Permanently delete a note")]
     public async Task<bool> DeleteNote(
         [Description("The unique identifier of the note to delete")] Guid id,
         CancellationToken ct)
@@ -155,13 +131,8 @@ public class NotesTools
     /// Lists all notes for a specific project.
     /// Returns summary models without content - use notes_get for full details.
     /// </summary>
-    [McpServerTool(Name = "notes_list_by_project")]
-    [McpTool(
-        Name = "notes_list_by_project",
-        Title = "List Notes by Project",
-        Description = "List all notes directly associated with a specific project (project-level notes only). Does not include notes associated with milestones within the project - use notes_list_by_milestone for those. Returns summary models - use notes_get for full content.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "notes_list_by_project", Title = "List Notes by Project", ReadOnly = true)]
+    [Description("List all notes directly associated with a specific project (project-level notes only). Does not include notes associated with milestones within the project - use notes_list_by_milestone for those. Returns summary models - use notes_get for full content.")]
     public async Task<IReadOnlyList<NoteSummaryV1>> ListNotesByProject(
         [Description("The unique identifier of the project")] Guid projectId,
         CancellationToken ct)
@@ -173,13 +144,8 @@ public class NotesTools
     /// Lists all notes for a specific milestone.
     /// Returns summary models without content - use notes_get for full details.
     /// </summary>
-    [McpServerTool(Name = "notes_list_by_milestone")]
-    [McpTool(
-        Name = "notes_list_by_milestone",
-        Title = "List Notes by Milestone",
-        Description = "List all notes associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use notes_get for full content.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "notes_list_by_milestone", Title = "List Notes by Milestone", ReadOnly = true)]
+    [Description("List all notes associated with a specific milestone. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use notes_get for full content.")]
     public async Task<IReadOnlyList<NoteSummaryV1>> ListNotesByMilestone(
         [Description("The unique identifier of the milestone")] Guid milestoneId,
         CancellationToken ct)
@@ -191,13 +157,8 @@ public class NotesTools
     /// Lists all notes for a specific research item.
     /// Returns summary models without content - use notes_get for full details.
     /// </summary>
-    [McpServerTool(Name = "notes_list_by_research")]
-    [McpTool(
-        Name = "notes_list_by_research",
-        Title = "List Notes by Research",
-        Description = "List all notes associated with a specific research item. Research items track investigation topics, and notes contain the research material and findings. Returns summary models - use notes_get for full content.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "notes_list_by_research", Title = "List Notes by Research", ReadOnly = true)]
+    [Description("List all notes associated with a specific research item. Research items track investigation topics, and notes contain the research material and findings. Returns summary models - use notes_get for full content.")]
     public async Task<IReadOnlyList<NoteSummaryV1>> ListNotesByResearch(
         [Description("The unique identifier of the research item")] Guid researchId,
         CancellationToken ct)

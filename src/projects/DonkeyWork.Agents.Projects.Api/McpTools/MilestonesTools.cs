@@ -27,13 +27,8 @@ public class MilestonesTools
     /// Lists all milestones for a specific project.
     /// Returns summary models without content/successCriteria - use milestones_get for full details.
     /// </summary>
-    [McpServerTool(Name = "milestones_list")]
-    [McpTool(
-        Name = "milestones_list",
-        Title = "List Milestones",
-        Description = "List all milestones for a specific project. Milestones are phases or deliverables within a project. Each milestone can have its own tasks and notes. Returns summary models - use milestones_get for full milestone content.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "milestones_list", Title = "List Milestones", ReadOnly = true)]
+    [Description("List all milestones for a specific project. Milestones are phases or deliverables within a project. Each milestone can have its own tasks and notes. Returns summary models - use milestones_get for full milestone content.")]
     public async Task<IReadOnlyList<MilestoneSummaryV1>> ListMilestones(
         [Description("The unique identifier of the project to list milestones for")] Guid projectId,
         CancellationToken ct)
@@ -44,13 +39,8 @@ public class MilestonesTools
     /// <summary>
     /// Gets a milestone by ID with full details.
     /// </summary>
-    [McpServerTool(Name = "milestones_get")]
-    [McpTool(
-        Name = "milestones_get",
-        Title = "Get Milestone",
-        Description = "Get a milestone by ID with full details including all tasks and notes associated with this milestone.",
-        Icon = "file",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "milestones_get", Title = "Get Milestone", ReadOnly = true)]
+    [Description("Get a milestone by ID with full details including all tasks and notes associated with this milestone.")]
     public async Task<MilestoneDetailsV1?> GetMilestone(
         [Description("The unique identifier of the milestone")] Guid id,
         [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
@@ -63,12 +53,8 @@ public class MilestonesTools
     /// <summary>
     /// Creates a new milestone within a project.
     /// </summary>
-    [McpServerTool(Name = "milestones_create")]
-    [McpTool(
-        Name = "milestones_create",
-        Title = "Create Milestone",
-        Description = "Create a new milestone within a project. Milestones represent major phases or deliverables. After creating a milestone, you can add tasks and notes to it using tasks_create and notes_create with the milestoneId parameter.",
-        Icon = "plus")]
+    [McpServerTool(Name = "milestones_create", Title = "Create Milestone")]
+    [Description("Create a new milestone within a project. Milestones represent major phases or deliverables. After creating a milestone, you can add tasks and notes to it using tasks_create and notes_create with the milestoneId parameter.")]
     public async Task<MilestoneDetailsV1?> CreateMilestone(
         [Description("The project ID this milestone belongs to (required - milestones must belong to a project)")] Guid projectId,
         [Description("The name of the milestone")] string name,
@@ -95,12 +81,8 @@ public class MilestonesTools
     /// <summary>
     /// Updates an existing milestone. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
-    [McpServerTool(Name = "milestones_update")]
-    [McpTool(
-        Name = "milestones_update",
-        Title = "Update Milestone",
-        Description = "Update an existing milestone's details. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. Does not affect tasks or notes within the milestone.",
-        Icon = "edit")]
+    [McpServerTool(Name = "milestones_update", Title = "Update Milestone")]
+    [Description("Update an existing milestone's details. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. Does not affect tasks or notes within the milestone.")]
     public async Task<UpdateAcknowledgmentV1?> UpdateMilestone(
         [Description("The unique identifier of the milestone to update")] Guid id,
         [Description("New name for the milestone (omit to keep current)")] string? name = null,
@@ -141,14 +123,8 @@ public class MilestonesTools
     /// <summary>
     /// Permanently deletes a milestone and all its related data.
     /// </summary>
-    [McpServerTool(Name = "milestones_delete")]
-    [McpTool(
-        Name = "milestones_delete",
-        Title = "Delete Milestone",
-        Description = "Permanently delete a milestone and all its related data (tasks, notes)",
-        Icon = "trash",
-        DestructiveHint = true,
-        IdempotentHint = true)]
+    [McpServerTool(Name = "milestones_delete", Title = "Delete Milestone", Destructive = true, Idempotent = true)]
+    [Description("Permanently delete a milestone and all its related data (tasks, notes)")]
     public async Task<bool> DeleteMilestone(
         [Description("The unique identifier of the milestone to delete")] Guid id,
         CancellationToken ct)

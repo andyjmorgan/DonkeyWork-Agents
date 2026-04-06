@@ -26,13 +26,8 @@ public class ResearchTools
     /// <summary>
     /// Lists all research items for the current user.
     /// </summary>
-    [McpServerTool(Name = "research_list")]
-    [McpTool(
-        Name = "research_list",
-        Title = "List Research",
-        Description = "List all research items for the current user. Research items track investigation topics with a title, plan, result, and associated notes.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "research_list", Title = "List Research", ReadOnly = true)]
+    [Description("List all research items for the current user. Research items track investigation topics with a title, plan, result, and associated notes.")]
     public async Task<IReadOnlyList<ResearchSummaryV1>> ListResearch(CancellationToken ct)
     {
         return await _researchService.ListAsync(ct);
@@ -41,13 +36,8 @@ public class ResearchTools
     /// <summary>
     /// Gets a research item by ID with full details.
     /// </summary>
-    [McpServerTool(Name = "research_get")]
-    [McpTool(
-        Name = "research_get",
-        Title = "Get Research",
-        Description = "Get a research item by ID with full details including its notes (research material/findings). Use notes_get to read the full content of individual notes.",
-        Icon = "file",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "research_get", Title = "Get Research", ReadOnly = true)]
+    [Description("Get a research item by ID with full details including its notes (research material/findings). Use notes_get to read the full content of individual notes.")]
     public async Task<ResearchDetailsV1?> GetResearch(
         [Description("The unique identifier of the research item")] Guid id,
         [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
@@ -60,12 +50,8 @@ public class ResearchTools
     /// <summary>
     /// Creates a new research item.
     /// </summary>
-    [McpServerTool(Name = "research_create")]
-    [McpTool(
-        Name = "research_create",
-        Title = "Create Research",
-        Description = "Create a new research item. Research items track investigation topics. After creating, add notes with notes_create using the researchId to attach research material and findings.",
-        Icon = "plus")]
+    [McpServerTool(Name = "research_create", Title = "Create Research")]
+    [Description("Create a new research item. Research items track investigation topics. After creating, add notes with notes_create using the researchId to attach research material and findings.")]
     public async Task<object> CreateResearch(
         [Description("The research title")] string title,
         [Description("The research plan (supports markdown and mermaid diagrams)")] string plan,
@@ -86,12 +72,8 @@ public class ResearchTools
     /// <summary>
     /// Updates an existing research item. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
-    [McpServerTool(Name = "research_update")]
-    [McpTool(
-        Name = "research_update",
-        Title = "Update Research",
-        Description = "Update an existing research item. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. When completing, result is required.",
-        Icon = "edit")]
+    [McpServerTool(Name = "research_update", Title = "Update Research")]
+    [Description("Update an existing research item. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. When completing, result is required.")]
     public async Task<object?> UpdateResearch(
         [Description("The unique identifier of the research item to update")] Guid id,
         [Description("New title for the research (omit to keep current)")] string? title = null,
@@ -134,14 +116,8 @@ public class ResearchTools
     /// <summary>
     /// Permanently deletes a research item and all its related data.
     /// </summary>
-    [McpServerTool(Name = "research_delete")]
-    [McpTool(
-        Name = "research_delete",
-        Title = "Delete Research",
-        Description = "Permanently delete a research item and all its related data (notes, tags)",
-        Icon = "trash",
-        DestructiveHint = true,
-        IdempotentHint = true)]
+    [McpServerTool(Name = "research_delete", Title = "Delete Research", Destructive = true, Idempotent = true)]
+    [Description("Permanently delete a research item and all its related data (notes, tags)")]
     public async Task<bool> DeleteResearch(
         [Description("The unique identifier of the research item to delete")] Guid id,
         CancellationToken ct)

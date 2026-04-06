@@ -28,13 +28,8 @@ public class TasksTools
     /// Lists all tasks for the current user with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
-    [McpServerTool(Name = "tasks_list")]
-    [McpTool(
-        Name = "tasks_list",
-        Title = "List Tasks",
-        Description = "List all tasks for the current user with optional filtering and pagination. Tasks can be standalone, or optionally associated with a project or milestone. Returns summary models - use tasks_get for full task details including description.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "tasks_list", Title = "List Tasks", ReadOnly = true)]
+    [Description("List all tasks for the current user with optional filtering and pagination. Tasks can be standalone, or optionally associated with a project or milestone. Returns summary models - use tasks_get for full task details including description.")]
     public async Task<PaginatedResponse<TaskItemSummaryV1>> ListTasks(
         [Description("Optional status filter: Pending, InProgress, Completed, or Cancelled")] TaskItemStatus? status = null,
         [Description("Optional priority filter: Low, Medium, High, or Critical")] TaskItemPriority? priority = null,
@@ -50,13 +45,8 @@ public class TasksTools
     /// <summary>
     /// Gets a task by ID.
     /// </summary>
-    [McpServerTool(Name = "tasks_get")]
-    [McpTool(
-        Name = "tasks_get",
-        Title = "Get Task",
-        Description = "Get a task by ID",
-        Icon = "file",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "tasks_get", Title = "Get Task", ReadOnly = true)]
+    [Description("Get a task by ID")]
     public async Task<TaskItemV1?> GetTask(
         [Description("The unique identifier of the task")] Guid id,
         [Description("Optional character offset to start reading content from (for chunked reading of large content fields)")] int? contentOffset = null,
@@ -69,12 +59,8 @@ public class TasksTools
     /// <summary>
     /// Creates a new task.
     /// </summary>
-    [McpServerTool(Name = "tasks_create")]
-    [McpTool(
-        Name = "tasks_create",
-        Title = "Create Task",
-        Description = "Create a new task. Tasks can be standalone (no project or milestone), associated with a project only, or associated with a specific milestone within a project. Provide projectId for project-level tasks, or milestoneId for milestone-level tasks.",
-        Icon = "plus")]
+    [McpServerTool(Name = "tasks_create", Title = "Create Task")]
+    [Description("Create a new task. Tasks can be standalone (no project or milestone), associated with a project only, or associated with a specific milestone within a project. Provide projectId for project-level tasks, or milestoneId for milestone-level tasks.")]
     public async Task<TaskItemV1> CreateTask(
         [Description("The title of the task")] string title,
         [Description("Optional description of the task (supports markdown and mermaid diagrams)")] string? description,
@@ -100,12 +86,8 @@ public class TasksTools
     /// <summary>
     /// Updates an existing task. Only provided fields are updated; omitted fields retain their current values.
     /// </summary>
-    [McpServerTool(Name = "tasks_update")]
-    [McpTool(
-        Name = "tasks_update",
-        Title = "Update Task",
-        Description = "Update an existing task. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. You can move tasks between standalone/project/milestone associations by setting projectId and milestoneId.",
-        Icon = "edit")]
+    [McpServerTool(Name = "tasks_update", Title = "Update Task")]
+    [Description("Update an existing task. IMPORTANT: Only `id` is required - all other parameters are optional. Do NOT pass fields you don't intend to change; omitted fields keep their current values automatically. For example, to change only the status, pass just `id` and `status`. You can move tasks between standalone/project/milestone associations by setting projectId and milestoneId.")]
     public async Task<UpdateAcknowledgmentV1?> UpdateTask(
         [Description("The unique identifier of the task to update")] Guid id,
         [Description("New title for the task (omit to keep current)")] string? title = null,
@@ -146,14 +128,8 @@ public class TasksTools
     /// <summary>
     /// Permanently deletes a task.
     /// </summary>
-    [McpServerTool(Name = "tasks_delete")]
-    [McpTool(
-        Name = "tasks_delete",
-        Title = "Delete Task",
-        Description = "Permanently delete a task",
-        Icon = "trash",
-        DestructiveHint = true,
-        IdempotentHint = true)]
+    [McpServerTool(Name = "tasks_delete", Title = "Delete Task", Destructive = true, Idempotent = true)]
+    [Description("Permanently delete a task")]
     public async Task<bool> DeleteTask(
         [Description("The unique identifier of the task to delete")] Guid id,
         CancellationToken ct)
@@ -165,13 +141,8 @@ public class TasksTools
     /// Lists all tasks for a specific project with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
-    [McpServerTool(Name = "tasks_list_by_project")]
-    [McpTool(
-        Name = "tasks_list_by_project",
-        Title = "List Tasks by Project",
-        Description = "List all tasks directly associated with a specific project (project-level tasks only) with optional filtering and pagination. Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those. Returns summary models - use tasks_get for full task details.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "tasks_list_by_project", Title = "List Tasks by Project", ReadOnly = true)]
+    [Description("List all tasks directly associated with a specific project (project-level tasks only) with optional filtering and pagination. Does not include tasks associated with milestones within the project - use tasks_list_by_milestone for those. Returns summary models - use tasks_get for full task details.")]
     public async Task<PaginatedResponse<TaskItemSummaryV1>> ListTasksByProject(
         [Description("The unique identifier of the project")] Guid projectId,
         [Description("Optional status filter: Pending, InProgress, Completed, or Cancelled")] TaskItemStatus? status = null,
@@ -189,13 +160,8 @@ public class TasksTools
     /// Lists all tasks for a specific milestone with optional filtering and pagination.
     /// Returns summary models without description/completionNotes - use tasks_get for full details.
     /// </summary>
-    [McpServerTool(Name = "tasks_list_by_milestone")]
-    [McpTool(
-        Name = "tasks_list_by_milestone",
-        Title = "List Tasks by Milestone",
-        Description = "List all tasks associated with a specific milestone with optional filtering and pagination. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use tasks_get for full task details.",
-        Icon = "list",
-        ReadOnlyHint = true)]
+    [McpServerTool(Name = "tasks_list_by_milestone", Title = "List Tasks by Milestone", ReadOnly = true)]
+    [Description("List all tasks associated with a specific milestone with optional filtering and pagination. Milestones belong to projects and represent major deliverables or phases. Returns summary models - use tasks_get for full task details.")]
     public async Task<PaginatedResponse<TaskItemSummaryV1>> ListTasksByMilestone(
         [Description("The unique identifier of the milestone")] Guid milestoneId,
         [Description("Optional status filter: Pending, InProgress, Completed, or Cancelled")] TaskItemStatus? status = null,
