@@ -26,7 +26,7 @@ public class SandboxManagerConfig
     public string DefaultImage { get; set; } = "your-registry/donkeywork-agents/sandbox-executor:latest";
 
     [RegularExpression(@"^(Always|IfNotPresent|Never)$", ErrorMessage = "ImagePullPolicy must be Always, IfNotPresent, or Never")]
-    public string ImagePullPolicy { get; set; } = "IfNotPresent";
+    public string ImagePullPolicy { get; set; } = "Always";
 
     [Range(30, 300, ErrorMessage = "Pod ready timeout must be between 30 and 300 seconds")]
     public int PodReadyTimeoutSeconds { get; set; } = 90;
