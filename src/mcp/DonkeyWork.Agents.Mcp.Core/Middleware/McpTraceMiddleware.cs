@@ -14,7 +14,6 @@ public class McpTraceMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<McpTraceMiddleware> _logger;
     private const int MaxBodySize = 1_048_576; // 1 MB
-    private const string McpPathPrefix = "/mcp";
 
     public McpTraceMiddleware(RequestDelegate next, ILogger<McpTraceMiddleware> logger)
     {
@@ -24,7 +23,7 @@ public class McpTraceMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!context.Request.Path.StartsWithSegments(McpPathPrefix))
+        if (!IsJsonRpcRequest(context.Request))
         {
             await _next(context);
             return;
@@ -43,6 +42,12 @@ public class McpTraceMiddleware
             context.Request.Body.Position = 0;
 
             (method, jsonRpcId) = ExtractJsonRpcFields(requestBody);
+
+            if (method is null && jsonRpcId is null && !requestBody.Contains("jsonrpc"))
+            {
+                await _next(context);
+                return;
+            }
         }
         catch (Exception ex)
         {
@@ -112,13 +117,22 @@ public class McpTraceMiddleware
             try
             {
                 var repository = context.RequestServices.GetRequiredService<IMcpTraceRepository>();
-                _ = repository.CreateAsync(trace, CancellationToken.None);
+                await repository.CreateAsync(trace, CancellationToken.None);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to persist MCP trace for method {Method}", method);
             }
         }
+    }
+
+    private static bool IsJsonRpcRequest(HttpRequest request)
+    {
+        if (!HttpMethods.IsPost(request.Method))
+            return false;
+
+        var contentType = request.ContentType;
+        return contentType is not null && contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<string> ReadBodyAsync(Stream stream)

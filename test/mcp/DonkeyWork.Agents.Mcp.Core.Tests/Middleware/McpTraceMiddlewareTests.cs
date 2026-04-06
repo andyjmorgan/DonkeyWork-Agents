@@ -27,10 +27,10 @@ public class McpTraceMiddlewareTests
         return new McpTraceMiddleware(next, _loggerMock.Object);
     }
 
-    private DefaultHttpContext CreateMcpContext(string body, string path = "/mcp")
+    private DefaultHttpContext CreateMcpContext(string body)
     {
         var context = new DefaultHttpContext();
-        context.Request.Path = path;
+        context.Request.Path = "/";
         context.Request.Method = "POST";
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
         context.Request.ContentType = "application/json";
@@ -43,16 +43,51 @@ public class McpTraceMiddlewareTests
         return context;
     }
 
-    #region Path Filtering Tests
+    #region Request Filtering Tests
 
     [Fact]
-    public async Task InvokeAsync_NonMcpPath_SkipsTracing()
+    public async Task InvokeAsync_GetRequest_SkipsTracing()
     {
         // Arrange
         var nextCalled = false;
         var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
         var context = new DefaultHttpContext();
-        context.Request.Path = "/api/v1/something";
+        context.Request.Method = "GET";
+        context.Request.ContentType = "application/json";
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.True(nextCalled);
+        _repositoryMock.Verify(r => r.CreateAsync(It.IsAny<McpTraceEntity>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NonJsonContentType_SkipsTracing()
+    {
+        // Arrange
+        var nextCalled = false;
+        var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
+        var context = new DefaultHttpContext();
+        context.Request.Method = "POST";
+        context.Request.ContentType = "text/html";
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.True(nextCalled);
+        _repositoryMock.Verify(r => r.CreateAsync(It.IsAny<McpTraceEntity>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NonJsonRpcBody_SkipsTracing()
+    {
+        // Arrange
+        var nextCalled = false;
+        var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
+        var context = CreateMcpContext("""{"hello":"world"}""");
 
         // Act
         await middleware.InvokeAsync(context);
@@ -140,10 +175,27 @@ public class McpTraceMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_InvalidJson_SetsMethodToUnknown()
+    public async Task InvokeAsync_InvalidJson_SkipsTracing()
     {
         // Arrange
+        var nextCalled = false;
+        var middleware = CreateMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
         var context = CreateMcpContext("not valid json at all");
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        Assert.True(nextCalled);
+        _repositoryMock.Verify(r => r.CreateAsync(It.IsAny<McpTraceEntity>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_JsonRpcWithoutMethod_StillTraces()
+    {
+        // Arrange
+        var requestBody = """{"jsonrpc":"2.0","result":{},"id":"1"}""";
+        var context = CreateMcpContext(requestBody);
 
         var middleware = CreateMiddleware(ctx =>
         {
@@ -156,7 +208,7 @@ public class McpTraceMiddlewareTests
 
         // Assert
         _repositoryMock.Verify(r => r.CreateAsync(
-            It.Is<McpTraceEntity>(e => e.Method == "unknown" && e.JsonRpcId == null),
+            It.Is<McpTraceEntity>(e => e.Method == "unknown"),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }
