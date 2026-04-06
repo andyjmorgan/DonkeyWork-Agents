@@ -268,13 +268,13 @@ public class McpTraceMiddlewareTests
     {
         // Arrange
         var requestBody = """{"jsonrpc":"2.0","method":"tools/list","id":"abc"}""";
-        var responseBody = """{"jsonrpc":"2.0","result":{"tools":[]},"id":"abc"}""";
+        var responsePayload = """{"jsonrpc":"2.0","result":{"tools":[]},"id":"abc"}""";
         var context = CreateMcpContext(requestBody);
 
         var middleware = CreateMiddleware(ctx =>
         {
             ctx.Response.StatusCode = 200;
-            return ctx.Response.WriteAsync(responseBody);
+            return ctx.Response.WriteAsync(responsePayload);
         });
 
         // Act
@@ -284,7 +284,7 @@ public class McpTraceMiddlewareTests
         _repositoryMock.Verify(r => r.CreateAsync(
             It.Is<McpTraceEntity>(e =>
                 e.RequestBody == requestBody &&
-                e.ResponseBody == responseBody),
+                e.ResponseBody == responsePayload),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -422,6 +422,57 @@ public class McpTraceMiddlewareTests
         // Assert
         _repositoryMock.Verify(r => r.CreateAsync(
             It.Is<McpTraceEntity>(e => e.UserAgent == "Claude/1.0"),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region SSE Payload Extraction Tests
+
+    [Fact]
+    public void ExtractSsePayload_SseFramed_ReturnsJsonPayload()
+    {
+        var raw = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"result\":{},\"id\":\"1\"}\n\n";
+        var result = McpTraceMiddleware.ExtractSsePayload(raw);
+        Assert.Equal("{\"jsonrpc\":\"2.0\",\"result\":{},\"id\":\"1\"}", result);
+    }
+
+    [Fact]
+    public void ExtractSsePayload_PlainJson_ReturnsUnchanged()
+    {
+        var raw = "{\"jsonrpc\":\"2.0\",\"result\":{},\"id\":\"1\"}";
+        var result = McpTraceMiddleware.ExtractSsePayload(raw);
+        Assert.Equal(raw, result);
+    }
+
+    [Fact]
+    public void ExtractSsePayload_EmptyString_ReturnsEmpty()
+    {
+        Assert.Equal("", McpTraceMiddleware.ExtractSsePayload(""));
+    }
+
+    [Fact]
+    public async Task InvokeAsync_SseResponse_StoresStrippedPayload()
+    {
+        // Arrange
+        var requestBody = JsonSerializer.Serialize(new { jsonrpc = "2.0", method = "tools/call", id = "1" });
+        var context = CreateMcpContext(requestBody);
+        var sseResponse = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"result\":{\"content\":[]},\"id\":\"1\"}\n\n";
+
+        var middleware = CreateMiddleware(ctx =>
+        {
+            ctx.Response.StatusCode = 200;
+            return ctx.Response.WriteAsync(sseResponse);
+        });
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        _repositoryMock.Verify(r => r.CreateAsync(
+            It.Is<McpTraceEntity>(e =>
+                e.ResponseBody == "{\"jsonrpc\":\"2.0\",\"result\":{\"content\":[]},\"id\":\"1\"}"),
             It.IsAny<CancellationToken>()),
             Times.Once);
     }

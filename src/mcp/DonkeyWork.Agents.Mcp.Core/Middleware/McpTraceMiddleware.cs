@@ -72,7 +72,8 @@ public class McpTraceMiddleware
             try
             {
                 responseBuffer.Position = 0;
-                responseBody = await ReadBodyAsync(responseBuffer);
+                var rawResponse = await ReadBodyAsync(responseBuffer);
+                responseBody = ExtractSsePayload(rawResponse);
 
                 responseBuffer.Position = 0;
                 await responseBuffer.CopyToAsync(originalBodyStream);
@@ -170,6 +171,24 @@ public class McpTraceMiddleware
         {
             return (null, null);
         }
+    }
+
+    public static string ExtractSsePayload(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return raw;
+
+        if (!raw.Contains("data:"))
+            return raw;
+
+        var lines = raw.Split('\n');
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("data:", StringComparison.Ordinal))
+                return line.Substring(5).TrimStart();
+        }
+
+        return raw;
     }
 
     private static string? ExtractErrorMessage(string? responseBody)
