@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, CheckCircle2, XCircle, Loader2, ChevronLeft, ChevronRight, Eye, Server, Timer, Globe } from 'lucide-react'
+import { Clock, CheckCircle2, XCircle, Loader2, ChevronLeft, ChevronRight, Eye, Server, Timer, Globe, RefreshCw } from 'lucide-react'
 import {
   Button,
   Badge,
@@ -92,8 +92,14 @@ export function McpTracesPage() {
     <div className="p-4 md:p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">MCP Traces</h1>
-        <div className="text-sm text-muted-foreground">
-          {totalCount} total
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={loadTraces} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <div className="text-sm text-muted-foreground">
+            {totalCount} total
+          </div>
         </div>
       </div>
 
