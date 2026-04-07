@@ -36,7 +36,7 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
     <div className="flex h-full flex-col gap-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-4">
       {events.map((event, i) => (
         <div key={i} className="space-y-1">
-          {event.type === 'execution_started' && (
+          {event.type === 'ExecutionStartedEvent' && (
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="outline">Started</Badge>
               <span className="text-muted-foreground">
@@ -45,25 +45,25 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
             </div>
           )}
 
-          {event.type === 'node_started' && (
+          {event.type === 'NodeStartedEvent' && (
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="secondary">{(event as ExecutionEvent & NodeEventData).nodeType || 'node'}</Badge>
               <span className="text-muted-foreground">{(event as ExecutionEvent & NodeEventData).nodeId}</span>
             </div>
           )}
 
-          {event.type === 'token_delta' && (
+          {event.type === 'TokenDeltaEvent' && (
             <span className="text-sm">{(event as ExecutionEvent & NodeEventData).delta}</span>
           )}
 
-          {event.type === 'node_completed' && (
+          {event.type === 'NodeCompletedEvent' && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
               <span>Node completed: {(event as ExecutionEvent & NodeEventData).nodeId}</span>
             </div>
           )}
 
-          {event.type === 'execution_completed' && (
+          {event.type === 'ExecutionCompletedEvent' && (
             <div className="rounded-md border border-green-600/20 bg-green-600/10 p-3">
               <div className="flex items-center gap-2 text-sm font-medium text-green-600">
                 <CheckCircle2 className="h-4 w-4" />
@@ -75,7 +75,7 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
             </div>
           )}
 
-          {event.type === 'execution_failed' && (
+          {event.type === 'ExecutionFailedEvent' && (
             <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3">
               <div className="flex items-center gap-2 text-sm font-medium text-destructive">
                 <XCircle className="h-4 w-4" />
