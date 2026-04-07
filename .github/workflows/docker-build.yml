@@ -131,6 +131,9 @@ jobs:
             }
           fi
 
+      - name: Configure NuGet for local proxy
+        run: cp _nuget.config nuget.config
+
       - name: Build Executor Docker Image for Tests
         run: |
           cp nuget.config src/sandbox/nuget.config
