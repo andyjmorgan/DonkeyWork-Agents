@@ -64,11 +64,9 @@ RUN dotnet publish src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj -c Rel
 # Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libmp3lame0 \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/lib/x86_64-linux-gnu/libmp3lame.so.0 /usr/lib/x86_64-linux-gnu/libmp3lame.64.dll
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app/publish .
-RUN ln -s /usr/lib/x86_64-linux-gnu/libmp3lame.so.0 /app/libmp3lame.64.dll
 ENTRYPOINT ["dotnet", "DonkeyWork.Agents.Api.dll"]

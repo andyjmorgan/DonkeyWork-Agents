@@ -1,4 +1,4 @@
-using NAudio.Lame;
+using System.Diagnostics;
 using NAudio.Wave;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Helpers;
@@ -37,15 +37,69 @@ internal static class AudioConverter
 
     private static byte[] ConvertToMp3(byte[] pcmData, int sampleRate, int bitsPerSample, int channels)
     {
-        var waveFormat = new WaveFormat(sampleRate, bitsPerSample, channels);
-        using var pcmStream = new RawSourceWaveStream(pcmData, 0, pcmData.Length, waveFormat);
-        using var mp3Stream = new MemoryStream();
-        using (var writer = new LameMP3FileWriter(mp3Stream, waveFormat, LAMEPreset.STANDARD))
+        var sampleFormat = bitsPerSample switch
         {
-            pcmStream.CopyTo(writer);
+            16 => "s16le",
+            24 => "s24le",
+            32 => "s32le",
+            8 => "u8",
+            _ => throw new NotSupportedException($"Unsupported bits per sample: {bitsPerSample}"),
+        };
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "ffmpeg",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        psi.ArgumentList.Add("-hide_banner");
+        psi.ArgumentList.Add("-loglevel");
+        psi.ArgumentList.Add("error");
+        psi.ArgumentList.Add("-f");
+        psi.ArgumentList.Add(sampleFormat);
+        psi.ArgumentList.Add("-ar");
+        psi.ArgumentList.Add(sampleRate.ToString());
+        psi.ArgumentList.Add("-ac");
+        psi.ArgumentList.Add(channels.ToString());
+        psi.ArgumentList.Add("-i");
+        psi.ArgumentList.Add("pipe:0");
+        psi.ArgumentList.Add("-codec:a");
+        psi.ArgumentList.Add("libmp3lame");
+        psi.ArgumentList.Add("-b:a");
+        psi.ArgumentList.Add("192k");
+        psi.ArgumentList.Add("-f");
+        psi.ArgumentList.Add("mp3");
+        psi.ArgumentList.Add("pipe:1");
+
+        using var process = Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to start ffmpeg process.");
+
+        var stdoutTask = Task.Run(() =>
+        {
+            using var ms = new MemoryStream();
+            process.StandardOutput.BaseStream.CopyTo(ms);
+            return ms.ToArray();
+        });
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        process.StandardInput.BaseStream.Write(pcmData, 0, pcmData.Length);
+        process.StandardInput.BaseStream.Flush();
+        process.StandardInput.Close();
+
+        var output = stdoutTask.GetAwaiter().GetResult();
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            var error = stderrTask.GetAwaiter().GetResult();
+            throw new InvalidOperationException($"ffmpeg failed with exit code {process.ExitCode}: {error}");
         }
 
-        return mp3Stream.ToArray();
+        return output;
     }
 
     private static byte[] ConvertToWav(byte[] pcmData, int sampleRate, int bitsPerSample, int channels)
