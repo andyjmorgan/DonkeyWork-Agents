@@ -63,6 +63,9 @@ RUN dotnet publish src/DonkeyWork.Agents.Api/DonkeyWork.Agents.Api.csproj -c Rel
 
 # Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libmp3lame0 \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 EXPOSE 8080
 COPY --from=publish /app/publish .
