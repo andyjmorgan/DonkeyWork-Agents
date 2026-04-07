@@ -246,8 +246,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   onNodesChange: (changes) => {
-    const { nodes } = get()
-    set({ nodes: nodes.map(node => {
+    const { nodes, edges, nodeConfigurations } = get()
+    const removedIds = new Set(
+      changes.filter((c) => c.type === 'remove' && 'id' in c).map((c) => (c as { id: string }).id)
+    )
+
+    const newNodes = nodes.map(node => {
       const change = changes.find((c) => 'id' in c && c.id === node.id)
       if (!change) return node
 
@@ -261,7 +265,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         return null
       }
       return node
-    }).filter(Boolean) as Node[] })
+    }).filter(Boolean) as Node[]
+
+    if (removedIds.size === 0) {
+      set({ nodes: newNodes })
+      return
+    }
+
+    const newConfigs = { ...nodeConfigurations }
+    for (const id of removedIds) {
+      delete newConfigs[id]
+    }
+    const newEdges = edges.filter(e => !removedIds.has(e.source) && !removedIds.has(e.target))
+
+    set({
+      nodes: newNodes,
+      edges: newEdges,
+      nodeConfigurations: newConfigs,
+      selectedNodeId: null
+    })
   },
 
   onEdgesChange: (changes) => {
