@@ -153,5 +153,16 @@ public sealed class SandboxTools
         - Python: requests, numpy, pandas, python-dateutil, pypdf, pdfplumber, reportlab, pytesseract, pdf2image, openpyxl, python-pptx, markitdown[pptx], Pillow, imageio, imageio-ffmpeg
         - Node.js: typescript, ts-node, docx, pptxgenjs (global)
         - System: pandoc, poppler-utils, qpdf, tesseract-ocr, libreoffice
+
+        ### File Hygiene
+
+        Keep `/home/sandbox/files/` pristine. Only write files there if they genuinely need to persist between conversation turns (e.g. skill binaries, user-requested output files, assets).
+
+        Avoid writing to `/home/sandbox/files/` for:
+        - Intermediate scripts or one-off helpers built during a task
+        - Temporary payloads, JSON blobs, or test files
+        - Anything that only serves the current turn
+
+        Use `/tmp/` for ephemeral working files instead — it's appropriate for anything that doesn't need to outlive the session.
         """;
 }
