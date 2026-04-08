@@ -54,7 +54,12 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
 
         var apiKey = credential.Fields[CredentialFieldType.ApiKey];
 
-        var googleAi = new GoogleAi(apiKey);
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(600)
+        };
+
+        var googleAi = new GoogleAi(apiKey, client: httpClient);
         var model = googleAi.CreateGenerativeModel(config.Model);
 
         var prompt = instructions is not null
