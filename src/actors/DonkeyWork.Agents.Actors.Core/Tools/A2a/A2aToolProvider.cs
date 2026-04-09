@@ -9,6 +9,7 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.A2a;
 internal sealed class A2aToolProvider : IAsyncDisposable
 {
     private static readonly TimeSpan PerServerTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ExecuteTimeout = TimeSpan.FromMinutes(5);
 
     private readonly Dictionary<string, A2aToolInfo> _tools = new(StringComparer.OrdinalIgnoreCase);
     private HttpClient? _httpClient;
@@ -129,10 +130,13 @@ internal sealed class A2aToolProvider : IAsyncDisposable
             foreach (var (key, value) in toolInfo.ConnectionConfig.Headers)
                 httpRequest.Headers.TryAddWithoutValidation(key, value);
 
-            var response = await _httpClient.SendAsync(httpRequest, ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(ExecuteTimeout);
+
+            var response = await _httpClient.SendAsync(httpRequest, timeoutCts.Token);
             response.EnsureSuccessStatusCode();
 
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            var responseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token);
             var (isError, content) = A2aProtocolHelper.ParseMessageResponse(responseBody);
             return isError ? ToolResult.Error(content) : ToolResult.Success(content);
         }
