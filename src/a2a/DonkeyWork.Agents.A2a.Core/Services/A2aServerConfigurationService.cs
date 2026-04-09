@@ -56,6 +56,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
             IsEnabled = request.IsEnabled,
             ConnectToNavi = request.ConnectToNavi,
             PublishToMcp = request.PublishToMcp,
+            TimeoutSeconds = request.TimeoutSeconds,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -126,6 +127,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
         entity.IsEnabled = request.IsEnabled;
         entity.ConnectToNavi = request.ConnectToNavi;
         entity.PublishToMcp = request.PublishToMcp;
+        entity.TimeoutSeconds = request.TimeoutSeconds;
         entity.UpdatedAt = now;
 
         var existingHeaders = entity.HeaderConfigurations
@@ -267,6 +269,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
             Name = entity.Name,
             Description = entity.Description,
             Address = entity.Address,
+            TimeoutSeconds = entity.TimeoutSeconds,
             Headers = headers,
         };
     }
@@ -305,6 +308,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
                 Name = entity.Name,
                 Description = entity.Description,
                 Address = entity.Address,
+                TimeoutSeconds = entity.TimeoutSeconds,
                 Headers = headers,
             });
         }
@@ -327,6 +331,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
             IsEnabled = entity.IsEnabled,
             ConnectToNavi = entity.ConnectToNavi,
             PublishToMcp = entity.PublishToMcp,
+            TimeoutSeconds = entity.TimeoutSeconds,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
@@ -343,6 +348,7 @@ public class A2aServerConfigurationService : IA2aServerConfigurationService
             IsEnabled = entity.IsEnabled,
             ConnectToNavi = entity.ConnectToNavi,
             PublishToMcp = entity.PublishToMcp,
+            TimeoutSeconds = entity.TimeoutSeconds,
             HeaderConfigurations = entity.HeaderConfigurations.Select(h => new A2aHeaderConfigurationV1
             {
                 Id = h.Id,

@@ -16,6 +16,7 @@ public class A2aMcpToolService : IA2aMcpToolService
 {
     private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan FetchTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ExecuteTimeout = TimeSpan.FromMinutes(5);
 
     private readonly IA2aServerConfigurationService _configService;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -83,7 +84,12 @@ public class A2aMcpToolService : IA2aMcpToolService
         if (!address.EndsWith("/a2a", StringComparison.OrdinalIgnoreCase))
             address += "/a2a";
 
+        var executeTimeout = config.TimeoutSeconds.HasValue
+            ? TimeSpan.FromSeconds(config.TimeoutSeconds.Value)
+            : ExecuteTimeout;
+
         using var client = _httpClientFactory.CreateClient();
+        client.Timeout = executeTimeout;
         foreach (var header in config.Headers)
             client.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value);
 

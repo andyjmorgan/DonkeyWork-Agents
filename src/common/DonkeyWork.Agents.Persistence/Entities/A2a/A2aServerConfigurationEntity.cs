@@ -14,5 +14,7 @@ public class A2aServerConfigurationEntity : BaseEntity
 
     public bool PublishToMcp { get; set; }
 
+    public int? TimeoutSeconds { get; set; }
+
     public ICollection<A2aServerHeaderConfigurationEntity> HeaderConfigurations { get; set; } = new List<A2aServerHeaderConfigurationEntity>();
 }

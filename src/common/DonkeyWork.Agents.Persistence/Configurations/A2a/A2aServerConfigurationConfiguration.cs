@@ -50,6 +50,8 @@ public class A2aServerConfigurationConfiguration : IEntityTypeConfiguration<A2aS
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(x => x.TimeoutSeconds).HasColumnName("timeout_seconds").IsRequired(false);
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();

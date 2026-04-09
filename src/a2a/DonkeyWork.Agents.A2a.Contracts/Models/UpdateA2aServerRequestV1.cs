@@ -28,6 +28,9 @@ public sealed class UpdateA2aServerRequestV1
     [JsonPropertyName("publishToMcp")]
     public bool PublishToMcp { get; init; }
 
+    [JsonPropertyName("timeoutSeconds")]
+    public int? TimeoutSeconds { get; init; }
+
     [JsonPropertyName("headerConfigurations")]
     public List<UpdateA2aHeaderConfigurationRequestV1>? HeaderConfigurations { get; init; }
 }

@@ -25,6 +25,9 @@ public sealed class A2aServerSummaryV1
     [JsonPropertyName("publishToMcp")]
     public bool PublishToMcp { get; init; }
 
+    [JsonPropertyName("timeoutSeconds")]
+    public int? TimeoutSeconds { get; init; }
+
     [JsonPropertyName("createdAt")]
     public DateTimeOffset CreatedAt { get; init; }
 
