@@ -9,6 +9,7 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.A2a;
 internal sealed class A2aToolProvider : IAsyncDisposable
 {
     private static readonly TimeSpan PerServerTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ExecuteTimeout = TimeSpan.FromMinutes(5);
 
     private readonly Dictionary<string, A2aToolInfo> _tools = new(StringComparer.OrdinalIgnoreCase);
     private HttpClient? _httpClient;
@@ -124,12 +125,18 @@ internal sealed class A2aToolProvider : IAsyncDisposable
             var jsonRpcRequest = A2aProtocolHelper.BuildMessageSendRequest(message, contextId);
             var endpointUrl = $"{toolInfo.ConnectionConfig.Address.TrimEnd('/')}/a2a";
 
+            var executeTimeout = toolInfo.ConnectionConfig.TimeoutSeconds.HasValue
+                ? TimeSpan.FromSeconds(toolInfo.ConnectionConfig.TimeoutSeconds.Value)
+                : ExecuteTimeout;
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(executeTimeout);
+
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpointUrl);
             httpRequest.Content = new StringContent(jsonRpcRequest, System.Text.Encoding.UTF8, "application/json");
             foreach (var (key, value) in toolInfo.ConnectionConfig.Headers)
                 httpRequest.Headers.TryAddWithoutValidation(key, value);
 
-            var response = await _httpClient.SendAsync(httpRequest, ct);
+            var response = await _httpClient.SendAsync(httpRequest, timeoutCts.Token);
             response.EnsureSuccessStatusCode();
 
             var responseBody = await response.Content.ReadAsStringAsync(ct);

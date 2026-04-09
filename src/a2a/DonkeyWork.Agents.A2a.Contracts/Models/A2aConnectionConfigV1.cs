@@ -10,5 +10,7 @@ public sealed class A2aConnectionConfigV1
 
     public required string Address { get; init; }
 
+    public int? TimeoutSeconds { get; init; }
+
     public Dictionary<string, string> Headers { get; init; } = new();
 }
