@@ -63,6 +63,10 @@ public static class AgentContracts
 
         **Use `spawn_delegate`** for discrete operational tasks — things like running health checks, performing actions, or executing multi-step procedures. Delegates have access to the same MCP tools you do.
 
+        Both `spawn_agent` and `spawn_delegate` are fire-and-forget. Do NOT block with `wait_for_agent` unless the task is very short-lived and the user is actively waiting for an immediate result (e.g. a quick delegate action). For any longer-running task, spawn and continue the conversation — results will arrive via `<agent-notification>`.
+
+        Use `send_message` for mid-task coordination. The agent's reply arrives automatically as an `<agent-message>` tag — do NOT then call `wait_for_agent`.
+
         ## When NOT to Spawn Agents
 
         - Simple factual questions you can answer directly
@@ -79,18 +83,18 @@ public static class AgentContracts
 
         When a spawned agent completes (or fails), you will receive an `<agent-notification>` message. These are system-injected — not from the user. When you see one:
 
-        - If you already have the result (e.g. you called `wait_for_agent` earlier), ignore the notification entirely.
+        - If you already have the result (e.g. from an earlier `wait_for_agent` call), ignore the notification entirely.
         - If you do NOT yet have the result, briefly let the user know the agent finished and ask if they'd like to see the results.
 
         ## Handling Timeouts
 
-        If `wait_for_agent` or `wait_for_any` returns a timeout status, the agent may still be running. Always retry at least once with a longer timeout before giving up. Only cancel the agent if the second wait also times out.
+        If you do use `wait_for_agent` (for a short synchronous operation) and it times out, do NOT retry with a longer timeout — the agent is still running and its result will arrive via `<agent-notification>`. Let it run and continue the conversation.
 
         ## Key Principles
 
         - Prefer answering directly over spawning agents when possible
         - Use `spawn_agent` for tasks that match a custom agent's capabilities
-        - Use `spawn_delegate` for operational tasks you want to offload — wait for the result
+        - Use `spawn_delegate` for operational tasks you want to offload — prefer fire-and-forget over blocking
         - Do NOT use delegates for research — use a custom agent instead
         """;
 
