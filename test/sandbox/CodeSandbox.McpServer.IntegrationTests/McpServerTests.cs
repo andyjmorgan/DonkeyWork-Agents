@@ -1,7 +1,7 @@
+using System.Net.Http.Json;
 using System.Text.Json;
-using CodeSandbox.Contracts.Grpc.McpServer;
-using Grpc.Core;
-using Grpc.Net.Client;
+using CodeSandbox.Contracts.Requests;
+using CodeSandbox.Contracts.Responses;
 using Xunit;
 
 namespace CodeSandbox.McpServer.IntegrationTests;
@@ -16,21 +16,14 @@ public class McpServerTests : IClassFixture<ServerFixture>
         _fixture = fixture;
     }
 
-    private McpServerService.McpServerServiceClient CreateClient()
-    {
-        var channel = GrpcChannel.ForAddress(_fixture.ServerUrl);
-        return new McpServerService.McpServerServiceClient(channel);
-    }
-
     #region GetStatus Tests
 
     [Fact]
     public async Task GetStatus_BeforeStart_ReturnsIdle()
     {
-        var client = CreateClient();
-        var response = await client.GetStatusAsync(new GetStatusRequest());
+        var response = await _fixture.HttpClient.GetFromJsonAsync<McpStatusResponse>("/api/mcp/status");
 
-        Assert.Equal("Idle", response.State);
+        Assert.Equal("Idle", response?.State);
     }
 
     #endregion
@@ -40,61 +33,40 @@ public class McpServerTests : IClassFixture<ServerFixture>
     [Fact]
     public async Task Start_WithValidCommand_StreamsEventsAndBecomesReady()
     {
-        var client = CreateClient();
-
         var request = new McpStartRequest
         {
             Command = "npx",
-            TimeoutSeconds = 60
+            Arguments = ["-y", "@modelcontextprotocol/server-everything"],
+            TimeoutSeconds = 60,
         };
-        request.Arguments.Add("-y");
-        request.Arguments.Add("@modelcontextprotocol/server-everything");
 
-        var events = new List<Contracts.Grpc.McpServer.McpStartEvent>();
+        var events = await StartServerAndCollectEventsAsync(request);
 
-        using var call = client.Start(request);
-        await foreach (var evt in call.ResponseStream.ReadAllAsync())
-        {
-            events.Add(evt);
-        }
+        Assert.Contains(events, e => e.GetProperty("eventType").GetString() == "ready");
 
-        // Should have received events including "ready"
-        Assert.Contains(events, e => e.EventType == "ready");
+        var status = await _fixture.HttpClient.GetFromJsonAsync<McpStatusResponse>("/api/mcp/status");
+        Assert.Equal("Ready", status?.State);
 
-        // Status should now be Ready
-        var status = await client.GetStatusAsync(new GetStatusRequest());
-        Assert.Equal("Ready", status.State);
-
-        // Clean up
-        await client.StopAsync(new StopRequest());
+        await _fixture.HttpClient.DeleteAsync("/api/mcp");
     }
 
     [Fact]
     public async Task Start_WithInvalidCommand_StreamsErrorEvent()
     {
-        var client = CreateClient();
-
         var request = new McpStartRequest
         {
             Command = "/nonexistent/command",
-            TimeoutSeconds = 5
+            TimeoutSeconds = 5,
         };
 
-        var events = new List<Contracts.Grpc.McpServer.McpStartEvent>();
+        var events = await StartServerAndCollectEventsAsync(request);
 
-        using var call = client.Start(request);
-        await foreach (var evt in call.ResponseStream.ReadAllAsync())
-        {
-            events.Add(evt);
-        }
+        Assert.Contains(events, e => e.GetProperty("eventType").GetString() == "error");
 
-        Assert.Contains(events, e => e.EventType == "error");
+        var status = await _fixture.HttpClient.GetFromJsonAsync<McpStatusResponse>("/api/mcp/status");
+        Assert.Equal("Error", status?.State);
 
-        var status = await client.GetStatusAsync(new GetStatusRequest());
-        Assert.Equal("Error", status.State);
-
-        // Reset for other tests
-        await client.StopAsync(new StopRequest());
+        await _fixture.HttpClient.DeleteAsync("/api/mcp");
     }
 
     #endregion
@@ -104,12 +76,8 @@ public class McpServerTests : IClassFixture<ServerFixture>
     [Fact]
     public async Task ProxyRequest_ToolsList_ReturnsTools()
     {
-        var client = CreateClient();
+        await StartServerAsync();
 
-        // Start the MCP server
-        await StartServerAsync(client);
-
-        // Send tools/list request
         var toolsListRequest = JsonSerializer.Serialize(new
         {
             jsonrpc = "2.0",
@@ -118,50 +86,47 @@ public class McpServerTests : IClassFixture<ServerFixture>
             @params = new { }
         });
 
-        var response = await client.ProxyRequestAsync(new JsonRpcRequest
+        var response = await _fixture.HttpClient.PostAsJsonAsync("/api/mcp/proxy", new McpProxyRequest
         {
             Body = toolsListRequest,
-            TimeoutSeconds = 30
+            TimeoutSeconds = 30,
         });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<McpProxyResponse>();
 
-        Assert.False(response.IsNotification);
-        Assert.NotEmpty(response.Body);
+        Assert.False(result?.IsNotification);
+        Assert.NotEmpty(result?.Body ?? "");
 
-        // Parse response to verify it's valid JSON-RPC with tools
-        using var doc = JsonDocument.Parse(response.Body);
-        Assert.True(doc.RootElement.TryGetProperty("result", out var result));
-        Assert.True(result.TryGetProperty("tools", out var tools));
+        using var doc = JsonDocument.Parse(result!.Body);
+        Assert.True(doc.RootElement.TryGetProperty("result", out var resultProp));
+        Assert.True(resultProp.TryGetProperty("tools", out var tools));
         Assert.True(tools.GetArrayLength() > 0);
 
-        // Clean up
-        await client.StopAsync(new StopRequest());
+        await _fixture.HttpClient.DeleteAsync("/api/mcp");
     }
 
     [Fact]
     public async Task ProxyRequest_Notification_ReturnsIsNotificationTrue()
     {
-        var client = CreateClient();
+        await StartServerAsync();
 
-        // Start the MCP server
-        await StartServerAsync(client);
-
-        // Send a notification (no id field)
         var notification = JsonSerializer.Serialize(new
         {
             jsonrpc = "2.0",
             method = "notifications/initialized"
         });
 
-        var response = await client.ProxyRequestAsync(new JsonRpcRequest
+        var response = await _fixture.HttpClient.PostAsJsonAsync("/api/mcp/proxy", new McpProxyRequest
         {
             Body = notification,
-            TimeoutSeconds = 5
+            TimeoutSeconds = 5,
         });
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<McpProxyResponse>();
 
-        Assert.True(response.IsNotification);
+        Assert.True(result?.IsNotification);
 
-        // Clean up
-        await client.StopAsync(new StopRequest());
+        await _fixture.HttpClient.DeleteAsync("/api/mcp");
     }
 
     #endregion
@@ -171,33 +136,27 @@ public class McpServerTests : IClassFixture<ServerFixture>
     [Fact]
     public async Task Stop_AfterStart_ReturnsToIdle()
     {
-        var client = CreateClient();
+        await StartServerAsync();
 
-        await StartServerAsync(client);
+        var stopResponse = await _fixture.HttpClient.DeleteAsync("/api/mcp");
+        stopResponse.EnsureSuccessStatusCode();
 
-        var stopResponse = await client.StopAsync(new StopRequest());
-        Assert.True(stopResponse.Success);
-
-        var status = await client.GetStatusAsync(new GetStatusRequest());
-        Assert.Equal("Idle", status.State);
+        var status = await _fixture.HttpClient.GetFromJsonAsync<McpStatusResponse>("/api/mcp/status");
+        Assert.Equal("Idle", status?.State);
     }
 
     [Fact]
     public async Task Stop_ThenRestart_Works()
     {
-        var client = CreateClient();
+        await StartServerAsync();
+        await _fixture.HttpClient.DeleteAsync("/api/mcp");
 
-        // Start, stop, then start again
-        await StartServerAsync(client);
-        await client.StopAsync(new StopRequest());
+        await StartServerAsync();
 
-        // Should be able to start again
-        await StartServerAsync(client);
+        var status = await _fixture.HttpClient.GetFromJsonAsync<McpStatusResponse>("/api/mcp/status");
+        Assert.Equal("Ready", status?.State);
 
-        var status = await client.GetStatusAsync(new GetStatusRequest());
-        Assert.Equal("Ready", status.State);
-
-        await client.StopAsync(new StopRequest());
+        await _fixture.HttpClient.DeleteAsync("/api/mcp");
     }
 
     #endregion
@@ -207,48 +166,60 @@ public class McpServerTests : IClassFixture<ServerFixture>
     [Fact]
     public async Task Start_WithPreExecScript_StreamsScriptEvents()
     {
-        var client = CreateClient();
-
         var request = new McpStartRequest
         {
             Command = "npx",
-            TimeoutSeconds = 60
+            Arguments = ["-y", "@modelcontextprotocol/server-everything"],
+            PreExecScripts = ["echo 'pre-exec test'"],
+            TimeoutSeconds = 60,
         };
-        request.Arguments.Add("-y");
-        request.Arguments.Add("@modelcontextprotocol/server-everything");
-        request.PreExecScripts.Add("echo 'pre-exec test'");
 
-        var events = new List<Contracts.Grpc.McpServer.McpStartEvent>();
+        var events = await StartServerAndCollectEventsAsync(request);
 
-        using var call = client.Start(request);
-        await foreach (var evt in call.ResponseStream.ReadAllAsync())
-        {
-            events.Add(evt);
-        }
+        Assert.Contains(events, e => e.GetProperty("eventType").GetString() == "pre_exec_start");
+        Assert.Contains(events, e => e.GetProperty("eventType").GetString() == "pre_exec_complete");
+        Assert.Contains(events, e => e.GetProperty("eventType").GetString() == "ready");
 
-        Assert.Contains(events, e => e.EventType == "pre_exec_start");
-        Assert.Contains(events, e => e.EventType == "pre_exec_complete");
-        Assert.Contains(events, e => e.EventType == "ready");
-
-        await client.StopAsync(new StopRequest());
+        await _fixture.HttpClient.DeleteAsync("/api/mcp");
     }
 
     #endregion
 
-    private async Task StartServerAsync(McpServerService.McpServerServiceClient client)
+    private async Task StartServerAsync()
     {
         var request = new McpStartRequest
         {
             Command = "npx",
-            TimeoutSeconds = 60
+            Arguments = ["-y", "@modelcontextprotocol/server-everything"],
+            TimeoutSeconds = 60,
         };
-        request.Arguments.Add("-y");
-        request.Arguments.Add("@modelcontextprotocol/server-everything");
 
-        using var call = client.Start(request);
-        await foreach (var _ in call.ResponseStream.ReadAllAsync())
+        await StartServerAndCollectEventsAsync(request);
+    }
+
+    private async Task<List<JsonElement>> StartServerAndCollectEventsAsync(McpStartRequest request)
+    {
+        var response = await _fixture.HttpClient.PostAsJsonAsync("/api/mcp/start", request);
+        response.EnsureSuccessStatusCode();
+
+        var events = new List<JsonElement>();
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var reader = new StreamReader(stream);
+
+        while (true)
         {
-            // Consume all events
+            var line = await reader.ReadLineAsync();
+            if (line == null)
+                break;
+
+            if (!line.StartsWith("data: "))
+                continue;
+
+            var json = line["data: ".Length..];
+            var doc = JsonDocument.Parse(json);
+            events.Add(doc.RootElement.Clone());
         }
+
+        return events;
     }
 }

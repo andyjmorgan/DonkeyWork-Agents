@@ -1,6 +1,7 @@
 # Runtime-only Dockerfile - uses pre-built artifacts from CI
 # Based on the executor base image with Python, Node.js, Git, GH CLI
-FROM --platform=linux/amd64 your-registry/donkeywork-agents/codesandbox-executor-base:latest
+ARG BASE_IMAGE=codesandbox-executor-base:latest
+FROM --platform=linux/amd64 ${BASE_IMAGE}
 
 # Allow running on newer/older patch versions
 ENV DOTNET_ROLL_FORWARD=LatestMajor

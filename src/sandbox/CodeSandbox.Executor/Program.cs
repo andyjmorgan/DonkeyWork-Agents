@@ -1,4 +1,9 @@
 using CodeSandbox.Executor.Services;
+using CodeSandbox.Executor.Tools.Editing;
+using CodeSandbox.Executor.Tools.FileSystem;
+using CodeSandbox.Executor.Tools.Reading;
+using CodeSandbox.Executor.Tools.Search;
+using CodeSandbox.Executor.Tools.Writing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -16,29 +21,36 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog();
 
-builder.Services.AddGrpc();
+builder.Services.AddSingleton<IFileSystem, PhysicalFileSystem>();
+builder.Services.AddSingleton<IRipgrepProvider, RipgrepProvider>();
+builder.Services.AddSingleton<ReadTool>();
+builder.Services.AddSingleton<EditTool>();
+builder.Services.AddSingleton<MultiEditTool>();
+builder.Services.AddSingleton<WriteTool>();
+builder.Services.AddSingleton<GlobTool>();
+builder.Services.AddSingleton<GrepTool>();
 
 builder.Services.AddSingleton<ProcessTracker>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<ProcessTracker>());
 
 builder.Services.AddSingleton<StdioBridge>();
 
+builder.Services.AddControllers();
+
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(8666, listenOptions =>
     {
-        listenOptions.Protocols = HttpProtocols.Http2;
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
     });
 });
 
 builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
-app.MapGrpcService<ExecutorGrpcService>();
-app.MapGrpcService<McpServerGrpcService>();
-
-// Keep health check endpoint (uses HTTP/2 but works fine)
+app.MapControllers();
 app.UseHealthChecks("/healthz");
 
-Log.Information("Starting gRPC server on port 8666 (HTTP/2)");
+Log.Information("Starting Executor on port 8666 (HTTP)");
 await app.RunAsync();

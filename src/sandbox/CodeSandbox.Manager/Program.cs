@@ -2,12 +2,16 @@ using CodeSandbox.Manager.Configuration;
 using CodeSandbox.Manager.Endpoints;
 using CodeSandbox.Manager.Services.Background;
 using CodeSandbox.Manager.Services.Container;
+using CodeSandbox.Manager.Services.Executor;
 using CodeSandbox.Manager.Services.Mcp;
 using CodeSandbox.Manager.Services.Terminal;
 using k8s;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
 using Scalar.AspNetCore;
 using Serilog;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +19,7 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(8080, listenOptions =>
     {
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2;
     });
 });
 
@@ -30,6 +34,18 @@ builder.Services.AddOptions<SandboxManagerConfig>()
     .BindConfiguration(nameof(SandboxManagerConfig))
     .ValidateDataAnnotations()
     .ValidateOnStart();
+
+var managerConfig = builder.Configuration.GetSection(nameof(SandboxManagerConfig)).Get<SandboxManagerConfig>();
+if (!string.IsNullOrEmpty(managerConfig?.RedisConnectionString))
+{
+    var redis = ConnectionMultiplexer.Connect(managerConfig.RedisConnectionString);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+
+    builder.Services.AddDataProtection()
+        .PersistKeysToStackExchangeRedis(redis, "CodeSandbox:DataProtectionKeys");
+
+    Log.Information("Redis configured for data protection key persistence");
+}
 
 builder.Services.AddSingleton<IKubernetes>(sp =>
 {
@@ -67,9 +83,28 @@ builder.Services.AddSingleton<IKubernetes>(sp =>
     return new Kubernetes(defaultConfig);
 });
 
+builder.Services.AddHttpClient("executor", client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(10);
+});
+
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddScoped<ISandboxService, SandboxService>();
 builder.Services.AddScoped<IMcpContainerService, McpContainerService>();
 builder.Services.AddScoped<ITerminalService, TerminalService>();
+builder.Services.AddScoped<IExecutorClient, ExecutorClient>();
+
+builder.Services
+    .AddMcpServer(options =>
+    {
+        options.ServerInfo = new Implementation { Name = "codesandbox", Version = "1.0.0" };
+    })
+    .WithHttpTransport(options =>
+    {
+        options.Stateless = true;
+    })
+    .WithToolsFromAssembly();
 
 builder.Services.AddHostedService<ContainerCleanupService>();
 
@@ -117,6 +152,7 @@ app.MapTerminalEndpoints();
 
 app.MapSandboxEndpoints();
 app.MapMcpEndpoints();
+app.MapMcp("/mcp");
 
 Log.Information("Sandbox Manager API started successfully");
 await app.RunAsync();
