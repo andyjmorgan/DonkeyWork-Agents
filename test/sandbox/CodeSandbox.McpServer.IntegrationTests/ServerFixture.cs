@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Xunit;
@@ -6,27 +7,32 @@ namespace CodeSandbox.McpServer.IntegrationTests;
 
 public class ServerFixture : IAsyncLifetime
 {
-    private IContainer? _container;
+    private const string ImageName = "codesandbox-executor:test";
     private const int ServerPort = 8666;
+
+    private IContainer? _container;
 
     public string ServerUrl { get; private set; } = string.Empty;
     public HttpClient HttpClient { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
-        var solutionDir = GetSolutionDirectory();
-        var sandboxDir = new CommonDirectoryPath(Path.Combine(solutionDir.DirectoryPath, "src", "sandbox"));
-        var imageFuture = new ImageFromDockerfileBuilder()
-            .WithDockerfileDirectory(sandboxDir, string.Empty)
-            .WithDockerfile("CodeSandbox.Executor/Dockerfile")
-            .WithName("codesandbox-executor:test")
-            .WithCleanUp(true)
-            .Build();
+        if (!await DockerImageExistsAsync(ImageName))
+        {
+            var solutionDir = GetSolutionDirectory();
+            var sandboxDir = new CommonDirectoryPath(Path.Combine(solutionDir.DirectoryPath, "src", "sandbox"));
+            var imageFuture = new ImageFromDockerfileBuilder()
+                .WithDockerfileDirectory(sandboxDir, string.Empty)
+                .WithDockerfile("CodeSandbox.Executor/Dockerfile")
+                .WithName(ImageName)
+                .WithCleanUp(true)
+                .Build();
 
-        await imageFuture.CreateAsync();
+            await imageFuture.CreateAsync();
+        }
 
         _container = new ContainerBuilder()
-            .WithImage("codesandbox-executor:test")
+            .WithImage(ImageName)
             .WithPortBinding(ServerPort, true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(ServerPort))
             .Build();
@@ -39,6 +45,31 @@ public class ServerFixture : IAsyncLifetime
 
         await Task.Delay(2000);
         await WaitForServerHealthAsync();
+    }
+
+    private static async Task<bool> DockerImageExistsAsync(string imageName)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = $"image inspect {imageName}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            using var process = Process.Start(psi);
+            if (process == null) return false;
+            await process.WaitForExitAsync();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private async Task WaitForServerHealthAsync()
