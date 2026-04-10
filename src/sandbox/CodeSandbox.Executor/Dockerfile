@@ -1,3 +1,6 @@
+# Global ARG — must be before the first FROM to be available in later FROM directives
+ARG BASE_IMAGE=codesandbox-executor-base:latest
+
 # Build stage — context: src/sandbox/
 FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -23,7 +26,6 @@ FROM build AS publish
 RUN dotnet publish "CodeSandbox.Executor.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime stage - pre-built base with Python, Node.js, Git, GH CLI
-ARG BASE_IMAGE=codesandbox-executor-base:latest
 FROM --platform=linux/amd64 ${BASE_IMAGE}
 
 COPY --from=publish --chown=sandbox:sandbox /app/publish .
