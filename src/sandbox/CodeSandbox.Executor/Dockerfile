@@ -23,7 +23,8 @@ FROM build AS publish
 RUN dotnet publish "CodeSandbox.Executor.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime stage - pre-built base with Python, Node.js, Git, GH CLI
-FROM --platform=linux/amd64 your-registry/donkeywork-agents/codesandbox-executor-base:latest
+ARG BASE_IMAGE=codesandbox-executor-base:latest
+FROM --platform=linux/amd64 ${BASE_IMAGE}
 
 COPY --from=publish --chown=sandbox:sandbox /app/publish .
 

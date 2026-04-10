@@ -137,7 +137,7 @@ jobs:
       - name: Build Executor Docker Image for Tests
         run: |
           cp nuget.config src/sandbox/nuget.config
-          docker build -t codesandbox-executor:test -f src/sandbox/CodeSandbox.Executor/Dockerfile src/sandbox/
+          docker build -t codesandbox-executor:test --build-arg BASE_IMAGE=${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest -f src/sandbox/CodeSandbox.Executor/Dockerfile src/sandbox/
 
       - name: Test
         run: >-
@@ -434,6 +434,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
+          build-args: |
+            BASE_IMAGE=${{ vars.DOCKER_REGISTRY }}/donkeywork-agents/codesandbox-executor-base:latest
 
       - name: Push Executor Base Image
         if: github.event_name != 'pull_request' && needs.changes.outputs.sandbox-executor-base == 'true'
