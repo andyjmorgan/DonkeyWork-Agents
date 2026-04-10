@@ -14,8 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos/executor.proto" GrpcServices="Both" />
-    <Protobuf Include="Protos/mcp_server.proto" GrpcServices="Both" />
     <Protobuf Include="Protos/credential_store.proto" GrpcServices="Both" />
   </ItemGroup>
 

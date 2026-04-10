@@ -117,6 +117,8 @@ public class SandboxManagerConfig
     [Range(5, 60, ErrorMessage = "Lease duration must be between 5 and 60 seconds")]
     public int LeaderLeaseDurationSeconds { get; set; } = 15;
 
+    public string? RedisConnectionString { get; set; }
+
     // Optional: Direct k8s connection (alternative to kubeconfig)
     public KubernetesConnectionConfig? Connection { get; set; }
 }

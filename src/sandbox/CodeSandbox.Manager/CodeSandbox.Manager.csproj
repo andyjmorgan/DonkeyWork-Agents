@@ -7,11 +7,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Grpc.Net.Client" />
         <PackageReference Include="KubernetesClient" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
         <PackageReference Include="Scalar.AspNetCore" />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" />
         <PackageReference Include="Serilog.AspNetCore" />
+        <PackageReference Include="StackExchange.Redis" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" />
     </ItemGroup>
 
     <ItemGroup>

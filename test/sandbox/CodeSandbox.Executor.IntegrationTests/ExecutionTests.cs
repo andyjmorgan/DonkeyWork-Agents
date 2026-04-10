@@ -1,5 +1,6 @@
-using CodeSandbox.Contracts.Grpc.Executor;
-using Grpc.Core;
+using System.Net.Http.Json;
+using CodeSandbox.Contracts.Requests.Tools;
+using CodeSandbox.Contracts.Responses;
 using Xunit;
 
 namespace CodeSandbox.Executor.IntegrationTests;
@@ -7,404 +8,165 @@ namespace CodeSandbox.Executor.IntegrationTests;
 [Trait("Category", "Integration")]
 public class ExecutionTests : IClassFixture<ServerFixture>
 {
-    private readonly ExecutorService.ExecutorServiceClient _client;
+    private readonly HttpClient _client;
 
     public ExecutionTests(ServerFixture fixture)
     {
-        _client = new ExecutorService.ExecutorServiceClient(fixture.GrpcChannel);
+        _client = fixture.HttpClient;
     }
 
-    private async Task<List<ExecuteEvent>> ExecuteCommandAsync(string command, int timeoutSeconds = 30)
+    private async Task<ToolResponse> ExecuteCommandAsync(string command, int timeoutSeconds = 30)
     {
-        var request = new ExecuteRequest { Command = command, TimeoutSeconds = timeoutSeconds };
-        using var call = _client.Execute(request, deadline: DateTime.UtcNow.AddSeconds(timeoutSeconds + 10));
-
-        var events = new List<ExecuteEvent>();
-        await foreach (var evt in call.ResponseStream.ReadAllAsync())
-        {
-            events.Add(evt);
-        }
-
-        return events;
+        var request = new BashRequest { Command = command, TimeoutSeconds = timeoutSeconds };
+        var response = await _client.PostAsJsonAsync("/api/tools/bash", request);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<ToolResponse>())!;
     }
 
-    private async Task<List<ExecuteEvent>> ReconnectAsync(int pid, int timeoutSeconds = 30)
+    private async Task<ToolResponse> ResumeAsync(int pid, int timeoutSeconds = 30)
     {
-        var request = new ReconnectProcessRequest { Pid = pid };
-        using var call = _client.ReconnectProcess(request, deadline: DateTime.UtcNow.AddSeconds(timeoutSeconds));
-
-        var events = new List<ExecuteEvent>();
-        await foreach (var evt in call.ResponseStream.ReadAllAsync())
-        {
-            events.Add(evt);
-        }
-
-        return events;
-    }
-
-    private async Task<ListProcessesResponse> ListProcessesAsync()
-    {
-        return await _client.ListProcessesAsync(new ListProcessesRequest());
-    }
-
-    private async Task<KillProcessResponse> KillProcessAsync(int pid)
-    {
-        return await _client.KillProcessAsync(new KillProcessRequest { Pid = pid });
+        var request = new ResumeRequest { Pid = pid, TimeoutSeconds = timeoutSeconds };
+        var response = await _client.PostAsJsonAsync("/api/tools/resume", request);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<ToolResponse>())!;
     }
 
     [Fact]
-    public async Task ExecuteAsync_SimpleEchoCommand_ReturnsOutput()
+    public async Task Bash_SimpleEchoCommand_ReturnsOutput()
     {
-        var events = await ExecuteCommandAsync("echo 'Hello, World!'");
+        var result = await ExecuteCommandAsync("echo 'Hello, World!'");
 
-        var outputEvents = events.Where(e => e.EventType == "output").ToList();
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.NotEmpty(outputEvents);
-        Assert.Contains(outputEvents, e => e.Data.Contains("Hello, World!"));
-        Assert.True(completedEvent.Pid > 0);
-        Assert.Equal(0, completedEvent.ExitCode);
+        Assert.False(result.IsError);
+        Assert.Contains("Hello, World!", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_MultiLineOutput_CapturesAllLines()
+    public async Task Bash_MultiLineOutput_CapturesAllLines()
     {
-        var events = await ExecuteCommandAsync("echo 'Line 1'; sleep 1; echo 'Line 2'; sleep 1; echo 'Line 3'");
+        var result = await ExecuteCommandAsync("echo 'Line 1'; echo 'Line 2'; echo 'Line 3'");
 
-        var outputLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stdout")
-            .Select(e => e.Data)
-            .ToList();
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.Equal(0, completedEvent.ExitCode);
-        Assert.Contains(outputLines, l => l.Contains("Line 1"));
-        Assert.Contains(outputLines, l => l.Contains("Line 2"));
-        Assert.Contains(outputLines, l => l.Contains("Line 3"));
+        Assert.False(result.IsError);
+        Assert.Contains("Line 1", result.Output);
+        Assert.Contains("Line 2", result.Output);
+        Assert.Contains("Line 3", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_StderrOutput_CapturesErrorStream()
+    public async Task Bash_StderrOutput_CapturesErrorStream()
     {
-        var events = await ExecuteCommandAsync("echo 'This is an error' >&2");
+        var result = await ExecuteCommandAsync("echo 'This is an error' >&2");
 
-        var errorLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stderr")
-            .Select(e => e.Data)
-            .ToList();
-
-        Assert.Contains(errorLines, l => l.Contains("This is an error"));
+        Assert.Contains("This is an error", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_NonZeroExitCode_ReturnsCorrectExitCode()
+    public async Task Bash_NonZeroExitCode_ReturnsExitCodeInOutput()
     {
-        var events = await ExecuteCommandAsync("exit 42");
+        var result = await ExecuteCommandAsync("exit 42");
 
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.Equal(42, completedEvent.ExitCode);
+        Assert.Contains("[Exit code: 42]", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_MultipleProcesses_RunConcurrently()
+    public async Task Bash_MultipleProcesses_RunConcurrently()
     {
-        var task1 = CollectResultAsync("sleep 2; echo 'Process A done'");
-        var task2 = CollectResultAsync("sleep 1; echo 'Process B done'");
-        var task3 = CollectResultAsync("sleep 3; echo 'Process C done'");
+        var task1 = ExecuteCommandAsync("sleep 2; echo 'Process A done'");
+        var task2 = ExecuteCommandAsync("sleep 1; echo 'Process B done'");
+        var task3 = ExecuteCommandAsync("sleep 3; echo 'Process C done'");
 
         var results = await Task.WhenAll(task1, task2, task3);
 
-        Assert.Equal(3, results.Length);
-        Assert.All(results, r => Assert.Equal(0, r.ExitCode));
-        Assert.Contains("Process A done", results[0].Stdout);
-        Assert.Contains("Process B done", results[1].Stdout);
-        Assert.Contains("Process C done", results[2].Stdout);
+        Assert.All(results, r => Assert.False(r.IsError));
+        Assert.Contains("Process A done", results[0].Output);
+        Assert.Contains("Process B done", results[1].Output);
+        Assert.Contains("Process C done", results[2].Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_MultipleStderr_CapturesAllErrors()
+    public async Task Bash_MixedStdoutStderr_CapturesBothStreams()
     {
-        var events = await ExecuteCommandAsync("echo 'Error 1' >&2; sleep 1; echo 'Error 2' >&2; sleep 1; echo 'Error 3' >&2");
+        var result = await ExecuteCommandAsync("echo 'stdout message'; echo 'stderr message' >&2");
 
-        var errorLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stderr")
-            .Select(e => e.Data)
-            .ToList();
-
-        Assert.Contains(errorLines, l => l.Contains("Error 1"));
-        Assert.Contains(errorLines, l => l.Contains("Error 2"));
-        Assert.Contains(errorLines, l => l.Contains("Error 3"));
+        Assert.Contains("stdout message", result.Output);
+        Assert.Contains("stderr message", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_MixedStdoutStderr_CapturesBothStreams()
+    public async Task Bash_PipedCommands_ExecutesCorrectly()
     {
-        var events = await ExecuteCommandAsync("echo 'stdout message'; echo 'stderr message' >&2");
+        var result = await ExecuteCommandAsync("echo hello world | grep world");
 
-        var stdoutLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stdout")
-            .Select(e => e.Data)
-            .ToList();
-        var stderrLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stderr")
-            .Select(e => e.Data)
-            .ToList();
-
-        Assert.Contains(stdoutLines, l => l.Contains("stdout message"));
-        Assert.Contains(stderrLines, l => l.Contains("stderr message"));
+        Assert.False(result.IsError);
+        Assert.Contains("hello world", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ContainsPidInformation()
+    public async Task Bash_VeryLongOutput_CapturesEverything()
     {
-        var events = await ExecuteCommandAsync("echo testmarker123");
+        var result = await ExecuteCommandAsync("for i in $(seq 1 50); do echo \"Line $i\"; done");
 
-        var outputEvent = events.FirstOrDefault(e => e.EventType == "output" && e.Data.Contains("testmarker123"));
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.NotNull(outputEvent);
-        Assert.Equal(completedEvent.Pid, outputEvent!.Pid);
-        Assert.Equal("stdout", outputEvent.Stream);
+        Assert.False(result.IsError);
+        Assert.Contains("Line 1", result.Output);
+        Assert.Contains("Line 25", result.Output);
+        Assert.Contains("Line 50", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompletedEvent_ContainsCorrectExitCode()
+    public async Task Bash_CommandWithEnvironmentVariables_UsesVariables()
     {
-        var events = await ExecuteCommandAsync("exit 7");
+        var result = await ExecuteCommandAsync("TEST_VAR=hello; echo $TEST_VAR");
 
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.True(completedEvent.Pid > 0);
-        Assert.Equal(7, completedEvent.ExitCode);
+        Assert.False(result.IsError);
+        Assert.Contains("hello", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_VeryLongOutput_CapturesEverything()
+    public async Task Bash_Timeout_ReturnsTimedOutWithPid()
     {
-        var events = await ExecuteCommandAsync("for i in $(seq 1 50); do echo \"Line $i\"; sleep 0.01; done");
-
-        var outputLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stdout")
-            .Select(e => e.Data)
-            .ToList();
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.Equal(0, completedEvent.ExitCode);
-        Assert.Contains(outputLines, l => l.Contains("Line 1"));
-        Assert.Contains(outputLines, l => l.Contains("Line 25"));
-        Assert.Contains(outputLines, l => l.Contains("Line 50"));
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_EmptyCommand_HandlesGracefully()
-    {
-        var events = await ExecuteCommandAsync("");
-
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.Equal(0, completedEvent.ExitCode);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_CommandWithEnvironmentVariables_UsesVariables()
-    {
-        var events = await ExecuteCommandAsync("TEST_VAR=hello; echo $TEST_VAR");
-
-        var outputLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stdout")
-            .Select(e => e.Data)
-            .ToList();
-
-        Assert.Contains(outputLines, l => l.Contains("hello"));
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_PipedCommands_ExecutesCorrectly()
-    {
-        var events = await ExecuteCommandAsync("echo hello world | grep world");
-
-        var outputLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stdout")
-            .Select(e => e.Data)
-            .ToList();
-
-        Assert.Contains(outputLines, l => l.Contains("hello world"));
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_BackgroundProcess_CompletesSuccessfully()
-    {
-        var events = await ExecuteCommandAsync("(sleep 1 &); echo 'done'");
-
-        var outputLines = events
-            .Where(e => e.EventType == "output" && e.Stream == "stdout")
-            .Select(e => e.Data)
-            .ToList();
-        var completedEvent = events.Single(e => e.EventType == "exit");
-
-        Assert.Equal(0, completedEvent.ExitCode);
-        Assert.Contains(outputLines, l => l.Contains("done"));
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_Timeout_ReturnsTimedOutWithPid()
-    {
-        // Command runs for 10s but timeout is 3s
-        var events = await ExecuteCommandAsync(
+        var result = await ExecuteCommandAsync(
             "echo 'before timeout'; sleep 10; echo 'after timeout'",
             timeoutSeconds: 3);
 
-        var outputEvents = events.Where(e => e.EventType == "output").ToList();
-        var timeoutEvent = events.Single(e => e.EventType == "timeout");
-
-        // Should have received output before timeout
-        Assert.Contains(outputEvents, e => e.Data.Contains("before timeout"));
-
-        // Should report timeout with a valid PID
-        Assert.True(timeoutEvent.Pid > 0);
-        Assert.Equal(-1, timeoutEvent.ExitCode);
+        Assert.Contains("before timeout", result.Output);
+        Assert.Contains("Operation timed out", result.Output);
+        Assert.Contains("pid=", result.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_Timeout_ProcessAppearsInTrackedList()
+    public async Task Bash_Timeout_ResumeGetsRemainingOutput()
     {
-        // Start a long-running command with a short timeout
-        var events = await ExecuteCommandAsync(
-            "echo 'tracked process'; sleep 30",
-            timeoutSeconds: 2);
-
-        var timeoutEvent = events.Single(e => e.EventType == "timeout");
-
-        // The process should appear in the tracked processes list
-        var trackedProcesses = await ListProcessesAsync();
-        var tracked = trackedProcesses.Processes.FirstOrDefault(p => p.Pid == timeoutEvent.Pid);
-
-        Assert.NotNull(tracked);
-        Assert.Contains("tracked process", tracked!.Command);
-        Assert.True(tracked.IsRunning);
-
-        // Clean up - kill the process
-        await KillProcessAsync(timeoutEvent.Pid);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_Timeout_ReconnectGetsRemainingOutput()
-    {
-        // Command: outputs lines every second for 8 seconds, timeout at 3 seconds
-        var events = await ExecuteCommandAsync(
+        var result = await ExecuteCommandAsync(
             "for i in $(seq 1 8); do echo \"tick $i\"; sleep 1; done",
             timeoutSeconds: 3);
 
-        var timeoutEvent = events.Single(e => e.EventType == "timeout");
-        var pid = timeoutEvent.Pid;
+        Assert.Contains("Operation timed out", result.Output);
 
-        // Wait a moment for more output to be buffered
+        var pidMatch = System.Text.RegularExpressions.Regex.Match(result.Output, @"pid=(\d+)");
+        Assert.True(pidMatch.Success, "Expected PID in timeout message");
+        var pid = int.Parse(pidMatch.Groups[1].Value);
+
         await Task.Delay(2000);
 
-        // Reconnect to get remaining output
-        var reconnectEvents = await ReconnectAsync(pid, timeoutSeconds: 15);
+        var resumed = await ResumeAsync(pid, timeoutSeconds: 15);
 
-        var reconnectOutput = reconnectEvents
-            .Where(e => e.EventType == "output")
-            .Select(e => e.Data)
-            .ToList();
-        var reconnectCompleted = reconnectEvents.SingleOrDefault(e => e.EventType == "exit");
-
-        // Should have output lines that came after the timeout
-        Assert.NotEmpty(reconnectOutput);
-
-        // The process should eventually complete
-        Assert.NotNull(reconnectCompleted);
-        Assert.Equal(0, reconnectCompleted!.ExitCode);
+        Assert.NotEmpty(resumed.Output);
     }
 
     [Fact]
-    public async Task ExecuteAsync_Timeout_ReconnectAfterCompletion_ReplaysBuffer()
+    public async Task Resume_UnknownPid_ReturnsError()
     {
-        // Command: runs for 5 seconds with output, timeout at 2 seconds
-        var events = await ExecuteCommandAsync(
-            "echo 'line A'; sleep 1; echo 'line B'; sleep 1; echo 'line C'; sleep 1; echo 'line D'",
-            timeoutSeconds: 2);
+        var result = await ResumeAsync(99999);
 
-        var timeoutEvent = events.Single(e => e.EventType == "timeout");
-        var pid = timeoutEvent.Pid;
-
-        // Wait for the process to fully complete
-        await Task.Delay(6000);
-
-        // Reconnect after the process has already completed
-        var reconnectEvents = await ReconnectAsync(pid, timeoutSeconds: 10);
-
-        var reconnectOutput = reconnectEvents
-            .Where(e => e.EventType == "output")
-            .Select(e => e.Data)
-            .ToList();
-        var reconnectCompleted = reconnectEvents.SingleOrDefault(e => e.EventType == "exit");
-
-        // Should have received the remaining output from the buffer
-        Assert.NotEmpty(reconnectOutput);
-
-        // Should have the real completion event
-        Assert.NotNull(reconnectCompleted);
-        Assert.Equal(0, reconnectCompleted!.ExitCode);
+        Assert.True(result.IsError);
+        Assert.Contains("No tracked process found", result.Output);
     }
 
     [Fact]
-    public async Task KillProcess_ForcesTrackedProcessToComplete()
+    public async Task Bash_EmptyCommand_ReturnsError()
     {
-        // Start a very long-running command
-        var events = await ExecuteCommandAsync(
-            "echo 'will be killed'; sleep 300",
-            timeoutSeconds: 2);
+        var result = await ExecuteCommandAsync("");
 
-        var timeoutEvent = events.Single(e => e.EventType == "timeout");
-        var pid = timeoutEvent.Pid;
-
-        // Verify it's tracked
-        var tracked = await ListProcessesAsync();
-        Assert.Contains(tracked.Processes, p => p.Pid == pid);
-
-        // Kill it
-        var killResponse = await KillProcessAsync(pid);
-        Assert.True(killResponse.Success);
-
-        // Should no longer be in the tracked list
-        await Task.Delay(1000);
-        tracked = await ListProcessesAsync();
-        Assert.DoesNotContain(tracked.Processes, p => p.Pid == pid);
-    }
-
-    [Fact]
-    public async Task KillProcess_UnknownPid_ReturnsFalse()
-    {
-        var response = await KillProcessAsync(99999);
-        Assert.False(response.Success);
-    }
-
-    [Fact]
-    public async Task ReconnectProcess_UnknownPid_ThrowsNotFound()
-    {
-        var ex = await Assert.ThrowsAsync<RpcException>(async () =>
-        {
-            await ReconnectAsync(99999);
-        });
-
-        Assert.Equal(StatusCode.NotFound, ex.StatusCode);
-    }
-
-    private async Task<(int Pid, int ExitCode, string Stdout, string Stderr)> CollectResultAsync(string command)
-    {
-        var events = await ExecuteCommandAsync(command);
-
-        var stdout = string.Join('\n', events
-            .Where(e => e.EventType == "output" && e.Stream == "stdout")
-            .Select(e => e.Data));
-        var stderr = string.Join('\n', events
-            .Where(e => e.EventType == "output" && e.Stream == "stderr")
-            .Select(e => e.Data));
-        var completedEvent = events.SingleOrDefault(e => e.EventType == "exit");
-
-        return (completedEvent?.Pid ?? 0, completedEvent?.ExitCode ?? -1, stdout, stderr);
+        Assert.True(result.IsError);
+        Assert.Contains("command must not be empty", result.Output);
     }
 }

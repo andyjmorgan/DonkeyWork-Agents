@@ -1,10 +1,10 @@
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using CodeSandbox.Contracts.Grpc.Executor;
+using CodeSandbox.Contracts.Requests.Tools;
+using CodeSandbox.Contracts.Responses;
 using CodeSandbox.Manager.Configuration;
 using CodeSandbox.Manager.Models;
-using Grpc.Core;
-using Grpc.Net.Client;
 using k8s;
 using k8s.Models;
 using Microsoft.Extensions.Options;
@@ -15,15 +15,18 @@ public class SandboxService : ISandboxService
 {
     private readonly IKubernetes _client;
     private readonly SandboxManagerConfig _config;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SandboxService> _logger;
 
     public SandboxService(
         IKubernetes client,
         IOptions<SandboxManagerConfig> config,
+        IHttpClientFactory httpClientFactory,
         ILogger<SandboxService> logger)
     {
         _client = client;
         _config = config.Value;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -874,11 +877,9 @@ public class SandboxService : ISandboxService
         return readyCondition?.Status == "True";
     }
 
-    // Execution passthrough implementation using gRPC
-    public async Task ExecuteCommandAsync(
+    public async Task<ToolResponse> ExecuteCommandAsync(
         string sandboxId,
         ExecutionRequest request,
-        Stream responseStream,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Executing command in sandbox {SandboxId}: {Command}", sandboxId, request.Command);
@@ -887,43 +888,21 @@ public class SandboxService : ISandboxService
 
         var podIp = await GetPodIpAsync(sandboxId, cancellationToken);
 
-        using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");
-        var client = new ExecutorService.ExecutorServiceClient(channel);
-
-        var grpcRequest = new ExecuteRequest
+        var httpClient = _httpClientFactory.CreateClient("executor");
+        var bashRequest = new BashRequest
         {
             Command = request.Command,
-            TimeoutSeconds = request.TimeoutSeconds
+            TimeoutSeconds = request.TimeoutSeconds,
         };
 
-        try
-        {
-            using var call = client.Execute(grpcRequest, cancellationToken: cancellationToken);
-            var writer = new StreamWriter(responseStream, Encoding.UTF8, leaveOpen: true);
-            await using (writer.ConfigureAwait(false))
-            {
-                await foreach (var evt in call.ResponseStream.ReadAllAsync(cancellationToken))
-                {
-                    var sseData = JsonSerializer.Serialize(new
-                    {
-                        eventType = evt.EventType,
-                        data = evt.Data,
-                        pid = evt.Pid,
-                        exitCode = evt.HasExitCode ? evt.ExitCode : (int?)null
-                    });
+        var response = await httpClient.PostAsJsonAsync($"http://{podIp}:8666/api/tools/bash", bashRequest, cancellationToken);
+        response.EnsureSuccessStatusCode();
 
-                    await writer.WriteAsync($"event: {evt.EventType}\ndata: {sseData}\n\n");
-                    await writer.FlushAsync(cancellationToken);
-                }
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogError(ex, "Failed to execute command in sandbox {SandboxId} via gRPC", sandboxId);
-            throw;
-        }
+        var result = await response.Content.ReadFromJsonAsync<ToolResponse>(cancellationToken);
 
-        _logger.LogInformation("Command execution stream completed for sandbox {SandboxId}", sandboxId);
+        _logger.LogInformation("Command execution completed for sandbox {SandboxId}", sandboxId);
+
+        return result ?? new ToolResponse { Output = "", IsError = true };
     }
 
     public async Task<string> GetPodIpAsync(string sandboxId, CancellationToken cancellationToken = default)

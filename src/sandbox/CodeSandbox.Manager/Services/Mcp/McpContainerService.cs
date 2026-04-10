@@ -1,15 +1,13 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using CodeSandbox.Manager.Configuration;
 using CodeSandbox.Manager.Models;
 using CodeSandbox.Manager.Services.Container;
-using Grpc.Core;
-using Grpc.Net.Client;
 using k8s;
 using k8s.Autorest;
 using k8s.Models;
 using Microsoft.Extensions.Options;
-using GrpcMcpServer = CodeSandbox.Contracts.Grpc.McpServer;
 
 namespace CodeSandbox.Manager.Services.Mcp;
 
@@ -17,15 +15,18 @@ public class McpContainerService : IMcpContainerService
 {
     private readonly IKubernetes _client;
     private readonly SandboxManagerConfig _config;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<McpContainerService> _logger;
 
     public McpContainerService(
         IKubernetes client,
         IOptions<SandboxManagerConfig> config,
+        IHttpClientFactory httpClientFactory,
         ILogger<McpContainerService> logger)
     {
         _client = client;
         _config = config.Value;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -193,7 +194,7 @@ public class McpContainerService : IMcpContainerService
                         var podIp = readyPod.Status?.PodIP
                             ?? throw new InvalidOperationException("Pod has no IP");
 
-                        await foreach (var startEvt in StartMcpProcessOnPodGrpcAsync(podIp, request, cancellationToken))
+                        await foreach (var startEvt in StartMcpProcessOnPodAsync(podIp, request, cancellationToken))
                         {
                             writer.TryWrite(new McpServerStartingEvent
                             {
@@ -396,7 +397,7 @@ public class McpContainerService : IMcpContainerService
             _logger.LogWarning(ex, "Failed to store launch command annotation for {PodName}", podName);
         }
 
-        await foreach (var evt in StartMcpProcessOnPodGrpcAsync(podIp, new CreateMcpServerRequest
+        await foreach (var evt in StartMcpProcessOnPodAsync(podIp, new CreateMcpServerRequest
         {
             UserId = "",
             McpServerConfigId = "",
@@ -425,22 +426,25 @@ public class McpContainerService : IMcpContainerService
 
         _ = UpdateLastActivityAsync(podName, cancellationToken);
 
-        using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");
-        var client = new GrpcMcpServer.McpServerService.McpServerServiceClient(channel);
-
-        var response = await client.ProxyRequestAsync(new GrpcMcpServer.JsonRpcRequest
+        var httpClient = _httpClientFactory.CreateClient("executor");
+        var request = new CodeSandbox.Contracts.Requests.McpProxyRequest
         {
             Body = jsonRpcBody,
-            TimeoutSeconds = timeoutSeconds
-        }, cancellationToken: cancellationToken);
+            TimeoutSeconds = timeoutSeconds,
+        };
+
+        var httpResponse = await httpClient.PostAsJsonAsync($"http://{podIp}:8666/api/mcp/proxy", request, cancellationToken);
+        httpResponse.EnsureSuccessStatusCode();
+
+        var response = await httpResponse.Content.ReadFromJsonAsync<CodeSandbox.Contracts.Responses.McpProxyResponse>(cancellationToken);
 
         _logger.LogInformation("ProxyMcpRequestAsync: pod={PodName} success, isNotification={IsNotification}",
-            podName, response.IsNotification);
+            podName, response?.IsNotification);
 
         return new McpProxyResponse
         {
-            Body = response.Body,
-            IsNotification = response.IsNotification
+            Body = response?.Body ?? "",
+            IsNotification = response?.IsNotification ?? false,
         };
     }
 
@@ -450,17 +454,16 @@ public class McpContainerService : IMcpContainerService
     {
         var podIp = await GetPodIpAsync(podName, cancellationToken);
 
-        using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");
-        var client = new GrpcMcpServer.McpServerService.McpServerServiceClient(channel);
-
-        var response = await client.GetStatusAsync(new GrpcMcpServer.GetStatusRequest(), cancellationToken: cancellationToken);
+        var httpClient = _httpClientFactory.CreateClient("executor");
+        var response = await httpClient.GetFromJsonAsync<CodeSandbox.Contracts.Responses.McpStatusResponse>(
+            $"http://{podIp}:8666/api/mcp/status", cancellationToken);
 
         return new McpStatusResponse
         {
-            State = response.State,
-            Error = response.HasError ? response.Error : null,
-            StartedAt = response.HasStartedAt ? DateTime.Parse(response.StartedAt) : null,
-            LastRequestAt = response.HasLastRequestAt ? DateTime.Parse(response.LastRequestAt) : null
+            State = response?.State ?? "Unknown",
+            Error = response?.Error,
+            StartedAt = response?.StartedAt != null ? DateTime.Parse(response.StartedAt) : null,
+            LastRequestAt = response?.LastRequestAt != null ? DateTime.Parse(response.LastRequestAt) : null,
         };
     }
 
@@ -470,10 +473,8 @@ public class McpContainerService : IMcpContainerService
     {
         var podIp = await GetPodIpAsync(podName, cancellationToken);
 
-        using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");
-        var client = new GrpcMcpServer.McpServerService.McpServerServiceClient(channel);
-
-        await client.StopAsync(new GrpcMcpServer.StopRequest(), cancellationToken: cancellationToken);
+        var httpClient = _httpClientFactory.CreateClient("executor");
+        await httpClient.DeleteAsync($"http://{podIp}:8666/api/mcp", cancellationToken);
     }
 
     #endregion
@@ -596,38 +597,46 @@ public class McpContainerService : IMcpContainerService
         };
     }
 
-    private async IAsyncEnumerable<McpStartProcessEvent> StartMcpProcessOnPodGrpcAsync(
+    private async IAsyncEnumerable<McpStartProcessEvent> StartMcpProcessOnPodAsync(
         string podIp,
         CreateMcpServerRequest request,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        using var channel = GrpcChannel.ForAddress($"http://{podIp}:8666");
-        var client = new GrpcMcpServer.McpServerService.McpServerServiceClient(channel);
-
-        var grpcRequest = new GrpcMcpServer.McpStartRequest
+        var httpClient = _httpClientFactory.CreateClient("executor");
+        var startRequest = new CodeSandbox.Contracts.Requests.McpStartRequest
         {
             Command = request.Command ?? "",
-            TimeoutSeconds = request.TimeoutSeconds
+            Arguments = request.Arguments.ToArray(),
+            PreExecScripts = request.PreExecScripts.ToArray(),
+            TimeoutSeconds = request.TimeoutSeconds,
+            WorkingDirectory = request.WorkingDirectory,
         };
 
-        foreach (var arg in request.Arguments)
-            grpcRequest.Arguments.Add(arg);
+        var httpResponse = await httpClient.PostAsJsonAsync($"http://{podIp}:8666/api/mcp/start", startRequest, cancellationToken);
+        httpResponse.EnsureSuccessStatusCode();
 
-        foreach (var script in request.PreExecScripts)
-            grpcRequest.PreExecScripts.Add(script);
+        using var stream = await httpResponse.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
 
-        if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
-            grpcRequest.WorkingDirectory = request.WorkingDirectory;
-
-        using var call = client.Start(grpcRequest, cancellationToken: cancellationToken);
-
-        await foreach (var evt in call.ResponseStream.ReadAllAsync(cancellationToken))
+        while (!cancellationToken.IsCancellationRequested)
         {
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (line == null)
+                break;
+
+            if (!line.StartsWith("data: "))
+                continue;
+
+            var json = line["data: ".Length..];
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
             yield return new McpStartProcessEvent
             {
-                EventType = evt.EventType,
-                Message = evt.Message,
-                Error = evt.HasError ? evt.Error : null
+                EventType = root.GetProperty("eventType").GetString() ?? "",
+                Message = root.GetProperty("message").GetString() ?? "",
+                Error = root.TryGetProperty("error", out var errProp) && errProp.ValueKind != JsonValueKind.Null
+                    ? errProp.GetString() : null,
             };
         }
     }
