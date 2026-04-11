@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -133,90 +132,137 @@ public sealed class SandboxManagerClient
         _logger.LogInformation("Executing command in sandbox {SandboxId}: {Command} (timeout={Timeout}s)",
             sandboxId, Truncate(command, 100), timeoutSeconds);
 
-        var request = new { command, timeoutSeconds };
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/sandbox/{sandboxId}/execute")
+        // The Manager exposes bash via its MCP server at /mcp (stateless HTTP transport).
+        // We POST a JSON-RPC tools/call message and pass the sandbox pod via x-sandbox-id.
+        var jsonRpcRequest = new
         {
-            Content = JsonContent.Create(request, options: JsonOptions),
+            jsonrpc = "2.0",
+            id = Guid.NewGuid().ToString("N"),
+            method = "tools/call",
+            @params = new
+            {
+                name = "bash",
+                arguments = new { command, timeoutSeconds },
+            },
         };
 
-        var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = JsonContent.Create(jsonRpcRequest, options: JsonOptions),
+        };
+        httpRequest.Headers.Add("x-sandbox-id", sandboxId);
+        httpRequest.Headers.Accept.ParseAdd("application/json, text/event-stream");
+
+        var response = await _httpClient.SendAsync(httpRequest, ct);
 
         if (!response.IsSuccessStatusCode)
         {
-            var body = await response.Content.ReadAsStringAsync(ct);
-            var allow = response.Content.Headers.Contains("Allow")
-                ? string.Join(", ", response.Content.Headers.GetValues("Allow"))
-                : "(none)";
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
             _logger.LogError(
-                "ExecuteCommand failed: Status={StatusCode}, Allow={Allow}, Body={Body}, RequestUri={Uri}",
-                (int)response.StatusCode, allow, body, response.RequestMessage?.RequestUri);
+                "ExecuteCommand failed: Status={StatusCode}, Body={Body}, SandboxId={SandboxId}",
+                (int)response.StatusCode, errorBody, sandboxId);
+            response.EnsureSuccessStatusCode();
         }
 
-        response.EnsureSuccessStatusCode();
+        var rawBody = await response.Content.ReadAsStringAsync(ct);
+        var (output, isError) = ParseMcpToolsCallResponse(rawBody);
+        var (exitCode, pid, timedOut, cleaned) = ParseBashOutput(output, isError);
 
-        var stdout = new StringBuilder();
-        var stderr = new StringBuilder();
-        var exitCode = -1;
-        var timedOut = false;
-        var pid = 0;
-        var eventCount = 0;
+        _logger.LogInformation(
+            "Command completed: PID={Pid}, ExitCode={ExitCode}, TimedOut={TimedOut}",
+            pid, exitCode, timedOut);
 
-        // Local timeout ensures SSE read completes even if Manager stream hangs.
-        // The +30s buffer allows the Manager's gRPC deadline (+15s) and the Executor's
-        // internal timeout to fire first.
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds + 30));
+        return new CommandResult(cleaned, string.Empty, exitCode, timedOut, pid);
+    }
 
-        try
+    /// <summary>
+    /// Parses an MCP JSON-RPC tools/call response. Handles both plain JSON and
+    /// SSE-framed responses (the MCP server may use either depending on transport).
+    /// Returns the concatenated text content and the isError flag.
+    /// </summary>
+    private static (string Output, bool IsError) ParseMcpToolsCallResponse(string body)
+    {
+        // SSE framing: lines like "event: message" then "data: {json}". Strip framing.
+        if (body.Contains("data:", StringComparison.Ordinal))
         {
-            await foreach (var evt in ReadSseEventsAsync(response, timeoutCts.Token))
+            foreach (var line in body.Split('\n'))
             {
-                eventCount++;
-                var eventType = evt.GetProperty("eventType").GetString();
-
-                switch (eventType)
+                var trimmed = line.TrimEnd('\r');
+                if (trimmed.StartsWith("data: ", StringComparison.Ordinal))
                 {
-                    case "output":
-                        var stream = evt.TryGetProperty("stream", out var s) ? s.GetString() : null;
-                        var data = evt.TryGetProperty("data", out var d) ? d.GetString() : "";
-                        if (stream == "stderr")
-                            stderr.AppendLine(data);
-                        else
-                            stdout.AppendLine(data);
-                        if (evt.TryGetProperty("pid", out var p) && p.GetInt32() > 0)
-                            pid = p.GetInt32();
-                        break;
-                    case "exit":
-                        if (evt.TryGetProperty("exitCode", out var ec))
-                            exitCode = ec.GetInt32();
-                        if (evt.TryGetProperty("pid", out var ep) && ep.GetInt32() > 0)
-                            pid = ep.GetInt32();
-                        break;
-                    case "timeout":
-                        timedOut = true;
-                        if (evt.TryGetProperty("exitCode", out var tc))
-                            exitCode = tc.GetInt32();
-                        if (evt.TryGetProperty("pid", out var tp) && tp.GetInt32() > 0)
-                            pid = tp.GetInt32();
-                        break;
+                    var json = trimmed["data: ".Length..];
+                    if (!string.IsNullOrWhiteSpace(json))
+                        return ExtractContentAndError(json);
                 }
             }
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+
+        return ExtractContentAndError(body);
+    }
+
+    private static (string Output, bool IsError) ExtractContentAndError(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("error", out var errorProp))
         {
-            // Local timeout fired (not caller cancellation) — treat as timeout
-            _logger.LogWarning(
-                "SSE read timed out after {Timeout}s for sandbox {SandboxId}",
-                timeoutSeconds + 30, sandboxId);
+            var message = errorProp.TryGetProperty("message", out var msgProp)
+                ? msgProp.GetString() ?? "Unknown JSON-RPC error"
+                : "Unknown JSON-RPC error";
+            return (message, true);
+        }
+
+        if (!root.TryGetProperty("result", out var result))
+            return (string.Empty, true);
+
+        var isError = result.TryGetProperty("isError", out var isErrorProp) && isErrorProp.GetBoolean();
+
+        var parts = new List<string>();
+        if (result.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in content.EnumerateArray())
+            {
+                var type = item.TryGetProperty("type", out var typeProp) ? typeProp.GetString() : null;
+                if (type == "text" && item.TryGetProperty("text", out var textProp))
+                {
+                    parts.Add(textProp.GetString() ?? string.Empty);
+                }
+            }
+        }
+
+        return (string.Join("\n", parts), isError);
+    }
+
+    /// <summary>
+    /// Parses the bash tool output to extract exit code, PID, and timeout status.
+    /// The Manager's bash tool returns stdout+stderr combined in a single string,
+    /// with markers appended on non-zero exit ("[Exit code: N]") or timeout.
+    /// </summary>
+    private static (int ExitCode, int Pid, bool TimedOut, string Output) ParseBashOutput(string output, bool isError)
+    {
+        var pid = 0;
+        var timedOut = false;
+        var exitCode = isError ? -1 : 0;
+        var cleaned = output;
+
+        var timeoutMatch = System.Text.RegularExpressions.Regex.Match(
+            output, @"\[Operation timed out after \d+s\. Process PID: (\d+)\]");
+        if (timeoutMatch.Success)
+        {
             timedOut = true;
+            pid = int.Parse(timeoutMatch.Groups[1].Value);
             exitCode = -1;
         }
 
-        _logger.LogInformation(
-            "Command completed: PID={Pid}, ExitCode={ExitCode}, TimedOut={TimedOut}, Events={EventCount}",
-            pid, exitCode, timedOut, eventCount);
+        var exitMatch = System.Text.RegularExpressions.Regex.Match(output, @"\[Exit code: (-?\d+)\]");
+        if (exitMatch.Success)
+        {
+            exitCode = int.Parse(exitMatch.Groups[1].Value);
+            cleaned = output[..exitMatch.Index].TrimEnd();
+        }
 
-        return new CommandResult(stdout.ToString(), stderr.ToString(), exitCode, timedOut, pid);
+        return (exitCode, pid, timedOut, cleaned);
     }
 
     public async Task<bool> DeleteSandboxAsync(string sandboxId, CancellationToken ct)
