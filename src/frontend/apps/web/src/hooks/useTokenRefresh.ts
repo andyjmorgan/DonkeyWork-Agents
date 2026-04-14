@@ -14,21 +14,26 @@ export function useTokenRefresh() {
   const intervalRef = useRef<number | null>(null)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
+  const consecutiveFailures = useRef(0)
+  const maxConsecutiveFailures = 3
+
   const checkAndRefreshToken = useCallback(async () => {
-    // Always get fresh state to avoid stale closures
     const state = useAuthStore.getState()
     if (!state.isAuthenticated) return
 
-    // Also check if token is expired (not just should refresh)
-    if (state.isTokenExpired()) {
+    if (state.isTokenExpired() || state.shouldRefreshToken()) {
       const refreshed = await state.refreshTokens()
-      if (!refreshed) {
-        state.logout()
-        window.location.href = '/api/v1/auth/logout'
+      if (refreshed) {
+        consecutiveFailures.current = 0
+        return
       }
-    } else if (state.shouldRefreshToken()) {
-      const refreshed = await state.refreshTokens()
-      if (!refreshed) {
+
+      consecutiveFailures.current++
+      console.warn(`[TokenRefresh] Refresh failed (${consecutiveFailures.current}/${maxConsecutiveFailures})`)
+
+      if (state.isTokenExpired() && consecutiveFailures.current >= maxConsecutiveFailures) {
+        console.error('[TokenRefresh] Token expired and refresh failed repeatedly, logging out')
+        consecutiveFailures.current = 0
         state.logout()
         window.location.href = '/api/v1/auth/logout'
       }

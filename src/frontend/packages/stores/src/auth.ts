@@ -106,7 +106,6 @@ export const useAuthStore = create<AuthState>()(
       refreshTokens: async () => {
         const state = get()
 
-        // If already refreshing, return the existing promise
         if (state.isRefreshing && state.refreshPromise) {
           console.debug('[Auth] Token refresh already in progress, reusing existing promise')
           return state.refreshPromise
@@ -124,55 +123,70 @@ export const useAuthStore = create<AuthState>()(
         const refreshPromise = (async () => {
           set({ isRefreshing: true })
 
-          try {
-            const { apiBaseUrl } = getPlatformConfig()
-            const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ refreshToken }),
-            })
+          const maxAttempts = 3
+          const baseDelay = 1000
 
-            if (!response.ok) {
-              try {
-                const errorBody = await response.json()
-                console.error('[Auth] Token refresh failed:', {
-                  status: response.status,
-                  error: errorBody.error,
-                  errorDescription: errorBody.error_description,
-                  refreshTokenPreview: refreshToken.substring(0, 20) + '...',
-                })
-              } catch {
-                console.error('[Auth] Token refresh failed:', {
-                  status: response.status,
-                  refreshTokenPreview: refreshToken.substring(0, 20) + '...',
-                })
+          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+              const currentRefreshToken = get().refreshToken
+              if (!currentRefreshToken) {
+                console.warn('[Auth] Refresh token disappeared during retry')
+                break
               }
-              get().logout()
-              return false
+
+              const { apiBaseUrl } = getPlatformConfig()
+              const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ refreshToken: currentRefreshToken }),
+              })
+
+              if (response.ok) {
+                const data: RefreshTokenResponse = await response.json()
+                const now = Date.now()
+                const newExpiresAt = now + data.expiresIn * 1000
+                set({
+                  accessToken: data.accessToken,
+                  refreshToken: data.refreshToken ?? currentRefreshToken,
+                  expiresAt: newExpiresAt,
+                  tokenIssuedAt: now,
+                  isRefreshing: false,
+                  refreshPromise: null,
+                })
+                console.debug(`[Auth] Token refresh successful. New token expires in ${data.expiresIn}s`)
+                return true
+              }
+
+              if (response.status === 400 || response.status === 401) {
+                try {
+                  const errorBody = await response.json()
+                  console.error(`[Auth] Token refresh rejected (${response.status}):`, {
+                    error: errorBody.error,
+                    errorDescription: errorBody.error_description,
+                  })
+                } catch {
+                  console.error(`[Auth] Token refresh rejected (${response.status})`)
+                }
+                break
+              }
+
+              console.warn(`[Auth] Token refresh attempt ${attempt}/${maxAttempts} failed with status ${response.status}`)
+            } catch (error) {
+              console.warn(`[Auth] Token refresh attempt ${attempt}/${maxAttempts} threw:`, error)
             }
 
-            const data: RefreshTokenResponse = await response.json()
-
-            const now = Date.now()
-            const expiresAt = now + data.expiresIn * 1000
-            set({
-              accessToken: data.accessToken,
-              refreshToken: data.refreshToken ?? refreshToken,
-              expiresAt,
-              tokenIssuedAt: now,
-              isRefreshing: false,
-              refreshPromise: null,
-            })
-
-            console.debug(`[Auth] Token refresh successful. New token expires in ${data.expiresIn}s`)
-            return true
-          } catch (error) {
-            console.error('[Auth] Token refresh threw exception:', error)
-            set({ isRefreshing: false, refreshPromise: null })
-            return false
+            if (attempt < maxAttempts) {
+              const delay = baseDelay * Math.pow(2, attempt - 1)
+              console.debug(`[Auth] Retrying token refresh in ${delay}ms`)
+              await new Promise(resolve => setTimeout(resolve, delay))
+            }
           }
+
+          console.error('[Auth] Token refresh failed after all attempts')
+          set({ isRefreshing: false, refreshPromise: null })
+          return false
         })()
 
         set({ refreshPromise })

@@ -102,7 +102,9 @@ export function useDesktopAuth() {
     }
   }, [setTokens, logout])
 
-  // Periodic token refresh from React side
+  const consecutiveFailures = useRef(0)
+  const maxConsecutiveFailures = 3
+
   const checkAndRefreshToken = useCallback(async () => {
     const state = useAuthStore.getState()
     if (!state.isAuthenticated) return
@@ -111,8 +113,17 @@ export function useDesktopAuth() {
       try {
         const tokens = await invoke<AuthTokens>('refresh_tokens')
         setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
+        consecutiveFailures.current = 0
       } catch {
-        logout()
+        consecutiveFailures.current++
+        console.warn(`[DesktopAuth] Refresh failed (${consecutiveFailures.current}/${maxConsecutiveFailures})`)
+
+        if (state.isTokenExpired() && consecutiveFailures.current >= maxConsecutiveFailures) {
+          console.error('[DesktopAuth] Token expired and refresh failed repeatedly, logging out')
+          consecutiveFailures.current = 0
+          await invoke('clear_tokens')
+          logout()
+        }
       }
     }
   }, [setTokens, logout])
