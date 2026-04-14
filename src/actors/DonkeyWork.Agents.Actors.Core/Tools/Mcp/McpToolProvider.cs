@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net.Http.Json;
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Core.Providers;
+using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Common.Contracts.Enums;
 using DonkeyWork.Agents.Mcp.Contracts.Models;
 using Microsoft.Extensions.Logging;
@@ -13,17 +15,20 @@ namespace DonkeyWork.Agents.Actors.Core.Tools.Mcp;
 /// <summary>
 /// Per-grain MCP tool manager that connects to external MCP servers,
 /// discovers their tools, and provides execution capabilities.
-/// Supports both HTTP MCP servers (via MCP SDK) and stdio MCP servers (via sandbox manager proxy).
+/// Supports HTTP MCP servers (via MCP SDK), stdio MCP servers (via sandbox manager proxy),
+/// and the sandbox manager's built-in MCP tools (bash, read, write, edit, etc.).
 /// </summary>
 internal sealed class McpToolProvider : IAsyncDisposable
 {
     private static readonly TimeSpan PerServerTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan StdioServerTimeout = TimeSpan.FromSeconds(120);
+    private static readonly TimeSpan SandboxDiscoveryTimeout = TimeSpan.FromSeconds(15);
     private static int _jsonRpcIdCounter;
 
     private readonly List<McpClient> _clients = [];
     private readonly Dictionary<string, McpClientTool> _toolsByName = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, StdioToolInfo> _stdioTools = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SandboxToolInfo> _sandboxTools = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _toolServerNames = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<InternalToolDefinition>? _cachedDefinitions;
 
@@ -129,7 +134,80 @@ internal sealed class McpToolProvider : IAsyncDisposable
     }
 
     /// <summary>
-    /// Returns tool definitions for all discovered MCP tools (both HTTP and stdio).
+    /// Discovers tools from the sandbox manager's MCP endpoint.
+    /// Tool definitions are fetched immediately (no sandbox pod required).
+    /// At execution time, the sandbox pod name is resolved from the provisioning handle.
+    /// </summary>
+    public async Task InitializeSandboxAsync(
+        HttpClient sandboxManagerHttpClient,
+        SandboxProvisioningHandle sandboxHandle,
+        ILogger logger,
+        Action<string, bool, long, int, string?>? onServerStatus,
+        CancellationToken ct)
+    {
+        const string serverName = "Sandbox";
+        var sw = Stopwatch.StartNew();
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(SandboxDiscoveryTimeout);
+
+        try
+        {
+            var jsonRpcRequest = BuildToolsListJsonRpc();
+
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+            {
+                Content = new StringContent(jsonRpcRequest, System.Text.Encoding.UTF8, "application/json"),
+            };
+            httpRequest.Headers.Accept.ParseAdd("application/json, text/event-stream");
+
+            var response = await sandboxManagerHttpClient.SendAsync(httpRequest, timeoutCts.Token);
+            response.EnsureSuccessStatusCode();
+
+            var responseBody = await response.Content.ReadAsStringAsync(timeoutCts.Token);
+            var stripped = StripSseFraming(responseBody);
+            var tools = ParseToolsFromResponse(stripped);
+            sw.Stop();
+
+            foreach (var tool in tools)
+            {
+                if (_toolsByName.ContainsKey(tool.Name) || _stdioTools.ContainsKey(tool.Name) || _sandboxTools.ContainsKey(tool.Name))
+                {
+                    logger.LogWarning(
+                        "Duplicate MCP tool name '{ToolName}' from sandbox manager, " +
+                        "already registered from '{ExistingServer}'. Skipping.",
+                        tool.Name, _toolServerNames[tool.Name]);
+                    continue;
+                }
+
+                _sandboxTools[tool.Name] = new SandboxToolInfo(tool, sandboxManagerHttpClient, sandboxHandle);
+                _toolServerNames[tool.Name] = serverName;
+            }
+
+            logger.LogInformation(
+                "Discovered {ToolCount} sandbox MCP tools in {ElapsedMs}ms",
+                tools.Count, sw.ElapsedMilliseconds);
+
+            onServerStatus?.Invoke(serverName, true, sw.ElapsedMilliseconds, tools.Count, null);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            sw.Stop();
+            logger.LogError("Timed out discovering sandbox MCP tools after {ElapsedMs}ms", sw.ElapsedMilliseconds);
+            onServerStatus?.Invoke(serverName, false, sw.ElapsedMilliseconds, 0, "Connection timed out");
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            logger.LogError(ex, "Failed to discover sandbox MCP tools after {ElapsedMs}ms", sw.ElapsedMilliseconds);
+            onServerStatus?.Invoke(serverName, false, sw.ElapsedMilliseconds, 0, ex.Message);
+        }
+
+        _cachedDefinitions = null;
+    }
+
+    /// <summary>
+    /// Returns tool definitions for all discovered MCP tools (HTTP, stdio, and sandbox).
     /// Uses cached definitions with all tools deferred by default.
     /// </summary>
     public IReadOnlyList<InternalToolDefinition> GetToolDefinitions()
@@ -149,7 +227,7 @@ internal sealed class McpToolProvider : IAsyncDisposable
         Dictionary<string, bool>? perToolDefer,
         HashSet<string>? excludedTools)
     {
-        var definitions = new List<InternalToolDefinition>(_toolsByName.Count + _stdioTools.Count);
+        var definitions = new List<InternalToolDefinition>(_toolsByName.Count + _stdioTools.Count + _sandboxTools.Count);
 
         foreach (var (name, tool) in _toolsByName)
         {
@@ -183,6 +261,21 @@ internal sealed class McpToolProvider : IAsyncDisposable
             definitions.Add(def);
         }
 
+        foreach (var (name, sandboxTool) in _sandboxTools)
+        {
+            if (excludedTools?.Contains(name) == true)
+                continue;
+
+            definitions.Add(new InternalToolDefinition
+            {
+                Name = sandboxTool.Definition.Name,
+                DisplayName = sandboxTool.Definition.DisplayName,
+                Description = sandboxTool.Definition.Description,
+                InputSchema = sandboxTool.Definition.InputSchema,
+                DeferLoading = false,
+            });
+        }
+
         return definitions;
     }
 
@@ -206,7 +299,7 @@ internal sealed class McpToolProvider : IAsyncDisposable
     /// Checks whether a tool with the given name exists in this provider.
     /// </summary>
     public bool HasTool(string toolName) =>
-        _toolsByName.ContainsKey(toolName) || _stdioTools.ContainsKey(toolName);
+        _toolsByName.ContainsKey(toolName) || _stdioTools.ContainsKey(toolName) || _sandboxTools.ContainsKey(toolName);
 
     /// <summary>
     /// Gets the display name for a tool, or null if not found.
@@ -218,6 +311,9 @@ internal sealed class McpToolProvider : IAsyncDisposable
 
         if (_stdioTools.TryGetValue(toolName, out var stdioTool))
             return stdioTool.Definition.DisplayName ?? stdioTool.Definition.Name;
+
+        if (_sandboxTools.TryGetValue(toolName, out var sandboxTool))
+            return sandboxTool.Definition.DisplayName ?? sandboxTool.Definition.Name;
 
         return null;
     }
@@ -235,6 +331,11 @@ internal sealed class McpToolProvider : IAsyncDisposable
         if (_stdioTools.TryGetValue(toolName, out var stdioTool))
         {
             return await ExecuteStdioToolAsync(stdioTool, toolName, arguments, ct);
+        }
+
+        if (_sandboxTools.TryGetValue(toolName, out var sandboxTool))
+        {
+            return await ExecuteSandboxToolAsync(sandboxTool, toolName, arguments, ct);
         }
 
         return ToolResult.Error($"MCP tool '{toolName}' not found.");
@@ -258,6 +359,7 @@ internal sealed class McpToolProvider : IAsyncDisposable
         _clients.Clear();
         _toolsByName.Clear();
         _stdioTools.Clear();
+        _sandboxTools.Clear();
         _toolServerNames.Clear();
         _cachedDefinitions = null;
     }
@@ -429,6 +531,67 @@ internal sealed class McpToolProvider : IAsyncDisposable
 
     #endregion
 
+    #region Sandbox Tool Execution
+
+    private static async Task<ToolResult> ExecuteSandboxToolAsync(
+        SandboxToolInfo sandboxTool,
+        string toolName,
+        JsonElement arguments,
+        CancellationToken ct)
+    {
+        string sandboxId;
+        try
+        {
+            sandboxId = await sandboxTool.Handle.Task.WaitAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return ToolResult.Error($"Sandbox not available: {ex.Message}");
+        }
+
+        var jsonRpcRequest = BuildToolCallJsonRpc(toolName, arguments);
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent(jsonRpcRequest, System.Text.Encoding.UTF8, "application/json"),
+        };
+        httpRequest.Headers.Add("x-sandbox-id", sandboxId);
+        httpRequest.Headers.Accept.ParseAdd("application/json, text/event-stream");
+
+        var response = await sandboxTool.HttpClient.SendAsync(httpRequest, ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            return ToolResult.Error($"Sandbox tool '{toolName}' failed: HTTP {(int)response.StatusCode} — {errorBody}");
+        }
+
+        var rawBody = await response.Content.ReadAsStringAsync(ct);
+        var stripped = StripSseFraming(rawBody);
+        return ParseToolCallResponse(stripped);
+    }
+
+    private static string StripSseFraming(string body)
+    {
+        if (!body.Contains("data:", StringComparison.Ordinal))
+            return body;
+
+        foreach (var line in body.Split('\n'))
+        {
+            var trimmed = line.TrimEnd('\r');
+            if (trimmed.StartsWith("data: ", StringComparison.Ordinal))
+            {
+                var json = trimmed["data: ".Length..];
+                if (!string.IsNullOrWhiteSpace(json))
+                    return json;
+            }
+        }
+
+        return body;
+    }
+
+    #endregion
+
     #region HTTP Server Connection
 
     private static async Task ConnectHttpServerAsync(
@@ -523,4 +686,9 @@ internal sealed class McpToolProvider : IAsyncDisposable
         InternalToolDefinition Definition,
         string PodName,
         McpSandboxManagerClient Client);
+
+    private sealed record SandboxToolInfo(
+        InternalToolDefinition Definition,
+        HttpClient HttpClient,
+        SandboxProvisioningHandle Handle);
 }

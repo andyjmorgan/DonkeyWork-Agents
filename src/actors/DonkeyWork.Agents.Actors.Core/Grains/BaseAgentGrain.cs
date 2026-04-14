@@ -56,7 +56,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     private protected McpToolProvider? McpToolProvider;
     private protected A2aToolProvider? A2aToolProvider;
     private protected OrchestrationToolProvider? OrchestrationToolProvider;
-    protected bool HasMcpSandbox;
     protected Type[]? EffectiveToolTypes;
     protected SandboxProvisioningHandle? SandboxHandle;
     protected int ContextWindowLimit;
@@ -107,45 +106,62 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
     protected virtual async Task InitializeMcpToolsAsync(AgentContract contract, string[] effectiveToolGroups, CancellationToken ct)
     {
-        if (McpToolProvider is not null || contract.McpServers is not { Length: > 0 })
+        var hasMcpServers = contract.McpServers is { Length: > 0 };
+        var hasSandbox = contract.EnableSandbox
+                         || effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase);
+
+        if (McpToolProvider is not null || (!hasMcpServers && !hasSandbox))
             return;
 
-        var allowedIds = new HashSet<Guid>(
-            contract.McpServers
-                .Select(s => Guid.TryParse(s.Id, out var id) ? id : (Guid?)null)
-                .Where(id => id.HasValue)
-                .Select(id => id!.Value));
+        McpToolProvider = new McpToolProvider();
 
-        var httpConfigs = (await McpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
-            .Where(c => allowedIds.Contains(c.Id))
-            .ToList();
-        var stdioConfigs = (await McpServerConfigService.GetEnabledStdioConfigsAsync(ct))
-            .Where(c => allowedIds.Contains(c.Id))
-            .ToList();
-
-        if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
+        if (hasMcpServers)
         {
-            McpToolProvider = new McpToolProvider();
-            await McpToolProvider.InitializeAsync(
-                httpConfigs,
-                stdioConfigs,
-                McpSandboxManagerClient,
-                IdentityContext.UserId.ToString(),
+            var allowedIds = new HashSet<Guid>(
+                contract.McpServers
+                    .Select(s => Guid.TryParse(s.Id, out var id) ? id : (Guid?)null)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value));
+
+            var httpConfigs = (await McpServerConfigService.GetEnabledConnectionConfigsAsync(ct))
+                .Where(c => allowedIds.Contains(c.Id))
+                .ToList();
+            var stdioConfigs = (await McpServerConfigService.GetEnabledStdioConfigsAsync(ct))
+                .Where(c => allowedIds.Contains(c.Id))
+                .ToList();
+
+            if (httpConfigs.Count > 0 || stdioConfigs.Count > 0)
+            {
+                await McpToolProvider.InitializeAsync(
+                    httpConfigs,
+                    stdioConfigs,
+                    McpSandboxManagerClient,
+                    IdentityContext.UserId.ToString(),
+                    Logger,
+                    (name, success, ms, toolCount, error) =>
+                    {
+                        Emit(new StreamMcpServerStatusEvent(GrainContext.GrainKey, name, success, ms, toolCount, error));
+                    },
+                    ct);
+            }
+        }
+
+        if (hasSandbox)
+        {
+            SandboxHandle = new SandboxProvisioningHandle();
+            GrainContext.SandboxHandle = SandboxHandle;
+
+            _ = ProvisionSandboxInternalAsync(SandboxHandle);
+
+            await McpToolProvider.InitializeSandboxAsync(
+                McpSandboxManagerClient.HttpClient,
+                SandboxHandle,
                 Logger,
                 (name, success, ms, toolCount, error) =>
                 {
                     Emit(new StreamMcpServerStatusEvent(GrainContext.GrainKey, name, success, ms, toolCount, error));
                 },
                 ct);
-
-            if (contract.EnableSandbox
-                && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase))
-            {
-                HasMcpSandbox = true;
-                SandboxHandle = new SandboxProvisioningHandle();
-                GrainContext.SandboxHandle = SandboxHandle;
-                _ = ProvisionSandboxInternalAsync(SandboxHandle);
-            }
         }
     }
 
@@ -531,9 +547,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         await InitializeA2aToolsAsync(contract, effectiveToolGroups, ct);
         await InitializeOrchestrationToolsAsync(contract, ct);
 
-        var effectiveToolTypes = HasMcpSandbox && !effectiveToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
-            ? [..toolTypes, typeof(SandboxTools)]
-            : toolTypes;
+        var effectiveToolTypes = toolTypes;
 
         var agentCatalog = await GetAgentCatalogPromptAsync(contract, ct);
         effectiveToolTypes = GetAdditionalSwarmToolTypes(contract, effectiveToolTypes);
@@ -644,11 +658,9 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         var combinedPrompt = string.Join("\n\n", promptParts);
 
-        var hasSandbox = contract.EnableSandbox
-                         || contract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase)
-                         || HasMcpSandbox;
+        var hasSandbox = SandboxHandle is not null;
         var systemPrompt = hasSandbox
-            ? combinedPrompt + SandboxTools.SystemPromptFragment
+            ? combinedPrompt + SandboxSystemPrompt
             : combinedPrompt;
 
         if (effectiveToolTypes.Contains(typeof(SwarmAgentMessagingTools)))
@@ -824,6 +836,56 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             Logger.LogError(ex, "Failed to rollback persisted messages for {Key}", GrainContext.GrainKey);
         }
     }
+
+    private const string SandboxSystemPrompt =
+        """
+
+        ## Sandbox
+
+        You have access to a code execution sandbox with the following tools:
+        - `bash` — execute shell commands (with optional timeout, default 120s)
+        - `read` — read file contents (with optional line range)
+        - `write` — write content to a file (creates or overwrites)
+        - `edit` — make targeted text replacements in a file
+        - `multi_edit` — apply multiple edits to a file in one call
+        - `glob` — find files by pattern
+        - `grep` — search file contents with regex
+        - `resume` — reconnect to a timed-out process by PID
+
+        Use the specialized tools (read, edit, write, glob, grep) for file operations instead of shell equivalents — they're faster and more reliable.
+
+        - Save files the user has requested to `/home/sandbox/files/` — they persist across sandbox restarts and appear on the user's Files page for download. Files outside this directory are lost when the sandbox restarts.
+        - GitHub access is available via the `gh` CLI (pre-authenticated).
+
+        ### Skills
+
+        Skills are stored in two locations:
+        - `/home/sandbox/skills/` — system skills (read-only)
+        - `/home/sandbox/files/skills/` — user skills (read-write, persisted)
+
+        To discover available skills:
+        `bash("ls /home/sandbox/skills/ /home/sandbox/files/skills/ 2>/dev/null")`
+
+        Before using a skill, read its instructions:
+        `read({ path: "/home/sandbox/skills/{name}/SKILL.md" })`
+
+        ### Pre-installed packages
+
+        - Python: requests, numpy, pandas, python-dateutil, pypdf, pdfplumber, reportlab, pytesseract, pdf2image, openpyxl, python-pptx, markitdown[pptx], Pillow, imageio, imageio-ffmpeg
+        - Node.js: typescript, ts-node, docx, pptxgenjs (global)
+        - System: pandoc, poppler-utils, qpdf, tesseract-ocr, libreoffice
+
+        ### File Hygiene
+
+        Keep `/home/sandbox/files/` pristine. Only write files there if they genuinely need to persist between conversation turns (e.g. skill binaries, user-requested output files, assets).
+
+        Avoid writing to `/home/sandbox/files/` for:
+        - Intermediate scripts or one-off helpers built during a task
+        - Temporary payloads, JSON blobs, or test files
+        - Anything that only serves the current turn
+
+        Use `/tmp/` for ephemeral working files instead — it's appropriate for anything that doesn't need to outlive the session.
+        """;
 
     protected void EnsureSandboxProvisioning(AgentContract contract)
     {

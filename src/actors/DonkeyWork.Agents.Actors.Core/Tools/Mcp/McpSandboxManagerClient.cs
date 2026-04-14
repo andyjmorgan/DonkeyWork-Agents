@@ -26,6 +26,8 @@ public sealed class McpSandboxManagerClient
         _logger = logger;
     }
 
+    internal HttpClient HttpClient => _httpClient;
+
     public async Task<string> EnsureMcpServerAsync(
         string userId,
         Guid mcpServerConfigId,

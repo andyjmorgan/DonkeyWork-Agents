@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
-using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Scheduling;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
@@ -20,7 +19,6 @@ internal static class ToolGroupMap
             typeof(NoteAgentTools),
             typeof(ResearchAgentTools),
         ],
-        [Actors.Contracts.Models.ToolGroupNames.Sandbox] = [typeof(SandboxTools)],
         [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = [typeof(SwarmAgentMessagingTools)],
         [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = [typeof(SwarmSharedContextTools)],
         [Actors.Contracts.Models.ToolGroupNames.Scheduling] = [typeof(SchedulingAgentTools)],
