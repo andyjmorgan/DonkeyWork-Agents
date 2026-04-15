@@ -32,7 +32,7 @@ public sealed class SwarmAgentMessagingTools
 
         ### Spawning agents
 
-        You must `spawn_agent` or `spawn_delegate` before you can message an agent. Check the swarm roster first — if an idle agent matches the topic, `send_message` to reuse it instead of spawning a new one. For cross-branch coordination, message your parent and let it route.
+        **Never spawn an agent that already appears as idle in the swarm roster.** Always reuse idle agents via `send_message` instead. Spawning a duplicate wastes resources and creates unnecessary agents. Only call `spawn_agent` or `spawn_delegate` if no suitable idle agent exists. For cross-branch coordination, message your parent and let it route.
         """;
     [AgentTool(ToolNames.SendMessage, DisplayName = "Send Message")]
     [Description("Send a message to another agent by name, or broadcast to all agents with target '*'.")]
