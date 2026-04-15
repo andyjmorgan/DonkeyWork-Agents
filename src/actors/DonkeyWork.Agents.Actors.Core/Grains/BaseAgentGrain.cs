@@ -148,10 +148,15 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         if (hasSandbox)
         {
-            SandboxHandle = new SandboxProvisioningHandle();
-            GrainContext.SandboxHandle = SandboxHandle;
+            // Only provision a new sandbox if EnsureSandboxProvisioning didn't
+            // already set up the handle (e.g. reusing a parent's sandbox pod).
+            if (SandboxHandle is null)
+            {
+                SandboxHandle = new SandboxProvisioningHandle();
+                GrainContext.SandboxHandle = SandboxHandle;
 
-            _ = ProvisionSandboxInternalAsync(SandboxHandle);
+                _ = ProvisionSandboxInternalAsync(SandboxHandle);
+            }
 
             await McpToolProvider.InitializeSandboxAsync(
                 McpSandboxManagerClient.HttpClient,
