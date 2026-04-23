@@ -94,19 +94,24 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         ConversationContext? conversation,
         CancellationToken cancellationToken)
     {
-        using var timeoutCts = new CancellationTokenSource(_options.Value.ExecutionTimeout);
+        var version = await _dbContext.OrchestrationVersions
+            .Include(v => v.Orchestration)
+            .FirstOrDefaultAsync(v => v.Id == versionId, cancellationToken);
+
+        if (version == null)
+        {
+            throw new InvalidOperationException($"Orchestration version not found: {versionId}");
+        }
+
+        var effectiveTimeout = version.ExecutionTimeoutSeconds.HasValue
+            ? TimeSpan.FromSeconds(version.ExecutionTimeoutSeconds.Value)
+            : _options.Value.ExecutionTimeout;
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(effectiveTimeout);
 
         try
         {
-            var version = await _dbContext.OrchestrationVersions
-                .Include(v => v.Orchestration)
-                .FirstOrDefaultAsync(v => v.Id == versionId, timeoutCts.Token);
-
-            if (version == null)
-            {
-                throw new InvalidOperationException($"Orchestration version not found: {versionId}");
-            }
-
             // Load existing execution record (pre-created by controller via pub/sub path)
             // or create one for direct callers (e.g., OrchestrationToolProvider from Orleans grains)
             var execution = await _dbContext.OrchestrationExecutions

@@ -109,6 +109,8 @@ builder.Services.AddActorsServices(builder.Configuration);
 builder.Host.UseWolverine(opts =>
 {
     var natsUrl = builder.Configuration["Nats:Url"] ?? "nats://localhost:4222";
+    var maxConcurrentExecutions = builder.Configuration.GetValue<int?>("Agents:MaxConcurrentExecutions") ?? 8;
+
     opts.UseNats(natsUrl)
         .AutoProvision()
         .UseJetStream(_ => { })
@@ -120,7 +122,7 @@ builder.Host.UseWolverine(opts =>
 
     opts.ListenToNatsSubject(NatsSubjects.CommandSubject)
         .UseJetStream(NatsSubjects.CommandStream, NatsSubjects.CommandConsumer)
-        .Sequential();
+        .MaximumParallelMessages(maxConcurrentExecutions);
 
     opts.Discovery.IncludeAssembly(typeof(ExecuteOrchestrationHandler).Assembly);
 
