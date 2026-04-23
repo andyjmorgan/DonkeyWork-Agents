@@ -18,10 +18,12 @@ namespace DonkeyWork.Agents.Orchestrations.Api.Controllers;
 public class TtsController : ControllerBase
 {
     private readonly ITtsService _ttsService;
+    private readonly IAudioCollectionService _audioCollectionService;
 
-    public TtsController(ITtsService ttsService)
+    public TtsController(ITtsService ttsService, IAudioCollectionService audioCollectionService)
     {
         _ttsService = ttsService;
+        _audioCollectionService = audioCollectionService;
     }
 
     /// <summary>
@@ -101,5 +103,20 @@ public class TtsController : ControllerBase
     {
         var deleted = await _ttsService.DeleteRecordingAsync(id, cancellationToken);
         return deleted ? NoContent() : NotFound();
+    }
+
+    /// <summary>
+    /// Move a recording between collections (or to/from the unfiled list).
+    /// </summary>
+    [HttpPut("recordings/{id:guid}/collection")]
+    [ProducesResponseType<TtsRecordingV1>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> MoveRecording(
+        Guid id,
+        [FromBody] MoveRecordingToCollectionRequestV1 request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _audioCollectionService.MoveRecordingAsync(id, request, cancellationToken);
+        return result == null ? NotFound() : Ok(result);
     }
 }

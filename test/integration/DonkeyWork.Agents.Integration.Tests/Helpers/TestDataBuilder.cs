@@ -12,6 +12,55 @@ namespace DonkeyWork.Agents.Integration.Tests.Helpers;
 
 public static class TestDataBuilder
 {
+    #region Audio Collection Builders
+
+    public static CreateAudioCollectionRequestV1 CreateAudioCollectionRequest(
+        string? name = null,
+        string? description = null,
+        string? defaultVoice = null,
+        string? defaultModel = null)
+    {
+        return new CreateAudioCollectionRequestV1
+        {
+            Name = name ?? $"Test Collection {Guid.NewGuid().ToString("N")[..8]}",
+            Description = description ?? "Test collection description",
+            DefaultVoice = defaultVoice,
+            DefaultModel = defaultModel,
+        };
+    }
+
+    public static UpdateAudioCollectionRequestV1 UpdateAudioCollectionRequest(
+        string? name = null,
+        string? description = null,
+        string? defaultVoice = null,
+        string? defaultModel = null,
+        string? coverImagePath = null)
+    {
+        return new UpdateAudioCollectionRequestV1
+        {
+            Name = name,
+            Description = description,
+            DefaultVoice = defaultVoice,
+            DefaultModel = defaultModel,
+            CoverImagePath = coverImagePath,
+        };
+    }
+
+    public static MoveRecordingToCollectionRequestV1 MoveRecordingRequest(
+        Guid? collectionId,
+        int? sequenceNumber = null,
+        string? chapterTitle = null)
+    {
+        return new MoveRecordingToCollectionRequestV1
+        {
+            CollectionId = collectionId,
+            SequenceNumber = sequenceNumber,
+            ChapterTitle = chapterTitle,
+        };
+    }
+
+    #endregion
+
     #region Agent Builders
 
     public static CreateOrchestrationRequestV1 CreateAgentRequest(string? name = null, string? description = null)

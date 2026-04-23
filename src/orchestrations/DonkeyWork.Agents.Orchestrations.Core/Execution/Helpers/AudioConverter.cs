@@ -113,4 +113,111 @@ internal static class AudioConverter
 
         return wavStream.ToArray();
     }
+
+    /// <summary>
+    /// Concatenates a sequence of same-format audio clips into a single blob using
+    /// ffmpeg's concat demuxer with stream-copy (no re-encode) for MP3/AAC/FLAC/WAV/Opus.
+    /// Temp files are cleaned up on success and on failure.
+    /// </summary>
+    public static byte[] Concat(IReadOnlyList<byte[]> clipBytes, string format)
+    {
+        if (clipBytes.Count == 0)
+        {
+            throw new ArgumentException("Concat requires at least one clip.", nameof(clipBytes));
+        }
+
+        if (clipBytes.Count == 1)
+        {
+            return clipBytes[0];
+        }
+
+        var extension = GetFileExtension(format);
+        var workDir = Path.Combine(Path.GetTempPath(), $"tts-concat-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workDir);
+
+        try
+        {
+            var clipPaths = new List<string>(clipBytes.Count);
+            for (var i = 0; i < clipBytes.Count; i++)
+            {
+                var path = Path.Combine(workDir, $"clip-{i:D5}.{extension}");
+                File.WriteAllBytes(path, clipBytes[i]);
+                clipPaths.Add(path);
+            }
+
+            var listPath = Path.Combine(workDir, "list.txt");
+            File.WriteAllLines(listPath, clipPaths.Select(p => $"file '{p.Replace("'", "'\\''")}'"));
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                RedirectStandardInput = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+
+            psi.ArgumentList.Add("-hide_banner");
+            psi.ArgumentList.Add("-loglevel");
+            psi.ArgumentList.Add("error");
+            psi.ArgumentList.Add("-f");
+            psi.ArgumentList.Add("concat");
+            psi.ArgumentList.Add("-safe");
+            psi.ArgumentList.Add("0");
+            psi.ArgumentList.Add("-i");
+            psi.ArgumentList.Add(listPath);
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("copy");
+            psi.ArgumentList.Add("-f");
+            psi.ArgumentList.Add(MapFormatForFfmpegMuxer(format));
+            psi.ArgumentList.Add("pipe:1");
+
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("Failed to start ffmpeg process.");
+
+            var stdoutTask = Task.Run(() =>
+            {
+                using var ms = new MemoryStream();
+                process.StandardOutput.BaseStream.CopyTo(ms);
+                return ms.ToArray();
+            });
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            var output = stdoutTask.GetAwaiter().GetResult();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                var error = stderrTask.GetAwaiter().GetResult();
+                throw new InvalidOperationException($"ffmpeg concat failed with exit code {process.ExitCode}: {error}");
+            }
+
+            return output;
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(workDir, recursive: true);
+            }
+            catch
+            {
+                // best-effort cleanup; don't mask the original exception
+            }
+        }
+    }
+
+    private static string MapFormatForFfmpegMuxer(string format)
+    {
+        return format.ToLowerInvariant() switch
+        {
+            "mp3" => "mp3",
+            "wav" => "wav",
+            "aac" => "adts",
+            "flac" => "flac",
+            "opus" => "opus",
+            _ => format.ToLowerInvariant(),
+        };
+    }
 }

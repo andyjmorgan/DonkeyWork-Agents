@@ -5,6 +5,7 @@ using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Tts;
 using DonkeyWork.Agents.Storage.Contracts.Models;
 using DonkeyWork.Agents.Storage.Contracts.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
@@ -48,6 +49,25 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
         var model = config.Model != null ? await _templateRenderer.RenderAsync(config.Model, cancellationToken) : null;
         var transcript = config.Transcript != null ? await _templateRenderer.RenderAsync(config.Transcript, cancellationToken) : null;
         var fileExtension = config.FileExtension != null ? await _templateRenderer.RenderAsync(config.FileExtension, cancellationToken) : null;
+        var collectionIdRendered = config.CollectionId != null ? await _templateRenderer.RenderAsync(config.CollectionId, cancellationToken) : null;
+        var sequenceNumberRendered = config.SequenceNumber != null ? await _templateRenderer.RenderAsync(config.SequenceNumber, cancellationToken) : null;
+        var chapterTitle = config.ChapterTitle != null ? await _templateRenderer.RenderAsync(config.ChapterTitle, cancellationToken) : null;
+
+        Guid? collectionId = null;
+        if (!string.IsNullOrWhiteSpace(collectionIdRendered) && Guid.TryParse(collectionIdRendered.Trim(), out var parsedCollectionId))
+        {
+            collectionId = parsedCollectionId;
+        }
+        else if (!string.IsNullOrWhiteSpace(collectionIdRendered))
+        {
+            throw new InvalidOperationException($"CollectionId '{collectionIdRendered}' is not a valid UUID.");
+        }
+
+        int? sequenceNumber = null;
+        if (!string.IsNullOrWhiteSpace(sequenceNumberRendered) && int.TryParse(sequenceNumberRendered.Trim(), out var parsedSequence))
+        {
+            sequenceNumber = parsedSequence;
+        }
 
         if (string.IsNullOrWhiteSpace(name))
             throw new InvalidOperationException("Recording name is empty after template rendering");
@@ -76,6 +96,25 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             },
             cancellationToken);
 
+        if (collectionId.HasValue)
+        {
+            var collectionExists = await _dbContext.TtsAudioCollections
+                .AnyAsync(c => c.Id == collectionId.Value, cancellationToken);
+
+            if (!collectionExists)
+            {
+                throw new InvalidOperationException($"Collection {collectionId} not found for user.");
+            }
+
+            if (!sequenceNumber.HasValue)
+            {
+                var maxSeq = await _dbContext.TtsRecordings
+                    .Where(r => r.CollectionId == collectionId.Value)
+                    .MaxAsync(r => (int?)r.SequenceNumber, cancellationToken) ?? 0;
+                sequenceNumber = maxSeq + 1;
+            }
+        }
+
         var recording = new TtsRecordingEntity
         {
             Id = Guid.NewGuid(),
@@ -89,6 +128,11 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
             Voice = string.IsNullOrWhiteSpace(voice) ? null : voice.Trim(),
             Model = string.IsNullOrWhiteSpace(model) ? null : model.Trim(),
             OrchestrationExecutionId = Context.ExecutionId,
+            CollectionId = collectionId,
+            SequenceNumber = sequenceNumber,
+            ChapterTitle = string.IsNullOrWhiteSpace(chapterTitle) ? null : chapterTitle.Trim(),
+            Status = TtsRecordingStatus.Ready,
+            Progress = 1.0,
             CreatedAt = DateTimeOffset.UtcNow
         };
 

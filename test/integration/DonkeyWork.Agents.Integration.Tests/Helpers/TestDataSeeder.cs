@@ -6,6 +6,7 @@ using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Projects;
+using DonkeyWork.Agents.Persistence.Entities.Tts;
 
 namespace DonkeyWork.Agents.Integration.Tests.Helpers;
 
@@ -172,4 +173,64 @@ public class TestDataSeeder
     {
         await _dbContext.SaveChangesAsync();
     }
+
+    #region TTS Seeding
+
+    public async Task<TtsAudioCollectionEntity> SeedAudioCollectionAsync(
+        Guid userId,
+        string? name = null,
+        Guid? id = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var collection = new TtsAudioCollectionEntity
+        {
+            Id = id ?? Guid.NewGuid(),
+            UserId = userId,
+            Name = name ?? $"Seeded Collection {Guid.NewGuid().ToString("N")[..8]}",
+            Description = "Seeded collection",
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        _dbContext.TtsAudioCollections.Add(collection);
+        await _dbContext.SaveChangesAsync();
+        return collection;
+    }
+
+    public async Task<TtsRecordingEntity> SeedTtsRecordingAsync(
+        Guid userId,
+        Guid? collectionId = null,
+        int? sequenceNumber = null,
+        string? chapterTitle = null,
+        TtsRecordingStatus status = TtsRecordingStatus.Ready,
+        string? name = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var recording = new TtsRecordingEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Name = name ?? $"Seeded Recording {Guid.NewGuid().ToString("N")[..8]}",
+            Description = "Seeded recording",
+            FilePath = $"tts/{userId}/test/{Guid.NewGuid()}.mp3",
+            Transcript = "Seeded transcript",
+            ContentType = "audio/mpeg",
+            SizeBytes = 1024,
+            Voice = "alloy",
+            Model = "tts-1",
+            CollectionId = collectionId,
+            SequenceNumber = sequenceNumber,
+            ChapterTitle = chapterTitle,
+            Status = status,
+            Progress = status == TtsRecordingStatus.Ready ? 1.0 : 0.0,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        _dbContext.TtsRecordings.Add(recording);
+        await _dbContext.SaveChangesAsync();
+        return recording;
+    }
+
+    #endregion
 }

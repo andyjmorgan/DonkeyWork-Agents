@@ -47,14 +47,19 @@ public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequires
     public required string Voice { get; init; }
 
     /// <summary>
-    /// The text to convert to speech. Supports Scriban template variables.
+    /// The text(s) to convert to speech. Must render to a JSON array of strings — each
+    /// element is generated as a separate clip and fan-out is bounded by <see cref="MaxParallelism"/>.
+    /// For a single clip, wrap the input as a JSON array literal:
+    ///   <c>["{{ Input.text | string.escape }}"]</c>
+    /// For chunked input from a ChunkText node:
+    ///   <c>{{ Steps.chunk_node.Chunks | to_json }}</c>
     /// </summary>
-    [JsonPropertyName("inputText")]
-    [ConfigurableField(Label = "Input Text", ControlType = ControlType.TextArea, Order = 10, Required = true,
-        Description = "The text to convert to speech. Use {{Steps.node_name.Property}} for variables.")]
+    [JsonPropertyName("inputs")]
+    [ConfigurableField(Label = "Inputs (JSON array)", ControlType = ControlType.TextArea, Order = 10, Required = true,
+        Description = "JSON array of text chunks. Use {{ Steps.chunk_node.Chunks | to_json }} or [\"your text\"] for a single clip.")]
     [Tab("Content", Order = 2, Icon = "file-text")]
     [SupportVariables]
-    public required string InputText { get; init; }
+    public required string Inputs { get; init; }
 
     /// <summary>
     /// Optional instructions for voice steering (tone, pacing, emotion).
@@ -85,4 +90,14 @@ public sealed class TextToSpeechNodeConfiguration : NodeConfiguration, IRequires
     [Tab("Advanced", Order = 3)]
     [SelectOptions("mp3", "opus", "aac", "flac", "wav", Default = "mp3")]
     public string ResponseFormat { get; init; } = "mp3";
+
+    /// <summary>
+    /// Maximum number of clips to generate in parallel. Bounded by provider rate limits.
+    /// </summary>
+    [JsonPropertyName("maxParallelism")]
+    [ConfigurableField(Label = "Max Parallelism", ControlType = ControlType.Slider, Order = 30,
+        Description = "Maximum concurrent provider calls when processing multiple chunks.")]
+    [Tab("Advanced", Order = 3)]
+    [Slider(Min = 1, Max = 16, Step = 1, Default = 4)]
+    public int MaxParallelism { get; init; } = 4;
 }

@@ -98,6 +98,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     // TTS module
     public DbSet<TtsRecordingEntity> TtsRecordings => Set<TtsRecordingEntity>();
     public DbSet<TtsPlaybackEntity> TtsPlayback => Set<TtsPlaybackEntity>();
+    public DbSet<TtsAudioCollectionEntity> TtsAudioCollections => Set<TtsAudioCollectionEntity>();
 
     // Scheduling module
     public DbSet<ScheduledJobEntity> ScheduledJobs => Set<ScheduledJobEntity>();
