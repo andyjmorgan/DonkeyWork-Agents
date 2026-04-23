@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Volume2, Trash2, Loader2, ChevronLeft, ChevronRight, Circle, CheckCircle2 } from 'lucide-react'
+import { Volume2, Trash2, Loader2, ChevronLeft, ChevronRight, Circle, CheckCircle2, FolderInput } from 'lucide-react'
 import {
   Button,
   Dialog,
@@ -16,7 +16,9 @@ import {
   TableRow,
 } from '@donkeywork/ui'
 import { tts, type TtsRecording } from '@donkeywork/api-client'
+import { useAudioRecordingEventsStore } from '@donkeywork/stores'
 import { AudioPlayer } from '@/components/audio/AudioPlayer'
+import { MoveRecordingDialog } from '@/components/audio/MoveRecordingDialog'
 
 const PAGE_SIZE = 20
 
@@ -28,6 +30,8 @@ export function RecordingsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [moveTarget, setMoveTarget] = useState<TtsRecording | null>(null)
+  const revision = useAudioRecordingEventsStore((s) => s.revision)
 
   const loadRecordings = async (offset = 0) => {
     setLoading(true)
@@ -44,7 +48,7 @@ export function RecordingsPage() {
 
   useEffect(() => {
     loadRecordings(page * PAGE_SIZE)
-  }, [page])
+  }, [page, revision])
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
   const canGoBack = page > 0
@@ -118,14 +122,25 @@ export function RecordingsPage() {
                     <div className="font-medium truncate">{recording.name}</div>
                     <div className="text-xs text-muted-foreground mt-1">{recording.description}</div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteId(recording.id)}
-                    className="text-muted-foreground hover:text-destructive shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMoveTarget(recording)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Move to collection"
+                    >
+                      <FolderInput className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteId(recording.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   {recording.voice && <span>Voice: {recording.voice}</span>}
@@ -183,17 +198,31 @@ export function RecordingsPage() {
                       <TableCell className="text-sm text-muted-foreground">{formatSize(recording.sizeBytes)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(recording.createdAt)}</TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeleteId(recording.id)
-                          }}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setMoveTarget(recording)
+                            }}
+                            className="text-muted-foreground hover:text-foreground"
+                            title="Move to collection"
+                          >
+                            <FolderInput className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteId(recording.id)
+                            }}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                     {expandedId === recording.id && (
@@ -233,6 +262,15 @@ export function RecordingsPage() {
           )}
         </>
       )}
+
+      <MoveRecordingDialog
+        recording={moveTarget}
+        onClose={() => setMoveTarget(null)}
+        onMoved={() => {
+          setMoveTarget(null)
+          loadRecordings(page * PAGE_SIZE)
+        }}
+      />
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

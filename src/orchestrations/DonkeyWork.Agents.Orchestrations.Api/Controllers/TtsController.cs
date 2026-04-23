@@ -19,11 +19,16 @@ public class TtsController : ControllerBase
 {
     private readonly ITtsService _ttsService;
     private readonly IAudioCollectionService _audioCollectionService;
+    private readonly IAudioGenerationService _audioGenerationService;
 
-    public TtsController(ITtsService ttsService, IAudioCollectionService audioCollectionService)
+    public TtsController(
+        ITtsService ttsService,
+        IAudioCollectionService audioCollectionService,
+        IAudioGenerationService audioGenerationService)
     {
         _ttsService = ttsService;
         _audioCollectionService = audioCollectionService;
+        _audioGenerationService = audioGenerationService;
     }
 
     /// <summary>
@@ -103,6 +108,23 @@ public class TtsController : ControllerBase
     {
         var deleted = await _ttsService.DeleteRecordingAsync(id, cancellationToken);
         return deleted ? NoContent() : NotFound();
+    }
+
+    /// <summary>
+    /// Kick off generation of a new recording. Returns the Pending recording immediately;
+    /// the chunked TTS → concat → upload pipeline runs on a background Wolverine handler.
+    /// Poll <see cref="GetRecording"/> or subscribe to SignalR for Status transitions.
+    /// </summary>
+    [HttpPost("recordings/generate")]
+    [ProducesResponseType<TtsRecordingV1>(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> StartGeneration(
+        [FromBody] StartAudioGenerationRequestV1 request,
+        CancellationToken cancellationToken)
+    {
+        var recordingId = await _audioGenerationService.StartGenerationAsync(request, cancellationToken);
+        var recording = await _ttsService.GetRecordingAsync(recordingId, cancellationToken);
+        return AcceptedAtAction(nameof(GetRecording), new { id = recordingId, version = "1" }, recording);
     }
 
     /// <summary>
