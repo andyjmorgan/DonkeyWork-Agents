@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IOrchestrationVersionService, OrchestrationVersionService>();
         services.AddScoped<ITtsService, TtsService>();
         services.AddScoped<IAudioCollectionService, AudioCollectionService>();
+        services.AddScoped<IAudioGenerationService, AudioGenerationService>();
         services.AddSingleton<IMarkdownChunker, MarkdownChunker>();
 
         services.AddSingleton<IExecutionStreamService, ExecutionStreamService>();

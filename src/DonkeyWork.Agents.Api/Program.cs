@@ -93,7 +93,10 @@ builder.Services.AddA2aApi();
 
 builder.Services.AddConversationsApi(builder.Configuration);
 
-builder.Services.AddDynamicMcpServer(typeof(NotesTools).Assembly, typeof(IdentityTools).Assembly);
+builder.Services.AddDynamicMcpServer(
+    typeof(NotesTools).Assembly,
+    typeof(IdentityTools).Assembly,
+    typeof(DonkeyWork.Agents.Orchestrations.Api.McpTools.AudioTools).Assembly);
 
 builder.Services.AddAgentDefinitionsApi();
 
@@ -114,14 +117,23 @@ builder.Host.UseWolverine(opts =>
     opts.UseNats(natsUrl)
         .AutoProvision()
         .UseJetStream(_ => { })
-        .DefineWorkQueueStream(NatsSubjects.CommandStream, NatsSubjects.CommandSubject);
+        .DefineWorkQueueStream(NatsSubjects.CommandStream, NatsSubjects.CommandSubject)
+        .DefineWorkQueueStream(NatsSubjects.AudioGenerationStream, NatsSubjects.AudioGenerationSubject);
 
     opts.PublishMessage<ExecuteOrchestrationCommand>()
         .ToNatsSubject(NatsSubjects.CommandSubject)
         .UseJetStream(NatsSubjects.CommandStream);
 
+    opts.PublishMessage<GenerateAudioRecordingCommand>()
+        .ToNatsSubject(NatsSubjects.AudioGenerationSubject)
+        .UseJetStream(NatsSubjects.AudioGenerationStream);
+
     opts.ListenToNatsSubject(NatsSubjects.CommandSubject)
         .UseJetStream(NatsSubjects.CommandStream, NatsSubjects.CommandConsumer)
+        .MaximumParallelMessages(maxConcurrentExecutions);
+
+    opts.ListenToNatsSubject(NatsSubjects.AudioGenerationSubject)
+        .UseJetStream(NatsSubjects.AudioGenerationStream, NatsSubjects.AudioGenerationConsumer)
         .MaximumParallelMessages(maxConcurrentExecutions);
 
     opts.Discovery.IncludeAssembly(typeof(ExecuteOrchestrationHandler).Assembly);

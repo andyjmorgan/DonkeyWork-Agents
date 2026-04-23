@@ -3,7 +3,7 @@ using NAudio.Wave;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Helpers;
 
-internal static class AudioConverter
+public static class AudioConverter
 {
     public static byte[] ConvertPcm(byte[] pcmData, string format, int sampleRate = 24000, int bitsPerSample = 16, int channels = 1)
     {
