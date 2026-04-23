@@ -21,6 +21,9 @@ public static class AudioConverter
         {
             "mp3" => "audio/mpeg",
             "wav" => "audio/wav",
+            "opus" => "audio/opus",
+            "aac" => "audio/aac",
+            "flac" => "audio/flac",
             _ => "audio/pcm",
         };
     }
@@ -31,6 +34,9 @@ public static class AudioConverter
         {
             "mp3" => "mp3",
             "wav" => "wav",
+            "opus" => "opus",
+            "aac" => "aac",
+            "flac" => "flac",
             _ => "pcm",
         };
     }

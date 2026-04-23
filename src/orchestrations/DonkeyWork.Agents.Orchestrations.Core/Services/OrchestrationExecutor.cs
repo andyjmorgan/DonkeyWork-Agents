@@ -103,7 +103,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
             throw new InvalidOperationException($"Orchestration version not found: {versionId}");
         }
 
-        var effectiveTimeout = version.ExecutionTimeoutSeconds.HasValue
+        var effectiveTimeout = version.ExecutionTimeoutSeconds is > 0
             ? TimeSpan.FromSeconds(version.ExecutionTimeoutSeconds.Value)
             : _options.Value.ExecutionTimeout;
 

@@ -62,6 +62,7 @@ public sealed class SaveOrchestrationVersionRequestV1
     /// like chunked audiobook generation that can exceed the 20-minute default.
     /// </summary>
     [JsonPropertyName("executionTimeoutSeconds")]
+    [Range(1, int.MaxValue)]
     public int? ExecutionTimeoutSeconds { get; init; }
 }
 

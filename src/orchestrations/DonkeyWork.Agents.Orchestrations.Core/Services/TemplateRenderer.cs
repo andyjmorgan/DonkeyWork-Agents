@@ -47,6 +47,7 @@ public class TemplateRenderer : ITemplateRenderer
         // Register custom functions
         var customFunctions = new ScriptObject();
         customFunctions.Import("json_value", new Func<string, string, string>(JsonValueFunction));
+        customFunctions.Import("to_json", new Func<object?, string>(ToJsonFunction));
         scriptObject.Import(customFunctions);
 
         var templateContext = new TemplateContext();
@@ -81,6 +82,57 @@ public class TemplateRenderer : ITemplateRenderer
         {
             return string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Serializes a value to JSON. Lets callers pipe an upstream array into a downstream
+    /// node's input (e.g. ChunkText.Chunks → TextToSpeech.Inputs).
+    /// Usage in Scriban: {{ Steps.chunker.Chunks | to_json }}
+    /// </summary>
+    private static string ToJsonFunction(object? value)
+    {
+        if (value is null)
+        {
+            return "null";
+        }
+
+        var normalized = UnwrapForJson(value);
+        return JsonSerializer.Serialize(normalized);
+    }
+
+    private static object? UnwrapForJson(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is ScriptObject so)
+        {
+            var dict = new Dictionary<string, object?>();
+            foreach (var key in so.Keys)
+            {
+                dict[key] = UnwrapForJson(so[key]);
+            }
+            return dict;
+        }
+
+        if (value is string)
+        {
+            return value;
+        }
+
+        if (value is System.Collections.IEnumerable enumerable)
+        {
+            var list = new List<object?>();
+            foreach (var item in enumerable)
+            {
+                list.Add(UnwrapForJson(item));
+            }
+            return list;
+        }
+
+        return value;
     }
 
     /// <summary>

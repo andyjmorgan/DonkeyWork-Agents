@@ -64,8 +64,13 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
         }
 
         int? sequenceNumber = null;
-        if (!string.IsNullOrWhiteSpace(sequenceNumberRendered) && int.TryParse(sequenceNumberRendered.Trim(), out var parsedSequence))
+        if (!string.IsNullOrWhiteSpace(sequenceNumberRendered))
         {
+            if (!int.TryParse(sequenceNumberRendered.Trim(), out var parsedSequence))
+            {
+                throw new InvalidOperationException($"SequenceNumber '{sequenceNumberRendered}' is not a valid integer.");
+            }
+
             sequenceNumber = parsedSequence;
         }
 

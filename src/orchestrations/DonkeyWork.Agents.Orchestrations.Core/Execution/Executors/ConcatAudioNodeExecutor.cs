@@ -12,17 +12,14 @@ namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Executors;
 /// </summary>
 public class ConcatAudioNodeExecutor : NodeExecutor<ConcatAudioNodeConfiguration, ConcatAudioNodeOutput>
 {
-    private readonly ITemplateRenderer _templateRenderer;
     private readonly ILogger<ConcatAudioNodeExecutor> _logger;
 
     public ConcatAudioNodeExecutor(
         IExecutionStreamWriter streamWriter,
         IExecutionContext context,
-        ITemplateRenderer templateRenderer,
         ILogger<ConcatAudioNodeExecutor> logger)
         : base(streamWriter, context)
     {
-        _templateRenderer = templateRenderer;
         _logger = logger;
     }
 
