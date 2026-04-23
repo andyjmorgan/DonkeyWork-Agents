@@ -58,6 +58,29 @@ public class TtsRecordingConfiguration : IEntityTypeConfiguration<TtsRecordingEn
         builder.Property(e => e.OrchestrationExecutionId)
             .HasColumnName("orchestration_execution_id");
 
+        builder.Property(e => e.CollectionId)
+            .HasColumnName("collection_id");
+
+        builder.Property(e => e.SequenceNumber)
+            .HasColumnName("sequence_number");
+
+        builder.Property(e => e.ChapterTitle)
+            .HasColumnName("chapter_title")
+            .HasMaxLength(500);
+
+        builder.Property(e => e.Status)
+            .HasColumnName("status")
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(e => e.Progress)
+            .HasColumnName("progress")
+            .IsRequired();
+
+        builder.Property(e => e.ErrorMessage)
+            .HasColumnName("error_message");
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();
@@ -67,6 +90,7 @@ public class TtsRecordingConfiguration : IEntityTypeConfiguration<TtsRecordingEn
 
         builder.HasIndex(e => e.UserId);
         builder.HasIndex(e => e.OrchestrationExecutionId);
+        builder.HasIndex(e => new { e.CollectionId, e.SequenceNumber });
 
         builder.HasOne(e => e.Playback)
             .WithOne(p => p.Recording)

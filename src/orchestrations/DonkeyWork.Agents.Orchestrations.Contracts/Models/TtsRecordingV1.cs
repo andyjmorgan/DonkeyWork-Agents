@@ -11,6 +11,12 @@ public sealed class TtsRecordingV1
     public required long SizeBytes { get; init; }
     public string? Voice { get; init; }
     public string? Model { get; init; }
+    public Guid? CollectionId { get; init; }
+    public int? SequenceNumber { get; init; }
+    public string? ChapterTitle { get; init; }
+    public required string Status { get; init; }
+    public required double Progress { get; init; }
+    public string? ErrorMessage { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
     public TtsPlaybackV1? Playback { get; init; }
 }

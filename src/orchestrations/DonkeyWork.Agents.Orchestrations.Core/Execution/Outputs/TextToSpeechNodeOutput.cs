@@ -1,35 +1,16 @@
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
 
 /// <summary>
-/// Output from a TextToSpeech node execution.
-/// Contains the generated audio as base64 and metadata. Storage is handled downstream by StoreAudio.
+/// Output from a TextToSpeech node — one or more generated audio clips.
+/// Even a single-chunk generation returns a one-element <see cref="Clips"/> array.
+/// Downstream nodes (typically <c>ConcatAudio</c>) combine clips into a stored recording.
 /// </summary>
 public class TextToSpeechNodeOutput : NodeOutput
 {
     /// <summary>
-    /// The audio data encoded as a base64 string.
+    /// Generated audio clips, in the same order as the input chunks.
     /// </summary>
-    public required string AudioBase64 { get; init; }
-
-    /// <summary>
-    /// The content type of the audio (e.g., "audio/mpeg").
-    /// </summary>
-    public required string ContentType { get; init; }
-
-    /// <summary>
-    /// The file extension (e.g., "mp3").
-    /// </summary>
-    public required string FileExtension { get; init; }
-
-    /// <summary>
-    /// The size of the audio in bytes.
-    /// </summary>
-    public required long SizeBytes { get; init; }
-
-    /// <summary>
-    /// The original text that was converted to speech.
-    /// </summary>
-    public required string Transcript { get; init; }
+    public required IReadOnlyList<AudioClip> Clips { get; init; }
 
     /// <summary>
     /// The voice used for generation.
@@ -41,8 +22,18 @@ public class TextToSpeechNodeOutput : NodeOutput
     /// </summary>
     public required string Model { get; init; }
 
+    /// <summary>
+    /// Total size across all clips in bytes.
+    /// </summary>
+    public long TotalSizeBytes => Clips.Sum(c => c.SizeBytes);
+
+    /// <summary>
+    /// Number of clips generated.
+    /// </summary>
+    public int ClipCount => Clips.Count;
+
     public override string ToMessageOutput()
     {
-        return $"Audio generated: {SizeBytes} bytes, voice: {Voice}, format: {FileExtension}";
+        return $"Audio generated: {ClipCount} clip(s), {TotalSizeBytes} bytes total, voice: {Voice}";
     }
 }

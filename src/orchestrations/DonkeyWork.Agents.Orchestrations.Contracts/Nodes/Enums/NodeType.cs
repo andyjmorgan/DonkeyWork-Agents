@@ -56,5 +56,15 @@ public enum NodeType
     /// <summary>
     /// Stores generated audio with metadata to create a TTS recording.
     /// </summary>
-    StoreAudio
+    StoreAudio,
+
+    /// <summary>
+    /// Splits long markdown into ordered chunks respecting block boundaries.
+    /// </summary>
+    ChunkText,
+
+    /// <summary>
+    /// Concatenates a list of audio chunks into a single stitched file.
+    /// </summary>
+    ConcatAudio
 }

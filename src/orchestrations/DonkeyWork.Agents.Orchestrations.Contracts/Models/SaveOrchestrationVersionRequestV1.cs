@@ -55,6 +55,15 @@ public sealed class SaveOrchestrationVersionRequestV1
 
     [JsonPropertyName("naviEnabled")]
     public bool NaviEnabled { get; init; }
+
+    /// <summary>
+    /// Optional per-version execution timeout in seconds. When null, the global
+    /// default (<c>Agents:ExecutionTimeout</c>) applies. Raise it for long-form work
+    /// like chunked audiobook generation that can exceed the 20-minute default.
+    /// </summary>
+    [JsonPropertyName("executionTimeoutSeconds")]
+    [Range(1, int.MaxValue)]
+    public int? ExecutionTimeoutSeconds { get; init; }
 }
 
 /// <summary>

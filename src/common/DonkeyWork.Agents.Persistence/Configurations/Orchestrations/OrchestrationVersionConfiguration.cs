@@ -106,6 +106,9 @@ public class OrchestrationVersionConfiguration : IEntityTypeConfiguration<Orches
         builder.Property(e => e.PublishedAt)
             .HasColumnName("published_at");
 
+        builder.Property(e => e.ExecutionTimeoutSeconds)
+            .HasColumnName("execution_timeout_seconds");
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();

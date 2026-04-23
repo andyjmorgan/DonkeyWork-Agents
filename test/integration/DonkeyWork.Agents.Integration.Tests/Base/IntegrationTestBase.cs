@@ -31,7 +31,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.Postgres,
-            SchemasToInclude = ["public", "agents", "credentials", "mcp", "projects", "storage"],
+            SchemasToInclude = ["public", "agents", "credentials", "mcp", "projects", "storage", "tts"],
             TablesToIgnore = ["__EFMigrationsHistory"]
         });
     }

@@ -1944,6 +1944,8 @@ export const prompts = {
 }
 
 // TTS Types
+export type TtsRecordingStatus = 'Pending' | 'Generating' | 'Ready' | 'Failed'
+
 export interface TtsRecording {
   id: string
   name: string
@@ -1955,6 +1957,12 @@ export interface TtsRecording {
   sizeBytes: number
   voice?: string
   model?: string
+  collectionId?: string
+  sequenceNumber?: number
+  chapterTitle?: string
+  status: TtsRecordingStatus
+  progress: number
+  errorMessage?: string
   createdAt: string
   playback?: TtsPlayback
 }
@@ -2011,6 +2019,90 @@ export const tts = {
 
   deleteRecording: (id: string) =>
     api.delete(`/api/v1/tts/recordings/${id}`),
+
+  moveRecording: (id: string, data: MoveRecordingToCollectionRequest) =>
+    api.put<TtsRecording>(`/api/v1/tts/recordings/${id}/collection`, data),
+
+  startGeneration: (data: StartAudioGenerationRequest) =>
+    api.post<TtsRecording>(`/api/v1/tts/recordings/generate`, data),
+}
+
+// Audio Collections
+
+export interface AudioCollection {
+  id: string
+  name: string
+  description: string
+  coverImagePath?: string
+  defaultVoice?: string
+  defaultModel?: string
+  recordingCount: number
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface AudioCollectionListResponse {
+  items: AudioCollection[]
+  totalCount: number
+}
+
+export interface CreateAudioCollectionRequest {
+  name: string
+  description?: string
+  coverImagePath?: string
+  defaultVoice?: string
+  defaultModel?: string
+}
+
+export interface UpdateAudioCollectionRequest {
+  name?: string
+  description?: string
+  coverImagePath?: string
+  defaultVoice?: string
+  defaultModel?: string
+}
+
+export interface MoveRecordingToCollectionRequest {
+  collectionId?: string | null
+  sequenceNumber?: number | null
+  chapterTitle?: string | null
+}
+
+export interface StartAudioGenerationRequest {
+  text: string
+  name: string
+  description?: string
+  model: string
+  voice: string
+  instructions?: string
+  collectionId?: string | null
+  sequenceNumber?: number | null
+  chapterTitle?: string | null
+  targetCharCount?: number
+  maxCharCount?: number
+  maxParallelism?: number
+  responseFormat?: string
+  speed?: number
+}
+
+export const audioCollections = {
+  list: (offset = 0, limit = 20) =>
+    api.get<AudioCollectionListResponse>(`/api/v1/audio-collections?offset=${offset}&limit=${limit}`),
+
+  get: (id: string) =>
+    api.get<AudioCollection>(`/api/v1/audio-collections/${id}`),
+
+  create: (data: CreateAudioCollectionRequest) =>
+    api.post<AudioCollection>(`/api/v1/audio-collections`, data),
+
+  update: (id: string, data: UpdateAudioCollectionRequest) =>
+    api.put<AudioCollection>(`/api/v1/audio-collections/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/api/v1/audio-collections/${id}`),
+
+  listRecordings: (id: string, offset = 0, limit = 50) =>
+    api.get<TtsRecordingListResponse>(`/api/v1/audio-collections/${id}/recordings?offset=${offset}&limit=${limit}`),
 }
 
 // Scheduling Types

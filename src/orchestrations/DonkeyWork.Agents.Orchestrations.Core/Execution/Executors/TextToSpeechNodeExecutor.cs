@@ -2,6 +2,7 @@ using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
+using DonkeyWork.Agents.Orchestrations.Core.Execution.Helpers;
 using DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
 using Microsoft.Extensions.Logging;
 using OpenAI.Audio;
@@ -31,66 +32,76 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
         TextToSpeechNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        var inputText = await _templateRenderer.RenderAsync(config.InputText, cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(inputText))
-            throw new InvalidOperationException("Input text is empty after template rendering");
+        var renderedInputs = await _templateRenderer.RenderAsync(config.Inputs, cancellationToken);
+        var chunks = TtsInputParser.Parse(renderedInputs);
 
         var instructions = !string.IsNullOrWhiteSpace(config.Instructions)
             ? await _templateRenderer.RenderAsync(config.Instructions, cancellationToken)
             : null;
 
-        _logger.LogDebug(
-            "TTS generation: model={Model}, voice={Voice}, text length={TextLength}",
-            config.Model, config.Voice, inputText.Length);
-
         var credential = await _credentialService.GetByIdAsync(
-            Context.UserId,
-            config.CredentialId,
-            cancellationToken);
+            Context.UserId, config.CredentialId, cancellationToken);
 
         if (credential == null)
+        {
             throw new InvalidOperationException($"Credential not found: {config.CredentialId}");
+        }
 
         var apiKey = credential.Fields[CredentialFieldType.ApiKey];
-
         var voice = new GeneratedSpeechVoice(config.Voice);
         var format = MapResponseFormat(config.ResponseFormat);
-
+        var contentType = GetContentType(config.ResponseFormat);
         var audioClient = new AudioClient(config.Model, apiKey);
 
-        var options = new SpeechGenerationOptions
-        {
-            SpeedRatio = (float)config.Speed,
-            ResponseFormat = format
-        };
+        _logger.LogInformation(
+            "OpenAI TTS fan-out: chunks={ChunkCount}, maxParallelism={MaxParallelism}, voice={Voice}, model={Model}",
+            chunks.Count, config.MaxParallelism, config.Voice, config.Model);
 
-        if (!string.IsNullOrWhiteSpace(instructions))
-            options.Instructions = instructions;
+        var clips = new AudioClip[chunks.Count];
+        var parallelism = Math.Max(1, Math.Min(config.MaxParallelism, chunks.Count));
 
-        var result = await audioClient.GenerateSpeechAsync(
-            inputText,
-            voice,
-            options,
-            cancellationToken);
+        await Parallel.ForEachAsync(
+            chunks.Select((text, index) => (text, index)),
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = parallelism,
+                CancellationToken = cancellationToken,
+            },
+            async (pair, ct) =>
+            {
+                var options = new SpeechGenerationOptions
+                {
+                    SpeedRatio = (float)config.Speed,
+                    ResponseFormat = format,
+                };
 
-        var audioBytes = result.Value.ToMemory().ToArray();
-        var contentType = GetContentType(config.ResponseFormat);
-        var audioBase64 = Convert.ToBase64String(audioBytes);
+                if (!string.IsNullOrWhiteSpace(instructions))
+                {
+                    options.Instructions = instructions;
+                }
+
+                var result = await audioClient.GenerateSpeechAsync(pair.text, voice, options, ct);
+                var bytes = result.Value.ToMemory().ToArray();
+
+                clips[pair.index] = new AudioClip
+                {
+                    AudioBase64 = Convert.ToBase64String(bytes),
+                    ContentType = contentType,
+                    FileExtension = config.ResponseFormat,
+                    SizeBytes = bytes.Length,
+                    Transcript = pair.text,
+                };
+            });
 
         _logger.LogInformation(
-            "TTS audio generated: {Size} bytes, voice={Voice}, model={Model}",
-            audioBytes.Length, config.Voice, config.Model);
+            "OpenAI TTS generation complete: {ClipCount} clips, {TotalBytes} total bytes",
+            clips.Length, clips.Sum(c => c.SizeBytes));
 
         return new TextToSpeechNodeOutput
         {
-            AudioBase64 = audioBase64,
-            ContentType = contentType,
-            FileExtension = config.ResponseFormat,
-            SizeBytes = audioBytes.Length,
-            Transcript = inputText,
+            Clips = clips,
             Voice = config.Voice,
-            Model = config.Model
+            Model = config.Model,
         };
     }
 
@@ -103,7 +114,7 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
             "aac" => GeneratedSpeechFormat.Aac,
             "flac" => GeneratedSpeechFormat.Flac,
             "wav" => GeneratedSpeechFormat.Wav,
-            _ => GeneratedSpeechFormat.Mp3
+            _ => GeneratedSpeechFormat.Mp3,
         };
     }
 
@@ -116,7 +127,7 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
             "aac" => "audio/aac",
             "flac" => "audio/flac",
             "wav" => "audio/wav",
-            _ => "audio/mpeg"
+            _ => "audio/mpeg",
         };
     }
 }

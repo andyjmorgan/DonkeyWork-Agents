@@ -8,10 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Markdig" Version="0.37.0" />
         <PackageReference Include="NAudio.Core" Version="2.2.1" />
         <PackageReference Include="NJsonSchema" Version="11.1.0" />
         <PackageReference Include="NATS.Net" Version="2.7.1" />
         <PackageReference Include="Scriban" Version="5.10.0" />
+        <PackageReference Include="WolverineFx" Version="5.27.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -23,6 +25,7 @@
         <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
         <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Core\DonkeyWork.Agents.Providers.Core.csproj" />
         <ProjectReference Include="..\..\storage\DonkeyWork.Agents.Storage.Contracts\DonkeyWork.Agents.Storage.Contracts.csproj" />
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Notifications.Contracts\DonkeyWork.Agents.Notifications.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

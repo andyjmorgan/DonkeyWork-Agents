@@ -173,6 +173,12 @@ public class TtsService : ITtsService
             SizeBytes = entity.SizeBytes,
             Voice = entity.Voice,
             Model = entity.Model,
+            CollectionId = entity.CollectionId,
+            SequenceNumber = entity.SequenceNumber,
+            ChapterTitle = entity.ChapterTitle,
+            Status = entity.Status.ToString(),
+            Progress = entity.Progress,
+            ErrorMessage = entity.ErrorMessage,
             CreatedAt = entity.CreatedAt,
             Playback = entity.Playback != null ? MapPlayback(entity.Playback) : null
         };

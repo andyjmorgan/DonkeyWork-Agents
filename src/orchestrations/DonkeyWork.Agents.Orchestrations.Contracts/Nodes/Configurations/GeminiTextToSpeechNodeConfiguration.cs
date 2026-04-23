@@ -42,12 +42,18 @@ public sealed class GeminiTextToSpeechNodeConfiguration : NodeConfiguration, IRe
         Default = "Kore")]
     public required string Voice { get; init; }
 
-    [JsonPropertyName("inputText")]
-    [ConfigurableField(Label = "Input Text", ControlType = ControlType.TextArea, Order = 10, Required = true,
-        Description = "The text to convert to speech. Use {{Steps.node_name.Property}} for variables.")]
+    /// <summary>
+    /// The text(s) to convert to speech. Must render to a JSON array of strings — each
+    /// element is generated as a separate clip. Fan-out bounded by <see cref="MaxParallelism"/>.
+    /// For a single clip: <c>["{{ Input.text | string.escape }}"]</c>.
+    /// For chunked input: <c>{{ Steps.chunk_node.Chunks | to_json }}</c>.
+    /// </summary>
+    [JsonPropertyName("inputs")]
+    [ConfigurableField(Label = "Inputs (JSON array)", ControlType = ControlType.TextArea, Order = 10, Required = true,
+        Description = "JSON array of text chunks. Use {{ Steps.chunk_node.Chunks | to_json }} or [\"your text\"] for a single clip.")]
     [Tab("Content", Order = 2, Icon = "file-text")]
     [SupportVariables]
-    public required string InputText { get; init; }
+    public required string Inputs { get; init; }
 
     [JsonPropertyName("instructions")]
     [ConfigurableField(Label = "Voice Instructions", ControlType = ControlType.TextArea, Order = 20,
@@ -62,4 +68,14 @@ public sealed class GeminiTextToSpeechNodeConfiguration : NodeConfiguration, IRe
     [Tab("Advanced", Order = 3, Icon = "sliders")]
     [SelectOptions("mp3", "wav", "pcm", Default = "mp3")]
     public string ResponseFormat { get; init; } = "mp3";
+
+    /// <summary>
+    /// Maximum number of clips to generate in parallel. Bounded by provider rate limits.
+    /// </summary>
+    [JsonPropertyName("maxParallelism")]
+    [ConfigurableField(Label = "Max Parallelism", ControlType = ControlType.Slider, Order = 20,
+        Description = "Maximum concurrent provider calls when processing multiple chunks.")]
+    [Tab("Advanced", Order = 3)]
+    [Slider(Min = 1, Max = 8, Step = 1, Default = 4)]
+    public int MaxParallelism { get; init; } = 4;
 }

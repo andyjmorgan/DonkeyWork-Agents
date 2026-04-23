@@ -38,6 +38,8 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
         [NodeType.TextToSpeech] = typeof(TextToSpeechNodeExecutor),
         [NodeType.GeminiTextToSpeech] = typeof(GeminiTextToSpeechNodeExecutor),
         [NodeType.StoreAudio] = typeof(StoreAudioNodeExecutor),
+        [NodeType.ChunkText] = typeof(ChunkTextNodeExecutor),
+        [NodeType.ConcatAudio] = typeof(ConcatAudioNodeExecutor),
     };
 
     private IReadOnlyList<string>? GetOutputPropertiesForNodeType(NodeType nodeType)
@@ -151,7 +153,7 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     CredentialId = Guid.Empty,
                     Model = "tts-1",
                     Voice = "alloy",
-                    InputText = ""
+                    Inputs = ""
                 },
                 nameof(GeminiTextToSpeechNodeConfiguration) => new GeminiTextToSpeechNodeConfiguration
                 {
@@ -159,7 +161,7 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     CredentialId = Guid.Empty,
                     Model = "gemini-2.5-flash-preview-tts",
                     Voice = "Kore",
-                    InputText = ""
+                    Inputs = ""
                 },
                 nameof(StoreAudioNodeConfiguration) => new StoreAudioNodeConfiguration
                 {
@@ -168,6 +170,16 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     RecordingDescription = "",
                     AudioBase64 = "",
                     ContentType = ""
+                },
+                nameof(ChunkTextNodeConfiguration) => new ChunkTextNodeConfiguration
+                {
+                    Name = "temp",
+                    InputText = ""
+                },
+                nameof(ConcatAudioNodeConfiguration) => new ConcatAudioNodeConfiguration
+                {
+                    Name = "temp",
+                    SourceNode = ""
                 },
                 _ => null
             };
