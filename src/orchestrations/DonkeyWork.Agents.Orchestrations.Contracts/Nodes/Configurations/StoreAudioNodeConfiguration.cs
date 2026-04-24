@@ -99,12 +99,13 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
     public string? FileExtension { get; init; }
 
     /// <summary>
-    /// Optional collection (folder) to drop the recording into. Use a UUID literal
-    /// or a template that renders to a UUID. Leave blank to store unfiled.
+    /// Optional collection (folder) for the recording. Pick from the dropdown or type
+    /// a name — if a collection with that name doesn't exist, one is created on first run.
+    /// Leave blank to store unfiled.
     /// </summary>
     [JsonPropertyName("collectionId")]
-    [ConfigurableField(Label = "Collection ID", ControlType = ControlType.Text, Order = 10,
-        Description = "UUID of an audio collection. Leave blank to store unfiled.")]
+    [ConfigurableField(Label = "Collection", ControlType = ControlType.AudioCollection, Order = 10,
+        Description = "Pick an existing collection or type a name to create one. Leave blank to store unfiled.")]
     [Tab("Collection", Order = 2, Icon = "folder")]
     [SupportVariables]
     public string? CollectionId { get; init; }

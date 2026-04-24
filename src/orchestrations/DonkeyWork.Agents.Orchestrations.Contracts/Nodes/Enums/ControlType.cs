@@ -66,5 +66,12 @@ public enum ControlType
     /// <summary>
     /// Key-value pair editor.
     /// </summary>
-    KeyValue
+    KeyValue,
+
+    /// <summary>
+    /// Audio collection selector dropdown with inline create.
+    /// Value is a UUID when selected from the list, or a free-text name when typed —
+    /// the backend resolves name → existing collection or creates one on first run.
+    /// </summary>
+    AudioCollection
 }
