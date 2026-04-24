@@ -853,6 +853,7 @@ export type NodeControlType =
   | 'Json'
   | 'KeyValueList'
   | 'Credential'
+  | 'AudioCollection'
 
 export interface NodeFieldSchema {
   name: string
