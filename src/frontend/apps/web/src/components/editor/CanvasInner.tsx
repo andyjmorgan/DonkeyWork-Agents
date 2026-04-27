@@ -121,6 +121,12 @@ export function CanvasInner() {
         attributionPosition="bottom-left"
         deleteKeyCode={['Backspace', 'Delete']}
         multiSelectionKeyCode="Shift"
+        // Disables ReactFlow's document-level keyboard listeners (arrow-key node
+        // nudging, Tab focus walk). Those listeners fire before any nested
+        // editor's handlers and were eating arrow keys inside Monaco/JSON edit
+        // fields in the properties sheet. Trade: lose keyboard-only canvas a11y;
+        // gain reliable text editing in nested editors.
+        disableKeyboardA11y
       >
         <Background
           gap={16}
