@@ -59,11 +59,6 @@ public enum NodeType
     StoreAudio,
 
     /// <summary>
-    /// Splits long markdown into ordered chunks respecting block boundaries.
-    /// </summary>
-    ChunkText,
-
-    /// <summary>
     /// Concatenates a list of audio chunks into a single stitched file.
     /// </summary>
     ConcatAudio

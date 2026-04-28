@@ -31,7 +31,7 @@ public static class GenerateAudioRecordingHandler
         GenerateAudioRecordingCommand command,
         AgentsDbContext dbContext,
         IIdentityContext identityContext,
-        IMarkdownChunker chunker,
+        ITtsChunker chunker,
         IExternalApiKeyService credentialService,
         IStorageService storageService,
         INotificationService notificationService,

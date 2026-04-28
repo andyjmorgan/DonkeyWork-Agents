@@ -1,24 +1,20 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
-using Markdig;
-using Markdig.Syntax;
 
 namespace DonkeyWork.Agents.Orchestrations.Core.Services;
 
-public sealed class MarkdownChunker : IMarkdownChunker
+public sealed partial class TtsChunker : ITtsChunker
 {
-    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .Build();
-
-    public IReadOnlyList<string> Chunk(string markdown, ChunkerOptions options)
+    public IReadOnlyList<string> Chunk(string text, ChunkerOptions options)
     {
-        if (string.IsNullOrWhiteSpace(markdown))
+        if (string.IsNullOrWhiteSpace(text))
         {
             return Array.Empty<string>();
         }
 
-        var blocks = ExtractBlocks(markdown);
+        var stripped = StripFormatting(text);
+        var blocks = SplitParagraphs(stripped);
         var chunks = new List<string>();
         var current = new StringBuilder();
 
@@ -63,30 +59,65 @@ public sealed class MarkdownChunker : IMarkdownChunker
         buffer.Clear();
     }
 
-    private static IEnumerable<string> ExtractBlocks(string markdown)
+    /// <summary>
+    /// Collapses markdown-ish formatting to plain text so the TTS engine doesn't
+    /// literally read syntax characters. Keeps the words, drops the punctuation
+    /// that is purely decorative.
+    /// </summary>
+    internal static string StripFormatting(string input)
     {
-        var document = Markdown.Parse(markdown, Pipeline);
+        // Remove fenced code blocks entirely — code is rarely speakable.
+        var text = FencedCodeRegex().Replace(input, string.Empty);
 
-        foreach (var block in document)
-        {
-            var text = Slice(markdown, block).Trim();
-            if (text.Length > 0)
-            {
-                yield return text;
-            }
-        }
+        // Inline code: keep the content, drop the backticks.
+        text = InlineCodeRegex().Replace(text, "$1");
+
+        // Images: ![alt](url) → alt
+        text = ImageRegex().Replace(text, "$1");
+
+        // Links: [text](url) → text
+        text = LinkRegex().Replace(text, "$1");
+
+        // Bold/italic markers (**, __, *, _) — keep the inner text.
+        text = BoldItalicRegex().Replace(text, "$2");
+
+        // Strikethrough ~~text~~ → text
+        text = StrikethroughRegex().Replace(text, "$1");
+
+        // Headings: leading #s on a line → drop them.
+        text = HeadingRegex().Replace(text, "$1");
+
+        // Blockquote markers at line start → drop them.
+        text = BlockquoteRegex().Replace(text, string.Empty);
+
+        // Horizontal rules on their own line → drop them.
+        text = HorizontalRuleRegex().Replace(text, string.Empty);
+
+        // HTML tags → drop them, keep inner text where applicable. Cheap removal:
+        text = HtmlTagRegex().Replace(text, string.Empty);
+
+        // Collapse 3+ blank lines down to a single blank line — protects paragraph splitting.
+        text = ExcessNewlinesRegex().Replace(text, "\n\n");
+
+        return text.Trim();
     }
 
-    private static string Slice(string source, Block block)
+    /// <summary>
+    /// Splits on blank lines into paragraph-like blocks, preserving list items
+    /// as their own block when the block is a list.
+    /// </summary>
+    internal static IEnumerable<string> SplitParagraphs(string text)
     {
-        var start = Math.Max(0, block.Span.Start);
-        var end = Math.Min(source.Length, block.Span.End + 1);
-        if (end <= start)
+        foreach (var raw in BlankLineRegex().Split(text))
         {
-            return string.Empty;
-        }
+            var block = raw.Trim();
+            if (block.Length == 0)
+            {
+                continue;
+            }
 
-        return source.Substring(start, end - start);
+            yield return block;
+        }
     }
 
     private static IEnumerable<string> SplitOversizedBlock(string block, ChunkerOptions options)
@@ -118,21 +149,28 @@ public sealed class MarkdownChunker : IMarkdownChunker
                 continue;
             }
 
-            if (trimmed.StartsWith("- ") || trimmed.StartsWith("* ") || trimmed.StartsWith("+ "))
+            return IsListItemStart(trimmed);
+        }
+
+        return false;
+    }
+
+    private static bool IsListItemStart(string trimmed)
+    {
+        if (trimmed.StartsWith("- ", StringComparison.Ordinal) ||
+            trimmed.StartsWith("* ", StringComparison.Ordinal) ||
+            trimmed.StartsWith("+ ", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (trimmed.Length > 2 && char.IsDigit(trimmed[0]))
+        {
+            var dotIndex = trimmed.IndexOf('.');
+            if (dotIndex > 0 && dotIndex < 4 && dotIndex + 1 < trimmed.Length && trimmed[dotIndex + 1] == ' ')
             {
                 return true;
             }
-
-            if (trimmed.Length > 2 && char.IsDigit(trimmed[0]))
-            {
-                var dotIndex = trimmed.IndexOf('.');
-                if (dotIndex > 0 && dotIndex < 4 && dotIndex + 1 < trimmed.Length && trimmed[dotIndex + 1] == ' ')
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         return false;
@@ -147,11 +185,8 @@ public sealed class MarkdownChunker : IMarkdownChunker
         while ((line = reader.ReadLine()) != null)
         {
             var trimmed = line.TrimStart();
-            var isItemStart =
-                trimmed.StartsWith("- ") || trimmed.StartsWith("* ") || trimmed.StartsWith("+ ") ||
-                (trimmed.Length > 2 && char.IsDigit(trimmed[0]) && trimmed.IndexOf('.') is > 0 and <= 3);
 
-            if (isItemStart && current.Length > 0)
+            if (IsListItemStart(trimmed) && current.Length > 0)
             {
                 yield return current.ToString().TrimEnd();
                 current.Clear();
@@ -186,7 +221,6 @@ public sealed class MarkdownChunker : IMarkdownChunker
                 continue;
             }
 
-            // swallow trailing whitespace up to and including the next newline or next word start
             while (i + 1 < paragraph.Length && char.IsWhiteSpace(paragraph[i + 1]))
             {
                 current.Append(paragraph[i + 1]);
@@ -253,4 +287,40 @@ public sealed class MarkdownChunker : IMarkdownChunker
             yield return value.Substring(start, length).Trim();
         }
     }
+
+    [GeneratedRegex("```[\\s\\S]*?```", RegexOptions.Multiline)]
+    private static partial Regex FencedCodeRegex();
+
+    [GeneratedRegex("`([^`]+)`")]
+    private static partial Regex InlineCodeRegex();
+
+    [GeneratedRegex(@"!\[([^\]]*)\]\([^)]*\)")]
+    private static partial Regex ImageRegex();
+
+    [GeneratedRegex(@"\[([^\]]+)\]\([^)]*\)")]
+    private static partial Regex LinkRegex();
+
+    [GeneratedRegex(@"(\*\*|__|\*|_)(.+?)\1")]
+    private static partial Regex BoldItalicRegex();
+
+    [GeneratedRegex("~~(.+?)~~")]
+    private static partial Regex StrikethroughRegex();
+
+    [GeneratedRegex(@"^[ \t]*#{1,6}[ \t]+(.*)$", RegexOptions.Multiline)]
+    private static partial Regex HeadingRegex();
+
+    [GeneratedRegex(@"^[ \t]*>[ \t]?", RegexOptions.Multiline)]
+    private static partial Regex BlockquoteRegex();
+
+    [GeneratedRegex(@"^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$", RegexOptions.Multiline)]
+    private static partial Regex HorizontalRuleRegex();
+
+    [GeneratedRegex("<[^>]+>")]
+    private static partial Regex HtmlTagRegex();
+
+    [GeneratedRegex(@"\n{3,}")]
+    private static partial Regex ExcessNewlinesRegex();
+
+    [GeneratedRegex(@"\n\s*\n")]
+    private static partial Regex BlankLineRegex();
 }
