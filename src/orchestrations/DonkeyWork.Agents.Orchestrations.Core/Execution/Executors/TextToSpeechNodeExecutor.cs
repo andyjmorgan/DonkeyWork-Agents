@@ -2,7 +2,6 @@ using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
-using DonkeyWork.Agents.Orchestrations.Core.Execution.Helpers;
 using DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
 using Microsoft.Extensions.Logging;
 using OpenAI.Audio;
@@ -13,6 +12,7 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
 {
     private readonly IExternalApiKeyService _credentialService;
     private readonly ITemplateRenderer _templateRenderer;
+    private readonly ITtsChunker _chunker;
     private readonly ILogger<TextToSpeechNodeExecutor> _logger;
 
     public TextToSpeechNodeExecutor(
@@ -20,11 +20,13 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
         IExecutionContext context,
         IExternalApiKeyService credentialService,
         ITemplateRenderer templateRenderer,
+        ITtsChunker chunker,
         ILogger<TextToSpeechNodeExecutor> logger)
         : base(streamWriter, context)
     {
         _credentialService = credentialService;
         _templateRenderer = templateRenderer;
+        _chunker = chunker;
         _logger = logger;
     }
 
@@ -32,8 +34,23 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
         TextToSpeechNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        var renderedInputs = await _templateRenderer.RenderAsync(config.Inputs, cancellationToken);
-        var chunks = TtsInputParser.Parse(renderedInputs);
+        var renderedText = await _templateRenderer.RenderAsync(config.Text, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(renderedText))
+        {
+            throw new InvalidOperationException("Text is empty after template rendering.");
+        }
+
+        var chunks = _chunker.Chunk(renderedText, new ChunkerOptions
+        {
+            TargetCharCount = config.TargetCharCount,
+            MaxCharCount = config.MaxCharCount,
+        });
+
+        if (chunks.Count == 0)
+        {
+            throw new InvalidOperationException("Chunker produced zero chunks from the rendered text.");
+        }
 
         var instructions = !string.IsNullOrWhiteSpace(config.Instructions)
             ? await _templateRenderer.RenderAsync(config.Instructions, cancellationToken)

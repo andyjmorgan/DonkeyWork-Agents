@@ -14,6 +14,7 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
 {
     private readonly IExternalApiKeyService _credentialService;
     private readonly ITemplateRenderer _templateRenderer;
+    private readonly ITtsChunker _chunker;
     private readonly ILogger<GeminiTextToSpeechNodeExecutor> _logger;
 
     public GeminiTextToSpeechNodeExecutor(
@@ -21,11 +22,13 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
         IExecutionContext context,
         IExternalApiKeyService credentialService,
         ITemplateRenderer templateRenderer,
+        ITtsChunker chunker,
         ILogger<GeminiTextToSpeechNodeExecutor> logger)
         : base(streamWriter, context)
     {
         _credentialService = credentialService;
         _templateRenderer = templateRenderer;
+        _chunker = chunker;
         _logger = logger;
     }
 
@@ -33,8 +36,23 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
         GeminiTextToSpeechNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        var renderedInputs = await _templateRenderer.RenderAsync(config.Inputs, cancellationToken);
-        var chunks = TtsInputParser.Parse(renderedInputs);
+        var renderedText = await _templateRenderer.RenderAsync(config.Text, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(renderedText))
+        {
+            throw new InvalidOperationException("Text is empty after template rendering.");
+        }
+
+        var chunks = _chunker.Chunk(renderedText, new ChunkerOptions
+        {
+            TargetCharCount = config.TargetCharCount,
+            MaxCharCount = config.MaxCharCount,
+        });
+
+        if (chunks.Count == 0)
+        {
+            throw new InvalidOperationException("Chunker produced zero chunks from the rendered text.");
+        }
 
         var instructions = !string.IsNullOrWhiteSpace(config.Instructions)
             ? await _templateRenderer.RenderAsync(config.Instructions, cancellationToken)

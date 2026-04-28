@@ -5,8 +5,9 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 
 /// <summary>
-/// Configuration for the Gemini Text-to-Speech node.
-/// Uses Google Gemini TTS models which support larger context windows (8K tokens).
+/// Configuration for the Gemini Text-to-Speech node. Long text is chunked internally
+/// on natural boundaries (paragraphs, list items, sentences) and clips are stitched
+/// downstream.
 /// </summary>
 [Node(
     DisplayName = "Gemini Text to Speech",
@@ -43,17 +44,15 @@ public sealed class GeminiTextToSpeechNodeConfiguration : NodeConfiguration, IRe
     public required string Voice { get; init; }
 
     /// <summary>
-    /// The text(s) to convert to speech. Must render to a JSON array of strings — each
-    /// element is generated as a separate clip. Fan-out bounded by <see cref="MaxParallelism"/>.
-    /// For a single clip: <c>["{{ Input.text | string.escape }}"]</c>.
-    /// For chunked input: <c>{{ Steps.chunk_node.Chunks | to_json }}</c>.
+    /// Plain-text or markdown-ish input. Markdown formatting is stripped before synthesis.
+    /// Long inputs are chunked on natural boundaries and rendered as parallel clips.
     /// </summary>
-    [JsonPropertyName("inputs")]
-    [ConfigurableField(Label = "Inputs (JSON array)", ControlType = ControlType.TextArea, Order = 10, Required = true,
-        Description = "JSON array of text chunks. Use {{ Steps.chunk_node.Chunks | to_json }} or [\"your text\"] for a single clip.")]
+    [JsonPropertyName("text")]
+    [ConfigurableField(Label = "Text", ControlType = ControlType.TextArea, Order = 10, Required = true,
+        Description = "Text to speak. Markdown formatting is stripped. Long input is chunked automatically.")]
     [Tab("Content", Order = 2, Icon = "file-text")]
     [SupportVariables]
-    public required string Inputs { get; init; }
+    public required string Text { get; init; }
 
     [JsonPropertyName("instructions")]
     [ConfigurableField(Label = "Voice Instructions", ControlType = ControlType.TextArea, Order = 20,
@@ -70,11 +69,31 @@ public sealed class GeminiTextToSpeechNodeConfiguration : NodeConfiguration, IRe
     public string ResponseFormat { get; init; } = "mp3";
 
     /// <summary>
-    /// Maximum number of clips to generate in parallel. Bounded by provider rate limits.
+    /// Target characters per chunk. Chunks are packed greedily up to this size.
+    /// </summary>
+    [JsonPropertyName("targetCharCount")]
+    [ConfigurableField(Label = "Target Chars", ControlType = ControlType.Slider, Order = 20,
+        Description = "Target characters per chunk. Chunker packs blocks up to this size.")]
+    [Tab("Advanced", Order = 3)]
+    [Slider(Min = 500, Max = 7500, Step = 250, Default = 4000)]
+    public int TargetCharCount { get; init; } = 4000;
+
+    /// <summary>
+    /// Hard ceiling per chunk. Gemini TTS comfortable around 8K chars.
+    /// </summary>
+    [JsonPropertyName("maxCharCount")]
+    [ConfigurableField(Label = "Max Chars", ControlType = ControlType.Slider, Order = 30,
+        Description = "Hard ceiling per chunk. Gemini TTS comfortable up to ~8000 chars.")]
+    [Tab("Advanced", Order = 3)]
+    [Slider(Min = 500, Max = 8000, Step = 250, Default = 7500)]
+    public int MaxCharCount { get; init; } = 7500;
+
+    /// <summary>
+    /// Maximum concurrent provider calls when synthesizing multiple chunks.
     /// </summary>
     [JsonPropertyName("maxParallelism")]
-    [ConfigurableField(Label = "Max Parallelism", ControlType = ControlType.Slider, Order = 20,
-        Description = "Maximum concurrent provider calls when processing multiple chunks.")]
+    [ConfigurableField(Label = "Max Parallelism", ControlType = ControlType.Slider, Order = 40,
+        Description = "Maximum concurrent provider calls when synthesizing multiple chunks.")]
     [Tab("Advanced", Order = 3)]
     [Slider(Min = 1, Max = 8, Step = 1, Default = 4)]
     public int MaxParallelism { get; init; } = 4;
