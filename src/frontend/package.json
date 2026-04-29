@@ -8,7 +8,7 @@
     "preview": "pnpm --filter @donkeywork/web preview",
     "test": "pnpm --filter @donkeywork/web test",
     "test:ui": "pnpm --filter @donkeywork/web test:ui",
-    "test:run": "pnpm --filter @donkeywork/web test:run"
+    "test:run": "pnpm --filter @donkeywork/web test:run && pnpm --filter @donkeywork/chat test:run"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

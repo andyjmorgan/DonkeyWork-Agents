@@ -21,6 +21,9 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   },
+  "scripts": {
+    "test:run": "vitest run"
+  },
   "devDependencies": {
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
