@@ -43,7 +43,7 @@ public sealed class AgentEventPublisher : IAgentEventPublisher, IAsyncDisposable
         var subject = AgentEventSubjects.ForEvent(conversationId, evt.TurnId);
         var seq = Interlocked.Increment(ref _sequence);
         var messageId = Guid.NewGuid().ToString("N");
-        var payloadBytes = _serializer.Serialize(evt);
+        var payloadBytes = _serializer.Serialize(evt, evt.GetType());
 
         Envelope envelope;
         if (payloadBytes.Length > 786432 && _store is not null)

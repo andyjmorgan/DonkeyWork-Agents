@@ -14,6 +14,8 @@ public sealed class JsonPayloadSerializer : IPayloadSerializer
 
     public byte[] Serialize<T>(T value) => JsonSerializer.SerializeToUtf8Bytes(value, Options);
 
+    public byte[] Serialize(object value, Type type) => JsonSerializer.SerializeToUtf8Bytes(value, type, Options);
+
     public T Deserialize<T>(byte[] bytes) => JsonSerializer.Deserialize<T>(bytes, Options)!;
 
     public object Deserialize(byte[] bytes, Type type) =>

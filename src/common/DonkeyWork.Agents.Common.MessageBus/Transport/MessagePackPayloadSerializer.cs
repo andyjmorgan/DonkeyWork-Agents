@@ -11,6 +11,8 @@ public sealed class MessagePackPayloadSerializer : IPayloadSerializer
 
     public byte[] Serialize<T>(T value) => MessagePackSerializer.Serialize(value, Options);
 
+    public byte[] Serialize(object value, Type type) => MessagePackSerializer.Serialize(type, value, Options);
+
     public T Deserialize<T>(byte[] bytes) => MessagePackSerializer.Deserialize<T>(bytes, Options);
 
     public object Deserialize(byte[] bytes, Type type) =>
