@@ -23,7 +23,7 @@ function applyTurnIdStamp(messages: ChatMessage[], userMsgId: string, turnId: st
   return messages.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId, _pending: true } : m);
 }
 
-function applyCancelPendingTurn(messages: ChatMessage[], turnId: string): ChatMessage[] {
+function applyCancelTurn(messages: ChatMessage[], turnId: string): ChatMessage[] {
   return messages.filter((m) => !(m.role === "user" && m._turnId === turnId));
 }
 
@@ -53,14 +53,14 @@ describe("pending flag stamping", () => {
   });
 });
 
-describe("cancelPendingTurn message removal", () => {
+describe("cancelTurn message removal", () => {
   it("removes only the user message with matching turnId", () => {
     const msgs: ChatMessage[] = [
       userMsg("u1", "turn-1", false),
       userMsg("u2", "turn-2", true),
       userMsg("u3", "turn-3", true),
     ];
-    const result = applyCancelPendingTurn(msgs, "turn-2");
+    const result = applyCancelTurn(msgs, "turn-2");
     expect(result).toHaveLength(2);
     expect(result.find((m) => m.id === "u2")).toBeUndefined();
     expect(result.find((m) => m.id === "u1")).toBeDefined();
@@ -72,7 +72,7 @@ describe("cancelPendingTurn message removal", () => {
       userMsg("u1", "turn-1", true),
       assistantMsg("a1", "turn-1"),
     ];
-    const result = applyCancelPendingTurn(msgs, "turn-1");
+    const result = applyCancelTurn(msgs, "turn-1");
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("a1");
   });
@@ -82,7 +82,7 @@ describe("cancelPendingTurn message removal", () => {
       userMsg("u1", "turn-1", true),
       userMsg("u2", "turn-2", true),
     ];
-    const result = applyCancelPendingTurn(msgs, "turn-999");
+    const result = applyCancelTurn(msgs, "turn-999");
     expect(result).toHaveLength(2);
   });
 });
