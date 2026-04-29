@@ -804,7 +804,12 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             var enriched = turnId != Guid.Empty && evt.TurnId == Guid.Empty
                 ? evt with { TurnId = turnId }
                 : evt;
-            Observer?.OnEvent(enriched);
+
+            var publisher = ServiceProvider.GetService<IAgentEventPublisher>();
+            if (publisher is not null && !string.IsNullOrEmpty(GrainContext.ConversationId))
+            {
+                _ = publisher.PublishAsync(enriched, GrainContext.ConversationId);
+            }
         }
         catch (Exception ex)
         {

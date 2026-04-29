@@ -28,6 +28,15 @@ public sealed class PayloadTypeRegistry
         return this;
     }
 
+    /// <summary>
+    /// Registers a type by name. Used for reflection-based bulk registration.
+    /// </summary>
+    public PayloadTypeRegistry Add(string discriminator, Type type)
+    {
+        _byDiscriminator[discriminator] = type;
+        return this;
+    }
+
     public bool TryResolve(string discriminator, out Type type)
         => _byDiscriminator.TryGetValue(discriminator, out type!);
 }

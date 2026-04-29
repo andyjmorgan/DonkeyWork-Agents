@@ -1,13 +1,18 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DonkeyWork.Agents.Actors.Api.EventBus;
 using DonkeyWork.Agents.Actors.Api.Observers;
 using DonkeyWork.Agents.Actors.Contracts;
+using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Common.MessageBus.Transport;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using NATS.Client.JetStream.Models;
 using StreamJsonRpc;
 
 namespace DonkeyWork.Agents.Actors.Api.Endpoints;
@@ -26,7 +31,8 @@ public static class ConversationWebSocketEndpoints
         HttpContext context,
         Guid id,
         IGrainFactory grainFactory,
-        IIdentityContext identityContext)
+        IIdentityContext identityContext,
+        AgentEventConsumerFactory consumerFactory)
     {
         if (!context.WebSockets.IsWebSocketRequest)
         {
@@ -54,28 +60,94 @@ public static class ConversationWebSocketEndpoints
 
         var handler = new WebSocketMessageHandler(ws, formatter);
         using var rpc = new JsonRpc(handler);
-        using var observer = new WebSocketObserver(rpc);
+        using var cts = new CancellationTokenSource();
 
-        var observerRef = grainFactory.CreateObjectReference<IAgentResponseObserver>(observer);
         var grainKey = $"{AgentKeys.ConversationPrefix}{identityContext.UserId}:{id}";
+        var conversationId = id.ToString();
 
         RequestContext.Set(GrainCallContextKeys.UserId, identityContext.UserId.ToString());
-        RequestContext.Set(GrainCallContextKeys.ConversationId, id.ToString());
+        RequestContext.Set(GrainCallContextKeys.ConversationId, conversationId);
 
         var grain = grainFactory.GetGrain<IConversationGrain>(grainKey);
 
-        await grain.SubscribeAsync(observerRef);
-
         rpc.AddLocalRpcTarget(
-            new ConversationRpcTarget(grain, observerRef, identityContext.UserId.ToString(), id.ToString(), grainKey),
+            new ConversationRpcTarget(grain, identityContext.UserId.ToString(), conversationId, grainKey, consumerFactory),
             new JsonRpcTargetOptions { MethodNameTransform = CommonMethodNameTransforms.CamelCase });
 
         rpc.StartListening();
+
+        var consumer = consumerFactory.CreateConsumer();
+        var liveOpts = AgentEventConsumerFactory.LiveTailOptions(conversationId);
+
+        var forwardTask = ForwardEventsAsync(consumer, liveOpts, rpc, cts.Token);
+
         await rpc.Completion;
+
+        cts.Cancel();
+        try { await forwardTask; } catch (OperationCanceledException) { }
+    }
+
+    private static async Task ForwardEventsAsync(
+        StreamConsumer consumer,
+        ConsumerOptions opts,
+        JsonRpc rpc,
+        CancellationToken ct)
+    {
+        await foreach (var delivered in consumer.GetMessagesAsync<StreamEventBase>(opts, ct))
+        {
+            if (rpc.IsDisposed) break;
+            try
+            {
+                var payload = ToJsonElement(delivered.Payload);
+                await rpc.NotifyAsync("event", payload, delivered.Sequence);
+            }
+            catch
+            {
+                break;
+            }
+        }
+    }
+
+    internal static JsonElement ToJsonElement(StreamEventBase evt)
+    {
+        var bytes = evt switch
+        {
+            StreamMessageEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamMessageEvent),
+            StreamThinkingEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamThinkingEvent),
+            StreamToolUseEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamToolUseEvent),
+            StreamToolResultEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamToolResultEvent),
+            StreamToolCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamToolCompleteEvent),
+            StreamWebSearchEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamWebSearchEvent),
+            StreamWebSearchCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamWebSearchCompleteEvent),
+            StreamCitationEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamCitationEvent),
+            StreamUsageEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamUsageEvent),
+            StreamProgressEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamProgressEvent),
+            StreamAgentSpawnEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamAgentSpawnEvent),
+            StreamAgentCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamAgentCompleteEvent),
+            StreamAgentResultDataEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamAgentResultDataEvent),
+            StreamCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamCompleteEvent),
+            StreamErrorEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamErrorEvent),
+            StreamRetryEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamRetryEvent),
+            StreamTurnStartEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamTurnStartEvent),
+            StreamTurnEndEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamTurnEndEvent),
+            StreamQueueStatusEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamQueueStatusEvent),
+            StreamCancelledEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamCancelledEvent),
+            StreamMcpServerStatusEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamMcpServerStatusEvent),
+            StreamSandboxStatusEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamSandboxStatusEvent),
+            _ => JsonSerializer.SerializeToUtf8Bytes(new { agentKey = evt.AgentKey, eventType = evt.EventType }),
+        };
+
+        using var doc = JsonDocument.Parse(bytes);
+        return doc.RootElement.Clone();
     }
 }
 
-internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResponseObserver observer, string userId, string conversationId, string grainKey)
+internal sealed class ConversationRpcTarget(
+    IConversationGrain grain,
+    string userId,
+    string conversationId,
+    string grainKey,
+    AgentEventConsumerFactory consumerFactory)
 {
     public async Task<object> Message(string text)
     {
@@ -86,9 +158,7 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     }
 
     /// <summary>
-    /// Client request: { jsonrpc: "2.0", id: N, method: "cancelTurn", params: { turnId: "..." } }
     /// Cancels a specific pending or active turn by its id.
-    /// Returns { result: "active" | "pending" | "notFound" }.
     /// </summary>
     public async Task<object> CancelTurn(string turnId)
     {
@@ -100,14 +170,11 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     }
 
     /// <summary>
-    /// Client notification: { jsonrpc: "2.0", method: "cancel", params: { key: "...", scope?: "active" } }
-    /// The frontend may send a key like "swarm:{conversationId}" for self-cancel.
-    /// Resolve any non-prefixed key to the actual grain key so CancelByKeyAsync can match.
+    /// Cancels all active or pending turns for an agent key.
     /// </summary>
     public Task Cancel(string key, string? scope = null)
     {
         SetCallContext();
-        // If the key doesn't match a known agent prefix, treat it as a self-cancel
         var resolvedKey = key.StartsWith(AgentKeys.DelegatePrefix)
                           || key.StartsWith(AgentKeys.AgentPrefix)
                           || key.StartsWith(AgentKeys.ConversationPrefix)
@@ -117,9 +184,6 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
         return grain.CancelByKeyAsync(resolvedKey, scope);
     }
 
-    /// <summary>
-    /// Client request: { jsonrpc: "2.0", id: N, method: "listAgents" }
-    /// </summary>
     public async Task<IReadOnlyList<TrackedAgent>> ListAgents()
     {
         SetCallContext();
@@ -127,10 +191,7 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     }
 
     /// <summary>
-    /// Client request: { jsonrpc: "2.0", id: N, method: "getState" }
-    /// Returns the current conversation state including all messages.
-    /// Pre-serializes messages to preserve $type polymorphic discriminators
-    /// that would be lost through StreamJsonRpc's object serialization.
+    /// Returns the current conversation state including all persisted messages.
     /// </summary>
     public async Task<object> GetState()
     {
@@ -147,7 +208,6 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     }
 
     /// <summary>
-    /// Client request: { jsonrpc: "2.0", id: N, method: "getAgentMessages", params: { agentKey: "..." } }
     /// Returns the full execution transcript for a specific sub-agent.
     /// </summary>
     public async Task<object> GetAgentMessages(string agentKey)
@@ -162,6 +222,58 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
         };
         var messagesJson = JsonSerializer.SerializeToElement(messages, options);
         return new { messages = messagesJson };
+    }
+
+    /// <summary>
+    /// Replays events for a turn from a given JetStream sequence cursor.
+    /// Returns collected events, the last sequence seen, and whether the turn is complete.
+    /// Used by clients after reconnect to catch up on missed events.
+    /// </summary>
+    public async Task<object> EventsSince(string turnId, ulong afterSequence)
+    {
+        SetCallContext();
+        if (!Guid.TryParse(turnId, out var turnGuid))
+            return new { events = Array.Empty<object>(), lastSequence = afterSequence, complete = false };
+
+        var consumer = consumerFactory.CreateConsumer();
+        var opts = AgentEventConsumerFactory.ReplayFromOptions(conversationId, turnGuid, afterSequence);
+
+        var events = new List<JsonElement>();
+        ulong lastSeq = afterSequence;
+        bool complete = false;
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(2000));
+
+        try
+        {
+            await foreach (var delivered in consumer.GetMessagesAsync<StreamEventBase>(opts, cts.Token))
+            {
+                var element = ConversationWebSocketEndpoints.ToJsonElement(delivered.Payload);
+                events.Add(element);
+                lastSeq = delivered.Sequence;
+
+                if (delivered.Payload is StreamTurnEndEvent or StreamCancelledEvent)
+                {
+                    complete = true;
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter() },
+        };
+        return new
+        {
+            events = JsonSerializer.SerializeToElement(events, jsonOptions),
+            lastSequence = lastSeq,
+            complete,
+        };
     }
 
     private void SetCallContext()

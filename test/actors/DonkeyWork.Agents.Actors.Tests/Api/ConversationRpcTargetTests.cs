@@ -1,13 +1,28 @@
 using DonkeyWork.Agents.Actors.Api.Endpoints;
+using DonkeyWork.Agents.Actors.Api.EventBus;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Common.MessageBus.Transport;
+using Microsoft.Extensions.Logging;
 using Moq;
+using NATS.Client.JetStream;
+using NATS.Client.ObjectStore;
 using Xunit;
 
 namespace DonkeyWork.Agents.Actors.Tests.Api;
 
 public class ConversationRpcTargetTests
 {
+    private static AgentEventConsumerFactory CreateConsumerFactory()
+    {
+        var js = new Mock<INatsJSContext>();
+        var obj = new Mock<INatsObjContext>();
+        var serializer = new MessagePackPayloadSerializer();
+        var registry = new PayloadTypeRegistry();
+        var log = new Mock<ILogger<StreamConsumer>>();
+        return new AgentEventConsumerFactory(js.Object, obj.Object, serializer, registry, log.Object);
+    }
+
     #region Message Tests
 
     [Fact]
@@ -15,8 +30,8 @@ public class ConversationRpcTargetTests
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
+        var factory = CreateConsumerFactory();
+        var target = new ConversationRpcTarget(grain.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222", factory);
 
         // Act
         await target.Message("Hello");
@@ -31,8 +46,8 @@ public class ConversationRpcTargetTests
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
+        var factory = CreateConsumerFactory();
+        var target = new ConversationRpcTarget(grain.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222", factory);
 
         // Act
         var result = await target.Message("Hello");
@@ -54,8 +69,8 @@ public class ConversationRpcTargetTests
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
+        var factory = CreateConsumerFactory();
+        var target = new ConversationRpcTarget(grain.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222", factory);
 
         // Act
         await target.Cancel("agent:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222:33333333-3333-3333-3333-333333333333", "active");
@@ -69,8 +84,8 @@ public class ConversationRpcTargetTests
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
+        var factory = CreateConsumerFactory();
+        var target = new ConversationRpcTarget(grain.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222", factory);
 
         // Act — frontend sends "swarm:{conversationId}" which has no known prefix
         await target.Cancel("swarm:22222222-2222-2222-2222-222222222222", "active");
@@ -84,8 +99,8 @@ public class ConversationRpcTargetTests
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
+        var factory = CreateConsumerFactory();
+        var target = new ConversationRpcTarget(grain.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222", factory);
 
         // Act
         await target.Cancel("swarm:some-id");
@@ -103,14 +118,14 @@ public class ConversationRpcTargetTests
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
+        var factory = CreateConsumerFactory();
         var expected = new List<TrackedAgent>
         {
             new("agent-1", "researcher", "parent-1", AgentStatus.Completed, null, DateTime.UtcNow),
             new("agent-2", "writer", "parent-1", AgentStatus.Pending, null, DateTime.UtcNow),
         };
         grain.Setup(g => g.ListAgentsAsync()).ReturnsAsync(expected);
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
+        var target = new ConversationRpcTarget(grain.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222", factory);
 
         // Act
         var result = await target.ListAgents();
@@ -126,9 +141,9 @@ public class ConversationRpcTargetTests
     {
         // Arrange
         var grain = new Mock<IConversationGrain>();
-        var observer = new Mock<IAgentResponseObserver>();
+        var factory = CreateConsumerFactory();
         grain.Setup(g => g.ListAgentsAsync()).ReturnsAsync(new List<TrackedAgent>());
-        var target = new ConversationRpcTarget(grain.Object, observer.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222");
+        var target = new ConversationRpcTarget(grain.Object, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "conv:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222", factory);
 
         // Act
         var result = await target.ListAgents();
