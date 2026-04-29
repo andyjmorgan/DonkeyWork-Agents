@@ -138,9 +138,9 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         return Task.CompletedTask;
     }
 
-    public Task PostUserMessageAsync(string message)
+    public Task PostUserMessageAsync(string message, Guid turnId)
     {
-        var msg = new UserConversationMessage(message, DateTimeOffset.UtcNow);
+        var msg = new UserConversationMessage(message, turnId, DateTimeOffset.UtcNow);
         _queue.Writer.TryWrite(msg);
         Interlocked.Increment(ref _pendingCount);
         EnsureProcessingLoop();
@@ -250,6 +250,8 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             {
                 Interlocked.Decrement(ref _pendingCount);
 
+                var turnId = message is UserConversationMessage userTurnMsg ? userTurnMsg.TurnId : Guid.NewGuid();
+
                 var contract = await ResolveContractAsync(CancellationToken.None);
                 Contract = contract;
 
@@ -266,7 +268,8 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                         null,
                         contractJson,
                         null,
-                        contract.ModelId);
+                        contract.ModelId,
+                        turnId);
                     _activatedAt = DateTimeOffset.UtcNow;
                 }
 
@@ -297,8 +300,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 var ct = _currentTurnCts.Token;
 
                 var snapshotSequenceNumber = NextSequenceNumber;
-
-                var turnId = Guid.NewGuid();
                 var internalMsg = FormatMessage(message);
                 internalMsg.TurnId = turnId;
                 Messages.Add(internalMsg);
@@ -315,7 +316,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                     await EnsureSqlRecordAsync();
                 }
 
-                Emit(new StreamTurnStartEvent(GrainContext.GrainKey, source, preview));
+                Emit(new StreamTurnStartEvent(GrainContext.GrainKey, source, preview) { TurnId = turnId });
                 EmitQueueStatus();
 
                 await SendAgentNotificationAsync(
@@ -355,7 +356,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                     "Agent Complete",
                     contract.DisplayName ?? "Navi");
 
-                Emit(new StreamTurnEndEvent(GrainContext.GrainKey));
+                Emit(new StreamTurnEndEvent(GrainContext.GrainKey) { TurnId = turnId });
                 EmitQueueStatus();
 
                 if (ExecutionId != Guid.Empty)
@@ -398,7 +399,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
         if (assistantMsg?.TextContent is not null)
         {
-            Emit(new StreamCompleteEvent(GrainContext.GrainKey, assistantMsg.TextContent));
+            Emit(new StreamCompleteEvent(GrainContext.GrainKey, assistantMsg.TextContent) { TurnId = turnId });
         }
     }
 

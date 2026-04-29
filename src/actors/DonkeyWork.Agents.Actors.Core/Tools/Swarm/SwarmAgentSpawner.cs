@@ -55,6 +55,7 @@ public sealed class SwarmAgentSpawner
             Label = label,
             Icon = contract.Icon,
             DisplayName = contract.DisplayName,
+            TurnId = context.CurrentTurnId,
         });
 
         // If the parent has a sandbox ready, pass the pod name so the child reuses it
@@ -77,6 +78,7 @@ public sealed class SwarmAgentSpawner
             contractJson,
             query,
             contract.ModelId,
+            context.CurrentTurnId,
             ct);
 
         // Propagate caller context so the sub-agent's interceptor can hydrate

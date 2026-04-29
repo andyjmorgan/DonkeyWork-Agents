@@ -6,6 +6,7 @@ public abstract record ConversationMessage([property: Id(0)] DateTimeOffset Time
 [GenerateSerializer]
 public sealed record UserConversationMessage(
     [property: Id(1)] string Text,
+    [property: Id(2)] Guid TurnId,
     DateTimeOffset Timestamp) : ConversationMessage(Timestamp);
 
 [GenerateSerializer]
