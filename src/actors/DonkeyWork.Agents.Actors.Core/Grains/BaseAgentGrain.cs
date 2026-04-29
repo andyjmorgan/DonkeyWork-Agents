@@ -52,7 +52,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     protected AgentContract? Contract;
     protected CancellationTokenSource? Cts;
     protected bool ExplicitCancel;
-    protected IAgentResponseObserver? Observer;
     private protected McpToolProvider? McpToolProvider;
     private protected A2aToolProvider? A2aToolProvider;
     private protected OrchestrationToolProvider? OrchestrationToolProvider;
@@ -804,7 +803,12 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             var enriched = turnId != Guid.Empty && evt.TurnId == Guid.Empty
                 ? evt with { TurnId = turnId }
                 : evt;
-            Observer?.OnEvent(enriched);
+
+            var publisher = ServiceProvider.GetService<IAgentEventPublisher>();
+            if (publisher is not null && !string.IsNullOrEmpty(GrainContext.ConversationId))
+            {
+                _ = publisher.PublishAsync(enriched, GrainContext.ConversationId);
+            }
         }
         catch (Exception ex)
         {
@@ -814,7 +818,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
     protected void SetupGrainContext()
     {
-        GrainContext.Observer = Observer;
         GrainContext.GrainFactory = GrainFactory;
         GrainContext.Logger = Logger;
         GrainContext.UserId = IdentityContext.UserId.ToString();

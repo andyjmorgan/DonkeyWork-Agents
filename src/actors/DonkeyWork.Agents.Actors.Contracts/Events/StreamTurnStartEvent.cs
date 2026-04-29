@@ -1,6 +1,8 @@
+using MessagePack;
 namespace DonkeyWork.Agents.Actors.Contracts.Events;
 
 [GenerateSerializer]
+[MessagePackObject(keyAsPropertyName: true)]
 public sealed record StreamTurnStartEvent(
     string AgentKey,
     [property: Id(0)] string Source,

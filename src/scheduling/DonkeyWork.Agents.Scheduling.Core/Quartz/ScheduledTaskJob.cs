@@ -143,7 +143,7 @@ public class ScheduledTaskJob : IJob
 
         try
         {
-            var result = await grain.RunAsync(contract, schedule.Payload.UserPrompt, null);
+            var result = await grain.RunAsync(contract, schedule.Payload.UserPrompt);
 
             _logger.LogInformation("Scheduled job {ScheduleId} ({Name}) completed with {PartCount} result parts",
                 scheduleId, schedule.Name, result.Parts.Count);

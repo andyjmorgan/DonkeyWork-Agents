@@ -133,14 +133,6 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
     #region IConversationGrain
 
-    public Task SubscribeAsync(IAgentResponseObserver observer)
-    {
-        Observer = observer;
-        EnsureProcessingLoop();
-        EmitQueueStatus();
-        return Task.CompletedTask;
-    }
-
     public Task PostUserMessageAsync(string message, Guid turnId)
     {
         var msg = new UserConversationMessage(message, turnId, DateTimeOffset.UtcNow);

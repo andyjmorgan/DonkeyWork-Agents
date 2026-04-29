@@ -1,6 +1,5 @@
 using System.Threading.Channels;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
-using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using Microsoft.Extensions.Logging;
@@ -12,7 +11,6 @@ public class GrainContext
     public string GrainKey { get; set; } = "";
     public string ConversationId { get; set; } = "";
     public string UserId { get; set; } = "";
-    public IAgentResponseObserver? Observer { get; set; }
     public IGrainFactory GrainFactory { get; set; } = null!;
     public ILogger Logger { get; set; } = null!;
     public Action<string>? ProgressCallback { get; set; }

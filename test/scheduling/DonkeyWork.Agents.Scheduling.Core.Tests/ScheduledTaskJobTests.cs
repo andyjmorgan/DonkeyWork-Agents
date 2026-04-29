@@ -138,7 +138,7 @@ public class ScheduledTaskJobTests : IDisposable
             .ReturnsAsync(Guid.NewGuid());
 
         var grainMock = new Mock<IAgentGrain>();
-        grainMock.Setup(g => g.RunAsync(It.IsAny<AgentContract>(), It.IsAny<string>(), null))
+        grainMock.Setup(g => g.RunAsync(It.IsAny<AgentContract>(), It.IsAny<string>()))
             .ReturnsAsync(AgentResult.Empty);
 
         _grainFactoryMock.Setup(f => f.GetGrain<IAgentGrain>(It.IsAny<string>(), It.IsAny<string>()))

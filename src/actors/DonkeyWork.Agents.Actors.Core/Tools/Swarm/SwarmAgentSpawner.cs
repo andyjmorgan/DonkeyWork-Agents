@@ -1,7 +1,6 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
-using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
@@ -47,17 +46,6 @@ public sealed class SwarmAgentSpawner
             conversationId,
             taskId);
 
-        context.Observer?.OnEvent(new StreamAgentSpawnEvent(
-            context.GrainKey,
-            agentKey,
-            contract.AgentType)
-        {
-            Label = label,
-            Icon = contract.Icon,
-            DisplayName = contract.DisplayName,
-            TurnId = context.CurrentTurnId,
-        });
-
         // If the parent has a sandbox ready, pass the pod name so the child reuses it
         if (string.IsNullOrEmpty(contract.SandboxPodName) && context.SandboxHandle is { } handle)
         {
@@ -92,7 +80,7 @@ public sealed class SwarmAgentSpawner
         RequestContext.Set(GrainCallContextKeys.ParentGrainKey, context.GrainKey);
 
         var grain = context.GrainFactory.GetGrain<IAgentGrain>(agentKey);
-        _ = grain.RunAsync(contract, query, context.Observer);
+        _ = grain.RunAsync(contract, query);
 
         var registryKey = AgentKeys.Conversation(identityContext.UserId, conversationId);
         var registry = context.GrainFactory.GetGrain<IAgentRegistryGrain>(registryKey);

@@ -1,6 +1,8 @@
+using MessagePack;
 namespace DonkeyWork.Agents.Actors.Contracts.Events;
 
 [GenerateSerializer]
+[MessagePackObject(keyAsPropertyName: true)]
 public sealed record StreamAgentResultDataEvent(
     string AgentKey,
     [property: Id(0)] string SubAgentKey,
@@ -14,6 +16,7 @@ public sealed record StreamAgentResultDataEvent(
 }
 
 [GenerateSerializer]
+[MessagePackObject(keyAsPropertyName: true)]
 public sealed record StreamAgentCitation(
     [property: Id(0)] string Title,
     [property: Id(1)] string Url,

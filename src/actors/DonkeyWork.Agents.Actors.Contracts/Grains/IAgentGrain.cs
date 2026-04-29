@@ -7,7 +7,7 @@ namespace DonkeyWork.Agents.Actors.Contracts.Grains;
 
 public interface IAgentGrain : IGrainWithStringKey
 {
-    Task<AgentResult> RunAsync(AgentContract contract, string input, IAgentResponseObserver? observer);
+    Task<AgentResult> RunAsync(AgentContract contract, string input);
 
     [AlwaysInterleave]
     Task CancelAsync();

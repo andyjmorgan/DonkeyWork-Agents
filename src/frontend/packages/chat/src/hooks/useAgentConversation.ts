@@ -37,6 +37,15 @@ export interface UseAgentConversationOptions {
   onReset?: () => void
 }
 
+const MAX_RECONNECT_ATTEMPTS = 10;
+const RECONNECT_BACKOFF_BASE_MS = 500;
+const RECONNECT_BACKOFF_CAP_MS = 10000;
+
+interface TurnCursor {
+  lastSequence: number;
+  complete: boolean;
+}
+
 export function useAgentConversation(initialConversationId?: string, options?: UseAgentConversationOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,6 +72,18 @@ export function useAgentConversation(initialConversationId?: string, options?: U
 
   // Track pending RPC requests for getState
   const pendingRpcRef = useRef<Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>>(new Map());
+
+  // Per-turn sequence cursors: turnId -> { lastSequence, complete }
+  // Tracks the highest JetStream sequence seen for each turn so reconnects can replay gaps.
+  const turnCursorsRef = useRef<Map<string, TurnCursor>>(new Map());
+
+  // Deduplication set: sequences already dispatched to handleEvent
+  const seenSequencesRef = useRef<Set<number>>(new Set());
+
+  // Reconnect state
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isManualCloseRef = useRef(false);
 
   // --- Box update helpers ---
 
@@ -110,8 +131,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         return result?.boxes ?? boxes;
       });
     } else {
-      // No index entry — scan all messages for a nested agent_group matching this agentKey.
-      // Uses a single setMessages call so the scan result is available for the fallback decision.
       setMessages((prev) => {
         for (const m of prev) {
           for (let i = 0; i < m.boxes.length; i++) {
@@ -125,7 +144,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
           }
         }
 
-        // Fallback: append to the target message's root boxes
         return prev.map((m) => {
           if (m.id !== fallbackMessageId) return m;
           const boxes = m.boxes;
@@ -268,6 +286,9 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       if (eventTurnId) {
         turnIdToMessageIdRef.current.set(eventTurnId, newId);
         setActiveTurnId(eventTurnId);
+        if (!turnCursorsRef.current.has(eventTurnId)) {
+          turnCursorsRef.current.set(eventTurnId, { lastSequence: 0, complete: false });
+        }
       }
       const source = (data.source as string) ?? "user";
       const preview = (data.messagePreview as string) ?? "";
@@ -298,22 +319,34 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     if (eventType === "turn_end") {
       setIsProcessing(false);
       setActiveTurnId(null);
-      return;
-    }
-
-    if (eventType === "queue_status") {
-      setPendingCount((data.pendingCount as number) ?? 0);
-      setIsProcessing((data.isProcessing as boolean) ?? false);
+      if (eventTurnId) {
+        const cursor = turnCursorsRef.current.get(eventTurnId);
+        if (cursor) {
+          turnCursorsRef.current.set(eventTurnId, { ...cursor, complete: true });
+        }
+      }
       return;
     }
 
     if (eventType === "cancelled") {
+      if (eventTurnId) {
+        const cursor = turnCursorsRef.current.get(eventTurnId);
+        if (cursor) {
+          turnCursorsRef.current.set(eventTurnId, { ...cursor, complete: true });
+        }
+      }
       setIsProcessing(false);
       setActiveTurnId(null);
       if (assistantId) {
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
         currentAssistantIdRef.current = null;
       }
+      return;
+    }
+
+    if (eventType === "queue_status") {
+      setPendingCount((data.pendingCount as number) ?? 0);
+      setIsProcessing((data.isProcessing as boolean) ?? false);
       return;
     }
 
@@ -440,9 +473,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         const targetMessageId = parentEntry?.messageId ?? assistantId;
         const childGroup = makeAgentGroup(spawnedKey, agentType, label, icon, displayName);
 
-        // Set a provisional ref entry synchronously so that child events
-        // arriving before React processes the setMessages callback can still
-        // find this agent via agentGroupIndexRef.
         agentGroupIndexRef.current.set(spawnedKey, { messageId: targetMessageId, boxIndex: -1 });
 
         if (parentEntry) {
@@ -641,7 +671,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         method,
         params: params ?? {},
       }));
-      // Timeout after 10s
       setTimeout(() => {
         if (pendingRpcRef.current.has(id)) {
           pendingRpcRef.current.delete(id);
@@ -650,6 +679,62 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       }, 10000);
     });
   }, []);
+
+  // --- Cursor tracking: dispatch event and update sequence ---
+
+  const dispatchWithSequence = useCallback((eventData: Record<string, unknown>, sequence: number) => {
+    const turnId = eventData.turnId as string | undefined;
+
+    if (sequence > 0) {
+      if (seenSequencesRef.current.has(sequence)) return;
+      seenSequencesRef.current.add(sequence);
+
+      if (turnId) {
+        const existing = turnCursorsRef.current.get(turnId);
+        if (!existing || sequence > existing.lastSequence) {
+          turnCursorsRef.current.set(turnId, {
+            lastSequence: sequence,
+            complete: existing?.complete ?? false,
+          });
+        }
+      }
+    }
+
+    handleEventRef.current(eventData);
+  }, []);
+
+  // --- Replay missed events after reconnect ---
+
+  const replayMissedEvents = useCallback(async () => {
+    const incompleteTurns = Array.from(turnCursorsRef.current.entries())
+      .filter(([, cursor]) => !cursor.complete && cursor.lastSequence > 0);
+
+    for (const [turnId, cursor] of incompleteTurns) {
+      try {
+        const result = await sendRpc("eventsSince", {
+          turnId,
+          afterSequence: cursor.lastSequence,
+        }) as { events?: { payload: Record<string, unknown>; sequence: number }[]; lastSequence?: number; complete?: boolean } | null;
+
+        if (!result) continue;
+
+        const replayedEvents = result.events ?? [];
+        const lastSeq = result.lastSequence ?? cursor.lastSequence;
+        const isComplete = result.complete ?? false;
+
+        for (const { payload, sequence } of replayedEvents) {
+          dispatchWithSequence(payload, sequence);
+        }
+
+        turnCursorsRef.current.set(turnId, {
+          lastSequence: lastSeq,
+          complete: isComplete,
+        });
+      } catch {
+        // If eventsSince fails, skip this turn — live events will continue
+      }
+    }
+  }, [sendRpc, dispatchWithSequence]);
 
   // --- WebSocket connection ---
 
@@ -662,6 +747,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
 
     ws.onopen = () => {
       setIsConnected(true);
+      reconnectAttemptsRef.current = 0;
     };
 
     ws.onmessage = (evt) => {
@@ -672,7 +758,6 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         return;
       }
 
-      // Handle RPC responses (has id and result/error)
       if (frame.id !== undefined && frame.id !== null) {
         const id = frame.id as number;
         const pending = pendingRpcRef.current.get(id);
@@ -688,14 +773,16 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         }
       }
 
-      // Handle server notifications (events)
       if (frame.method === "event" && Array.isArray(frame.params)) {
-        const eventData = (frame.params as unknown[])[0] as Record<string, unknown>;
+        const params = frame.params as unknown[];
+        const eventData = params[0] as Record<string, unknown>;
+        const sequence = typeof params[1] === "number" ? params[1] : 0;
+
         if (eventData) {
           if (isBufferingRef.current) {
-            eventBufferRef.current.push(eventData);
+            eventBufferRef.current.push({ ...eventData, _sequence: sequence });
           } else {
-            handleEventRef.current(eventData);
+            dispatchWithSequence(eventData, sequence);
           }
         }
       } else if (frame.error && !frame.id) {
@@ -712,12 +799,23 @@ export function useAgentConversation(initialConversationId?: string, options?: U
 
     ws.onclose = () => {
       setIsConnected(false);
+      if (!isManualCloseRef.current && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        const delay = Math.min(
+          RECONNECT_BACKOFF_BASE_MS * Math.pow(2, reconnectAttemptsRef.current),
+          RECONNECT_BACKOFF_CAP_MS
+        );
+        reconnectAttemptsRef.current++;
+        reconnectTimerRef.current = setTimeout(() => {
+          doReconnect(convId);
+        }, delay);
+      }
     };
 
     ws.onerror = () => {
       setIsConnected(false);
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatchWithSequence]);
 
   // --- Rebuild agent group index from restored messages ---
 
@@ -746,14 +844,14 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     }
   }
 
-  // --- Reconnection ---
+  // --- Reconnection (internal, used by ws.onclose and the public reconnect) ---
 
-  const reconnect = useCallback(async (convId: string) => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const doReconnect = useCallback(async (convId: string) => {
     setIsReconnecting(true);
     isBufferingRef.current = true;
     eventBufferRef.current = [];
 
-    // Connect WebSocket (events start flowing but are buffered)
     await connect(convId);
     await new Promise<void>((resolve) => {
       const check = () => {
@@ -771,58 +869,64 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const grainMessages: InternalMessage[] = stateResult?.messages ?? [];
       const agents: TrackedAgent[] = Array.isArray(agentsResult) ? agentsResult : [];
 
-      console.debug("[reconnect] getState returned", grainMessages.length, "messages, listAgents returned", agents.length, "agents");
-      if (grainMessages.length > 0) {
-        console.debug("[reconnect] first message $type:", grainMessages[0]?.$type);
-      }
-
       if (grainMessages.length > 0) {
         const chatMessages = internalToChat(grainMessages, agents);
         setMessages(chatMessages);
-
-        // Populate agentGroupIndexRef so live events can target agent groups
         rebuildAgentGroupIndex(chatMessages);
 
-        // Set currentAssistantIdRef to last assistant message so live events append correctly
         const lastAssistant = chatMessages.filter((m) => m.role === "assistant").pop();
         if (lastAssistant) {
           currentAssistantIdRef.current = lastAssistant.id;
         }
       }
 
-      // If there are still-running agents, mark processing
       if (agents.some((a) => a.status === "Pending")) {
         setIsProcessing(true);
       }
+
+      // Replay missed events for turns that were in-progress when we disconnected
+      await replayMissedEvents();
 
       isBufferingRef.current = false;
       const buffered = eventBufferRef.current;
       eventBufferRef.current = [];
       for (const evt of buffered) {
-        handleEventRef.current(evt);
+        const { _sequence, ...eventData } = evt as Record<string, unknown>;
+        dispatchWithSequence(eventData as Record<string, unknown>, typeof _sequence === "number" ? _sequence : 0);
       }
     } catch {
-      // If getState fails, just stop buffering and let live events flow
       isBufferingRef.current = false;
       const buffered = eventBufferRef.current;
       eventBufferRef.current = [];
       for (const evt of buffered) {
-        handleEventRef.current(evt);
+        const { _sequence, ...eventData } = evt as Record<string, unknown>;
+        dispatchWithSequence(eventData as Record<string, unknown>, typeof _sequence === "number" ? _sequence : 0);
       }
     } finally {
       setIsReconnecting(false);
     }
-  }, [connect, sendRpc]);
+  }, [connect, sendRpc, replayMissedEvents, dispatchWithSequence]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Public reconnect (manual, used on initial conversation load) ---
+
+  const reconnect = useCallback(async (convId: string) => {
+    isManualCloseRef.current = false;
+    reconnectAttemptsRef.current = 0;
+    await doReconnect(convId);
+  }, [doReconnect]);
 
   // --- Auto-connect on mount when conversationId is in URL ---
 
   useEffect(() => {
     if (initialConversationId) {
-      // Reconnect to existing conversation
       setConversationId(initialConversationId);
       reconnect(initialConversationId);
     } else {
-      // Fresh chat — reset everything
+      isManualCloseRef.current = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       wsRef.current?.close();
       wsRef.current = null;
       setMessages([]);
@@ -839,9 +943,17 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       pendingRpcRef.current.clear();
       eventBufferRef.current = [];
       isBufferingRef.current = false;
+      turnCursorsRef.current = new Map();
+      seenSequencesRef.current = new Set();
+      reconnectAttemptsRef.current = 0;
     }
 
     return () => {
+      isManualCloseRef.current = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       wsRef.current?.close();
       wsRef.current = null;
     };
@@ -859,6 +971,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
 
       options?.onConversationCreated?.(activeConvId);
 
+      isManualCloseRef.current = false;
+      reconnectAttemptsRef.current = 0;
       await connect(activeConvId);
       await new Promise<void>((resolve) => {
         const check = () => {
@@ -905,7 +1019,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         );
       }
     }).catch(() => {});
-  }, [conversationId, connect]);
+  }, [conversationId, connect, options]);
 
   const cancel = useCallback((key: string, scope?: string) => {
     wsRef.current?.send(JSON.stringify({
@@ -924,6 +1038,11 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   }, [sendRpc]);
 
   const resetConversation = useCallback(() => {
+    isManualCloseRef.current = true;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     wsRef.current?.close();
     wsRef.current = null;
     setMessages([]);
@@ -942,6 +1061,9 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     pendingRpcRef.current.clear();
     eventBufferRef.current = [];
     isBufferingRef.current = false;
+    turnCursorsRef.current = new Map();
+    seenSequencesRef.current = new Set();
+    reconnectAttemptsRef.current = 0;
     options?.onReset?.();
   }, [options]);
 
