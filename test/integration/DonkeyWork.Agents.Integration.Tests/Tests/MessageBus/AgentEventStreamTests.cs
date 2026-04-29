@@ -314,4 +314,193 @@ public class AgentEventStreamTests : IAsyncLifetime
     }
 
     #endregion
+
+    #region Reconnect Tests
+
+    [Fact]
+    public async Task ReconnectMidTurn_GapEventsReplayedThenLiveTailResumes()
+    {
+        var conversationId = Guid.NewGuid().ToString();
+        var turnId = Guid.NewGuid();
+        var agentKey = $"test:{conversationId}";
+
+        var liveTailConsumer = _consumerFactory.CreateConsumer();
+        var liveTailOpts = AgentEventConsumerFactory.LiveTailOptions(conversationId);
+
+        using var liveCtsBefore = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var liveReceivedBefore = new List<DeliveredMessage<StreamEventBase>>();
+        var liveTaskBefore = Task.Run(async () =>
+        {
+            await foreach (var msg in liveTailConsumer.GetMessagesAsync<StreamEventBase>(liveTailOpts, liveCtsBefore.Token))
+            {
+                liveReceivedBefore.Add(msg);
+                if (liveReceivedBefore.Count >= 2) break;
+            }
+        }, liveCtsBefore.Token);
+
+        await Task.Delay(200, liveCtsBefore.Token);
+
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "A") { TurnId = turnId }, conversationId);
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "B") { TurnId = turnId }, conversationId);
+
+        await liveTaskBefore;
+        Assert.Equal(2, liveReceivedBefore.Count);
+        var cursor = liveReceivedBefore[1].Sequence;
+
+        // Consumer disposed — simulate WS drop
+        // Events C, D, E published while disconnected
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "C") { TurnId = turnId }, conversationId);
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "D") { TurnId = turnId }, conversationId);
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "E") { TurnId = turnId }, conversationId);
+
+        // Replay gap via EventsSince
+        var replayConsumer = _consumerFactory.CreateConsumer();
+        var replayOpts = AgentEventConsumerFactory.ReplayFromOptions(conversationId, turnId, cursor);
+        var replayed = new List<DeliveredMessage<StreamEventBase>>();
+        bool replayComplete = false;
+
+        using var replayCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await foreach (var msg in replayConsumer.GetMessagesAsync<StreamEventBase>(replayOpts, replayCts.Token))
+        {
+            replayed.Add(msg);
+            if (replayed.Count >= 3) break;
+        }
+
+        Assert.Equal(3, replayed.Count);
+        Assert.Equal("C", ((StreamMessageEvent)replayed[0].Payload).Text);
+        Assert.Equal("D", ((StreamMessageEvent)replayed[1].Payload).Text);
+        Assert.Equal("E", ((StreamMessageEvent)replayed[2].Payload).Text);
+        Assert.False(replayComplete);
+
+        // Resume live tail (simulate reconnect)
+        var resumedLiveConsumer = _consumerFactory.CreateConsumer();
+        var resumedLiveOpts = AgentEventConsumerFactory.LiveTailOptions(conversationId);
+        var resumedLive = new List<DeliveredMessage<StreamEventBase>>();
+
+        using var resumeCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var resumeTask = Task.Run(async () =>
+        {
+            await foreach (var msg in resumedLiveConsumer.GetMessagesAsync<StreamEventBase>(resumedLiveOpts, resumeCts.Token))
+            {
+                resumedLive.Add(msg);
+                if (resumedLive.Count >= 1) break;
+            }
+        }, resumeCts.Token);
+
+        await Task.Delay(200, resumeCts.Token);
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "F") { TurnId = turnId }, conversationId);
+        await resumeTask;
+
+        Assert.Single(resumedLive);
+        Assert.Equal("F", ((StreamMessageEvent)resumedLive[0].Payload).Text);
+
+        // Assemble full stream as the frontend would: A, B (live before drop) + C, D, E (replayed) + F (live after reconnect)
+        var full = liveReceivedBefore.Concat(replayed).Concat(resumedLive).ToList();
+        Assert.Equal(6, full.Count);
+
+        var texts = full.Select(m => ((StreamMessageEvent)m.Payload).Text).ToList();
+        Assert.Equal(["A", "B", "C", "D", "E", "F"], texts);
+
+        // Sequences must be monotonically increasing and have no gaps within known range
+        var sequences = full.Select(m => m.Sequence).ToList();
+        for (int i = 1; i < sequences.Count; i++)
+            Assert.True(sequences[i] > sequences[i - 1], $"Sequence not monotonic at index {i}: {sequences[i - 1]} -> {sequences[i]}");
+
+        var uniqueSequences = sequences.ToHashSet();
+        Assert.Equal(sequences.Count, uniqueSequences.Count);
+    }
+
+    [Fact]
+    public async Task TwoClientsOnSameConversation_BothReceiveAllEvents()
+    {
+        var conversationId = Guid.NewGuid().ToString();
+        var turnId = Guid.NewGuid();
+        var agentKey = $"test:{conversationId}";
+
+        var consumer1 = _consumerFactory.CreateConsumer();
+        var consumer2 = _consumerFactory.CreateConsumer();
+        var opts1 = AgentEventConsumerFactory.LiveTailOptions(conversationId);
+        var opts2 = AgentEventConsumerFactory.LiveTailOptions(conversationId);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var received1 = new List<DeliveredMessage<StreamEventBase>>();
+        var received2 = new List<DeliveredMessage<StreamEventBase>>();
+
+        var task1 = Task.Run(async () =>
+        {
+            await foreach (var msg in consumer1.GetMessagesAsync<StreamEventBase>(opts1, cts.Token))
+            {
+                received1.Add(msg);
+                if (received1.Count >= 4) break;
+            }
+        }, cts.Token);
+
+        var task2 = Task.Run(async () =>
+        {
+            await foreach (var msg in consumer2.GetMessagesAsync<StreamEventBase>(opts2, cts.Token))
+            {
+                received2.Add(msg);
+                if (received2.Count >= 4) break;
+            }
+        }, cts.Token);
+
+        await Task.Delay(200, cts.Token);
+
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "msg1") { TurnId = turnId }, conversationId);
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "msg2") { TurnId = turnId }, conversationId);
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "msg3") { TurnId = turnId }, conversationId);
+        await _publisher.PublishAsync(new StreamMessageEvent(agentKey, "msg4") { TurnId = turnId }, conversationId);
+
+        await Task.WhenAll(task1, task2);
+
+        Assert.Equal(4, received1.Count);
+        Assert.Equal(4, received2.Count);
+
+        var texts1 = received1.Select(m => ((StreamMessageEvent)m.Payload).Text).ToList();
+        var texts2 = received2.Select(m => ((StreamMessageEvent)m.Payload).Text).ToList();
+        Assert.Equal(["msg1", "msg2", "msg3", "msg4"], texts1);
+        Assert.Equal(["msg1", "msg2", "msg3", "msg4"], texts2);
+
+        for (int i = 1; i < received1.Count; i++)
+            Assert.True(received1[i].Sequence > received1[i - 1].Sequence);
+
+        for (int i = 1; i < received2.Count; i++)
+            Assert.True(received2[i].Sequence > received2[i - 1].Sequence);
+    }
+
+    [Fact]
+    public async Task EventsSince_AgainstEvictedTurn_ReturnsEmptyAndComplete()
+    {
+        var conversationId = Guid.NewGuid().ToString();
+        var unknownTurnId = Guid.NewGuid();
+
+        var consumer = _consumerFactory.CreateConsumer();
+        var opts = AgentEventConsumerFactory.ReplayFromOptions(conversationId, unknownTurnId, 0);
+
+        var events = new List<DeliveredMessage<StreamEventBase>>();
+        bool complete = false;
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            await foreach (var msg in consumer.GetMessagesAsync<StreamEventBase>(opts, cts.Token))
+            {
+                events.Add(msg);
+                if (msg.Payload is StreamTurnEndEvent or StreamCancelledEvent)
+                {
+                    complete = true;
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected: no events published means consumer times out
+        }
+
+        Assert.Empty(events);
+        Assert.False(complete);
+    }
+
+    #endregion
 }
