@@ -44,7 +44,7 @@ public sealed class AgentEventStreamBootstrap : IHostedService
             {
                 Retention = StreamConfigRetention.Limits,
                 MaxAge = TimeSpan.FromHours(1),
-                MaxMsgsPerSubject = 10000,
+                MaxMsgsPerSubject = 50000,
                 Storage = StreamConfigStorage.File,
                 NumReplicas = 1,
             }, ct);
