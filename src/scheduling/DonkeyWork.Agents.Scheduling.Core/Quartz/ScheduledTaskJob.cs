@@ -124,7 +124,7 @@ public class ScheduledTaskJob : IJob
             contractJson,
             schedule.Payload.UserPrompt,
             contract.ModelId,
-            context.CancellationToken);
+            ct: context.CancellationToken);
 
         var scheduleExecutionIdStr = context.Get(ScheduleDataMapKeys.ScheduleExecutionId) as string;
         if (Guid.TryParse(scheduleExecutionIdStr, out var scheduleExecutionId))

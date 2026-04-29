@@ -26,6 +26,8 @@ export type NotificationType =
   // Conversation notifications
   | 'ConversationAgentStarted'
   | 'ConversationAgentCompleted'
+  // Audio recording notifications
+  | 'AudioRecordingUpdated'
 
 /**
  * Notification payload received from SignalR hub.

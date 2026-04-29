@@ -14,6 +14,7 @@
         <PackageReference Include="Scriban" Version="5.10.0" />
         <PackageReference Include="OpenAI" Version="2.8.0" />
         <PackageReference Include="Google_GenerativeAI" Version="3.6.3" />
+        <PackageReference Include="WolverineFx" Version="5.27.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -24,6 +25,7 @@
         <ProjectReference Include="..\..\credentials\DonkeyWork.Agents.Credentials.Contracts\DonkeyWork.Agents.Credentials.Contracts.csproj" />
         <ProjectReference Include="..\..\providers\DonkeyWork.Agents.Providers.Contracts\DonkeyWork.Agents.Providers.Contracts.csproj" />
         <ProjectReference Include="..\..\storage\DonkeyWork.Agents.Storage.Contracts\DonkeyWork.Agents.Storage.Contracts.csproj" />
+        <ProjectReference Include="..\..\common\DonkeyWork.Agents.Notifications.Contracts\DonkeyWork.Agents.Notifications.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

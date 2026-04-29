@@ -8,7 +8,7 @@ public interface IConversationGrain : IGrainWithStringKey
 {
     Task SubscribeAsync(IAgentResponseObserver observer);
 
-    Task PostUserMessageAsync(string message);
+    Task PostUserMessageAsync(string message, Guid turnId);
 
     Task DeliverAgentResultAsync(string agentKey, string label, AgentResult? result, bool isError);
 
@@ -16,6 +16,9 @@ public interface IConversationGrain : IGrainWithStringKey
     Task DeliverMessageAsync(AgentMessage message);
 
     Task CancelByKeyAsync(string key, string? scope = null);
+
+    [AlwaysInterleave]
+    Task<CancelTurnResult> CancelTurnAsync(Guid turnId);
 
     Task<IReadOnlyList<TrackedAgent>> ListAgentsAsync();
 

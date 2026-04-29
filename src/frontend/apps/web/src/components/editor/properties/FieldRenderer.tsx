@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { NodeFieldSchema } from '@donkeywork/api-client'
-import { credentials, type CredentialSummary } from '@donkeywork/api-client'
+import { credentials, type CredentialSummary, audioCollections, type AudioCollection } from '@donkeywork/api-client'
 import {
   Input,
   Textarea,
@@ -23,6 +23,7 @@ import { KeyValueEditor, type KeyValueCollection } from './KeyValueEditor'
 import { ScribanEditor } from './ScribanEditor'
 import Editor from '@monaco-editor/react'
 import { CreateCredentialDialog } from '@/components/credentials/CreateCredentialDialog'
+import { AudioCollectionFormDialog } from '@/components/audio/AudioCollectionFormDialog'
 
 // Variable mode toggle button - allows switching between native control and ScribanEditor
 function VariableModeButton({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
@@ -76,6 +77,8 @@ export function FieldRenderer({
 }: FieldRendererProps) {
   const [availableCredentials, setAvailableCredentials] = useState<CredentialSummary[]>([])
   const [isCreateCredentialOpen, setIsCreateCredentialOpen] = useState(false)
+  const [availableAudioCollections, setAvailableAudioCollections] = useState<AudioCollection[]>([])
+  const [isCreateAudioCollectionOpen, setIsCreateAudioCollectionOpen] = useState(false)
   // Track if field is in variable mode (showing ScribanEditor instead of native control)
   const [isVariableMode, setIsVariableMode] = useState(false)
 
@@ -85,7 +88,7 @@ export function FieldRenderer({
   const showAsVariable = isVariableMode || hasVariableExpression
 
   // Control types that need the variable mode toggle (native controls that don't support variables directly)
-  const needsVariableToggle = field.supportsVariables && ['Slider', 'Toggle', 'Number', 'Select'].includes(field.controlType)
+  const needsVariableToggle = field.supportsVariables && ['Slider', 'Toggle', 'Number', 'Select', 'AudioCollection'].includes(field.controlType)
 
   const isReadOnly = readOnly || field.immutable === true
 
@@ -94,11 +97,18 @@ export function FieldRenderer({
     credentials.list().then(setAvailableCredentials).catch(console.error)
   }, [])
 
+  const loadAudioCollections = useCallback(() => {
+    audioCollections.list(0, 100).then((r) => setAvailableAudioCollections(r.items)).catch(console.error)
+  }, [])
+
   useEffect(() => {
     if (field.controlType === 'Credential') {
       loadCredentials()
     }
-  }, [field.controlType, loadCredentials])
+    if (field.controlType === 'AudioCollection') {
+      loadAudioCollections()
+    }
+  }, [field.controlType, loadCredentials, loadAudioCollections])
 
   if (field.supportedBy && field.supportedBy.length > 0 && modelId) {
     if (!field.supportedBy.includes(modelId)) {
@@ -316,7 +326,11 @@ export function FieldRenderer({
           )
         }
         return (
-          <div className="border rounded-md overflow-hidden">
+          <div
+            className="border rounded-md overflow-hidden"
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDownCapture={(e) => e.stopPropagation()}
+          >
             <Editor
               height="200px"
               defaultLanguage="plaintext"
@@ -336,7 +350,11 @@ export function FieldRenderer({
 
       case 'Json':
         return (
-          <div className="border rounded-md overflow-hidden">
+          <div
+            className="border rounded-md overflow-hidden"
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDownCapture={(e) => e.stopPropagation()}
+          >
             <Editor
               height="200px"
               defaultLanguage="json"
@@ -416,6 +434,63 @@ export function FieldRenderer({
             />
           </>
         )
+
+      case 'AudioCollection': {
+        const selected = availableAudioCollections.find((c) => c.id === value)
+        return (
+          <>
+            <Select
+              value={selected ? String(value) : ''}
+              onValueChange={(v) => {
+                if (v === '__create_new__') {
+                  setIsCreateAudioCollectionOpen(true)
+                } else if (v === '__unfiled__') {
+                  onChange('')
+                } else {
+                  onChange(v)
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  typeof value === 'string' && value && !selected
+                    ? value
+                    : 'Unfiled (pick or create a collection)'
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__unfiled__">
+                  <span className="text-muted-foreground">Unfiled</span>
+                </SelectItem>
+                {availableAudioCollections.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__create_new__" className="text-blue-500">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>New Collection…</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Or switch to variable mode and enter a name — the collection is created on first run if it doesn't exist.
+            </p>
+            <AudioCollectionFormDialog
+              open={isCreateAudioCollectionOpen}
+              mode="create"
+              onClose={() => setIsCreateAudioCollectionOpen(false)}
+              onSaved={(collection) => {
+                setIsCreateAudioCollectionOpen(false)
+                loadAudioCollections()
+                onChange(collection.id)
+              }}
+            />
+          </>
+        )
+      }
 
       default:
         return (

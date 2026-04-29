@@ -81,4 +81,11 @@ public sealed class GetOrchestrationVersionResponseV1
 
     [JsonPropertyName("naviEnabled")]
     public bool NaviEnabled { get; init; }
+
+    /// <summary>
+    /// Optional per-version execution timeout in seconds. Null means the global
+    /// default (<c>Agents:ExecutionTimeout</c>) applies.
+    /// </summary>
+    [JsonPropertyName("executionTimeoutSeconds")]
+    public int? ExecutionTimeoutSeconds { get; init; }
 }

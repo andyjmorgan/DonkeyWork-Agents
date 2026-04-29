@@ -97,4 +97,36 @@ public sealed class StoreAudioNodeConfiguration : NodeConfiguration
     [Tab("Settings", Order = 1)]
     [SupportVariables]
     public string? FileExtension { get; init; }
+
+    /// <summary>
+    /// Optional collection (folder) for the recording. Pick from the dropdown or type
+    /// a name — if a collection with that name doesn't exist, one is created on first run.
+    /// Leave blank to store unfiled.
+    /// </summary>
+    [JsonPropertyName("collectionId")]
+    [ConfigurableField(Label = "Collection", ControlType = ControlType.AudioCollection, Order = 10,
+        Description = "Pick an existing collection or type a name to create one. Leave blank to store unfiled.")]
+    [Tab("Collection", Order = 2, Icon = "folder")]
+    [SupportVariables]
+    public string? CollectionId { get; init; }
+
+    /// <summary>
+    /// Optional sequence number within the collection for chapter-style ordering.
+    /// </summary>
+    [JsonPropertyName("sequenceNumber")]
+    [ConfigurableField(Label = "Sequence Number", ControlType = ControlType.Text, Order = 20,
+        Description = "Position within the collection. Leave blank to append at the end.")]
+    [Tab("Collection", Order = 2)]
+    [SupportVariables]
+    public string? SequenceNumber { get; init; }
+
+    /// <summary>
+    /// Optional chapter-style title; falls back to RecordingName in the UI when null.
+    /// </summary>
+    [JsonPropertyName("chapterTitle")]
+    [ConfigurableField(Label = "Chapter Title", ControlType = ControlType.Text, Order = 30,
+        Description = "Optional chapter title within the collection.")]
+    [Tab("Collection", Order = 2)]
+    [SupportVariables]
+    public string? ChapterTitle { get; init; }
 }

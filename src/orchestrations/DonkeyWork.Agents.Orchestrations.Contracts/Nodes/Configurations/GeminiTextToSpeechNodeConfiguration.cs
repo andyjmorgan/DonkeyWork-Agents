@@ -5,8 +5,9 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 namespace DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 
 /// <summary>
-/// Configuration for the Gemini Text-to-Speech node.
-/// Uses Google Gemini TTS models which support larger context windows (8K tokens).
+/// Configuration for the Gemini Text-to-Speech node. Long text is chunked internally
+/// on natural boundaries (paragraphs, list items, sentences) and clips are stitched
+/// downstream.
 /// </summary>
 [Node(
     DisplayName = "Gemini Text to Speech",
@@ -42,12 +43,16 @@ public sealed class GeminiTextToSpeechNodeConfiguration : NodeConfiguration, IRe
         Default = "Kore")]
     public required string Voice { get; init; }
 
-    [JsonPropertyName("inputText")]
-    [ConfigurableField(Label = "Input Text", ControlType = ControlType.TextArea, Order = 10, Required = true,
-        Description = "The text to convert to speech. Use {{Steps.node_name.Property}} for variables.")]
+    /// <summary>
+    /// Plain-text or markdown-ish input. Markdown formatting is stripped before synthesis.
+    /// Long inputs are chunked on natural boundaries and rendered as parallel clips.
+    /// </summary>
+    [JsonPropertyName("text")]
+    [ConfigurableField(Label = "Text", ControlType = ControlType.TextArea, Order = 10, Required = true,
+        Description = "Text to speak. Markdown formatting is stripped. Long input is chunked automatically.")]
     [Tab("Content", Order = 2, Icon = "file-text")]
     [SupportVariables]
-    public required string InputText { get; init; }
+    public required string Text { get; init; }
 
     [JsonPropertyName("instructions")]
     [ConfigurableField(Label = "Voice Instructions", ControlType = ControlType.TextArea, Order = 20,
@@ -62,4 +67,34 @@ public sealed class GeminiTextToSpeechNodeConfiguration : NodeConfiguration, IRe
     [Tab("Advanced", Order = 3, Icon = "sliders")]
     [SelectOptions("mp3", "wav", "pcm", Default = "mp3")]
     public string ResponseFormat { get; init; } = "mp3";
+
+    /// <summary>
+    /// Target characters per chunk. Chunks are packed greedily up to this size.
+    /// </summary>
+    [JsonPropertyName("targetCharCount")]
+    [ConfigurableField(Label = "Target Chars", ControlType = ControlType.Slider, Order = 20,
+        Description = "Target characters per chunk. Chunker packs blocks up to this size.")]
+    [Tab("Advanced", Order = 3)]
+    [Slider(Min = 500, Max = 7500, Step = 250, Default = 4000)]
+    public int TargetCharCount { get; init; } = 4000;
+
+    /// <summary>
+    /// Hard ceiling per chunk. Gemini TTS comfortable around 8K chars.
+    /// </summary>
+    [JsonPropertyName("maxCharCount")]
+    [ConfigurableField(Label = "Max Chars", ControlType = ControlType.Slider, Order = 30,
+        Description = "Hard ceiling per chunk. Gemini TTS comfortable up to ~8000 chars.")]
+    [Tab("Advanced", Order = 3)]
+    [Slider(Min = 500, Max = 8000, Step = 250, Default = 7500)]
+    public int MaxCharCount { get; init; } = 7500;
+
+    /// <summary>
+    /// Maximum concurrent provider calls when synthesizing multiple chunks.
+    /// </summary>
+    [JsonPropertyName("maxParallelism")]
+    [ConfigurableField(Label = "Max Parallelism", ControlType = ControlType.Slider, Order = 40,
+        Description = "Maximum concurrent provider calls when synthesizing multiple chunks.")]
+    [Tab("Advanced", Order = 3)]
+    [Slider(Min = 1, Max = 8, Step = 1, Default = 4)]
+    public int MaxParallelism { get; init; } = 4;
 }

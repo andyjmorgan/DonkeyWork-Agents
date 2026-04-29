@@ -32,13 +32,16 @@ public class NodeTypeSchemaServiceTests
 
         Assert.NotNull(tts);
         Assert.NotNull(tts.OutputProperties);
+        Assert.Contains("Clips", tts.OutputProperties);
+        Assert.Contains("Voice", tts.OutputProperties);
+        Assert.Contains("Model", tts.OutputProperties);
+        Assert.Contains("TotalSizeBytes", tts.OutputProperties);
+        Assert.Contains("ClipCount", tts.OutputProperties);
         Assert.Contains("AudioBase64", tts.OutputProperties);
         Assert.Contains("ContentType", tts.OutputProperties);
         Assert.Contains("FileExtension", tts.OutputProperties);
         Assert.Contains("SizeBytes", tts.OutputProperties);
         Assert.Contains("Transcript", tts.OutputProperties);
-        Assert.Contains("Voice", tts.OutputProperties);
-        Assert.Contains("Model", tts.OutputProperties);
     }
 
     [Fact]

@@ -51,12 +51,14 @@ function MessageBubble({
   isCurrentTurn,
   onAgentClick,
   onAgentCancel,
+  onCancelTurn,
 }: {
   message: ChatMessage;
   isStreaming: boolean;
   isCurrentTurn: boolean;
   onAgentClick: (entry: AgentEntry) => void;
   onAgentCancel?: (agentKey: string) => void;
+  onCancelTurn?: (turnId: string) => void;
 }) {
   if (message.role === "progress") {
     return (
@@ -73,11 +75,22 @@ function MessageBubble({
   const source = message._source;
 
   if (isUser) {
+    const isPending = message._pending === true && !!message._turnId;
     return (
       <div className="flex justify-end px-6 py-1.5">
         <div className="max-w-[75%]">
-          <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/10">
+          <div className="relative rounded-2xl rounded-br-md px-4 py-2.5 text-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/10">
             <span className="whitespace-pre-wrap">{message.content}</span>
+            {isPending && onCancelTurn && (
+              <button
+                type="button"
+                onClick={() => onCancelTurn(message._turnId!)}
+                className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 rounded-full bg-slate-700/80 text-slate-300 hover:bg-slate-600 hover:text-white transition-colors"
+                aria-label="Cancel pending message"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            )}
           </div>
           <div className="flex justify-end mt-1">
             <CopyButton text={message.content} />
@@ -182,10 +195,12 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     messages,
     isProcessing,
     pendingCount,
+    activeTurnId,
     conversationId,
     sendMessage,
     sendRpc,
     cancel,
+    cancelTurn,
     resetConversation,
     isConnected,
     isReconnecting,
@@ -421,6 +436,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
                 isCurrentTurn={isProcessing && msg.role === "assistant" && i === messages.length - 1}
                 onAgentClick={handleAgentClick(msg.id)}
                 onAgentCancel={handleAgentCancel}
+                onCancelTurn={cancelTurn}
               />
             ))}
             <div ref={bottomRef} />
@@ -468,13 +484,24 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
                 className="w-full h-11 rounded-xl border border-input bg-secondary px-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all"
               />
             </div>
-            <button
-              type="submit"
-              disabled={!input.trim()}
-              className="h-11 px-5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-40 disabled:hover:shadow-none transition-all cursor-pointer disabled:cursor-not-allowed"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+            {activeTurnId ? (
+              <button
+                type="button"
+                onClick={() => cancelTurn(activeTurnId)}
+                className="h-11 px-5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-red-500 to-rose-600 hover:shadow-lg hover:shadow-red-500/25 transition-all cursor-pointer"
+                aria-label="Stop current turn"
+              >
+                <Square className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className="h-11 px-5 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:shadow-lg hover:shadow-cyan-500/25 disabled:opacity-40 disabled:hover:shadow-none transition-all cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            )}
           </form>
         </div>
       </div>

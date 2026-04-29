@@ -226,6 +226,10 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("status");
 
+                    b.Property<Guid>("TurnId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("turn_id");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -253,6 +257,9 @@ namespace DonkeyWork.Agents.Persistence.Migrations
 
                     b.HasIndex("ConversationId", "StartedAt")
                         .HasDatabaseName("ix_agent_executions_conversation_id_started_at");
+
+                    b.HasIndex("ConversationId", "TurnId")
+                        .HasDatabaseName("ix_agent_executions_conversation_id_turn_id");
 
                     b.ToTable("agent_executions", "actors");
                 });
@@ -284,6 +291,10 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("sequence_number");
 
+                    b.Property<Guid>("TurnId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("turn_id");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -300,6 +311,9 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.HasIndex("GrainKey", "SequenceNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_grain_messages_grain_key_sequence_number");
+
+                    b.HasIndex("GrainKey", "TurnId")
+                        .HasDatabaseName("ix_grain_messages_grain_key_turn_id");
 
                     b.ToTable("grain_messages", "actors");
                 });
@@ -1695,6 +1709,10 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("direct_enabled");
 
+                    b.Property<int?>("ExecutionTimeoutSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("execution_timeout_seconds");
+
                     b.Property<string>("InputSchema")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -2769,6 +2787,59 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.ToTable("scheduled_job_payloads", "scheduling");
                 });
 
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsAudioCollectionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("CoverImagePath")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("cover_image_path");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DefaultModel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("default_model");
+
+                    b.Property<string>("DefaultVoice")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("default_voice");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("collections", "tts");
+                });
+
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsPlaybackEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2832,6 +2903,15 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<string>("ChapterTitle")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("chapter_title");
+
+                    b.Property<Guid?>("CollectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("collection_id");
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -2846,6 +2926,10 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("description");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("error_message");
 
                     b.Property<string>("FilePath")
                         .IsRequired()
@@ -2868,9 +2952,23 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("orchestration_execution_id");
 
+                    b.Property<double>("Progress")
+                        .HasColumnType("double precision")
+                        .HasColumnName("progress");
+
+                    b.Property<int?>("SequenceNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence_number");
+
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint")
                         .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
 
                     b.Property<string>("Transcript")
                         .IsRequired()
@@ -2895,6 +2993,8 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.HasIndex("OrchestrationExecutionId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("CollectionId", "SequenceNumber");
 
                     b.ToTable("recordings", "tts");
                 });
@@ -3241,6 +3341,16 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.Navigation("Recording");
                 });
 
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsRecordingEntity", b =>
+                {
+                    b.HasOne("DonkeyWork.Agents.Persistence.Entities.Tts.TtsAudioCollectionEntity", "Collection")
+                        .WithMany("Recordings")
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Collection");
+                });
+
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.A2a.A2aServerConfigurationEntity", b =>
                 {
                     b.Navigation("HeaderConfigurations");
@@ -3333,6 +3443,11 @@ namespace DonkeyWork.Agents.Persistence.Migrations
                     b.Navigation("Executions");
 
                     b.Navigation("Payload");
+                });
+
+            modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsAudioCollectionEntity", b =>
+                {
+                    b.Navigation("Recordings");
                 });
 
             modelBuilder.Entity("DonkeyWork.Agents.Persistence.Entities.Tts.TtsRecordingEntity", b =>

@@ -134,7 +134,7 @@ public class ScheduledTaskJobTests : IDisposable
         _agentExecRepoMock.Setup(r => r.CreateAsync(
             It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(),
             It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string?>(),
-            It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
         var grainMock = new Mock<IAgentGrain>();

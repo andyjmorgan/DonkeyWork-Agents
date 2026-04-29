@@ -51,6 +51,41 @@ public class TtsRecordingEntity : BaseEntity
     public Guid? OrchestrationExecutionId { get; set; }
 
     /// <summary>
+    /// The collection (folder) this recording belongs to, if any.
+    /// </summary>
+    public Guid? CollectionId { get; set; }
+
+    /// <summary>
+    /// Position of this recording within its collection.
+    /// </summary>
+    public int? SequenceNumber { get; set; }
+
+    /// <summary>
+    /// Chapter-style title within the collection; falls back to <see cref="Name"/> when null.
+    /// </summary>
+    public string? ChapterTitle { get; set; }
+
+    /// <summary>
+    /// Lifecycle state of the recording's audio generation.
+    /// </summary>
+    public TtsRecordingStatus Status { get; set; } = TtsRecordingStatus.Ready;
+
+    /// <summary>
+    /// Generation progress in [0.0, 1.0]. Always 1.0 once <see cref="Status"/> is Ready.
+    /// </summary>
+    public double Progress { get; set; } = 1.0;
+
+    /// <summary>
+    /// Error message when <see cref="Status"/> is Failed.
+    /// </summary>
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Collection this recording belongs to, if any.
+    /// </summary>
+    public TtsAudioCollectionEntity? Collection { get; set; }
+
+    /// <summary>
     /// Playback state for this recording (one per user, last write wins).
     /// </summary>
     public TtsPlaybackEntity? Playback { get; set; }

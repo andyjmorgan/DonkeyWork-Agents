@@ -24,6 +24,13 @@ public class OrchestrationVersionEntity : BaseEntity
 
     public DateTimeOffset? PublishedAt { get; set; }
 
+    /// <summary>
+    /// Optional per-version execution timeout override in seconds.
+    /// When null, the global <c>Agents:ExecutionTimeout</c> applies.
+    /// Needed for long-running orchestrations (e.g. chunked long-form TTS audiobooks).
+    /// </summary>
+    public int? ExecutionTimeoutSeconds { get; set; }
+
     public OrchestrationEntity Orchestration { get; set; } = null!;
     public ICollection<OrchestrationVersionCredentialMappingEntity> CredentialMappings { get; set; } = new List<OrchestrationVersionCredentialMappingEntity>();
     public ICollection<OrchestrationExecutionEntity> Executions { get; set; } = new List<OrchestrationExecutionEntity>();

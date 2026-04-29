@@ -41,6 +41,10 @@ public class GrainMessageConfiguration : IEntityTypeConfiguration<GrainMessageEn
         builder.Property(e => e.UpdatedAt)
             .HasColumnName("updated_at");
 
+        builder.Property(e => e.TurnId)
+            .HasColumnName("turn_id")
+            .IsRequired();
+
         // Unique composite index for ordering within a grain
         builder.HasIndex(e => new { e.GrainKey, e.SequenceNumber })
             .IsUnique()
@@ -48,5 +52,8 @@ public class GrainMessageConfiguration : IEntityTypeConfiguration<GrainMessageEn
 
         builder.HasIndex(e => e.UserId)
             .HasDatabaseName("ix_grain_messages_user_id");
+
+        builder.HasIndex(e => new { e.GrainKey, e.TurnId })
+            .HasDatabaseName("ix_grain_messages_grain_key_turn_id");
     }
 }

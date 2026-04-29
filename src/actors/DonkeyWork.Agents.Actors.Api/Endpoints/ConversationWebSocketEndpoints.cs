@@ -80,8 +80,23 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     public async Task<object> Message(string text)
     {
         SetCallContext();
-        await grain.PostUserMessageAsync(text);
-        return new { status = "queued" };
+        var turnId = Guid.NewGuid();
+        await grain.PostUserMessageAsync(text, turnId);
+        return new { status = "queued", turnId };
+    }
+
+    /// <summary>
+    /// Client request: { jsonrpc: "2.0", id: N, method: "cancelTurn", params: { turnId: "..." } }
+    /// Cancels a specific pending or active turn by its id.
+    /// Returns { result: "active" | "pending" | "notFound" }.
+    /// </summary>
+    public async Task<object> CancelTurn(string turnId)
+    {
+        SetCallContext();
+        if (!Guid.TryParse(turnId, out var id))
+            return new { result = "notFound" };
+        var outcome = await grain.CancelTurnAsync(id);
+        return new { result = outcome.ToString().ToLowerInvariant() };
     }
 
     /// <summary>

@@ -14,6 +14,7 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
 {
     private readonly IExternalApiKeyService _credentialService;
     private readonly ITemplateRenderer _templateRenderer;
+    private readonly ITtsChunker _chunker;
     private readonly ILogger<GeminiTextToSpeechNodeExecutor> _logger;
 
     public GeminiTextToSpeechNodeExecutor(
@@ -21,11 +22,13 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
         IExecutionContext context,
         IExternalApiKeyService credentialService,
         ITemplateRenderer templateRenderer,
+        ITtsChunker chunker,
         ILogger<GeminiTextToSpeechNodeExecutor> logger)
         : base(streamWriter, context)
     {
         _credentialService = credentialService;
         _templateRenderer = templateRenderer;
+        _chunker = chunker;
         _logger = logger;
     }
 
@@ -33,92 +36,128 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
         GeminiTextToSpeechNodeConfiguration config,
         CancellationToken cancellationToken)
     {
-        var inputText = await _templateRenderer.RenderAsync(config.InputText, cancellationToken);
+        var renderedText = await _templateRenderer.RenderAsync(config.Text, cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(inputText))
-            throw new InvalidOperationException("Input text is empty after template rendering");
+        if (string.IsNullOrWhiteSpace(renderedText))
+        {
+            throw new InvalidOperationException("Text is empty after template rendering.");
+        }
+
+        var chunks = _chunker.Chunk(renderedText, new ChunkerOptions
+        {
+            TargetCharCount = config.TargetCharCount,
+            MaxCharCount = config.MaxCharCount,
+        });
+
+        if (chunks.Count == 0)
+        {
+            throw new InvalidOperationException("Chunker produced zero chunks from the rendered text.");
+        }
 
         var instructions = !string.IsNullOrWhiteSpace(config.Instructions)
             ? await _templateRenderer.RenderAsync(config.Instructions, cancellationToken)
             : null;
 
-        _logger.LogDebug(
-            "Gemini TTS generation: model={Model}, voice={Voice}, text length={TextLength}",
-            config.Model, config.Voice, inputText.Length);
-
         var credential = await _credentialService.GetByIdAsync(
             Context.UserId, config.CredentialId, cancellationToken);
 
         if (credential == null)
+        {
             throw new InvalidOperationException($"Credential not found: {config.CredentialId}");
+        }
 
         var apiKey = credential.Fields[CredentialFieldType.ApiKey];
 
         using var httpClient = new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(600)
+            Timeout = TimeSpan.FromSeconds(600),
         };
 
         var googleAi = new GoogleAi(apiKey, client: httpClient);
         var model = googleAi.CreateGenerativeModel(config.Model);
 
-        var prompt = instructions is not null
-            ? $"{instructions}\n\n{inputText}"
-            : inputText;
-
-        var request = new GenerateContentRequest
-        {
-            Contents =
-            [
-                new Content
-                {
-                    Role = "user",
-                    Parts = [new Part { Text = prompt }]
-                }
-            ],
-            GenerationConfig = new GenerationConfig
-            {
-                ResponseModalities = [Modality.AUDIO],
-                SpeechConfig = new SpeechConfig
-                {
-                    VoiceConfig = new VoiceConfig
-                    {
-                        PrebuiltVoiceConfig = new PrebuiltVoiceConfig
-                        {
-                            VoiceName = config.Voice
-                        }
-                    }
-                }
-            }
-        };
-
-        var response = await model.GenerateContentAsync(request, cancellationToken);
-
-        var inlineData = response?.Candidates?.FirstOrDefault()
-            ?.Content?.Parts?.FirstOrDefault()?.InlineData;
-
-        if (inlineData?.Data == null)
-            throw new InvalidOperationException("Gemini TTS returned no audio data");
-
-        var pcmBytes = Convert.FromBase64String(inlineData.Data);
         var outputFormat = config.ResponseFormat.ToLowerInvariant();
-        var audioBytes = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
         var contentType = AudioConverter.GetContentType(outputFormat);
         var fileExtension = AudioConverter.GetFileExtension(outputFormat);
 
         _logger.LogInformation(
-            "Gemini TTS audio generated: {PcmSize} bytes PCM → {OutputSize} bytes {Format}, voice={Voice}, model={Model}",
-            pcmBytes.Length, audioBytes.Length, fileExtension, config.Voice, config.Model);
+            "Gemini TTS fan-out: chunks={ChunkCount}, maxParallelism={MaxParallelism}, voice={Voice}, model={Model}",
+            chunks.Count, config.MaxParallelism, config.Voice, config.Model);
+
+        var clips = new AudioClip[chunks.Count];
+        var parallelism = Math.Max(1, Math.Min(config.MaxParallelism, chunks.Count));
+
+        await Parallel.ForEachAsync(
+            chunks.Select((text, index) => (text, index)),
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = parallelism,
+                CancellationToken = cancellationToken,
+            },
+            async (pair, ct) =>
+            {
+                var prompt = instructions is not null
+                    ? $"{instructions}\n\n{pair.text}"
+                    : pair.text;
+
+                var request = new GenerateContentRequest
+                {
+                    Contents =
+                    [
+                        new Content
+                        {
+                            Role = "user",
+                            Parts = [new Part { Text = prompt }],
+                        },
+                    ],
+                    GenerationConfig = new GenerationConfig
+                    {
+                        ResponseModalities = [Modality.AUDIO],
+                        SpeechConfig = new SpeechConfig
+                        {
+                            VoiceConfig = new VoiceConfig
+                            {
+                                PrebuiltVoiceConfig = new PrebuiltVoiceConfig
+                                {
+                                    VoiceName = config.Voice,
+                                },
+                            },
+                        },
+                    },
+                };
+
+                var response = await model.GenerateContentAsync(request, ct);
+                var inlineData = response?.Candidates?.FirstOrDefault()
+                    ?.Content?.Parts?.FirstOrDefault()?.InlineData;
+
+                if (inlineData?.Data == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Gemini TTS returned no audio data for chunk index {pair.index}");
+                }
+
+                var pcmBytes = Convert.FromBase64String(inlineData.Data);
+                var audioBytes = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
+
+                clips[pair.index] = new AudioClip
+                {
+                    AudioBase64 = Convert.ToBase64String(audioBytes),
+                    ContentType = contentType,
+                    FileExtension = fileExtension,
+                    SizeBytes = audioBytes.Length,
+                    Transcript = pair.text,
+                };
+            });
+
+        _logger.LogInformation(
+            "Gemini TTS generation complete: {ClipCount} clips, {TotalBytes} total bytes",
+            clips.Length, clips.Sum(c => c.SizeBytes));
 
         return new TextToSpeechNodeOutput
         {
-            AudioBase64 = Convert.ToBase64String(audioBytes),
-            ContentType = contentType,
-            FileExtension = fileExtension,
-            SizeBytes = audioBytes.Length,
-            Transcript = inputText,
+            Clips = clips,
             Voice = config.Voice,
-            Model = config.Model
+            Model = config.Model,
         };
     }
 }

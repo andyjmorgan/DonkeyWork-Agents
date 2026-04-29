@@ -50,6 +50,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             existingDraft.ToolEnabled = request.ToolEnabled;
             existingDraft.McpEnabled = request.McpEnabled;
             existingDraft.NaviEnabled = request.NaviEnabled;
+            existingDraft.ExecutionTimeoutSeconds = request.ExecutionTimeoutSeconds;
             existingDraft.UpdatedAt = DateTimeOffset.UtcNow;
 
             version = existingDraft;
@@ -80,6 +81,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
                 ToolEnabled = request.ToolEnabled,
                 McpEnabled = request.McpEnabled,
                 NaviEnabled = request.NaviEnabled,
+                ExecutionTimeoutSeconds = request.ExecutionTimeoutSeconds,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -282,6 +284,7 @@ public partial class OrchestrationVersionService : IOrchestrationVersionService
             ToolEnabled = version.ToolEnabled,
             McpEnabled = version.McpEnabled,
             NaviEnabled = version.NaviEnabled,
+            ExecutionTimeoutSeconds = version.ExecutionTimeoutSeconds,
             CreatedAt = version.CreatedAt,
             PublishedAt = version.PublishedAt
         };

@@ -35,6 +35,7 @@ public sealed class AgentExecutionRepository : IAgentExecutionRepository
         string contractSnapshot,
         string? input,
         string? modelId,
+        Guid turnId = default,
         CancellationToken ct = default)
     {
         try
@@ -54,6 +55,7 @@ public sealed class AgentExecutionRepository : IAgentExecutionRepository
                 Status = "Running",
                 StartedAt = DateTimeOffset.UtcNow,
                 ModelId = modelId,
+                TurnId = turnId,
             };
 
             dbContext.AgentExecutions.Add(entity);

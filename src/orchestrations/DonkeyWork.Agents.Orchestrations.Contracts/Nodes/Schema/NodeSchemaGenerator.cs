@@ -145,7 +145,7 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                     CredentialId = Guid.Empty,
                     Model = "tts-1",
                     Voice = "alloy",
-                    InputText = ""
+                    Text = ""
                 };
             }
             if (configType == typeof(GeminiTextToSpeechNodeConfiguration))
@@ -156,7 +156,15 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                     CredentialId = Guid.Empty,
                     Model = "gemini-2.5-flash-preview-tts",
                     Voice = "Kore",
-                    InputText = ""
+                    Text = ""
+                };
+            }
+            if (configType == typeof(ConcatAudioNodeConfiguration))
+            {
+                return new ConcatAudioNodeConfiguration
+                {
+                    Name = name,
+                    SourceNode = ""
                 };
             }
             if (configType == typeof(StoreAudioNodeConfiguration))
