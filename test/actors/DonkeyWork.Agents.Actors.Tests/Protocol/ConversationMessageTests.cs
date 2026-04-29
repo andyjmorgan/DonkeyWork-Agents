@@ -14,7 +14,7 @@ public class ConversationMessageTests
         var timestamp = DateTimeOffset.UtcNow;
 
         // Act
-        var msg = new UserConversationMessage("Hello", timestamp);
+        var msg = new UserConversationMessage("Hello", Guid.NewGuid(), timestamp);
 
         // Assert
         Assert.Equal("Hello", msg.Text);

@@ -21,6 +21,7 @@ public interface IAgentExecutionRepository
         string contractSnapshot,
         string? input,
         string? modelId,
+        Guid turnId = default,
         CancellationToken ct = default);
 
     /// <summary>

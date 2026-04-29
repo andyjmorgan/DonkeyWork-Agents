@@ -80,8 +80,9 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     public async Task<object> Message(string text)
     {
         SetCallContext();
-        await grain.PostUserMessageAsync(text);
-        return new { status = "queued" };
+        var turnId = Guid.NewGuid();
+        await grain.PostUserMessageAsync(text, turnId);
+        return new { status = "queued", turnId };
     }
 
     /// <summary>

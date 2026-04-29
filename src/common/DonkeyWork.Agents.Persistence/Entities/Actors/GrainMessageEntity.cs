@@ -21,4 +21,9 @@ public class GrainMessageEntity : BaseEntity
     /// Deserialization is handled by GrainMessageStore in the Actors.Core layer.
     /// </summary>
     public string MessageJson { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Turn correlation id — shared by the user message, assistant message, and all stream events for a single turn.
+    /// </summary>
+    public Guid TurnId { get; set; }
 }

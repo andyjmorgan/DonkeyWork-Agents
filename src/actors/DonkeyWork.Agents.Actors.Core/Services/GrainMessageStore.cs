@@ -76,6 +76,7 @@ public sealed class GrainMessageStore : IGrainMessageStore
                 UserId = userId,
                 SequenceNumber = sequenceNumber,
                 MessageJson = json,
+                TurnId = message.TurnId,
             });
 
             await dbContext.SaveChangesAsync(ct);
@@ -108,6 +109,7 @@ public sealed class GrainMessageStore : IGrainMessageStore
                 UserId = userId,
                 SequenceNumber = correctedSeq,
                 MessageJson = json,
+                TurnId = message.TurnId,
             });
 
             await freshContext.SaveChangesAsync(ct);

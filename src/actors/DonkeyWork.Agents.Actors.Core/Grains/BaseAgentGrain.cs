@@ -800,7 +800,11 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     {
         try
         {
-            Observer?.OnEvent(evt);
+            var turnId = GrainContext.CurrentTurnId;
+            var enriched = turnId != Guid.Empty && evt.TurnId == Guid.Empty
+                ? evt with { TurnId = turnId }
+                : evt;
+            Observer?.OnEvent(enriched);
         }
         catch (Exception ex)
         {

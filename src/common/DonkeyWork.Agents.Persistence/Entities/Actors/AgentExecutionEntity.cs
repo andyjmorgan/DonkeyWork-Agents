@@ -86,4 +86,9 @@ public class AgentExecutionEntity : BaseEntity
     /// Model identifier used for this execution.
     /// </summary>
     public string? ModelId { get; set; }
+
+    /// <summary>
+    /// Turn id of the user message that triggered this execution.
+    /// </summary>
+    public Guid TurnId { get; set; }
 }

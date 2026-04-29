@@ -90,6 +90,10 @@ public class AgentExecutionConfiguration : IEntityTypeConfiguration<AgentExecuti
         builder.Property(e => e.UpdatedAt)
             .HasColumnName("updated_at");
 
+        builder.Property(e => e.TurnId)
+            .HasColumnName("turn_id")
+            .IsRequired();
+
         // Indexes
         builder.HasIndex(e => e.UserId)
             .HasDatabaseName("ix_agent_executions_user_id");
@@ -108,5 +112,8 @@ public class AgentExecutionConfiguration : IEntityTypeConfiguration<AgentExecuti
 
         builder.HasIndex(e => new { e.ConversationId, e.StartedAt })
             .HasDatabaseName("ix_agent_executions_conversation_id_started_at");
+
+        builder.HasIndex(e => new { e.ConversationId, e.TurnId })
+            .HasDatabaseName("ix_agent_executions_conversation_id_turn_id");
     }
 }
