@@ -53,6 +53,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   const nextIdRef = useRef(1);
   const agentGroupIndexRef = useRef<Map<string, AgentGroupEntry>>(new Map());
   const currentAssistantIdRef = useRef<string | null>(null);
+  const turnIdToMessageIdRef = useRef<Map<string, string>>(new Map());
   const handleEventRef = useRef<(data: Record<string, unknown>) => void>(() => {});
 
   // Buffer for events received during reconnection
@@ -232,7 +233,12 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   function handleEvent(data: Record<string, unknown>) {
     const eventType = (data.eventType as string) ?? "";
     const agentKey = (data.agentKey as string) ?? "";
-    let assistantId = currentAssistantIdRef.current;
+    const eventTurnId = (data.turnId as string) ?? undefined;
+
+    const resolvedAssistantId = eventTurnId
+      ? (turnIdToMessageIdRef.current.get(eventTurnId) ?? currentAssistantIdRef.current)
+      : currentAssistantIdRef.current;
+    let assistantId = resolvedAssistantId;
 
     // Capture socket event for debug panel
     const socketEventId = ++socketEventIdRef.current;
@@ -258,6 +264,9 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const newId = crypto.randomUUID();
       currentAssistantIdRef.current = newId;
       assistantId = newId;
+      if (eventTurnId) {
+        turnIdToMessageIdRef.current.set(eventTurnId, newId);
+      }
       const source = (data.source as string) ?? "user";
       const preview = (data.messagePreview as string) ?? "";
 
@@ -270,6 +279,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
           boxes: [],
           _source: source,
           _preview: preview,
+          _turnId: eventTurnId,
         },
       ]);
       setIsProcessing(true);
@@ -812,6 +822,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       setIsReconnecting(false);
       agentGroupIndexRef.current = new Map();
       currentAssistantIdRef.current = null;
+      turnIdToMessageIdRef.current = new Map();
       nextIdRef.current = 1;
       pendingRpcRef.current.clear();
       eventBufferRef.current = [];
@@ -846,21 +857,42 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       });
     }
 
+    const userMsgId = crypto.randomUUID();
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: userMsgId,
       role: "user",
       content: text,
       boxes: [],
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    const id = nextIdRef.current++;
+    const rpcId = nextIdRef.current++;
+    const rpcPromise = new Promise<unknown>((resolve, reject) => {
+      pendingRpcRef.current.set(rpcId, { resolve, reject });
+      setTimeout(() => {
+        if (pendingRpcRef.current.has(rpcId)) {
+          pendingRpcRef.current.delete(rpcId);
+          reject(new Error("RPC timeout: message"));
+        }
+      }, 10000);
+    });
+
     wsRef.current?.send(JSON.stringify({
       jsonrpc: "2.0",
-      id,
+      id: rpcId,
       method: "message",
       params: { text },
     }));
+
+    rpcPromise.then((result) => {
+      const res = result as Record<string, unknown>;
+      const turnId = res?.turnId as string | undefined;
+      if (turnId) {
+        setMessages((prev) =>
+          prev.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId } : m)
+        );
+      }
+    }).catch(() => {});
   }, [conversationId, connect]);
 
   const cancel = useCallback((key: string, scope?: string) => {
@@ -884,6 +916,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     setSandboxStatus(null);
     agentGroupIndexRef.current = new Map();
     currentAssistantIdRef.current = null;
+    turnIdToMessageIdRef.current = new Map();
     nextIdRef.current = 1;
     pendingRpcRef.current.clear();
     eventBufferRef.current = [];

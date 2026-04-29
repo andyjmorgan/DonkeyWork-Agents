@@ -8,7 +8,7 @@ public interface IConversationGrain : IGrainWithStringKey
 {
     Task SubscribeAsync(IAgentResponseObserver observer);
 
-    Task PostUserMessageAsync(string message);
+    Task PostUserMessageAsync(string message, Guid turnId);
 
     Task DeliverAgentResultAsync(string agentKey, string label, AgentResult? result, bool isError);
 

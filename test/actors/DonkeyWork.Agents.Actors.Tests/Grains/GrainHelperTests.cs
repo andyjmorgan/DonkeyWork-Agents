@@ -116,7 +116,7 @@ public class GrainHelperTests
     public void FormatMessage_UserMessage_ReturnsUserContentMessage()
     {
         // Arrange
-        var msg = new UserConversationMessage("Hello", DateTimeOffset.UtcNow);
+        var msg = new UserConversationMessage("Hello", Guid.NewGuid(), DateTimeOffset.UtcNow);
 
         // Act
         var result = ConversationGrainTestHelpers.FormatMessage(msg);

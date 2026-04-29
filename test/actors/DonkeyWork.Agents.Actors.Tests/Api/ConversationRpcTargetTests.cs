@@ -23,7 +23,7 @@ public class ConversationRpcTargetTests
 
         // Assert
         grain.Verify(g => g.SubscribeAsync(It.IsAny<IAgentResponseObserver>()), Times.Never);
-        grain.Verify(g => g.PostUserMessageAsync("Hello"), Times.Once);
+        grain.Verify(g => g.PostUserMessageAsync("Hello", It.IsAny<Guid>()), Times.Once);
     }
 
     [Fact]
@@ -39,7 +39,10 @@ public class ConversationRpcTargetTests
 
         // Assert
         var status = result.GetType().GetProperty("status")?.GetValue(result)?.ToString();
+        var turnId = result.GetType().GetProperty("turnId")?.GetValue(result);
         Assert.Equal("queued", status);
+        Assert.NotNull(turnId);
+        Assert.IsType<Guid>(turnId);
     }
 
     #endregion

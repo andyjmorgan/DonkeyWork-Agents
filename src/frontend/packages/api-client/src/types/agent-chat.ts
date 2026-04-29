@@ -61,4 +61,12 @@ export type ChatMessage = {
   boxes: ContentBox[];
   _source?: string;
   _preview?: string;
+  _turnId?: string;
+};
+
+export type StreamEventEnvelope = {
+  eventType: string;
+  agentKey: string;
+  turnId?: string;
+  [key: string]: unknown;
 };
