@@ -1,6 +1,8 @@
+using MessagePack;
 namespace DonkeyWork.Agents.Actors.Contracts.Events;
 
 [GenerateSerializer]
+[MessagePackObject(keyAsPropertyName: true)]
 public sealed record StreamWebSearchEvent(
     string AgentKey,
     [property: Id(0)] string ToolUseId,
