@@ -16,7 +16,6 @@
         <ProjectReference Include="..\..\identity\DonkeyWork.Agents.Identity.Contracts\DonkeyWork.Agents.Identity.Contracts.csproj" />
         <ProjectReference Include="..\..\actors\DonkeyWork.Agents.Actors.Contracts\DonkeyWork.Agents.Actors.Contracts.csproj" />
         <ProjectReference Include="..\..\agentdefinitions\DonkeyWork.Agents.AgentDefinitions.Contracts\DonkeyWork.Agents.AgentDefinitions.Contracts.csproj" />
-        <ProjectReference Include="..\..\actors\DonkeyWork.Agents.Actors.Core\DonkeyWork.Agents.Actors.Core.csproj" />
     </ItemGroup>
 
 </Project>

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools;
 
-public sealed class AgentContractRegistry
+public sealed class AgentContractRegistry : IAgentContractRegistry
 {
     private readonly FrozenDictionary<string, AgentContractDescriptor> _contracts;
 

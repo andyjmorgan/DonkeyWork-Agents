@@ -10,10 +10,7 @@ using DonkeyWork.Agents.Identity.Api;
 using DonkeyWork.Agents.Identity.Api.Options;
 using DonkeyWork.Agents.A2a.Api;
 using DonkeyWork.Agents.Mcp.Api;
-using DonkeyWork.Agents.Mcp.Core;
-using DonkeyWork.Agents.Mcp.Core.Middleware;
 using DonkeyWork.Agents.Notifications.Core;
-using DonkeyWork.Agents.Notifications.Core.Hubs;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Services;
 using DonkeyWork.Agents.Projects.Api;
@@ -27,10 +24,8 @@ using DonkeyWork.Agents.Prompts.Api;
 using DonkeyWork.Agents.Scheduling.Api;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol.AspNetCore.Authentication;
 using DonkeyWork.Agents.Orchestrations.Contracts;
 using DonkeyWork.Agents.Orchestrations.Contracts.Messages;
 using DonkeyWork.Agents.Orchestrations.Core.Handlers;
@@ -87,16 +82,14 @@ builder.Services.AddIdentityApi(builder.Configuration);
 
 builder.Services.AddProjectsApi();
 
-builder.Services.AddMcpApi();
+builder.Services.AddMcpApi(
+    typeof(NotesTools).Assembly,
+    typeof(IdentityTools).Assembly,
+    typeof(DonkeyWork.Agents.Orchestrations.Api.McpTools.AudioTools).Assembly);
 
 builder.Services.AddA2aApi();
 
 builder.Services.AddConversationsApi(builder.Configuration);
-
-builder.Services.AddDynamicMcpServer(
-    typeof(NotesTools).Assembly,
-    typeof(IdentityTools).Assembly,
-    typeof(DonkeyWork.Agents.Orchestrations.Api.McpTools.AudioTools).Assembly);
 
 builder.Services.AddAgentDefinitionsApi();
 
@@ -253,17 +246,13 @@ app.UseWebSockets();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<McpTraceMiddleware>();
 app.MapControllers();
 
 app.MapActorsEndpoints();
 
-app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapNotifications();
 
-app.MapMcp().RequireAuthorization(new AuthorizeAttribute
-{
-    AuthenticationSchemes = McpAuthenticationDefaults.AuthenticationScheme
-});
+app.UseMcpApi();
 
 // Redirect OAuth/OIDC discovery to Keycloak for clients that don't implement RFC 9728
 var keycloakAuthority = app.Services.GetRequiredService<IOptions<KeycloakOptions>>().Value.Authority.TrimEnd('/');

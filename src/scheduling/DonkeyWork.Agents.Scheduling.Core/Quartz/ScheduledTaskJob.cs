@@ -4,7 +4,6 @@ using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
-using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
@@ -31,7 +30,7 @@ public class ScheduledTaskJob : IJob
     private readonly IScheduledJobExecutionRepository _scheduledJobExecutionRepository;
     private readonly IAgentDefinitionService _agentDefinitionService;
     private readonly IConversationContractHydrator _contractHydrator;
-    private readonly AgentContractRegistry _contractRegistry;
+    private readonly IAgentContractRegistry _contractRegistry;
     private readonly IGrainFactory _grainFactory;
     private readonly ILogger<ScheduledTaskJob> _logger;
 
@@ -42,7 +41,7 @@ public class ScheduledTaskJob : IJob
         IScheduledJobExecutionRepository scheduledJobExecutionRepository,
         IAgentDefinitionService agentDefinitionService,
         IConversationContractHydrator contractHydrator,
-        AgentContractRegistry contractRegistry,
+        IAgentContractRegistry contractRegistry,
         IGrainFactory grainFactory,
         ILogger<ScheduledTaskJob> logger)
     {

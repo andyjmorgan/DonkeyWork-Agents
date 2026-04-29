@@ -1,17 +1,13 @@
 using DonkeyWork.Agents.Notifications.Contracts.Interfaces;
+using DonkeyWork.Agents.Notifications.Core.Hubs;
 using DonkeyWork.Agents.Notifications.Core.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DonkeyWork.Agents.Notifications.Core;
 
-/// <summary>
-/// Dependency injection extensions for the Notifications Core library.
-/// </summary>
 public static class DependencyInjection
 {
-    /// <summary>
-    /// Adds the notification services and SignalR to the service collection.
-    /// </summary>
     public static IServiceCollection AddNotificationsCore(this IServiceCollection services)
     {
         services.AddSignalR();
@@ -19,5 +15,11 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
 
         return services;
+    }
+
+    public static WebApplication MapNotifications(this WebApplication app, string path = "/hubs/notifications")
+    {
+        app.MapHub<NotificationHub>(path);
+        return app;
     }
 }
