@@ -17,6 +17,9 @@ public interface IConversationGrain : IGrainWithStringKey
 
     Task CancelByKeyAsync(string key, string? scope = null);
 
+    [AlwaysInterleave]
+    Task<CancelTurnResult> CancelTurnAsync(Guid turnId);
+
     Task<IReadOnlyList<TrackedAgent>> ListAgentsAsync();
 
     Task<IReadOnlyList<InternalMessage>> GetMessagesAsync();

@@ -40,9 +40,12 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
     private readonly Channel<ConversationMessage> _queue =
         Channel.CreateUnbounded<ConversationMessage>(new UnboundedChannelOptions { SingleReader = true });
 
+    private readonly HashSet<Guid> _cancelledTurnIds = new();
+
     private Task? _processingLoop;
     private int _pendingCount;
     private CancellationTokenSource? _currentTurnCts;
+    private Guid? _currentTurnId;
     private bool _sqlRecordCreated;
     private bool _titleGenerated;
     private bool _registeredInRegistry;
@@ -201,6 +204,25 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         return Task.CompletedTask;
     }
 
+    public Task<CancelTurnResult> CancelTurnAsync(Guid turnId)
+    {
+        if (turnId == _currentTurnId)
+        {
+            _currentTurnCts?.Cancel();
+            Logger.LogInformation("Cancelled active turn {TurnId} for {Key}", turnId, GrainContext.GrainKey);
+            return Task.FromResult(CancelTurnResult.Active);
+        }
+
+        if (_cancelledTurnIds.Contains(turnId))
+        {
+            return Task.FromResult(CancelTurnResult.NotFound);
+        }
+
+        _cancelledTurnIds.Add(turnId);
+        Logger.LogInformation("Tombstoned pending turn {TurnId} for {Key}", turnId, GrainContext.GrainKey);
+        return Task.FromResult(CancelTurnResult.Pending);
+    }
+
     public async Task<IReadOnlyList<TrackedAgent>> ListAgentsAsync()
     {
         var registryKey = AgentKeys.Conversation(IdentityContext.UserId, Guid.Parse(GrainContext.ConversationId));
@@ -252,6 +274,12 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
 
                 var turnId = message is UserConversationMessage userTurnMsg ? userTurnMsg.TurnId : Guid.NewGuid();
 
+                if (message is UserConversationMessage && _cancelledTurnIds.Remove(turnId))
+                {
+                    EmitQueueStatus();
+                    continue;
+                }
+
                 var contract = await ResolveContractAsync(CancellationToken.None);
                 Contract = contract;
 
@@ -297,6 +325,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
                 DelayDeactivation(TimeSpan.FromSeconds(timeoutSeconds + 60));
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+                _currentTurnId = turnId;
                 var ct = _currentTurnCts.Token;
 
                 var snapshotSequenceNumber = NextSequenceNumber;
@@ -349,6 +378,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 {
                     _currentTurnCts.Dispose();
                     _currentTurnCts = null;
+                    _currentTurnId = null;
                 }
 
                 await SendAgentNotificationAsync(

@@ -86,6 +86,20 @@ internal sealed class ConversationRpcTarget(IConversationGrain grain, IAgentResp
     }
 
     /// <summary>
+    /// Client request: { jsonrpc: "2.0", id: N, method: "cancelTurn", params: { turnId: "..." } }
+    /// Cancels a specific pending or active turn by its id.
+    /// Returns { result: "active" | "pending" | "notFound" }.
+    /// </summary>
+    public async Task<object> CancelTurn(string turnId)
+    {
+        SetCallContext();
+        if (!Guid.TryParse(turnId, out var id))
+            return new { result = "notFound" };
+        var outcome = await grain.CancelTurnAsync(id);
+        return new { result = outcome.ToString().ToLowerInvariant() };
+    }
+
+    /// <summary>
     /// Client notification: { jsonrpc: "2.0", method: "cancel", params: { key: "...", scope?: "active" } }
     /// The frontend may send a key like "swarm:{conversationId}" for self-cancel.
     /// Resolve any non-prefixed key to the actual grain key so CancelByKeyAsync can match.

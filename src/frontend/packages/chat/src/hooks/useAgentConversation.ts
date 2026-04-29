@@ -270,18 +270,25 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const source = (data.source as string) ?? "user";
       const preview = (data.messagePreview as string) ?? "";
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: newId,
-          role: "assistant",
-          content: "",
-          boxes: [],
-          _source: source,
-          _preview: preview,
-          _turnId: eventTurnId,
-        },
-      ]);
+      setMessages((prev) => {
+        const updated = eventTurnId
+          ? prev.map((m) =>
+              m._turnId === eventTurnId && m.role === "user" ? { ...m, _pending: false } : m
+            )
+          : prev;
+        return [
+          ...updated,
+          {
+            id: newId,
+            role: "assistant" as const,
+            content: "",
+            boxes: [],
+            _source: source,
+            _preview: preview,
+            _turnId: eventTurnId,
+          },
+        ];
+      });
       setIsProcessing(true);
       return;
     }
@@ -889,7 +896,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const turnId = res?.turnId as string | undefined;
       if (turnId) {
         setMessages((prev) =>
-          prev.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId } : m)
+          prev.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId, _pending: true } : m)
         );
       }
     }).catch(() => {});
@@ -902,6 +909,14 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       params: { key, ...(scope ? { scope } : {}) },
     }));
   }, []);
+
+  const cancelPendingTurn = useCallback(async (turnId: string) => {
+    const result = await sendRpc("cancelTurn", { turnId }) as Record<string, unknown> | null;
+    const outcome = (result as Record<string, unknown>)?.result as string | undefined;
+    if (outcome === "pending" || outcome === "active" || outcome === "notFound") {
+      setMessages((prev) => prev.filter((m) => !(m.role === "user" && m._turnId === turnId)));
+    }
+  }, [sendRpc]);
 
   const resetConversation = useCallback(() => {
     wsRef.current?.close();
@@ -937,6 +952,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     sendMessage,
     sendRpc,
     cancel,
+    cancelPendingTurn,
     resetConversation,
     clearSocketEvents: () => setSocketEvents([]),
   };
