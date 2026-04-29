@@ -25,7 +25,6 @@
         <ProjectReference Include="..\common\DonkeyWork.Agents.Notifications.Core\DonkeyWork.Agents.Notifications.Core.csproj" />
         <ProjectReference Include="..\conversations\DonkeyWork.Agents.Conversations.Api\DonkeyWork.Agents.Conversations.Api.csproj" />
         <ProjectReference Include="..\mcp\DonkeyWork.Agents.Mcp.Api\DonkeyWork.Agents.Mcp.Api.csproj" />
-        <ProjectReference Include="..\mcp\DonkeyWork.Agents.Mcp.Core\DonkeyWork.Agents.Mcp.Core.csproj" />
         <ProjectReference Include="..\orchestrations\DonkeyWork.Agents.Orchestrations.Api\DonkeyWork.Agents.Orchestrations.Api.csproj" />
         <ProjectReference Include="..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />
         <ProjectReference Include="..\credentials\DonkeyWork.Agents.Credentials.Api\DonkeyWork.Agents.Credentials.Api.csproj" />

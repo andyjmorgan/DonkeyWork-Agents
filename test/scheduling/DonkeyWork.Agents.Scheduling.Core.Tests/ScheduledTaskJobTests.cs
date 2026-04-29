@@ -3,7 +3,6 @@ using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
-using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Persistence;
@@ -26,7 +25,7 @@ public class ScheduledTaskJobTests : IDisposable
     private readonly Mock<IScheduledJobExecutionRepository> _schedExecRepoMock;
     private readonly Mock<IAgentDefinitionService> _agentDefServiceMock;
     private readonly Mock<IConversationContractHydrator> _contractHydratorMock;
-    private readonly AgentContractRegistry _contractRegistry;
+    private readonly Mock<IAgentContractRegistry> _contractRegistryMock;
     private readonly Mock<IGrainFactory> _grainFactoryMock;
     private readonly ScheduledTaskJob _job;
 
@@ -51,8 +50,10 @@ public class ScheduledTaskJobTests : IDisposable
             .Setup(h => h.HydrateAsync(It.IsAny<AgentContract>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((AgentContract c, CancellationToken _) => c);
 
-        _contractRegistry = new AgentContractRegistry(
-            Mock.Of<ILogger<AgentContractRegistry>>());
+        _contractRegistryMock = new Mock<IAgentContractRegistry>();
+        _contractRegistryMock
+            .Setup(r => r.GetContract("conversation"))
+            .Returns(new AgentContractDescriptor("conversation", "test", new AgentContract()));
 
         _job = new ScheduledTaskJob(
             _dbContext,
@@ -61,7 +62,7 @@ public class ScheduledTaskJobTests : IDisposable
             _schedExecRepoMock.Object,
             _agentDefServiceMock.Object,
             _contractHydratorMock.Object,
-            _contractRegistry,
+            _contractRegistryMock.Object,
             _grainFactoryMock.Object,
             Mock.Of<ILogger<ScheduledTaskJob>>());
     }

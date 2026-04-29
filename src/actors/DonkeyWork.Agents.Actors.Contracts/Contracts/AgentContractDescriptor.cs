@@ -1,5 +1,3 @@
-using DonkeyWork.Agents.Actors.Contracts.Contracts;
-
-namespace DonkeyWork.Agents.Actors.Core.Tools;
+namespace DonkeyWork.Agents.Actors.Contracts.Contracts;
 
 public sealed record AgentContractDescriptor(string Name, string Description, AgentContract Contract);
