@@ -714,7 +714,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         const result = await sendRpc("eventsSince", {
           turnId,
           afterSequence: cursor.lastSequence,
-        }) as { events?: unknown[]; lastSequence?: number; complete?: boolean } | null;
+        }) as { events?: { payload: Record<string, unknown>; sequence: number }[]; lastSequence?: number; complete?: boolean } | null;
 
         if (!result) continue;
 
@@ -722,8 +722,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         const lastSeq = result.lastSequence ?? cursor.lastSequence;
         const isComplete = result.complete ?? false;
 
-        for (const evt of replayedEvents) {
-          handleEventRef.current(evt as Record<string, unknown>);
+        for (const { payload, sequence } of replayedEvents) {
+          dispatchWithSequence(payload, sequence);
         }
 
         turnCursorsRef.current.set(turnId, {
@@ -734,7 +734,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         // If eventsSince fails, skip this turn — live events will continue
       }
     }
-  }, [sendRpc]);
+  }, [sendRpc, dispatchWithSequence]);
 
   // --- WebSocket connection ---
 

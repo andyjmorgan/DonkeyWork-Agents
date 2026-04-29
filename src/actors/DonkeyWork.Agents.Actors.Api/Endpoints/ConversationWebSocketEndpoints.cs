@@ -238,7 +238,7 @@ internal sealed class ConversationRpcTarget(
         var consumer = consumerFactory.CreateConsumer();
         var opts = AgentEventConsumerFactory.ReplayFromOptions(conversationId, turnGuid, afterSequence);
 
-        var events = new List<JsonElement>();
+        var events = new List<ReplayedEvent>();
         ulong lastSeq = afterSequence;
         bool complete = false;
 
@@ -249,7 +249,7 @@ internal sealed class ConversationRpcTarget(
             await foreach (var delivered in consumer.GetMessagesAsync<StreamEventBase>(opts, cts.Token))
             {
                 var element = ConversationWebSocketEndpoints.ToJsonElement(delivered.Payload);
-                events.Add(element);
+                events.Add(new ReplayedEvent(element, delivered.Sequence));
                 lastSeq = delivered.Sequence;
 
                 if (delivered.Payload is StreamTurnEndEvent or StreamCancelledEvent)
@@ -275,6 +275,8 @@ internal sealed class ConversationRpcTarget(
             complete,
         };
     }
+
+    private sealed record ReplayedEvent(JsonElement Payload, ulong Sequence);
 
     private void SetCallContext()
     {
