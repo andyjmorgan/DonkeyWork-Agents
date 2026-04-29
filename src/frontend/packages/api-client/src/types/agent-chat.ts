@@ -62,6 +62,7 @@ export type ChatMessage = {
   _source?: string;
   _preview?: string;
   _turnId?: string;
+  _pending?: boolean;
 };
 
 export type StreamEventEnvelope = {

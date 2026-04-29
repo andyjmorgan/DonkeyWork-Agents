@@ -44,6 +44,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null);
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
   const [mcpServerStatuses, setMcpServerStatuses] = useState<McpServerStatus[]>([]);
   const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
   const [socketEvents, setSocketEvents] = useState<SocketEvent[]>([]);
@@ -266,28 +267,37 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       assistantId = newId;
       if (eventTurnId) {
         turnIdToMessageIdRef.current.set(eventTurnId, newId);
+        setActiveTurnId(eventTurnId);
       }
       const source = (data.source as string) ?? "user";
       const preview = (data.messagePreview as string) ?? "";
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: newId,
-          role: "assistant",
-          content: "",
-          boxes: [],
-          _source: source,
-          _preview: preview,
-          _turnId: eventTurnId,
-        },
-      ]);
+      setMessages((prev) => {
+        const updated = eventTurnId
+          ? prev.map((m) =>
+              m._turnId === eventTurnId && m.role === "user" ? { ...m, _pending: false } : m
+            )
+          : prev;
+        return [
+          ...updated,
+          {
+            id: newId,
+            role: "assistant" as const,
+            content: "",
+            boxes: [],
+            _source: source,
+            _preview: preview,
+            _turnId: eventTurnId,
+          },
+        ];
+      });
       setIsProcessing(true);
       return;
     }
 
     if (eventType === "turn_end") {
       setIsProcessing(false);
+      setActiveTurnId(null);
       return;
     }
 
@@ -299,6 +309,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
 
     if (eventType === "cancelled") {
       setIsProcessing(false);
+      setActiveTurnId(null);
       if (assistantId) {
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
         currentAssistantIdRef.current = null;
@@ -817,6 +828,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       setMessages([]);
       setConversationId(null);
       setIsProcessing(false);
+      setActiveTurnId(null);
       setPendingCount(0);
       setIsConnected(false);
       setIsReconnecting(false);
@@ -889,7 +901,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const turnId = res?.turnId as string | undefined;
       if (turnId) {
         setMessages((prev) =>
-          prev.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId } : m)
+          prev.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId, _pending: true } : m)
         );
       }
     }).catch(() => {});
@@ -903,12 +915,21 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     }));
   }, []);
 
+  const cancelTurn = useCallback(async (turnId: string) => {
+    const result = await sendRpc("cancelTurn", { turnId }) as Record<string, unknown> | null;
+    const outcome = (result as Record<string, unknown>)?.result as string | undefined;
+    if (outcome === "pending" || outcome === "active" || outcome === "notFound") {
+      setMessages((prev) => prev.filter((m) => !(m.role === "user" && m._turnId === turnId)));
+    }
+  }, [sendRpc]);
+
   const resetConversation = useCallback(() => {
     wsRef.current?.close();
     wsRef.current = null;
     setMessages([]);
     setConversationId(null);
     setIsProcessing(false);
+    setActiveTurnId(null);
     setPendingCount(0);
     setIsConnected(false);
     setIsReconnecting(false);
@@ -928,6 +949,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     messages,
     isProcessing,
     pendingCount,
+    activeTurnId,
     conversationId,
     isConnected,
     isReconnecting,
@@ -937,6 +959,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     sendMessage,
     sendRpc,
     cancel,
+    cancelTurn,
     resetConversation,
     clearSocketEvents: () => setSocketEvents([]),
   };
