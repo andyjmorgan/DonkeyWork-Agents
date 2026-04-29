@@ -98,10 +98,9 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
 
     #region IAgentGrain
 
-    public async Task<AgentResult> RunAsync(AgentContract contract, string input, IAgentResponseObserver? observer)
+    public async Task<AgentResult> RunAsync(AgentContract contract, string input)
     {
         Contract = contract;
-        Observer = observer;
         ExplicitCancel = false;
         _isIdle = false;
 

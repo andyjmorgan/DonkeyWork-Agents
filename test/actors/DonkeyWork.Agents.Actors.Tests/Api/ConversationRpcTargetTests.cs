@@ -37,7 +37,6 @@ public class ConversationRpcTargetTests
         await target.Message("Hello");
 
         // Assert
-        grain.Verify(g => g.SubscribeAsync(It.IsAny<IAgentResponseObserver>()), Times.Never);
         grain.Verify(g => g.PostUserMessageAsync("Hello", It.IsAny<Guid>()), Times.Once);
     }
 

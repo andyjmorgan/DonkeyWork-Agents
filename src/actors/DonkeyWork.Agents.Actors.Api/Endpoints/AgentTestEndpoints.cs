@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using DonkeyWork.Agents.Actors.Api.Observers;
+using DonkeyWork.Agents.Actors.Api.EventBus;
 using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Events;
@@ -33,7 +33,8 @@ public static class AgentTestEndpoints
     private static async Task HandleTestAsync(
         HttpContext context,
         IGrainFactory grainFactory,
-        IIdentityContext identityContext)
+        IIdentityContext identityContext,
+        AgentEventConsumerFactory consumerFactory)
     {
         if (!identityContext.IsAuthenticated)
         {
@@ -75,49 +76,54 @@ public static class AgentTestEndpoints
         }
 
         var testId = Guid.NewGuid();
+        var conversationId = testId.ToString();
         var grainKey = AgentKeys.Test(identityContext.UserId, testId);
 
         RequestContext.Set(GrainCallContextKeys.UserId, identityContext.UserId.ToString());
+        RequestContext.Set(GrainCallContextKeys.ConversationId, conversationId);
 
         var grain = grainFactory.GetGrain<IAgentGrain>(grainKey);
-        using var observer = new SseObserver();
-        var observerRef = grainFactory.CreateObjectReference<IAgentResponseObserver>(observer);
 
         context.Response.ContentType = "text/event-stream";
         context.Response.Headers.CacheControl = "no-cache";
         context.Response.Headers.Connection = "keep-alive";
 
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+
+        var consumer = consumerFactory.CreateConsumer();
+        var liveOpts = AgentEventConsumerFactory.LiveTailOptions(conversationId);
+
         var runTask = Task.Run(async () =>
         {
             try
             {
-                await grain.RunAsync(contract, request.Input, observerRef);
+                await grain.RunAsync(contract, request.Input);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                observer.OnEvent(new StreamErrorEvent(grainKey, ex.Message));
+                // Errors are emitted via JetStream by the grain
             }
             finally
             {
-                observer.Complete();
+                cts.CancelAfter(TimeSpan.FromSeconds(5));
             }
         }, context.RequestAborted);
 
         try
         {
-            await foreach (var evt in observer.ReadAllAsync(context.RequestAborted))
+            await foreach (var delivered in consumer.GetMessagesAsync<StreamEventBase>(liveOpts, cts.Token))
             {
-                var json = SerializeEvent(evt);
+                var json = ConversationWebSocketEndpoints.ToJsonElement(delivered.Payload);
                 await context.Response.WriteAsync($"data: {json}\n\n", context.RequestAborted);
                 await context.Response.Body.FlushAsync(context.RequestAborted);
 
-                if (evt is StreamCompleteEvent or StreamErrorEvent)
+                if (delivered.Payload is StreamCompleteEvent or StreamErrorEvent)
                     break;
             }
         }
         catch (OperationCanceledException)
         {
-            // Client disconnected
+            // Client disconnected or run completed
         }
 
         try
@@ -126,38 +132,8 @@ public static class AgentTestEndpoints
         }
         catch
         {
-            // Already handled via observer
+            // Already handled via JetStream
         }
-    }
-
-    private static string SerializeEvent(StreamEventBase evt)
-    {
-        var bytes = evt switch
-        {
-            StreamMessageEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamMessageEvent),
-            StreamThinkingEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamThinkingEvent),
-            StreamToolUseEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamToolUseEvent),
-            StreamToolResultEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamToolResultEvent),
-            StreamToolCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamToolCompleteEvent),
-            StreamWebSearchEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamWebSearchEvent),
-            StreamWebSearchCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamWebSearchCompleteEvent),
-            StreamCitationEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamCitationEvent),
-            StreamUsageEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamUsageEvent),
-            StreamProgressEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamProgressEvent),
-            StreamAgentSpawnEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamAgentSpawnEvent),
-            StreamAgentCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamAgentCompleteEvent),
-            StreamAgentResultDataEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamAgentResultDataEvent),
-            StreamCompleteEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamCompleteEvent),
-            StreamErrorEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamErrorEvent),
-            StreamTurnStartEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamTurnStartEvent),
-            StreamTurnEndEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamTurnEndEvent),
-            StreamQueueStatusEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamQueueStatusEvent),
-            StreamCancelledEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamCancelledEvent),
-            StreamMcpServerStatusEvent e => JsonSerializer.SerializeToUtf8Bytes(e, AgentJsonContext.Default.StreamMcpServerStatusEvent),
-            _ => JsonSerializer.SerializeToUtf8Bytes(new { agentKey = evt.AgentKey, eventType = evt.EventType }),
-        };
-
-        return System.Text.Encoding.UTF8.GetString(bytes);
     }
 }
 

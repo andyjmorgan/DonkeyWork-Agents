@@ -52,7 +52,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     protected AgentContract? Contract;
     protected CancellationTokenSource? Cts;
     protected bool ExplicitCancel;
-    protected IAgentResponseObserver? Observer;
     private protected McpToolProvider? McpToolProvider;
     private protected A2aToolProvider? A2aToolProvider;
     private protected OrchestrationToolProvider? OrchestrationToolProvider;
@@ -819,7 +818,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
     protected void SetupGrainContext()
     {
-        GrainContext.Observer = Observer;
         GrainContext.GrainFactory = GrainFactory;
         GrainContext.Logger = Logger;
         GrainContext.UserId = IdentityContext.UserId.ToString();
