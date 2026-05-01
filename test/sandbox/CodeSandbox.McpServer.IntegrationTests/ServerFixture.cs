@@ -7,6 +7,7 @@ namespace CodeSandbox.McpServer.IntegrationTests;
 
 public class ServerFixture : IAsyncLifetime
 {
+    private const string BaseImageName = "codesandbox-executor-base:latest";
     private const string ImageName = "codesandbox-executor:test";
     private const int ServerPort = 8666;
 
@@ -17,18 +18,24 @@ public class ServerFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        var solutionDir = GetSolutionDirectory();
+        var executorDir = Path.Combine(solutionDir, "src", "sandbox", "CodeSandbox.Executor");
+        var sandboxDir = Path.Combine(solutionDir, "src", "sandbox");
+
+        if (!await DockerImageExistsAsync(BaseImageName))
+        {
+            await BuildDockerImageAsync(
+                Path.Combine(executorDir, "Dockerfile.base"),
+                executorDir,
+                BaseImageName);
+        }
+
         if (!await DockerImageExistsAsync(ImageName))
         {
-            var solutionDir = GetSolutionDirectory();
-            var sandboxDir = new CommonDirectoryPath(Path.Combine(solutionDir.DirectoryPath, "src", "sandbox"));
-            var imageFuture = new ImageFromDockerfileBuilder()
-                .WithDockerfileDirectory(sandboxDir, string.Empty)
-                .WithDockerfile("CodeSandbox.Executor/Dockerfile")
-                .WithName(ImageName)
-                .WithCleanUp(true)
-                .Build();
-
-            await imageFuture.CreateAsync();
+            await BuildDockerImageAsync(
+                Path.Combine(executorDir, "Dockerfile"),
+                sandboxDir,
+                ImageName);
         }
 
         _container = new ContainerBuilder()
@@ -72,6 +79,41 @@ public class ServerFixture : IAsyncLifetime
         }
     }
 
+    private static async Task BuildDockerImageAsync(string dockerfilePath, string contextDir, string imageName)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "docker",
+            ArgumentList =
+            {
+                "build",
+                "--platform", "linux/amd64",
+                "-f", dockerfilePath,
+                "-t", imageName,
+                contextDir,
+            },
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        using var process = Process.Start(psi)
+            ?? throw new InvalidOperationException($"Failed to start docker build for {imageName}");
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        var stdout = await stdoutTask;
+        var stderr = await stderrTask;
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"docker build failed for {imageName} (exit {process.ExitCode}):\n{stderr}\n{stdout}");
+        }
+    }
+
     private async Task WaitForServerHealthAsync()
     {
         var maxRetries = 30;
@@ -109,7 +151,7 @@ public class ServerFixture : IAsyncLifetime
         }
     }
 
-    private static CommonDirectoryPath GetSolutionDirectory()
+    private static string GetSolutionDirectory()
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
 
@@ -118,7 +160,7 @@ public class ServerFixture : IAsyncLifetime
             if (directory.GetFiles("*.sln").Length > 0 ||
                 directory.GetFiles("*.slnx").Length > 0)
             {
-                return new CommonDirectoryPath(directory.FullName);
+                return directory.FullName;
             }
 
             directory = directory.Parent;
