@@ -25,11 +25,17 @@ public class TtsService : ITtsService
     }
 
     public async Task<ListRecordingsResponseV1> ListRecordingsAsync(
-        int offset, int limit, CancellationToken cancellationToken = default)
+        int offset, int limit, bool unfiledOnly = false, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.TtsRecordings
-            .Include(r => r.Playback)
-            .OrderByDescending(r => r.CreatedAt);
+        IQueryable<TtsRecordingEntity> query = _dbContext.TtsRecordings
+            .Include(r => r.Playback);
+
+        if (unfiledOnly)
+        {
+            query = query.Where(r => r.CollectionId == null);
+        }
+
+        query = query.OrderByDescending(r => r.CreatedAt);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

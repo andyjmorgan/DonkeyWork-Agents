@@ -4,7 +4,7 @@ namespace DonkeyWork.Agents.Orchestrations.Contracts.Services;
 
 public interface ITtsService
 {
-    Task<ListRecordingsResponseV1> ListRecordingsAsync(int offset, int limit, CancellationToken cancellationToken = default);
+    Task<ListRecordingsResponseV1> ListRecordingsAsync(int offset, int limit, bool unfiledOnly = false, CancellationToken cancellationToken = default);
     Task<TtsRecordingV1?> GetRecordingAsync(Guid id, CancellationToken cancellationToken = default);
     Task<(Stream Content, string ContentType, string FileName)?> DownloadAudioAsync(Guid id, CancellationToken cancellationToken = default);
     Task<TtsPlaybackV1> GetPlaybackAsync(Guid recordingId, CancellationToken cancellationToken = default);
