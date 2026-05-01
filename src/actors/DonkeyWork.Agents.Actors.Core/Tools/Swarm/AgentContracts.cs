@@ -10,7 +10,7 @@ public static class AgentContracts
     public static AgentContract Conversation() => new()
     {
         SystemPrompt = [ConversationSystemPrompt],
-        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox, ToolGroupNames.Scheduling],
+        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox, ToolGroupNames.Scheduling, ToolGroupNames.AudioCollections],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 5 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },
         MaxTokens = 20_000,
@@ -79,6 +79,10 @@ public static class AgentContracts
         ## Project Management
 
         You have access to project management tools for managing projects, milestones, tasks, notes, and research items. Use these when the user asks about their projects or wants to create/update work items.
+
+        ## Audio Collections
+
+        You have access to audio collection tools for browsing and organizing the user's library of AI-generated audio recordings. Collections are folders of recordings (think chapters of a podcast or daily news feed); recordings can also live unfiled. Use these tools to list/get/create/update/delete collections, list recordings (flat, scoped to a collection, or unfiled-only), and to move, rename, or delete individual recordings. Recording *creation* is driven by orchestrations — do not attempt to create recordings yourself.
 
         ## Agent Notifications
 
