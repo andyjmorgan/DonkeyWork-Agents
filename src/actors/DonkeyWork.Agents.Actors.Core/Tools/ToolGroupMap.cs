@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using DonkeyWork.Agents.Actors.Core.Tools.AudioCollections;
 using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
 using DonkeyWork.Agents.Actors.Core.Tools.Scheduling;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
@@ -22,6 +23,11 @@ internal static class ToolGroupMap
         [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = [typeof(SwarmAgentMessagingTools)],
         [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = [typeof(SwarmSharedContextTools)],
         [Actors.Contracts.Models.ToolGroupNames.Scheduling] = [typeof(SchedulingAgentTools)],
+        [Actors.Contracts.Models.ToolGroupNames.AudioCollections] =
+        [
+            typeof(AudioCollectionAgentTools),
+            typeof(AudioRecordingAgentTools),
+        ],
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public static readonly FrozenDictionary<string, string> DisplayNames = new Dictionary<string, string>
@@ -33,5 +39,6 @@ internal static class ToolGroupMap
         [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = "Swarm Messaging",
         [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = "Swarm Context",
         [Actors.Contracts.Models.ToolGroupNames.Scheduling] = "Scheduling",
+        [Actors.Contracts.Models.ToolGroupNames.AudioCollections] = "Audio Collections",
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 }
