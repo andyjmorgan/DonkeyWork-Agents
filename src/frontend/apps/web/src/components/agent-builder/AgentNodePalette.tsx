@@ -84,6 +84,7 @@ interface ToolGroupDef {
 const toolGroupDefinitions: ToolGroupDef[] = [
   { id: 'project_management', label: 'Project Management', toolIds: ['project_management'] },
   { id: 'scheduling', label: 'Scheduling', toolIds: ['scheduling'] },
+  { id: 'audio_collections', label: 'Audio Collections', toolIds: ['audio_collections'] },
 ]
 
 export function AgentNodePalette() {
