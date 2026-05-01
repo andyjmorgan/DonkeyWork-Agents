@@ -89,6 +89,11 @@ public static class DependencyInjection
         services.AddScoped<ModelNodeExecutor>();
         services.AddScoped<MultimodalChatNodeExecutor>();
         services.AddScoped<TextToSpeechNodeExecutor>();
+        services.AddHttpClient("gemini-tts", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(600);
+        });
+
         services.AddScoped<GeminiTextToSpeechNodeExecutor>();
         services.AddScoped<StoreAudioNodeExecutor>();
         services.AddScoped<ConcatAudioNodeExecutor>();

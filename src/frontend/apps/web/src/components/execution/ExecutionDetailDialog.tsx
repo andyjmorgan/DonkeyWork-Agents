@@ -5,6 +5,7 @@ import {
   XCircle,
   Loader2,
   Zap,
+  Download,
 } from 'lucide-react'
 import {
   Badge,
@@ -12,6 +13,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  Button,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -19,6 +21,7 @@ import {
 } from '@donkeywork/ui'
 import { JsonViewer } from '@/components/ui/json-viewer'
 import { executions, type NodeExecution } from '@donkeywork/api-client'
+import { downloadExecutionLog } from './executionLogExport'
 
 interface ExecutionDetailDialogProps {
   executionId: string
@@ -67,7 +70,20 @@ export function ExecutionDetailDialog({ executionId, open, onOpenChange }: Execu
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Execution Log</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Execution Log</DialogTitle>
+            {!loading && nodeExecutions.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs mr-6"
+                onClick={() => downloadExecutionLog(executionId, nodeExecutions)}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Export JSON
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {loading ? (

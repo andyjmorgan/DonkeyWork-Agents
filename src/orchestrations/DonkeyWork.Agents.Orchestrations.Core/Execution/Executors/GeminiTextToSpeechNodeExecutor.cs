@@ -15,6 +15,7 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
     private readonly IExternalApiKeyService _credentialService;
     private readonly ITemplateRenderer _templateRenderer;
     private readonly ITtsChunker _chunker;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<GeminiTextToSpeechNodeExecutor> _logger;
 
     public GeminiTextToSpeechNodeExecutor(
@@ -23,12 +24,14 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
         IExternalApiKeyService credentialService,
         ITemplateRenderer templateRenderer,
         ITtsChunker chunker,
+        IHttpClientFactory httpClientFactory,
         ILogger<GeminiTextToSpeechNodeExecutor> logger)
         : base(streamWriter, context)
     {
         _credentialService = credentialService;
         _templateRenderer = templateRenderer;
         _chunker = chunker;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -68,10 +71,7 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
 
         var apiKey = credential.Fields[CredentialFieldType.ApiKey];
 
-        using var httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(600),
-        };
+        using var httpClient = _httpClientFactory.CreateClient("gemini-tts");
 
         var googleAi = new GoogleAi(apiKey, client: httpClient);
         var model = googleAi.CreateGenerativeModel(config.Model);
@@ -97,8 +97,8 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
             async (pair, ct) =>
             {
                 var prompt = instructions is not null
-                    ? $"{instructions}\n\n{pair.text}"
-                    : pair.text;
+                    ? $"{instructions}\n\nRead aloud the following text exactly as written:\n\n{pair.text}"
+                    : $"Read aloud the following text exactly as written:\n\n{pair.text}";
 
                 var request = new GenerateContentRequest
                 {
