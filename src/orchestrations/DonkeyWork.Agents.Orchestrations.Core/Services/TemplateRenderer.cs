@@ -40,7 +40,9 @@ public class TemplateRenderer : ITemplateRenderer
         var stepsObject = new ScriptObject();
         foreach (var (nodeName, output) in _context.NodeOutputs)
         {
-            stepsObject[nodeName] = ConvertToScribanObject(output);
+            var converted = ConvertToScribanObject(output);
+            stepsObject[nodeName] = converted;
+            scriptObject[nodeName] = converted;
         }
         scriptObject["Steps"] = stepsObject;
 
