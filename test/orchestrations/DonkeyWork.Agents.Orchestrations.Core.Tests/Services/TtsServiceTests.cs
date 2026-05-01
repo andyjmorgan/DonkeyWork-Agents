@@ -90,6 +90,20 @@ public class TtsServiceTests : IDisposable
         Assert.Equal("My Recording", result.Items[0].Name);
     }
 
+    [Fact]
+    public async Task ListRecordingsAsync_WithUnfiledOnly_ExcludesRecordingsInCollections()
+    {
+        var collection = MockDbContext.SeedAudioCollection(_dbContext);
+        MockDbContext.SeedRecording(_dbContext, name: "Loose 1");
+        MockDbContext.SeedRecording(_dbContext, name: "In Collection", collectionId: collection.Id);
+        MockDbContext.SeedRecording(_dbContext, name: "Loose 2");
+
+        var result = await _service.ListRecordingsAsync(0, 20, unfiledOnly: true);
+
+        Assert.Equal(2, result.TotalCount);
+        Assert.DoesNotContain(result.Items, r => r.Name == "In Collection");
+    }
+
     #endregion
 
     #region GetRecordingAsync Tests

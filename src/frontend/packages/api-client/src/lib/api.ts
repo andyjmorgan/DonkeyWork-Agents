@@ -1996,8 +1996,10 @@ export interface UpdatePlaybackRequest {
 
 // TTS API
 export const tts = {
-  listRecordings: (offset = 0, limit = 20) =>
-    api.get<TtsRecordingListResponse>(`/api/v1/tts/recordings?offset=${offset}&limit=${limit}`),
+  listRecordings: (offset = 0, limit = 20, unfiled = false) =>
+    api.get<TtsRecordingListResponse>(
+      `/api/v1/tts/recordings?offset=${offset}&limit=${limit}${unfiled ? '&unfiled=true' : ''}`,
+    ),
 
   getRecording: (id: string) =>
     api.get<TtsRecording>(`/api/v1/tts/recordings/${id}`),

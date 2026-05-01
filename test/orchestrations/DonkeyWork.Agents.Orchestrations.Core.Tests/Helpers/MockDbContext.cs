@@ -34,7 +34,8 @@ public static class MockDbContext
         AgentsDbContext context,
         Guid? userId = null,
         string name = "Test Recording",
-        string filePath = "tts/test/audio.mp3")
+        string filePath = "tts/test/audio.mp3",
+        Guid? collectionId = null)
     {
         var recording = new TtsRecordingEntity
         {
@@ -48,11 +49,31 @@ public static class MockDbContext
             SizeBytes = 12345,
             Voice = "alloy",
             Model = "tts-1",
+            CollectionId = collectionId,
             CreatedAt = DateTimeOffset.UtcNow
         };
         context.TtsRecordings.Add(recording);
         context.SaveChanges();
         return recording;
+    }
+
+    public static TtsAudioCollectionEntity SeedAudioCollection(
+        AgentsDbContext context,
+        Guid? userId = null,
+        string name = "Test Collection")
+    {
+        var collection = new TtsAudioCollectionEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId ?? Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Name = name,
+            Description = string.Empty,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        context.TtsAudioCollections.Add(collection);
+        context.SaveChanges();
+        return collection;
     }
 
     public static TtsPlaybackEntity SeedPlayback(

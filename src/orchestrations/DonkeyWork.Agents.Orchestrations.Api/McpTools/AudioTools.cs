@@ -7,73 +7,23 @@ using ModelContextProtocol.Server;
 namespace DonkeyWork.Agents.Orchestrations.Api.McpTools;
 
 /// <summary>
-/// MCP tools for managing audio recordings and collections.
-/// Generation is asynchronous — <see cref="CreateAudioRecording"/> returns a recording ID
-/// immediately and the caller polls <see cref="GetRecordingStatus"/> until Status = Ready.
+/// MCP tools for browsing and managing audio collections and recordings.
+/// Recording <em>creation</em> is intentionally not exposed — it is driven by orchestrations
+/// (TTS + Store Audio nodes) and routed through them as the only authoring path.
 /// </summary>
 [McpServerToolType]
 [McpToolProvider(Provider = McpToolProvider.DonkeyWork)]
 public class AudioTools
 {
-    private readonly IAudioGenerationService _audioGenerationService;
-    private readonly IAudioCollectionService _collectionService;
     private readonly ITtsService _ttsService;
+    private readonly IAudioCollectionService _collectionService;
 
     public AudioTools(
-        IAudioGenerationService audioGenerationService,
-        IAudioCollectionService collectionService,
-        ITtsService ttsService)
+        ITtsService ttsService,
+        IAudioCollectionService collectionService)
     {
-        _audioGenerationService = audioGenerationService;
-        _collectionService = collectionService;
         _ttsService = ttsService;
-    }
-
-    [McpServerTool(Name = "create_audio_recording", Title = "Create Audio Recording")]
-    [Description(
-        "Generate a new TTS audio recording from text. Returns a recording ID immediately with Status=Pending; " +
-        "the chunk → TTS → concat → store pipeline runs in the background. Poll get_recording_status until Status=Ready. " +
-        "Long text is automatically split to respect provider limits, generated in parallel, and stitched.")]
-    public async Task<TtsRecordingV1?> CreateAudioRecording(
-        [Description("The text to convert to speech. Markdown is supported and chunked on block boundaries.")] string text,
-        [Description("Name for the recording.")] string name,
-        [Description("TTS model (e.g. tts-1, gpt-4o-mini-tts, gemini-2.5-flash-preview-tts).")] string model,
-        [Description("Voice for the TTS provider (e.g. alloy for OpenAI, Kore for Gemini).")] string voice,
-        [Description("Optional collection (folder) UUID to drop the recording into.")] Guid? collectionId = null,
-        [Description("Optional description for the recording.")] string? description = null,
-        [Description("Optional chapter title when inside a collection.")] string? chapterTitle = null,
-        [Description("Optional sequence number within the collection. If omitted, appends to end.")] int? sequenceNumber = null,
-        [Description("Optional voice-style instructions (e.g. 'Speak warmly with moderate pacing').")] string? instructions = null,
-        [Description("Output format: mp3 (default), wav, opus, aac, flac.")] string responseFormat = "mp3",
-        CancellationToken ct = default)
-    {
-        var request = new StartAudioGenerationRequestV1
-        {
-            Text = text,
-            Name = name,
-            Description = description,
-            Model = model,
-            Voice = voice,
-            Instructions = instructions,
-            CollectionId = collectionId,
-            SequenceNumber = sequenceNumber,
-            ChapterTitle = chapterTitle,
-            ResponseFormat = responseFormat,
-        };
-
-        var recordingId = await _audioGenerationService.StartGenerationAsync(request, ct);
-        return await _ttsService.GetRecordingAsync(recordingId, ct);
-    }
-
-    [McpServerTool(Name = "get_recording_status", Title = "Get Recording Status", ReadOnly = true)]
-    [Description(
-        "Get the current status of an audio recording. Status progresses Pending → Generating → Ready (or Failed). " +
-        "Progress is a [0,1] float. FilePath and SizeBytes are populated once Status=Ready.")]
-    public async Task<TtsRecordingV1?> GetRecordingStatus(
-        [Description("The recording ID returned from create_audio_recording.")] Guid recordingId,
-        CancellationToken ct = default)
-    {
-        return await _ttsService.GetRecordingAsync(recordingId, ct);
+        _collectionService = collectionService;
     }
 
     [McpServerTool(Name = "list_audio_collections", Title = "List Audio Collections", ReadOnly = true)]
@@ -143,5 +93,67 @@ public class AudioTools
         CancellationToken ct = default)
     {
         return await _collectionService.DeleteAsync(id, ct);
+    }
+
+    [McpServerTool(Name = "list_audio_recordings", Title = "List Audio Recordings", ReadOnly = true)]
+    [Description(
+        "List audio recordings. Pass collectionId to scope to one collection (recordings come back ordered by sequence). " +
+        "Pass unfiledOnly=true to list recordings that are not in any collection. " +
+        "Omit both for a flat list of every recording, newest first.")]
+    public async Task<ListRecordingsResponseV1?> ListAudioRecordings(
+        [Description("Optional collection ID to scope the listing to one collection.")] Guid? collectionId = null,
+        [Description("If true, only return recordings not assigned to any collection. Ignored when collectionId is set.")] bool unfiledOnly = false,
+        [Description("Pagination offset (default 0).")] int? offset = null,
+        [Description("Page size (default 20, max 100).")] int? limit = null,
+        CancellationToken ct = default)
+    {
+        var pageOffset = offset ?? 0;
+        var pageLimit = Math.Min(limit ?? 20, 100);
+
+        if (collectionId.HasValue)
+        {
+            return await _collectionService.ListRecordingsAsync(collectionId.Value, pageOffset, pageLimit, ct);
+        }
+
+        return await _ttsService.ListRecordingsAsync(pageOffset, pageLimit, unfiledOnly, ct);
+    }
+
+    [McpServerTool(Name = "get_audio_recording", Title = "Get Audio Recording", ReadOnly = true)]
+    [Description(
+        "Get a single audio recording by ID. Returns full metadata: Status (Pending/Generating/Ready/Failed), " +
+        "Progress, FilePath/SizeBytes (when Ready), CollectionId, transcript, and playback state.")]
+    public async Task<TtsRecordingV1?> GetAudioRecording(
+        [Description("The recording ID.")] Guid recordingId,
+        CancellationToken ct = default)
+    {
+        return await _ttsService.GetRecordingAsync(recordingId, ct);
+    }
+
+    [McpServerTool(Name = "delete_audio_recording", Title = "Delete Audio Recording")]
+    [Description("Permanently delete an audio recording and its underlying audio file.")]
+    public async Task<bool> DeleteAudioRecording(
+        [Description("The recording ID.")] Guid recordingId,
+        CancellationToken ct = default)
+    {
+        return await _ttsService.DeleteRecordingAsync(recordingId, ct);
+    }
+
+    [McpServerTool(Name = "move_audio_recording", Title = "Move Audio Recording")]
+    [Description(
+        "Move a recording to a different collection, or unfile it. " +
+        "Pass collectionId=null to remove it from its current collection without assigning a new one.")]
+    public async Task<TtsRecordingV1?> MoveAudioRecording(
+        [Description("The recording ID.")] Guid recordingId,
+        [Description("Target collection ID, or null to unfile the recording.")] Guid? collectionId = null,
+        [Description("Optional sequence number within the target collection.")] int? sequenceNumber = null,
+        [Description("Optional chapter title within the target collection.")] string? chapterTitle = null,
+        CancellationToken ct = default)
+    {
+        return await _collectionService.MoveRecordingAsync(recordingId, new MoveRecordingToCollectionRequestV1
+        {
+            CollectionId = collectionId,
+            SequenceNumber = sequenceNumber,
+            ChapterTitle = chapterTitle,
+        }, ct);
     }
 }

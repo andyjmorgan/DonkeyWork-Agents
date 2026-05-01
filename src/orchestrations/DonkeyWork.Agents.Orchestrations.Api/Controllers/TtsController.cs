@@ -39,9 +39,10 @@ public class TtsController : ControllerBase
     public async Task<IActionResult> ListRecordings(
         [FromQuery] int offset = 0,
         [FromQuery] int limit = 20,
+        [FromQuery] bool unfiled = false,
         CancellationToken cancellationToken = default)
     {
-        var result = await _ttsService.ListRecordingsAsync(offset, limit, cancellationToken);
+        var result = await _ttsService.ListRecordingsAsync(offset, limit, unfiled, cancellationToken);
         return Ok(result);
     }
 
