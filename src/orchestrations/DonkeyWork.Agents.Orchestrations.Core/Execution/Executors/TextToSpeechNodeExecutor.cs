@@ -2,6 +2,7 @@ using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Configurations;
 using DonkeyWork.Agents.Orchestrations.Contracts.Services;
+using DonkeyWork.Agents.Orchestrations.Core.Execution.Helpers;
 using DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
 using Microsoft.Extensions.Logging;
 using OpenAI.Audio;
@@ -74,7 +75,7 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
             "OpenAI TTS fan-out: chunks={ChunkCount}, maxParallelism={MaxParallelism}, voice={Voice}, model={Model}",
             chunks.Count, config.MaxParallelism, config.Voice, config.Model);
 
-        var clips = new AudioClip[chunks.Count];
+        var clipBytes = new byte[chunks.Count][];
         var parallelism = Math.Max(1, Math.Min(config.MaxParallelism, chunks.Count));
 
         await Parallel.ForEachAsync(
@@ -98,25 +99,25 @@ public class TextToSpeechNodeExecutor : NodeExecutor<TextToSpeechNodeConfigurati
                 }
 
                 var result = await audioClient.GenerateSpeechAsync(pair.text, voice, options, ct);
-                var bytes = result.Value.ToMemory().ToArray();
-
-                clips[pair.index] = new AudioClip
-                {
-                    AudioBase64 = Convert.ToBase64String(bytes),
-                    ContentType = contentType,
-                    FileExtension = config.ResponseFormat,
-                    SizeBytes = bytes.Length,
-                    Transcript = pair.text,
-                };
+                clipBytes[pair.index] = result.Value.ToMemory().ToArray();
             });
 
+        var stitched = clipBytes.Length == 1
+            ? clipBytes[0]
+            : AudioConverter.Concat(clipBytes, config.ResponseFormat);
+        var transcript = string.Join(" ", chunks.Select(c => c.Trim()));
+
         _logger.LogInformation(
-            "OpenAI TTS generation complete: {ClipCount} clips, {TotalBytes} total bytes",
-            clips.Length, clips.Sum(c => c.SizeBytes));
+            "OpenAI TTS generation complete: {ChunkCount} chunks stitched to {TotalBytes} bytes",
+            chunks.Count, stitched.Length);
 
         return new TextToSpeechNodeOutput
         {
-            Clips = clips,
+            AudioBase64 = Convert.ToBase64String(stitched),
+            ContentType = contentType,
+            FileExtension = config.ResponseFormat,
+            SizeBytes = stitched.Length,
+            Transcript = transcript,
             Voice = config.Voice,
             Model = config.Model,
         };

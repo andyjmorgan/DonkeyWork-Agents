@@ -38,7 +38,6 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
         [NodeType.TextToSpeech] = typeof(TextToSpeechNodeExecutor),
         [NodeType.GeminiTextToSpeech] = typeof(GeminiTextToSpeechNodeExecutor),
         [NodeType.StoreAudio] = typeof(StoreAudioNodeExecutor),
-        [NodeType.ConcatAudio] = typeof(ConcatAudioNodeExecutor),
     };
 
     private IReadOnlyList<string>? GetOutputPropertiesForNodeType(NodeType nodeType)
@@ -169,11 +168,6 @@ public class NodeTypeSchemaService : INodeTypeSchemaService
                     RecordingDescription = "",
                     AudioBase64 = "",
                     ContentType = ""
-                },
-                nameof(ConcatAudioNodeConfiguration) => new ConcatAudioNodeConfiguration
-                {
-                    Name = "temp",
-                    SourceNode = ""
                 },
                 _ => null
             };

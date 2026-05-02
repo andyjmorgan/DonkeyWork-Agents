@@ -84,7 +84,7 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
             "Gemini TTS fan-out: chunks={ChunkCount}, maxParallelism={MaxParallelism}, voice={Voice}, model={Model}",
             chunks.Count, config.MaxParallelism, config.Voice, config.Model);
 
-        var clips = new AudioClip[chunks.Count];
+        var clipBytes = new byte[chunks.Count][];
         var parallelism = Math.Max(1, Math.Min(config.MaxParallelism, chunks.Count));
 
         await Parallel.ForEachAsync(
@@ -137,25 +137,25 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
                 }
 
                 var pcmBytes = Convert.FromBase64String(inlineData.Data);
-                var audioBytes = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
-
-                clips[pair.index] = new AudioClip
-                {
-                    AudioBase64 = Convert.ToBase64String(audioBytes),
-                    ContentType = contentType,
-                    FileExtension = fileExtension,
-                    SizeBytes = audioBytes.Length,
-                    Transcript = pair.text,
-                };
+                clipBytes[pair.index] = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
             });
 
+        var stitched = clipBytes.Length == 1
+            ? clipBytes[0]
+            : AudioConverter.Concat(clipBytes, outputFormat);
+        var transcript = string.Join(" ", chunks.Select(c => c.Trim()));
+
         _logger.LogInformation(
-            "Gemini TTS generation complete: {ClipCount} clips, {TotalBytes} total bytes",
-            clips.Length, clips.Sum(c => c.SizeBytes));
+            "Gemini TTS generation complete: {ChunkCount} chunks stitched to {TotalBytes} bytes",
+            chunks.Count, stitched.Length);
 
         return new TextToSpeechNodeOutput
         {
-            Clips = clips,
+            AudioBase64 = Convert.ToBase64String(stitched),
+            ContentType = contentType,
+            FileExtension = fileExtension,
+            SizeBytes = stitched.Length,
+            Transcript = transcript,
             Voice = config.Voice,
             Model = config.Model,
         };

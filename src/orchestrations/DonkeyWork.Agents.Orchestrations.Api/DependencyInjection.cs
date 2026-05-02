@@ -96,7 +96,6 @@ public static class DependencyInjection
 
         services.AddScoped<GeminiTextToSpeechNodeExecutor>();
         services.AddScoped<StoreAudioNodeExecutor>();
-        services.AddScoped<ConcatAudioNodeExecutor>();
 
         services.AddScoped<INodeExecutorRegistry>(sp =>
         {
@@ -112,7 +111,6 @@ public static class DependencyInjection
             registry.Register(NodeType.TextToSpeech, typeof(TextToSpeechNodeExecutor));
             registry.Register(NodeType.GeminiTextToSpeech, typeof(GeminiTextToSpeechNodeExecutor));
             registry.Register(NodeType.StoreAudio, typeof(StoreAudioNodeExecutor));
-            registry.Register(NodeType.ConcatAudio, typeof(ConcatAudioNodeExecutor));
 
             // Generic executor for provider-based nodes
             registry.Register(NodeType.MessageFormatter, typeof(GenericNodeExecutor));
