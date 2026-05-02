@@ -10,12 +10,18 @@ export async function fetchWithAuth(
 
   if (isTokenExpired() && retryOnUnauthorized) {
     console.debug('[fetchWithAuth] Token expired, attempting refresh before request to:', url)
-    const refreshed = await refreshTokens()
-    if (!refreshed) {
-      console.warn('[fetchWithAuth] Token refresh failed, logging out and redirecting to /login')
-      logout()
-      getPlatformConfig().navigate('/login')
-      throw new Error('Session expired')
+    const result = await refreshTokens()
+    if (!result.ok) {
+      if (result.reason === 'rejected') {
+        console.warn('[fetchWithAuth] Token refresh rejected, logging out and redirecting to /login')
+        logout()
+        getPlatformConfig().navigate('/login')
+        throw new Error('Session expired')
+      }
+      // Network/transient failure: surface the error without logging out so the
+      // user keeps their session and the next request can try again.
+      console.warn('[fetchWithAuth] Token refresh failed transiently, surfacing error without logout')
+      throw new Error('Token refresh failed (network)')
     }
     console.debug('[fetchWithAuth] Token refreshed successfully, proceeding with request')
   }
@@ -39,17 +45,24 @@ export async function fetchWithAuth(
 
   if (response.status === 401 && retryOnUnauthorized) {
     console.debug('[fetchWithAuth] Got 401 response from:', url, '- attempting token refresh')
-    const refreshed = await refreshTokens()
+    const result = await refreshTokens()
 
-    if (refreshed) {
+    if (result.ok) {
       console.debug('[fetchWithAuth] Token refreshed after 401, retrying request to:', url)
       return fetchWithAuth(url, options, false)
     }
 
-    console.warn('[fetchWithAuth] Token refresh failed after 401, logging out and redirecting to /login')
-    logout()
-    getPlatformConfig().navigate('/login')
-    throw new Error('Session expired')
+    if (result.reason === 'rejected') {
+      console.warn('[fetchWithAuth] Token refresh rejected after 401, logging out and redirecting to /login')
+      logout()
+      getPlatformConfig().navigate('/login')
+      throw new Error('Session expired')
+    }
+
+    // Network failure during a 401 retry — return the original 401 response so
+    // the caller can decide what to do, rather than killing the whole session.
+    console.warn('[fetchWithAuth] Token refresh failed transiently after 401, returning original response')
+    return response
   }
 
   return response

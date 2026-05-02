@@ -16,6 +16,10 @@ interface RefreshTokenResponse {
   tokenType: string
 }
 
+export type RefreshResult =
+  | { ok: true }
+  | { ok: false; reason: 'rejected' | 'network' }
+
 interface AuthState {
   accessToken: string | null
   refreshToken: string | null
@@ -24,7 +28,7 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isRefreshing: boolean
-  refreshPromise: Promise<boolean> | null
+  refreshPromise: Promise<RefreshResult> | null
   hasHydrated: boolean
 
   setTokens: (accessToken: string, refreshToken: string | null, expiresIn: number) => void
@@ -32,7 +36,7 @@ interface AuthState {
   logout: () => void
   isTokenExpired: () => boolean
   shouldRefreshToken: () => boolean
-  refreshTokens: () => Promise<boolean>
+  refreshTokens: () => Promise<RefreshResult>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -114,23 +118,25 @@ export const useAuthStore = create<AuthState>()(
         const { refreshToken, expiresAt } = state
         if (!refreshToken) {
           console.warn('[Auth] Cannot refresh: no refresh token available')
-          return false
+          return { ok: false, reason: 'rejected' }
         }
 
         const timeRemaining = expiresAt ? Math.round((expiresAt - Date.now()) / 1000) : 'unknown'
         console.debug(`[Auth] Starting token refresh. Token expires in ${timeRemaining}s. RefreshToken preview: ${refreshToken.substring(0, 20)}...`)
 
-        const refreshPromise = (async () => {
+        const refreshPromise: Promise<RefreshResult> = (async () => {
           set({ isRefreshing: true })
 
           const maxAttempts = 3
           const baseDelay = 1000
+          let rejected = false
 
           for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
               const currentRefreshToken = get().refreshToken
               if (!currentRefreshToken) {
                 console.warn('[Auth] Refresh token disappeared during retry')
+                rejected = true
                 break
               }
 
@@ -156,7 +162,7 @@ export const useAuthStore = create<AuthState>()(
                   refreshPromise: null,
                 })
                 console.debug(`[Auth] Token refresh successful. New token expires in ${data.expiresIn}s`)
-                return true
+                return { ok: true }
               }
 
               if (response.status === 400 || response.status === 401) {
@@ -169,6 +175,7 @@ export const useAuthStore = create<AuthState>()(
                 } catch {
                   console.error(`[Auth] Token refresh rejected (${response.status})`)
                 }
+                rejected = true
                 break
               }
 
@@ -184,9 +191,10 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          console.error('[Auth] Token refresh failed after all attempts')
+          const reason: 'rejected' | 'network' = rejected ? 'rejected' : 'network'
+          console.error(`[Auth] Token refresh failed after all attempts (reason: ${reason})`)
           set({ isRefreshing: false, refreshPromise: null })
-          return false
+          return { ok: false, reason }
         })()
 
         set({ refreshPromise })
