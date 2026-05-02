@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@donkeywork/ui'
 import type { ExecutionEvent } from '@donkeywork/api-client'
+import { useEditorStore } from '@/store/editor'
 
 interface NodeEventData {
   nodeType?: string
@@ -19,6 +20,23 @@ interface StreamingOutputProps {
 
 export function StreamingOutput({ events, output, isStreaming }: StreamingOutputProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const nodes = useEditorStore((state) => state.nodes)
+
+  const nodeNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const node of nodes) {
+      const name =
+        (node.data?.config as { name?: string } | undefined)?.name ??
+        (typeof node.data?.label === 'string' ? node.data.label : undefined)
+      if (name) map.set(node.id, name)
+    }
+    return map
+  }, [nodes])
+
+  const labelFor = (nodeId: string | undefined) => {
+    if (!nodeId) return ''
+    return nodeNameById.get(nodeId) ?? nodeId
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -48,7 +66,7 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
           {event.type === 'NodeStartedEvent' && (
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="secondary">{(event as ExecutionEvent & NodeEventData).nodeType || 'node'}</Badge>
-              <span className="text-muted-foreground">{(event as ExecutionEvent & NodeEventData).nodeId}</span>
+              <span className="text-muted-foreground">{labelFor((event as ExecutionEvent & NodeEventData).nodeId)}</span>
             </div>
           )}
 
@@ -59,7 +77,7 @@ export function StreamingOutput({ events, output, isStreaming }: StreamingOutput
           {event.type === 'NodeCompletedEvent' && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
-              <span>Node completed: {(event as ExecutionEvent & NodeEventData).nodeId}</span>
+              <span>Node completed: {labelFor((event as ExecutionEvent & NodeEventData).nodeId)}</span>
             </div>
           )}
 

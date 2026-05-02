@@ -11,7 +11,9 @@ import {
   AlertCircle,
   Zap,
   Timer,
+  Download,
 } from 'lucide-react'
+import { downloadExecutionLog } from '@/components/execution/executionLogExport'
 import {
   Button,
   Badge,
@@ -161,6 +163,17 @@ export function ExecutionDetailPage() {
           <Badge variant={getStatusVariant(execution.status)} className="text-sm">
             {execution.status}
           </Badge>
+          {nodeExecutions.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 ml-2"
+              onClick={() => downloadExecutionLog(execution.id, nodeExecutions)}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" />
+              Export JSON
+            </Button>
+          )}
         </div>
       </div>
 
