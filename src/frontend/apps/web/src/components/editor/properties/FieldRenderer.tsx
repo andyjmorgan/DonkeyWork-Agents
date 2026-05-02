@@ -436,6 +436,17 @@ export function FieldRenderer({
         )
 
       case 'AudioCollection': {
+        if (showAsVariable && field.supportsVariables) {
+          return (
+            <ScribanEditor
+              value={String(value ?? '')}
+              onChange={onChange}
+              placeholder={`Collection name or variable, e.g. {{Input.${field.name}}}`}
+              predecessors={predecessors}
+              height="60px"
+            />
+          )
+        }
         const selected = availableAudioCollections.find((c) => c.id === value)
         return (
           <>
