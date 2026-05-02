@@ -8,6 +8,7 @@ import type {
   TextBox,
   ThinkingBox,
   AgentCompleteReason,
+  AgentGroupBox,
   ChatMessage,
   WebSearchResult,
   McpServerStatus,
@@ -142,6 +143,27 @@ export function useAgentConversation(initialConversationId?: string, options?: U
               return prev.map((msg) => msg.id === m.id ? { ...msg, boxes: newBoxes } : msg);
             }
           }
+        }
+
+        // No existing card found anywhere. If the event is for a child agent
+        // (delegate/agent prefix), materialize a placeholder agent_group on
+        // the assistant message rather than dumping the box into the main feed.
+        // This rescues the case where agent_spawn/spawn-tool-result was missed
+        // — e.g. due to a JetStream reconnect where the cursor advanced past
+        // the spawn event — so live message/thinking deltas still collapse
+        // into a card. If agent_spawn arrives later, the existing tryUpdateNested
+        // path will find this placeholder by agentKey and merge into it.
+        const isChildAgentKey = agentKey.startsWith("delegate:") || agentKey.startsWith("agent:");
+        if (isChildAgentKey) {
+          const placeholder: AgentGroupBox = {
+            type: "agent_group",
+            agentKey,
+            agentType: agentKey.startsWith("delegate:") ? "delegate" : "agent",
+            boxes: [newBox],
+          };
+          const { messages: next, entry: placeholderEntry } = attachRootAgent(prev, fallbackMessageId, placeholder);
+          agentGroupIndexRef.current.set(agentKey, placeholderEntry);
+          return next;
         }
 
         return prev.map((m) => {
