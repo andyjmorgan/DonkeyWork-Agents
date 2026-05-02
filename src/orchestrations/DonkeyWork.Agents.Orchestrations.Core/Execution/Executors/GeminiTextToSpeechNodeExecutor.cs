@@ -137,7 +137,15 @@ public class GeminiTextToSpeechNodeExecutor : NodeExecutor<GeminiTextToSpeechNod
                 }
 
                 var pcmBytes = Convert.FromBase64String(inlineData.Data);
-                clipBytes[pair.index] = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
+                var sampleRate = AudioConverter.ParseSampleRateFromMime(inlineData.MimeType);
+                if (sampleRate != 24000)
+                {
+                    _logger.LogWarning(
+                        "Gemini TTS chunk {ChunkIndex} returned PCM at {SampleRate} Hz (expected 24000). " +
+                        "Using the response MIME's rate for conversion to avoid pitch/speed mismatch with sibling chunks.",
+                        pair.index, sampleRate);
+                }
+                clipBytes[pair.index] = AudioConverter.ConvertPcm(pcmBytes, outputFormat, sampleRate);
             });
 
         var stitched = clipBytes.Length == 1

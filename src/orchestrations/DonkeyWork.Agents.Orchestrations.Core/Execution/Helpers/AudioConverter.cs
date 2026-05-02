@@ -15,6 +15,49 @@ public static class AudioConverter
         };
     }
 
+    /// <summary>
+    /// Parses the sample rate out of a Gemini-style PCM MIME type like
+    /// <c>audio/L16;codec=pcm;rate=24000</c>. Falls back to <paramref name="fallback"/>
+    /// if the MIME is null/empty or doesn't carry a <c>rate=</c> parameter.
+    /// </summary>
+    /// <remarks>
+    /// Critical for chunked pipelines: if Gemini returns one chunk at a different
+    /// sample rate than another (load-shed, region routing, model variant) and we
+    /// hardcode 24 kHz, the chunks render at different effective speed/pitch and
+    /// the seam sounds like the speaker's voice changed. Always pass the rate
+    /// declared in the response MIME.
+    /// </remarks>
+    public static int ParseSampleRateFromMime(string? mimeType, int fallback = 24000)
+    {
+        if (string.IsNullOrWhiteSpace(mimeType))
+        {
+            return fallback;
+        }
+
+        foreach (var part in mimeType.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eq = part.IndexOf('=');
+            if (eq <= 0)
+            {
+                continue;
+            }
+
+            var key = part[..eq].Trim();
+            if (!key.Equals("rate", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = part[(eq + 1)..].Trim();
+            if (int.TryParse(value, out var rate) && rate > 0)
+            {
+                return rate;
+            }
+        }
+
+        return fallback;
+    }
+
     public static string GetContentType(string format)
     {
         return format.ToLowerInvariant() switch
