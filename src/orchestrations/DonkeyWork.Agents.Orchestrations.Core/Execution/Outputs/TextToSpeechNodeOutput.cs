@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace DonkeyWork.Agents.Orchestrations.Core.Execution.Outputs;
 
 /// <summary>
@@ -38,30 +40,64 @@ public class TextToSpeechNodeOutput : NodeOutput
     /// <c>{{ Steps.tts.Clips[0].AudioBase64 }}</c>. For chunked pipelines, route
     /// <c>Clips</c> through <c>ConcatAudio</c> and read the stitched result there.
     /// </summary>
+    /// <remarks>
+    /// <see cref="JsonIgnoreAttribute"/> keeps this out of serialized payloads
+    /// (orchestration trace events, per-step DB records). Scriban templating
+    /// reads it via reflection, so the convenience for templates is preserved.
+    /// </remarks>
+    [JsonIgnore]
     public string AudioBase64 => Clips.Count > 0 ? Clips[0].AudioBase64 : string.Empty;
 
     /// <summary>
     /// First clip's content type. Convenience proxy; see <see cref="AudioBase64"/>.
     /// </summary>
+    [JsonIgnore]
     public string ContentType => Clips.Count > 0 ? Clips[0].ContentType : string.Empty;
 
     /// <summary>
     /// First clip's file extension. Convenience proxy; see <see cref="AudioBase64"/>.
     /// </summary>
+    [JsonIgnore]
     public string FileExtension => Clips.Count > 0 ? Clips[0].FileExtension : string.Empty;
 
     /// <summary>
     /// First clip's size in bytes. Convenience proxy; see <see cref="AudioBase64"/>.
     /// </summary>
+    [JsonIgnore]
     public long SizeBytes => Clips.Count > 0 ? Clips[0].SizeBytes : 0;
 
     /// <summary>
     /// First clip's transcript text. Convenience proxy; see <see cref="AudioBase64"/>.
     /// </summary>
+    [JsonIgnore]
     public string Transcript => Clips.Count > 0 ? Clips[0].Transcript : string.Empty;
 
     public override string ToMessageOutput()
     {
         return $"Audio generated: {ClipCount} clip(s), {TotalSizeBytes} bytes total, voice: {Voice}";
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Strips raw base64 audio out of every clip before serialization so that
+    /// trace events and persisted Input/Output records hold only metadata.
+    /// </remarks>
+    public override object ToTraceOutput()
+    {
+        return new
+        {
+            Clips = Clips.Select(c => new
+            {
+                AudioBase64 = $"<audio:{c.SizeBytes} bytes>",
+                c.ContentType,
+                c.FileExtension,
+                c.SizeBytes,
+                c.Transcript,
+            }).ToList(),
+            Voice,
+            Model,
+            TotalSizeBytes,
+            ClipCount,
+        };
     }
 }

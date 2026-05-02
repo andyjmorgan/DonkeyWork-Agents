@@ -207,11 +207,17 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                 }
                 else
                 {
-                    // Other nodes get their input from upstream node outputs
+                    // Other nodes get their input from upstream node outputs.
+                    // Project through ToTraceOutput so heavyweight payloads (e.g. base64
+                    // audio) don't bloat the persisted Input record. Downstream nodes
+                    // still read the real outputs from _executionContext.NodeOutputs.
                     var upstreamOutputs = _executionContext.NodeOutputs;
                     if (upstreamOutputs.Count > 0)
                     {
-                        nodeInput = JsonSerializer.Serialize(upstreamOutputs);
+                        var traceProjection = upstreamOutputs.ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => kvp.Value is NodeOutput no ? no.ToTraceOutput() : kvp.Value);
+                        nodeInput = JsonSerializer.Serialize(traceProjection);
                     }
                 }
 
@@ -251,7 +257,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
                     nodeExecution.Status = ExecutionStatus.Completed;
                     nodeExecution.CompletedAt = DateTimeOffset.UtcNow;
                     nodeExecution.DurationMs = (int)nodeStopwatch.ElapsedMilliseconds;
-                    nodeExecution.Output = JsonSerializer.Serialize(output, output.GetType());
+                    nodeExecution.Output = JsonSerializer.Serialize(output.ToTraceOutput());
 
                     // For model nodes, store additional information
                     if (output is ModelNodeOutput modelOutput)

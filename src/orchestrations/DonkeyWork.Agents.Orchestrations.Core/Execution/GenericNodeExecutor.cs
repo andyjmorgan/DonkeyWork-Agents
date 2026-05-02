@@ -70,7 +70,7 @@ public class GenericNodeExecutor : INodeExecutor
                 new NodeCompletedEvent
                 {
                     NodeId = nodeId,
-                    Output = JsonSerializer.Serialize(output)
+                    Output = JsonSerializer.Serialize(output.ToTraceOutput())
                 });
 
             return output;

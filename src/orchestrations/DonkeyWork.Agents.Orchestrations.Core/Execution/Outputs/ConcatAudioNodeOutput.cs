@@ -41,4 +41,23 @@ public class ConcatAudioNodeOutput : NodeOutput
     {
         return $"Stitched {ClipCount} clips → {SizeBytes} bytes {FileExtension}";
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Trace projections drop the stitched base64 audio (which can be
+    /// multi-megabyte) so the per-step record and NATS event payload stay
+    /// below the 1 MB stream limit.
+    /// </remarks>
+    public override object ToTraceOutput()
+    {
+        return new
+        {
+            AudioBase64 = $"<audio:{SizeBytes} bytes>",
+            ContentType,
+            FileExtension,
+            SizeBytes,
+            Transcript,
+            ClipCount,
+        };
+    }
 }
