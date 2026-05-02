@@ -76,13 +76,13 @@ public static class GenerateAudioRecordingHandler
             var apiKey = await ResolveApiKeyAsync(credentialService, command.UserId, provider, cancellationToken);
             var outputFormat = command.ResponseFormat.ToLowerInvariant();
 
-            var clips = provider == ExternalApiKeyProvider.Google
+            var clipBytes = provider == ExternalApiKeyProvider.Google
                 ? await GenerateWithGeminiAsync(chunks, command, apiKey, outputFormat, cancellationToken)
                 : await GenerateWithOpenAiAsync(chunks, command, apiKey, outputFormat, cancellationToken);
 
-            var stitched = chunks.Count == 1
-                ? Convert.FromBase64String(clips[0].AudioBase64)
-                : AudioConverter.Concat(clips.Select(c => Convert.FromBase64String(c.AudioBase64)).ToList(), outputFormat);
+            var stitched = clipBytes.Length == 1
+                ? clipBytes[0]
+                : AudioConverter.Concat(clipBytes, outputFormat);
 
             var contentType = AudioConverter.GetContentType(outputFormat);
             var fileExtension = AudioConverter.GetFileExtension(outputFormat);
@@ -188,7 +188,7 @@ public static class GenerateAudioRecordingHandler
         return first.Fields[CredentialFieldType.ApiKey];
     }
 
-    private static async Task<AudioClip[]> GenerateWithOpenAiAsync(
+    private static async Task<byte[][]> GenerateWithOpenAiAsync(
         IReadOnlyList<string> chunks,
         GenerateAudioRecordingCommand command,
         string apiKey,
@@ -197,9 +197,8 @@ public static class GenerateAudioRecordingHandler
     {
         var voice = new GeneratedSpeechVoice(command.Voice);
         var format = MapOpenAiFormat(outputFormat);
-        var contentType = AudioConverter.GetContentType(outputFormat);
         var audioClient = new AudioClient(command.Model, apiKey);
-        var clips = new AudioClip[chunks.Count];
+        var clipBytes = new byte[chunks.Count][];
         var parallelism = Math.Max(1, Math.Min(command.MaxParallelism, chunks.Count));
 
         await Parallel.ForEachAsync(
@@ -223,22 +222,13 @@ public static class GenerateAudioRecordingHandler
                 }
 
                 var result = await audioClient.GenerateSpeechAsync(pair.text, voice, options, ct);
-                var bytes = result.Value.ToMemory().ToArray();
-
-                clips[pair.index] = new AudioClip
-                {
-                    AudioBase64 = Convert.ToBase64String(bytes),
-                    ContentType = contentType,
-                    FileExtension = outputFormat,
-                    SizeBytes = bytes.Length,
-                    Transcript = pair.text,
-                };
+                clipBytes[pair.index] = result.Value.ToMemory().ToArray();
             });
 
-        return clips;
+        return clipBytes;
     }
 
-    private static async Task<AudioClip[]> GenerateWithGeminiAsync(
+    private static async Task<byte[][]> GenerateWithGeminiAsync(
         IReadOnlyList<string> chunks,
         GenerateAudioRecordingCommand command,
         string apiKey,
@@ -248,8 +238,7 @@ public static class GenerateAudioRecordingHandler
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(600) };
         var googleAi = new GoogleAi(apiKey, client: httpClient);
         var model = googleAi.CreateGenerativeModel(command.Model);
-        var contentType = AudioConverter.GetContentType(outputFormat);
-        var clips = new AudioClip[chunks.Count];
+        var clipBytes = new byte[chunks.Count][];
         var parallelism = Math.Max(1, Math.Min(command.MaxParallelism, chunks.Count));
 
         await Parallel.ForEachAsync(
@@ -302,19 +291,10 @@ public static class GenerateAudioRecordingHandler
                 }
 
                 var pcmBytes = Convert.FromBase64String(inlineData.Data);
-                var audioBytes = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
-
-                clips[pair.index] = new AudioClip
-                {
-                    AudioBase64 = Convert.ToBase64String(audioBytes),
-                    ContentType = contentType,
-                    FileExtension = AudioConverter.GetFileExtension(outputFormat),
-                    SizeBytes = audioBytes.Length,
-                    Transcript = pair.text,
-                };
+                clipBytes[pair.index] = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
             });
 
-        return clips;
+        return clipBytes;
     }
 
     private static GeneratedSpeechFormat MapOpenAiFormat(string format)

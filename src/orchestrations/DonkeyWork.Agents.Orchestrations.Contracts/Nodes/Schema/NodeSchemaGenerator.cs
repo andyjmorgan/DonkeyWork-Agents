@@ -159,14 +159,6 @@ public sealed class NodeSchemaGenerator : INodeSchemaGenerator
                     Text = ""
                 };
             }
-            if (configType == typeof(ConcatAudioNodeConfiguration))
-            {
-                return new ConcatAudioNodeConfiguration
-                {
-                    Name = name,
-                    SourceNode = ""
-                };
-            }
             if (configType == typeof(StoreAudioNodeConfiguration))
             {
                 return new StoreAudioNodeConfiguration

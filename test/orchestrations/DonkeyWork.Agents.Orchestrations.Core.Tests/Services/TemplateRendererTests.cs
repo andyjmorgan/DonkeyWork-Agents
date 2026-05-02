@@ -25,19 +25,13 @@ public class TemplateRendererTests
     {
         return new TextToSpeechNodeOutput
         {
+            AudioBase64 = Convert.ToBase64String([1, 2, 3]),
+            ContentType = contentType,
+            FileExtension = fileExtension,
+            SizeBytes = 3,
+            Transcript = "Hello world",
             Voice = "Kore",
             Model = "gemini-2.5-flash-preview-tts",
-            Clips =
-            [
-                new AudioClip
-                {
-                    AudioBase64 = Convert.ToBase64String([1, 2, 3]),
-                    ContentType = contentType,
-                    FileExtension = fileExtension,
-                    SizeBytes = 3,
-                    Transcript = "Hello world",
-                },
-            ],
         };
     }
 

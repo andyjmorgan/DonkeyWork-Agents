@@ -92,26 +92,6 @@ public class StoreAudioNodeExecutor : NodeExecutor<StoreAudioNodeConfiguration, 
 
         var fileName = $"{Guid.NewGuid()}.{fileExtension.Trim()}";
         var audioBytes = Convert.FromBase64String(audioBase64.Trim());
-
-        // Guard: a common misconfiguration is to wire StoreAudio directly to a
-        // chunked TextToSpeech node via {{ Steps.tts.AudioBase64 }} (which proxies
-        // Clips[0]). If the upstream TTS produced multiple clips and the rendered
-        // payload is exactly the first clip, the orchestration is silently dropping
-        // the rest of the audio. Detect that and fail loudly so the user inserts
-        // a ConcatAudio node instead of shipping a truncated recording.
-        foreach (var upstream in Context.NodeOutputs.Values)
-        {
-            if (upstream is TextToSpeechNodeOutput tts && tts.ClipCount > 1
-                && tts.Clips[0].SizeBytes == audioBytes.Length)
-            {
-                throw new InvalidOperationException(
-                    $"StoreAudio received only the first of {tts.ClipCount} TTS clips " +
-                    $"({audioBytes.Length:N0} bytes vs {tts.TotalSizeBytes:N0} bytes total). " +
-                    "Insert a ConcatAudio node between the TextToSpeech node and StoreAudio, " +
-                    "and point StoreAudio's audio fields at the ConcatAudio output instead.");
-            }
-        }
-
         using var audioStream = new MemoryStream(audioBytes);
 
         var uploadResult = await _storageService.UploadAsync(
