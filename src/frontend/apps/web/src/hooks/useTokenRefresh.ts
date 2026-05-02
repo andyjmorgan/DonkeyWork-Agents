@@ -16,6 +16,9 @@ const NETWORK_BACKOFF_MS = 15_000
  */
 export function useTokenRefresh() {
   const timerRef = useRef<number | null>(null)
+  // Indirection so scheduleNext can recursively re-arm itself from inside its own
+  // setTimeout body without forward-referencing the useCallback before declaration.
+  const scheduleNextRef = useRef<(() => void) | null>(null)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   const clearTimer = useCallback(() => {
@@ -68,12 +71,18 @@ export function useTokenRefresh() {
       if (outcome === 'rejected') return // logout already navigated away
       if (outcome === 'network') {
         // Back off and retry without touching session state.
-        timerRef.current = window.setTimeout(scheduleNext, NETWORK_BACKOFF_MS)
+        timerRef.current = window.setTimeout(() => scheduleNextRef.current?.(), NETWORK_BACKOFF_MS)
         return
       }
-      scheduleNext()
+      scheduleNextRef.current?.()
     }, delay)
   }, [checkAndRefreshToken, clearTimer])
+
+  // Keep the ref pointing at the latest scheduleNext so the recursive call
+  // path above always sees the current closure.
+  useEffect(() => {
+    scheduleNextRef.current = scheduleNext
+  }, [scheduleNext])
 
   useEffect(() => {
     if (!isAuthenticated) {
