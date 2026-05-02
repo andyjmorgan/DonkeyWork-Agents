@@ -52,7 +52,7 @@ internal sealed class AnthropicAiClient : IAiClient
             Model = _modelId,
             MaxTokens = maxTokens,
             Messages = messageParams,
-            System = systemBlocks != null ? (MessageCreateParamsSystem)systemBlocks : null,
+            System = systemBlocks is not null ? systemBlocks : null,
             Temperature = temperature,
             TopP = topP
         };
@@ -159,7 +159,7 @@ internal sealed class AnthropicAiClient : IAiClient
             Model = _modelId,
             MaxTokens = maxTokens,
             Messages = messageParams,
-            System = systemBlocks != null ? (MessageCreateParamsSystem)systemBlocks : null,
+            System = systemBlocks is not null ? systemBlocks : null,
             Temperature = temperature,
             TopP = topP
         };
@@ -223,7 +223,7 @@ internal sealed class AnthropicAiClient : IAiClient
         };
     }
 
-    private static (IReadOnlyList<TextBlockParam>? systemBlocks, MessageParam[] messages) MapMessages(
+    private static (List<TextBlockParam>? systemBlocks, MessageParam[] messages) MapMessages(
         IReadOnlyList<InternalMessage> messages)
     {
         List<TextBlockParam>? systemBlocks = null;
