@@ -82,7 +82,24 @@ public class ContainerCleanupService : BackgroundService
             };
 
             _logger.LogInformation("Starting leader election...");
-            await leaderElector.RunUntilLeadershipLostAsync(stoppingToken);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await leaderElector.RunUntilLeadershipLostAsync(stoppingToken);
+                    _logger.LogInformation("Leader election iteration ended; re-entering election");
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Leader election iteration failed; retrying in {Delay}s", 5);
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+            }
         }
         catch (OperationCanceledException)
         {
