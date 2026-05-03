@@ -291,7 +291,8 @@ public static class GenerateAudioRecordingHandler
                 }
 
                 var pcmBytes = Convert.FromBase64String(inlineData.Data);
-                clipBytes[pair.index] = AudioConverter.ConvertPcm(pcmBytes, outputFormat);
+                var sampleRate = AudioConverter.ParseSampleRateFromMime(inlineData.MimeType);
+                clipBytes[pair.index] = AudioConverter.ConvertPcm(pcmBytes, outputFormat, sampleRate);
             });
 
         return clipBytes;
