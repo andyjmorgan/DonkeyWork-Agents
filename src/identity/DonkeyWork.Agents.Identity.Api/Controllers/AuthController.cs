@@ -171,6 +171,11 @@ public class AuthController : ControllerBase
             fragmentParams.Add($"refresh_token={Uri.EscapeDataString(tokens.RefreshToken)}");
         }
 
+        if (!string.IsNullOrEmpty(tokens.IdToken))
+        {
+            fragmentParams.Add($"id_token={Uri.EscapeDataString(tokens.IdToken)}");
+        }
+
         return Redirect($"{frontendCallbackUrl}#{string.Join("&", fragmentParams)}");
     }
 
@@ -267,6 +272,7 @@ public class AuthController : ControllerBase
         {
             AccessToken = tokens.AccessToken,
             RefreshToken = tokens.RefreshToken,
+            IdToken = tokens.IdToken,
             ExpiresIn = tokens.ExpiresIn,
             TokenType = tokens.TokenType ?? "Bearer"
         });
@@ -277,11 +283,12 @@ public class AuthController : ControllerBase
     /// Redirects to the Keycloak end-session endpoint which clears the SSO cookie,
     /// then redirects back to the frontend login page.
     /// </summary>
+    /// <param name="idTokenHint">The user's ID token. When supplied, Keycloak skips the logout confirmation prompt.</param>
     /// <returns>Redirect to Keycloak logout endpoint.</returns>
     /// <response code="302">Redirects to Keycloak logout, then back to frontend login.</response>
     [HttpGet("logout")]
     [ProducesResponseType(StatusCodes.Status302Found)]
-    public IActionResult Logout()
+    public IActionResult Logout([FromQuery(Name = "id_token_hint")] string? idTokenHint = null)
     {
         var frontendBaseUrl = !string.IsNullOrEmpty(_keycloakOptions.FrontendUrl)
             ? _keycloakOptions.FrontendUrl.TrimEnd('/')
@@ -292,6 +299,11 @@ public class AuthController : ControllerBase
         var logoutUrl = $"{_keycloakOptions.Authority}/protocol/openid-connect/logout?" +
             $"client_id={Uri.EscapeDataString(EffectiveClientId)}" +
             $"&post_logout_redirect_uri={Uri.EscapeDataString(postLogoutRedirectUri)}";
+
+        if (!string.IsNullOrEmpty(idTokenHint))
+        {
+            logoutUrl += $"&id_token_hint={Uri.EscapeDataString(idTokenHint)}";
+        }
 
         return Redirect(logoutUrl);
     }
@@ -326,6 +338,9 @@ public class AuthController : ControllerBase
 
         [JsonPropertyName("refresh_token")]
         public string? RefreshToken { get; set; }
+
+        [JsonPropertyName("id_token")]
+        public string? IdToken { get; set; }
 
         [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
@@ -377,6 +392,12 @@ public class AuthController : ControllerBase
         /// </summary>
         [JsonPropertyName("refreshToken")]
         public string? RefreshToken { get; set; }
+
+        /// <summary>
+        /// The new ID token (if provided). Used as id_token_hint on logout to skip Keycloak's confirmation prompt.
+        /// </summary>
+        [JsonPropertyName("idToken")]
+        public string? IdToken { get; set; }
 
         /// <summary>
         /// Token expiration time in seconds.

@@ -20,11 +20,15 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { user, idToken, logout } = useAuthStore()
 
   const handleLogout = () => {
+    const hint = idToken
     logout()
-    window.location.href = '/api/v1/auth/logout'
+    const logoutUrl = hint
+      ? `/api/v1/auth/logout?id_token_hint=${encodeURIComponent(hint)}`
+      : '/api/v1/auth/logout'
+    window.location.href = logoutUrl
   }
 
   const getInitials = (name?: string, email?: string) => {

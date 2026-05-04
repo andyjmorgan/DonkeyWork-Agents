@@ -45,6 +45,7 @@ export function LoginCallbackPage() {
 
     const accessToken = params.get('access_token')
     const refreshToken = params.get('refresh_token')
+    const idToken = params.get('id_token')
     const expiresIn = params.get('expires_in')
 
     if (!accessToken) {
@@ -52,7 +53,7 @@ export function LoginCallbackPage() {
       return
     }
 
-    setTokens(accessToken, refreshToken, parseInt(expiresIn || '300', 10))
+    setTokens(accessToken, refreshToken, parseInt(expiresIn || '300', 10), idToken)
 
     const payload = parseJwt(accessToken)
     if (payload) {
