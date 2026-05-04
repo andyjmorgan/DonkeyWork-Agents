@@ -11,8 +11,8 @@ public sealed class StartAudioGenerationRequestV1
     public Guid? CollectionId { get; init; }
     public int? SequenceNumber { get; init; }
     public string? ChapterTitle { get; init; }
-    public int TargetCharCount { get; init; } = 3000;
-    public int MaxCharCount { get; init; } = 3800;
+    public int TargetCharCount { get; init; } = 1500;
+    public int MaxCharCount { get; init; } = 2500;
     public int MaxParallelism { get; init; } = 4;
     public string ResponseFormat { get; init; } = "mp3";
     public double Speed { get; init; } = 1.0;

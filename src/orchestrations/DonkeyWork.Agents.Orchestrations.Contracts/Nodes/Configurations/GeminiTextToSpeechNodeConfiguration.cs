@@ -68,25 +68,24 @@ public sealed class GeminiTextToSpeechNodeConfiguration : NodeConfiguration, IRe
     [SelectOptions("mp3", "wav", "pcm", Default = "mp3")]
     public string ResponseFormat { get; init; } = "mp3";
 
-    /// <summary>
-    /// Target characters per chunk. Chunks are packed greedily up to this size.
-    /// </summary>
+    // Gemini's autoregressive TTS speeds up within a single generation as it gets longer
+    // (rush: voice-active density climbs ~10pp from chunk start to chunk end, then resets at the
+    // next chunk seam). Smaller chunks bound the rush window. Defaults sit at ~30s of audio per
+    // chunk — short enough that intra-chunk drift is imperceptible, large enough that we don't
+    // shred prosody across sentence groups.
     [JsonPropertyName("targetCharCount")]
     [ConfigurableField(Label = "Target Chars", ControlType = ControlType.Slider, Order = 20,
-        Description = "Target characters per chunk. Chunker packs blocks up to this size.")]
+        Description = "Target characters per chunk. Smaller values reduce intra-chunk pacing drift but increase parallel call count.")]
     [Tab("Advanced", Order = 3)]
-    [Slider(Min = 500, Max = 7500, Step = 250, Default = 4000)]
-    public int TargetCharCount { get; init; } = 4000;
+    [Slider(Min = 500, Max = 7500, Step = 250, Default = 1500)]
+    public int TargetCharCount { get; init; } = 1500;
 
-    /// <summary>
-    /// Hard ceiling per chunk. Gemini TTS comfortable around 8K chars.
-    /// </summary>
     [JsonPropertyName("maxCharCount")]
     [ConfigurableField(Label = "Max Chars", ControlType = ControlType.Slider, Order = 30,
-        Description = "Hard ceiling per chunk. Gemini TTS comfortable up to ~8000 chars.")]
+        Description = "Hard ceiling per chunk before forced split.")]
     [Tab("Advanced", Order = 3)]
-    [Slider(Min = 500, Max = 8000, Step = 250, Default = 7500)]
-    public int MaxCharCount { get; init; } = 7500;
+    [Slider(Min = 500, Max = 8000, Step = 250, Default = 2500)]
+    public int MaxCharCount { get; init; } = 2500;
 
     /// <summary>
     /// Maximum concurrent provider calls when synthesizing multiple chunks.
