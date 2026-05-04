@@ -12,6 +12,7 @@ export interface User {
 interface RefreshTokenResponse {
   accessToken: string
   refreshToken: string | null
+  idToken: string | null
   expiresIn: number
   tokenType: string
 }
@@ -23,6 +24,7 @@ export type RefreshResult =
 interface AuthState {
   accessToken: string | null
   refreshToken: string | null
+  idToken: string | null
   expiresAt: number | null
   tokenIssuedAt: number | null
   user: User | null
@@ -31,7 +33,7 @@ interface AuthState {
   refreshPromise: Promise<RefreshResult> | null
   hasHydrated: boolean
 
-  setTokens: (accessToken: string, refreshToken: string | null, expiresIn: number) => void
+  setTokens: (accessToken: string, refreshToken: string | null, expiresIn: number, idToken?: string | null) => void
   setUser: (user: User) => void
   logout: () => void
   isTokenExpired: () => boolean
@@ -44,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       accessToken: null,
       refreshToken: null,
+      idToken: null,
       expiresAt: null,
       tokenIssuedAt: null,
       user: null,
@@ -52,16 +55,17 @@ export const useAuthStore = create<AuthState>()(
       refreshPromise: null,
       hasHydrated: false,
 
-      setTokens: (accessToken, refreshToken, expiresIn) => {
+      setTokens: (accessToken, refreshToken, expiresIn, idToken) => {
         const now = Date.now()
         const expiresAt = now + expiresIn * 1000
-        set({
+        set((state) => ({
           accessToken,
           refreshToken,
+          idToken: idToken !== undefined ? idToken : state.idToken,
           expiresAt,
           tokenIssuedAt: now,
           isAuthenticated: true,
-        })
+        }))
       },
 
       setUser: (user) => {
@@ -72,6 +76,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           accessToken: null,
           refreshToken: null,
+          idToken: null,
           expiresAt: null,
           tokenIssuedAt: null,
           user: null,
@@ -153,14 +158,15 @@ export const useAuthStore = create<AuthState>()(
                 const data: RefreshTokenResponse = await response.json()
                 const now = Date.now()
                 const newExpiresAt = now + data.expiresIn * 1000
-                set({
+                set((state) => ({
                   accessToken: data.accessToken,
                   refreshToken: data.refreshToken ?? currentRefreshToken,
+                  idToken: data.idToken ?? state.idToken,
                   expiresAt: newExpiresAt,
                   tokenIssuedAt: now,
                   isRefreshing: false,
                   refreshPromise: null,
-                })
+                }))
                 console.debug(`[Auth] Token refresh successful. New token expires in ${data.expiresIn}s`)
                 return { ok: true }
               }
@@ -210,6 +216,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
+        idToken: state.idToken,
         expiresAt: state.expiresAt,
         tokenIssuedAt: state.tokenIssuedAt,
         user: state.user,
