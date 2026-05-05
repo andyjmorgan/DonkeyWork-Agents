@@ -333,7 +333,13 @@ function UnfiledRow({ recording, expanded, onToggle, onMove, onDelete }: Unfiled
   const ready = recording.status === 'Ready'
 
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div
+      className={`rounded-xl border transition-colors ${
+        expanded
+          ? 'border-pink-500/40 bg-pink-500/[0.04] ring-1 ring-pink-500/20'
+          : 'border-border bg-card'
+      }`}
+    >
       <div
         className={`flex items-center gap-3 p-3 ${ready ? 'cursor-pointer hover:bg-secondary/30' : ''}`}
         onClick={ready ? onToggle : undefined}
