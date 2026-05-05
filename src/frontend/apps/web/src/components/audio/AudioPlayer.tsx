@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Play, Pause, RotateCcw, Volume2, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { Play, Pause, RotateCcw, Volume2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@donkeywork/ui'
 import { tts } from '@donkeywork/api-client'
 import { cn } from '@/lib/utils'
@@ -18,8 +18,7 @@ export function AudioPlayer({ recordingId, name, transcript, className }: AudioP
   const audioRef = useRef<HTMLAudioElement>(null)
   const reportTimerRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
-  const [audioUrl, setAudioUrl] = useState<string>()
-  const [loading, setLoading] = useState(true)
+  const audioUrl = tts.getAudioStreamUrl(recordingId)
   const [error, setError] = useState<string>()
 
   const [isPlaying, setIsPlaying] = useState(false)
@@ -27,44 +26,22 @@ export function AudioPlayer({ recordingId, name, transcript, className }: AudioP
   const [duration, setDuration] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [completed, setCompleted] = useState(false)
-  const [showTranscript, setShowTranscript] = useState(false)
+  const [showTranscript, setShowTranscript] = useState(true)
 
-  // Load audio URL and restore playback state
+  // Restore playback state in the background — playback can begin before this resolves.
   useEffect(() => {
     let cancelled = false
 
-    async function load() {
-      try {
-        setLoading(true)
-        const [blobUrl, playbackData] = await Promise.all([
-          tts.getAudioBlobUrl(recordingId),
-          tts.getPlayback(recordingId).catch(() => null),
-        ])
-
-        if (cancelled) return
-
-        setAudioUrl(blobUrl)
-
-        if (playbackData) {
-          setCurrentTime(playbackData.positionSeconds)
-          setPlaybackSpeed(playbackData.playbackSpeed)
-          setCompleted(playbackData.completed)
-          if (playbackData.durationSeconds > 0) {
-            setDuration(playbackData.durationSeconds)
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          setError('Failed to load audio')
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+    tts.getPlayback(recordingId).then((playbackData) => {
+      if (cancelled || !playbackData) return
+      setCurrentTime(playbackData.positionSeconds)
+      setPlaybackSpeed(playbackData.playbackSpeed)
+      setCompleted(playbackData.completed)
+      if (playbackData.durationSeconds > 0) {
+        setDuration(playbackData.durationSeconds)
       }
-    }
+    }).catch(() => {})
 
-    load()
     return () => { cancelled = true }
   }, [recordingId])
 
@@ -143,17 +120,20 @@ export function AudioPlayer({ recordingId, name, transcript, className }: AudioP
         playbackSpeed: audio.playbackRate,
       }).catch(() => {})
     }
+    const onErr = () => setError('Failed to load audio')
 
     audio.addEventListener('timeupdate', onTimeUpdate)
     audio.addEventListener('play', onPlay)
     audio.addEventListener('pause', onPause)
     audio.addEventListener('ended', onEnded)
+    audio.addEventListener('error', onErr)
 
     return () => {
       audio.removeEventListener('timeupdate', onTimeUpdate)
       audio.removeEventListener('play', onPlay)
       audio.removeEventListener('pause', onPause)
       audio.removeEventListener('ended', onEnded)
+      audio.removeEventListener('error', onErr)
     }
   }, [recordingId, audioUrl])
 
@@ -201,15 +181,6 @@ export function AudioPlayer({ recordingId, name, transcript, className }: AudioP
   }
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
-
-  if (loading) {
-    return (
-      <div className={cn('flex items-center gap-2 rounded-xl border border-border bg-secondary/50 p-3', className)}>
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Loading audio...</span>
-      </div>
-    )
-  }
 
   if (error) {
     return (

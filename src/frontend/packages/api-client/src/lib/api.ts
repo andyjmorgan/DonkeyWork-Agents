@@ -1,5 +1,6 @@
 import { fetchWithAuth as baseFetchWithAuth } from './fetchWithAuth'
 import { getPlatformConfig } from '@donkeywork/platform'
+import { useAuthStore } from '@donkeywork/stores'
 
 async function fetchWithAuth(url: string, options: RequestInit = {}, retryOnUnauthorized = true): Promise<Response> {
   const { apiBaseUrl } = getPlatformConfig()
@@ -2004,14 +2005,10 @@ export const tts = {
   getRecording: (id: string) =>
     api.get<TtsRecording>(`/api/v1/tts/recordings/${id}`),
 
-  getAudioBlobUrl: async (id: string): Promise<string> => {
-    const response = await baseFetchWithAuth(
-      `${getPlatformConfig().apiBaseUrl}/api/v1/tts/recordings/${id}/audio`,
-      {},
-      true
-    )
-    const blob = await response.blob()
-    return URL.createObjectURL(blob)
+  getAudioStreamUrl: (id: string): string => {
+    const token = useAuthStore.getState().accessToken
+    const base = `${getPlatformConfig().apiBaseUrl}/api/v1/tts/recordings/${id}/audio`
+    return token ? `${base}?access_token=${encodeURIComponent(token)}` : base
   },
 
   updatePlayback: (id: string, data: UpdatePlaybackRequest) =>
