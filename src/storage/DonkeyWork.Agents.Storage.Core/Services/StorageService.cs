@@ -111,11 +111,24 @@ public sealed class StorageService : IStorageService
 
         if (!string.IsNullOrEmpty(_options.PublicServiceUrl))
         {
+            // The AWS SDK emits https:// for presigned URLs even when ServiceUrl is http://,
+            // so a string Replace keyed on `${ServiceUrl.Scheme}://${Authority}` would miss
+            // the actual URL. Rewrite via Uri parsing so we replace host+port regardless of
+            // the scheme the SDK chose, then take the public scheme/host/port verbatim.
+            var presignedUri = new Uri(presignedUrl);
             var internalUri = new Uri(_options.ServiceUrl);
             var publicUri = new Uri(_options.PublicServiceUrl);
-            presignedUrl = presignedUrl.Replace(
-                $"{internalUri.Scheme}://{internalUri.Authority}",
-                $"{publicUri.Scheme}://{publicUri.Authority}");
+
+            if (string.Equals(presignedUri.Authority, internalUri.Authority, StringComparison.OrdinalIgnoreCase))
+            {
+                var rebuilt = new UriBuilder(presignedUri)
+                {
+                    Scheme = publicUri.Scheme,
+                    Host = publicUri.Host,
+                    Port = publicUri.IsDefaultPort ? -1 : publicUri.Port,
+                };
+                presignedUrl = rebuilt.Uri.ToString();
+            }
         }
 
         return new PresignedUrlResult
