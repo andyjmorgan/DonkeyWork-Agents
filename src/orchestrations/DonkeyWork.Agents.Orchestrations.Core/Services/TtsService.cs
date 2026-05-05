@@ -78,6 +78,23 @@ public class TtsService : ITtsService
         return (download.Content, recording.ContentType, download.FileName);
     }
 
+    public async Task<string?> GetAudioStreamUrlAsync(
+        Guid id, CancellationToken cancellationToken = default)
+    {
+        var recording = await _dbContext.TtsRecordings
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+
+        if (recording == null)
+            return null;
+
+        // 15-minute window is plenty for a single playback session and short enough that
+        // a leaked URL is not a long-term hazard.
+        var presigned = await _storageService.GetPublicUrlAsync(
+            recording.FilePath, TimeSpan.FromMinutes(15), cancellationToken);
+
+        return presigned?.Url;
+    }
+
     public async Task<TtsPlaybackV1> GetPlaybackAsync(
         Guid recordingId, CancellationToken cancellationToken = default)
     {

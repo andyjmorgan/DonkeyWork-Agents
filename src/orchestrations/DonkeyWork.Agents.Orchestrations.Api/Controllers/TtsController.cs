@@ -58,19 +58,30 @@ public class TtsController : ControllerBase
         return recording == null ? NotFound() : Ok(recording);
     }
 
-    /// <summary>
-    /// Stream the audio file for a recording.
-    /// </summary>
     [HttpGet("recordings/{id:guid}/audio")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status206PartialContent)]
+    [ProducesResponseType(StatusCodes.Status302Found)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAudio(Guid id, CancellationToken cancellationToken)
     {
+        // Prefer redirecting the browser to a short-lived presigned URL so it streams
+        // straight from object storage with native HTTP range support — the <audio>
+        // element can start playback and scrub before the whole file arrives.
+        // Falls back to in-process streaming for filesystem-backed dev environments
+        // where presigned URLs are not available; enableRangeProcessing makes that
+        // path seekable too on the FileStream returned by the storage service.
+        var streamUrl = await _ttsService.GetAudioStreamUrlAsync(id, cancellationToken);
+        if (streamUrl != null)
+        {
+            return Redirect(streamUrl);
+        }
+
         var result = await _ttsService.DownloadAudioAsync(id, cancellationToken);
         if (result == null)
             return NotFound();
 
-        return File(result.Value.Content, result.Value.ContentType, result.Value.FileName);
+        return File(result.Value.Content, result.Value.ContentType, result.Value.FileName, enableRangeProcessing: true);
     }
 
     /// <summary>

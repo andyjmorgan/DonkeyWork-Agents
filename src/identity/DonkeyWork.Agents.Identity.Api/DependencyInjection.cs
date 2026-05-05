@@ -121,8 +121,17 @@ public static class DependencyInjection
                         // Use token from query string for:
                         // - SignalR hubs (/hubs/*)
                         // - Actors WebSocket connections (*/ws)
+                        // - TTS audio downloads (.../tts/recordings/{id}/audio) — the <audio>
+                        //   element can't carry an Authorization header, so the frontend
+                        //   appends ?access_token=<jwt> to enable native HTTP range streaming
+                        //   without first buffering the whole blob through fetch.
+                        var pathValue = path.Value;
+                        var isAudioStream = pathValue != null
+                            && pathValue.Contains("/tts/recordings/", StringComparison.OrdinalIgnoreCase)
+                            && pathValue.EndsWith("/audio", StringComparison.OrdinalIgnoreCase);
+
                         if (!string.IsNullOrEmpty(accessToken) &&
-                            (path.StartsWithSegments("/hubs") || path.Value?.EndsWith("/ws") == true))
+                            (path.StartsWithSegments("/hubs") || pathValue?.EndsWith("/ws") == true || isAudioStream))
                         {
                             context.Token = accessToken;
                         }
