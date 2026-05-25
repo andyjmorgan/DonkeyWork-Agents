@@ -237,6 +237,7 @@ internal sealed class AnthropicProvider : IAiProvider
         var toolBlockInfo = new Dictionary<long, (string Id, string Name)>();
         var serverToolBlockInfo = new Dictionary<long, (string Id, string Name)>();
         var serverToolInputBuffers = new Dictionary<long, StringBuilder>();
+        var compactionBuffers = new Dictionary<long, StringBuilder>();
         InternalStopReason stopReason = InternalStopReason.EndTurn;
 
         await foreach (var streamEvent in client.Beta.Messages.CreateStreaming(parameters, ct)
@@ -318,11 +319,11 @@ internal sealed class AnthropicProvider : IAiProvider
                 }
                 else if (blockStart.ContentBlock.TryPickBetaCompaction(out var compactionStart))
                 {
-                    yield return new ModelResponseCompactionContent
-                    {
-                        BlockIndex = (int)index,
-                        Summary = compactionStart.Content
-                    };
+                    // The summary text may arrive entirely in content_block_start,
+                    // or stream in via content_block_delta. Buffer it and emit at
+                    // content_block_stop with the full text.
+                    var initial = compactionStart.Content ?? string.Empty;
+                    compactionBuffers[index] = new StringBuilder(initial);
                 }
             }
             else if (streamEvent.TryPickContentBlockDelta(out var blockDelta))
@@ -380,9 +381,12 @@ internal sealed class AnthropicProvider : IAiProvider
                         Signature = signatureDelta.Signature ?? ""
                     };
                 }
-                else if (blockDelta.Delta.TryPickCompaction(out _))
+                else if (blockDelta.Delta.TryPickCompaction(out var compactionDelta))
                 {
-                    // Compaction content arrives complete in content_block_start; deltas are no-ops
+                    if (compactionBuffers.TryGetValue(index, out var buf) && !string.IsNullOrEmpty(compactionDelta.Content))
+                    {
+                        buf.Append(compactionDelta.Content);
+                    }
                 }
             }
             else if (streamEvent.TryPickContentBlockStop(out var blockStop))
@@ -436,6 +440,16 @@ internal sealed class AnthropicProvider : IAiProvider
 
                 serverToolInputBuffers.Remove(index);
                 serverToolBlockInfo.Remove(index);
+
+                if (compactionBuffers.TryGetValue(index, out var compactionBuf))
+                {
+                    yield return new ModelResponseCompactionContent
+                    {
+                        BlockIndex = (int)index,
+                        Summary = compactionBuf.ToString()
+                    };
+                    compactionBuffers.Remove(index);
+                }
             }
             else if (streamEvent.TryPickDelta(out var messageDelta))
             {
