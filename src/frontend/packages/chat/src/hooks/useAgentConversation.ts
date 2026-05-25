@@ -57,6 +57,8 @@ export function useAgentConversation(initialConversationId?: string, options?: U
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
   const [mcpServerStatuses, setMcpServerStatuses] = useState<McpServerStatus[]>([]);
   const [sandboxStatus, setSandboxStatus] = useState<SandboxStatus | null>(null);
+  const [isCompacting, setIsCompacting] = useState(false);
+  const compactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [socketEvents, setSocketEvents] = useState<SocketEvent[]>([]);
   const socketEventIdRef = useRef(0);
 
@@ -513,6 +515,18 @@ export function useAgentConversation(initialConversationId?: string, options?: U
             return next;
           });
         }
+        break;
+      }
+
+      case "compaction": {
+        const summary = (data.summary as string) ?? "";
+        appendOrCreate(assistantId, agentKey, "", {
+          type: "compaction",
+          summary,
+        });
+        setIsCompacting(true);
+        if (compactionTimeoutRef.current) clearTimeout(compactionTimeoutRef.current);
+        compactionTimeoutRef.current = setTimeout(() => setIsCompacting(false), 4000);
         break;
       }
 
@@ -1076,6 +1090,11 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     setIsReconnecting(false);
     setMcpServerStatuses([]);
     setSandboxStatus(null);
+    setIsCompacting(false);
+    if (compactionTimeoutRef.current) {
+      clearTimeout(compactionTimeoutRef.current);
+      compactionTimeoutRef.current = null;
+    }
     agentGroupIndexRef.current = new Map();
     currentAssistantIdRef.current = null;
     turnIdToMessageIdRef.current = new Map();
@@ -1099,6 +1118,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
     isReconnecting,
     mcpServerStatuses,
     sandboxStatus,
+    isCompacting,
     socketEvents,
     sendMessage,
     sendRpc,

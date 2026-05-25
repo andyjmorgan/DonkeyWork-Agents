@@ -15,7 +15,7 @@ import { ExecutionSidePanel } from "./ExecutionSidePanel";
 import { SocketEventPanel } from "./SocketEventPanel";
 import { ExecutionDetailModal } from "./ExecutionDetailModal";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "./agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container, History, Radio } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container, History, Radio, Archive } from "lucide-react";
 
 function extractTextFromBoxes(boxes: ContentBox[]): string {
   return boxes
@@ -206,6 +206,7 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
     isReconnecting,
     mcpServerStatuses,
     sandboxStatus,
+    isCompacting,
     socketEvents,
     clearSocketEvents,
   } = useAgentConversation(initialConversationId, { onConversationCreated, onReset });
@@ -403,6 +404,15 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
           </div>
         </div>
         <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
+        {isCompacting && (
+          <div className="relative h-7 overflow-hidden border-b border-amber-500/20 bg-amber-500/5">
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(245,158,11,0.18),transparent)] bg-[length:200%_100%] animate-[compaction-shimmer_1.6s_linear_infinite]" />
+            <div className="relative flex items-center justify-center gap-2 h-full text-[11px] font-medium text-amber-400">
+              <Archive className="w-3 h-3 shrink-0" />
+              <span>Compacting context…</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Messages */}

@@ -20,6 +20,7 @@ export type ToolUseBox = {
   webSearchResults?: WebSearchResult[];
 };
 export type UsageBox = { type: "usage"; inputTokens: number; outputTokens: number; webSearchRequests: number; contextWindowLimit: number; maxOutputTokens: number };
+export type CompactionBox = { type: "compaction"; summary: string };
 export type AgentGroupBox = {
   type: "agent_group";
   agentKey: string;
@@ -38,6 +39,7 @@ export type ContentBox =
   | CitationBox
   | ToolUseBox
   | UsageBox
+  | CompactionBox
   | AgentGroupBox;
 
 export interface McpServerStatus {

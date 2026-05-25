@@ -243,6 +243,10 @@ function convertContentBlocks(blocks: InternalContentBlock[]): ContentBox[] {
 
       case "InternalWebFetchToolResultBlock":
         break;
+
+      case "InternalCompactionBlock":
+        result.push({ type: "compaction", summary: block.summary ?? "" });
+        break;
     }
   }
 

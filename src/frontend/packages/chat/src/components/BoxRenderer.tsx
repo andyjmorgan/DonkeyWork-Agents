@@ -5,7 +5,7 @@ import type { ContentBox, CitationBox } from "@donkeywork/api-client";
 import { CitationChipRow } from "./CitationChip";
 import { PulseDots } from "./PulseDots";
 import { useChatConfig } from "../context";
-import { BrainCircuit, Wrench, Globe, Check, CircleX, Clock, ExternalLink } from "lucide-react";
+import { BrainCircuit, Wrench, Globe, Check, CircleX, Clock, ExternalLink, Archive } from "lucide-react";
 
 const BLOCK_TAGS_RE = /<(?:system_warning|function_results|result|output)\b[^>]*>[\s\S]*?<\/(?:system_warning|function_results|result|output)>/g;
 const ORPHAN_TAGS_RE = /<\/?(?:system_warning|function_results|result|output)\b[^>]*>/g;
@@ -212,6 +212,30 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
     case "usage": {
       if (box.inputTokens + box.outputTokens === 0) return null;
       return <UsageChip inputTokens={box.inputTokens} outputTokens={box.outputTokens} contextWindowLimit={box.contextWindowLimit} maxOutputTokens={box.maxOutputTokens} />;
+    }
+
+    case "compaction": {
+      const hasSummary = !!box.summary?.trim();
+      return (
+        <div className="my-4 flex items-center gap-3">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-amber-500/30" />
+          <details className="group">
+            <summary className="cursor-pointer select-none flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/5 text-[11px] font-medium text-amber-400 hover:bg-amber-500/10 transition-colors list-none [&::-webkit-details-marker]:hidden">
+              <Archive className="w-3 h-3 shrink-0" />
+              <span>Context compacted</span>
+              {hasSummary && (
+                <svg className="w-2.5 h-2.5 shrink-0 transition-transform group-open:rotate-90 opacity-60" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l8 7-8 7z" /></svg>
+              )}
+            </summary>
+            {hasSummary && (
+              <div className="mt-2 max-w-xl rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                {box.summary}
+              </div>
+            )}
+          </details>
+          <div className="flex-1 h-px bg-gradient-to-l from-transparent via-amber-500/30 to-amber-500/30" />
+        </div>
+      );
     }
 
     case "agent_group":
