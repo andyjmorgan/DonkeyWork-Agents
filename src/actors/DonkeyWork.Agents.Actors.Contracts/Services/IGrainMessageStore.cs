@@ -28,9 +28,16 @@ public interface IGrainMessageStore
         string grainKey, Guid userId, int fromSequenceNumber, CancellationToken ct = default);
 
     /// <summary>
+    /// Loads every persisted message for the grain (no compaction folding applied).
+    /// Used for UI / transcript surfaces where the user must still see the original turns.
+    /// </summary>
+    Task<List<InternalMessage>> LoadAllMessagesAsync(
+        string grainKey, Guid userId, CancellationToken ct = default);
+
+    /// <summary>
     /// Records that a compaction occurred for this grain, anchoring at the given sequence number
-    /// and turn. Subsequent loads will drop messages at or before the anchor and prepend a synthetic
-    /// user-role message carrying the summary.
+    /// and turn. Subsequent LoadMessagesAsync calls (the LLM context path) will drop messages at or
+    /// before the anchor and prepend a synthetic user-role message carrying the summary.
     /// </summary>
     Task AppendCompactionMarkerAsync(
         string grainKey, Guid userId, int atSequenceNumber, Guid atTurnId, string summary, CancellationToken ct = default);
