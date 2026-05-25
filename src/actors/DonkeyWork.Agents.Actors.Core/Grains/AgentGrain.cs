@@ -175,9 +175,11 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
+    public async Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
     {
-        return Task.FromResult<IReadOnlyList<InternalMessage>>(Messages);
+        var grainKey = this.GetPrimaryKeyString();
+        var messages = await MessageStore.LoadAllMessagesAsync(grainKey, IdentityContext.UserId);
+        return messages.AsReadOnly();
     }
 
     public Task DeliverMessageAsync(AgentMessage message)

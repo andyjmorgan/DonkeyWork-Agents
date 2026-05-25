@@ -7,6 +7,7 @@ using DonkeyWork.Agents.Actors.Contracts.Messages;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware;
+using DonkeyWork.Agents.Actors.Core.Services;
 using DonkeyWork.Agents.Actors.Core.Middleware.Messages;
 using DonkeyWork.Agents.Actors.Core.Options;
 using DonkeyWork.Agents.Actors.Core.Providers;
@@ -501,7 +502,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         Messages.Add(new InternalContentMessage
         {
             Role = InternalMessageRole.User,
-            Content = $"[Conversation compacted — prior history summarized below]\n\n{safeSummary}",
+            Content = GrainMessageStore.BuildCompactionContinuationPrompt(safeSummary),
             Origin = MessageOrigin.User,
             TurnId = GrainContext.CurrentTurnId,
         });

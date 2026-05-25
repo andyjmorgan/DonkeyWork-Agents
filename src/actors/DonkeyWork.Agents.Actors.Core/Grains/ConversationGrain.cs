@@ -222,9 +222,14 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         return await registry.ListAsync();
     }
 
-    public Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
+    public async Task<IReadOnlyList<InternalMessage>> GetMessagesAsync()
     {
-        return Task.FromResult<IReadOnlyList<InternalMessage>>(Messages.AsReadOnly());
+        // Return the raw persisted history so the UI shows the original turns
+        // even after compaction pruned the in-memory Messages list (which is
+        // optimized for the LLM context, not for display).
+        var grainKey = this.GetPrimaryKeyString();
+        var messages = await MessageStore.LoadAllMessagesAsync(grainKey, IdentityContext.UserId);
+        return messages.AsReadOnly();
     }
 
     public async Task<IReadOnlyList<InternalMessage>> GetAgentMessagesAsync(string agentKey)

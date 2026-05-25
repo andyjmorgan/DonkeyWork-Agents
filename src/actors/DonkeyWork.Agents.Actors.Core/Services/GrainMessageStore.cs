@@ -57,7 +57,7 @@ public sealed class GrainMessageStore : IGrainMessageStore
             messages.Add(new InternalContentMessage
             {
                 Role = InternalMessageRole.User,
-                Content = $"[Conversation compacted — prior history summarized below]\n\n{latestMarker.Summary}",
+                Content = BuildCompactionContinuationPrompt(latestMarker.Summary),
                 Origin = MessageOrigin.User,
                 TurnId = latestMarker.AtTurnId,
             });
@@ -157,6 +157,39 @@ public sealed class GrainMessageStore : IGrainMessageStore
             "Rolled back {Count} messages from seq={FromSeq} for grain {GrainKey}",
             deleted, fromSequenceNumber, grainKey);
     }
+
+    public async Task<List<InternalMessage>> LoadAllMessagesAsync(
+        string grainKey, Guid userId, CancellationToken ct = default)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
+
+        var entities = await dbContext.GrainMessages
+            .IgnoreQueryFilters()
+            .Where(e => e.GrainKey == grainKey && e.UserId == userId)
+            .OrderBy(e => e.SequenceNumber)
+            .ToListAsync(ct);
+
+        var messages = new List<InternalMessage>(entities.Count);
+        foreach (var entity in entities)
+        {
+            var msg = JsonSerializer.Deserialize<InternalMessage>(entity.MessageJson, JsonOptions);
+            if (msg is not null)
+                messages.Add(msg);
+        }
+
+        return messages;
+    }
+
+    internal static string BuildCompactionContinuationPrompt(string summary) =>
+        "[SYSTEM CONTEXT — not a new user message]\n\n" +
+        "Earlier turns in this conversation have been summarized to save tokens. " +
+        "Treat the summary below as your own memory of what has already been said and done with the user. " +
+        "Continue the conversation naturally from where it left off. " +
+        "Do NOT greet the user, do NOT say you are starting fresh, do NOT mention compaction or summarization. " +
+        "If the next user message is a follow-up, answer it directly using the summarized context.\n\n" +
+        "---\n" +
+        $"{summary}\n" +
+        "---";
 
     public async Task AppendCompactionMarkerAsync(
         string grainKey, Guid userId, int atSequenceNumber, Guid atTurnId, string summary, CancellationToken ct = default)
