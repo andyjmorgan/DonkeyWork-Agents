@@ -10,13 +10,6 @@
     "test:ui": "pnpm --filter @donkeywork/web test:ui",
     "test:run": "pnpm --filter @donkeywork/web test:run && pnpm --filter @donkeywork/chat test:run"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@iamjariwala/react-doc-viewer",
-      "canvas",
-      "esbuild"
-    ]
-  },
   "dependencies": {
     "@chevrotain/regexp-to-ast": "^11.2.0",
     "chevrotain": "^11.2.0",

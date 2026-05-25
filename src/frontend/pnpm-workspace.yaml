@@ -1,3 +1,8 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+onlyBuiltDependencies:
+  - '@iamjariwala/react-doc-viewer'
+  - canvas
+  - esbuild
