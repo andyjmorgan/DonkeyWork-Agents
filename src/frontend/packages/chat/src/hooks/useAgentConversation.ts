@@ -1050,8 +1050,12 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const res = result as Record<string, unknown>;
       const turnId = res?.turnId as string | undefined;
       if (turnId) {
+        // If turn_start (or later events) already arrived for this turn before
+        // this RPC reply landed, the message is no longer pending — never flip
+        // _pending to true, or the X stays stuck.
+        const alreadyStarted = turnCursorsRef.current.has(turnId);
         setMessages((prev) =>
-          prev.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId, _pending: true } : m)
+          prev.map((m) => m.id === userMsgId ? { ...m, _turnId: turnId, _pending: !alreadyStarted } : m)
         );
       }
     }).catch(() => {});

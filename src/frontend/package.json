@@ -12,6 +12,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@iamjariwala/react-doc-viewer",
+      "canvas",
       "esbuild"
     ]
   },
