@@ -563,6 +563,46 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         break;
       }
 
+      case "web_fetch": {
+        const fetchUrl = (data.url as string) ?? undefined;
+        appendOrCreate(assistantId, agentKey, "", {
+          type: "tool_use",
+          toolName: "web_fetch",
+          displayName: fetchUrl ? `Fetching: ${fetchUrl}` : "Web Fetch",
+          toolUseId: (data.toolUseId as string) ?? "",
+          arguments: fetchUrl ? JSON.stringify({ url: fetchUrl }) : undefined,
+        });
+        break;
+      }
+
+      case "web_fetch_complete": {
+        const wfToolId = (data.toolUseId as string) ?? "";
+        const wfUrl = (data.url as string) ?? "";
+        const wfTitle = (data.title as string) ?? "";
+        const markFetchComplete = (boxes: ContentBox[]): ContentBox[] =>
+          boxes.map((b) => {
+            if (b.type === "tool_use" && b.toolUseId === wfToolId) {
+              return {
+                ...b,
+                isComplete: true,
+                success: true,
+                displayName: wfTitle || wfUrl ? `Fetched: ${wfTitle || wfUrl}` : b.displayName,
+                webSearchResults: wfUrl ? [{ title: wfTitle || wfUrl, url: wfUrl }] : b.webSearchResults,
+              };
+            }
+            if (b.type === "tool_use" && b.subAgent) {
+              return { ...b, subAgent: { ...b.subAgent, boxes: markFetchComplete(b.subAgent.boxes) } };
+            }
+            if (b.type === "agent_group") {
+              return { ...b, boxes: markFetchComplete(b.boxes) };
+            }
+            return b;
+          });
+        const wfEntry = agentGroupIndexRef.current.get(agentKey);
+        updateBoxes(wfEntry?.messageId ?? assistantId, markFetchComplete);
+        break;
+      }
+
       case "agent_message": {
         break;
       }

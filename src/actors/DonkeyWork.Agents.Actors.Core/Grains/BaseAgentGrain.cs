@@ -430,6 +430,24 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 break;
             }
 
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseServerToolUse serverTool }
+                when serverTool.ToolName.Equals("web_fetch", StringComparison.OrdinalIgnoreCase)
+                     && serverTool.Input.HasValue:
+            {
+                var url = serverTool.Input?.TryGetProperty("url", out var u) == true ? u.GetString() : null;
+                Emit(new StreamWebFetchEvent(key, serverTool.ToolUseId, url));
+                break;
+            }
+
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseServerToolUse serverTool }
+                when serverTool.ToolName.Equals("web_search", StringComparison.OrdinalIgnoreCase)
+                     && serverTool.Input.HasValue:
+            {
+                var searchQuery = serverTool.Input?.TryGetProperty("query", out var sq) == true ? sq.GetString() : null;
+                Emit(new StreamWebSearchEvent(key, serverTool.ToolUseId, searchQuery));
+                break;
+            }
+
             case ModelMiddlewareMessage { ModelMessage: ModelResponseToolSearchResult toolSearchResult }:
                 Emit(new StreamToolCompleteEvent(key, toolSearchResult.ToolUseId, "tool_search", true, 0)
                 {
@@ -445,6 +463,10 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             case ModelMiddlewareMessage { ModelMessage: ModelResponseWebSearchResult webSearch }:
                 Emit(new StreamWebSearchEvent(key, webSearch.ToolUseId));
                 EmitWebSearchComplete(key, webSearch);
+                break;
+
+            case ModelMiddlewareMessage { ModelMessage: ModelResponseWebFetchResult webFetch }:
+                EmitWebFetchComplete(key, webFetch);
                 break;
 
             case ToolResponseMessage toolResponse:
@@ -533,6 +555,29 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         catch (Exception ex)
         {
             Logger.LogDebug(ex, "Failed to parse web search results");
+        }
+    }
+
+    private protected void EmitWebFetchComplete(string key, ModelResponseWebFetchResult webFetch)
+    {
+        try
+        {
+            string url = "";
+            string? title = null;
+            var doc = JsonDocument.Parse(webFetch.RawJson);
+            if (doc.RootElement.TryGetProperty("content", out var contentEl))
+            {
+                if (contentEl.TryGetProperty("url", out var urlEl))
+                    url = urlEl.GetString() ?? "";
+                if (contentEl.TryGetProperty("content", out var innerContent)
+                    && innerContent.TryGetProperty("title", out var titleEl))
+                    title = titleEl.GetString();
+            }
+            Emit(new StreamWebFetchCompleteEvent(key, webFetch.ToolUseId, url, title));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to parse web fetch result");
         }
     }
 
