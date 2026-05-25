@@ -1,8 +1,11 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm — pinned to 9.x because pnpm 10 promotes ERR_PNPM_IGNORED_BUILDS
+# to a hard failure for any package with build scripts that isn't on the
+# approval list, even when listed in onlyBuiltDependencies. Lockfile is v9.0,
+# so 9.15.x is fully compatible.
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Copy workspace config and package files for dependency caching
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
