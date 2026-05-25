@@ -527,6 +527,13 @@ internal sealed class AnthropicProvider : IAiProvider
 
     internal static BetaMessageParam[] MapMessages(IReadOnlyList<InternalMessage> messages)
     {
+        // Build the set of tool_use IDs visible in the messages we're about to send.
+        // After compaction pruning, a kept assistant message may still carry
+        // *_tool_result blocks whose source server_tool_use lived in a dropped
+        // message; Anthropic rejects orphaned result blocks with
+        // "must have a corresponding server_tool_use block before it".
+        var knownToolUseIds = CollectToolUseIds(messages);
+
         var result = new List<BetaMessageParam>();
 
         foreach (var msg in messages)
@@ -542,7 +549,7 @@ internal sealed class AnthropicProvider : IAiProvider
                     break;
 
                 case InternalAssistantMessage asstToolMsg:
-                    var blocks = MapAssistantContentBlocks(asstToolMsg);
+                    var blocks = MapAssistantContentBlocks(asstToolMsg, knownToolUseIds);
                     result.Add(new BetaMessageParam
                     {
                         Role = Role.Assistant,
@@ -551,6 +558,8 @@ internal sealed class AnthropicProvider : IAiProvider
                     break;
 
                 case InternalToolResultMessage toolResult:
+                    if (!knownToolUseIds.Contains(toolResult.ToolUseId))
+                        break;
                     var toolResultBlock = new BetaToolResultBlockParam
                     {
                         ToolUseID = toolResult.ToolUseId,
@@ -573,7 +582,38 @@ internal sealed class AnthropicProvider : IAiProvider
         return result.ToArray();
     }
 
-    private static List<BetaContentBlockParam> MapAssistantContentBlocks(InternalAssistantMessage msg)
+    private static HashSet<string> CollectToolUseIds(IReadOnlyList<InternalMessage> messages)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var msg in messages)
+        {
+            if (msg is not InternalAssistantMessage am) continue;
+
+            foreach (var block in am.ContentBlocks)
+            {
+                switch (block)
+                {
+                    case InternalToolUseBlock tu when !string.IsNullOrEmpty(tu.Id):
+                        ids.Add(tu.Id);
+                        break;
+                    case InternalServerToolUseBlock stu when !string.IsNullOrEmpty(stu.Id):
+                        ids.Add(stu.Id);
+                        break;
+                }
+            }
+
+            foreach (var tu in am.ToolUses)
+            {
+                if (!string.IsNullOrEmpty(tu.Id))
+                    ids.Add(tu.Id);
+            }
+        }
+        return ids;
+    }
+
+    private static List<BetaContentBlockParam> MapAssistantContentBlocks(
+        InternalAssistantMessage msg,
+        HashSet<string> knownToolUseIds)
     {
         // If ContentBlocks is populated, use it for full-fidelity round-tripping
         if (msg.ContentBlocks.Count > 0)
@@ -610,12 +650,16 @@ internal sealed class AnthropicProvider : IAiProvider
                         break;
 
                     case InternalWebSearchResultBlock searchResult:
+                        if (!knownToolUseIds.Contains(searchResult.ToolUseId))
+                            break;
                         var searchResultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
                             searchResult.RawJson) ?? new Dictionary<string, JsonElement>();
                         blocks.Add(BetaWebSearchToolResultBlockParam.FromRawUnchecked(searchResultDict));
                         break;
 
                     case InternalWebFetchToolResultBlock fetchResult:
+                        if (!knownToolUseIds.Contains(fetchResult.ToolUseId))
+                            break;
                         var fetchResultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
                             fetchResult.RawJson) ?? new Dictionary<string, JsonElement>();
                         blocks.Add(BetaWebFetchToolResultBlockParam.FromRawUnchecked(fetchResultDict));
@@ -630,6 +674,8 @@ internal sealed class AnthropicProvider : IAiProvider
                         break;
 
                     case InternalToolSearchResultBlock toolSearchResult:
+                        if (!knownToolUseIds.Contains(toolSearchResult.ToolUseId))
+                            break;
                         var toolSearchDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
                             toolSearchResult.RawJson) ?? new Dictionary<string, JsonElement>();
                         blocks.Add(BetaToolSearchToolResultBlockParam.FromRawUnchecked(toolSearchDict));
