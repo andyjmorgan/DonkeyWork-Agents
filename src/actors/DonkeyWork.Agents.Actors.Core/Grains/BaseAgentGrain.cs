@@ -386,7 +386,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
     #region Event Emission
 
-    private protected void EmitStreamEvent(BaseMiddlewareMessage msg)
+    private protected async Task EmitStreamEvent(BaseMiddlewareMessage msg)
     {
         var key = GrainContext.GrainKey;
 
@@ -437,6 +437,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 break;
 
             case ModelMiddlewareMessage { ModelMessage: ModelResponseCompactionContent compaction }:
+                await OnCompactionAsync(key, compaction.Summary);
                 Emit(new StreamCompactionEvent(key, compaction.Summary));
                 break;
 
@@ -468,6 +469,46 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 Emit(new StreamErrorEvent(key, error.ErrorText));
                 break;
         }
+    }
+
+    private protected async Task OnCompactionAsync(string grainKey, string? summary)
+    {
+        // Anchor at the highest sequence already persisted (the user message that triggered this turn).
+        // The assistant turn currently streaming will be persisted at NextSequenceNumber and kept;
+        // the synthetic summary message replaces everything at or before the anchor on subsequent loads.
+        if (NextSequenceNumber <= 0)
+            return;
+
+        var anchorSequence = NextSequenceNumber - 1;
+        var safeSummary = summary ?? string.Empty;
+
+        try
+        {
+            await MessageStore.AppendCompactionMarkerAsync(
+                grainKey,
+                IdentityContext.UserId,
+                anchorSequence,
+                GrainContext.CurrentTurnId,
+                safeSummary);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to persist compaction marker for grain {GrainKey}", grainKey);
+            return;
+        }
+
+        Messages.Clear();
+        Messages.Add(new InternalContentMessage
+        {
+            Role = InternalMessageRole.User,
+            Content = $"[Conversation compacted — prior history summarized below]\n\n{safeSummary}",
+            Origin = MessageOrigin.User,
+            TurnId = GrainContext.CurrentTurnId,
+        });
+
+        Logger.LogInformation(
+            "Compaction handled for grain {GrainKey}: marker anchored at seq={Anchor}, in-memory history rebuilt with summary",
+            grainKey, anchorSequence);
     }
 
     private protected void EmitWebSearchComplete(string key, ModelResponseWebSearchResult webSearch)
@@ -750,7 +791,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         await foreach (var msg in Pipeline.ExecuteAsync(context))
         {
             ct.ThrowIfCancellationRequested();
-            EmitStreamEvent(msg);
+            await EmitStreamEvent(msg);
             if (msg is ErrorMessage error)
                 pipelineError = error.ErrorText;
         }

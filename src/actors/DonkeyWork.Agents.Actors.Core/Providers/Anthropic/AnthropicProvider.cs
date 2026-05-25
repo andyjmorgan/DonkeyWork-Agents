@@ -621,11 +621,10 @@ internal sealed class AnthropicProvider : IAiProvider
                         blocks.Add(BetaToolSearchToolResultBlockParam.FromRawUnchecked(toolSearchDict));
                         break;
 
-                    case InternalCompactionBlock compaction:
-                        blocks.Add(new BetaCompactionBlockParam
-                        {
-                            Content = compaction.Summary
-                        });
+                    case InternalCompactionBlock:
+                        // The summary is replayed as a synthetic user message via the compaction marker
+                        // (see GrainMessageStore.LoadMessagesAsync). Re-sending it as a BetaCompactionBlockParam
+                        // alongside the pruned history would double-count the summary and re-trigger compaction.
                         break;
 
                     case InternalCitationBlock:
