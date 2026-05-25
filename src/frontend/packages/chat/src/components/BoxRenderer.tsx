@@ -75,7 +75,7 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
     case "tool_use": {
       if (box.subAgent) return null;
 
-      const isWebSearch = box.toolName === "web_search";
+      const isWebSearch = box.toolName === "web_search" || box.toolName === "web_fetch";
       const isRunning = isStreaming && !box.isComplete;
       const hasResult = box.result !== undefined;
       const hasWebResults = isWebSearch && box.webSearchResults && box.webSearchResults.length > 0;
