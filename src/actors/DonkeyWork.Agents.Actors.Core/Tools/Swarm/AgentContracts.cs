@@ -11,8 +11,8 @@ public static class AgentContracts
     {
         SystemPrompt = [ConversationSystemPrompt],
         ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox, ToolGroupNames.Scheduling, ToolGroupNames.AudioCollections],
-        WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 5 },
-        WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 3 },
+        WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 20 },
+        WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 20 },
         MaxTokens = 20_000,
         ThinkingBudgetTokens = 10_000,
         AgentType = AgentTypes.Conversation,
