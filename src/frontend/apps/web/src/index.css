@@ -246,6 +246,11 @@
     to { transform: rotate(360deg); }
   }
 
+  @keyframes compaction-shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+
   /* Terminal/console output styling */
   .terminal-output {
     font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;

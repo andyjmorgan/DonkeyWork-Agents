@@ -49,6 +49,11 @@ export interface InternalCitationBlock {
   citedText: string;
 }
 
+export interface InternalCompactionBlock {
+  $type: "InternalCompactionBlock";
+  summary?: string | null;
+}
+
 export type InternalContentBlock =
   | InternalTextBlock
   | InternalThinkingBlock
@@ -56,7 +61,8 @@ export type InternalContentBlock =
   | InternalServerToolUseBlock
   | InternalWebSearchResultBlock
   | InternalWebFetchToolResultBlock
-  | InternalCitationBlock;
+  | InternalCitationBlock
+  | InternalCompactionBlock;
 
 // --- Tool use record ---
 
