@@ -67,6 +67,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
 
     // Actors module (grain message persistence)
     public DbSet<GrainMessageEntity> GrainMessages => Set<GrainMessageEntity>();
+    public DbSet<GrainCompactionMarkerEntity> GrainCompactionMarkers => Set<GrainCompactionMarkerEntity>();
     public DbSet<AgentExecutionEntity> AgentExecutions => Set<AgentExecutionEntity>();
 
     // Conversations module

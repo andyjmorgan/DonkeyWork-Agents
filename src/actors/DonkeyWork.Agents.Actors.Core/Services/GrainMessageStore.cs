@@ -44,9 +44,30 @@ public sealed class GrainMessageStore : IGrainMessageStore
             .OrderBy(e => e.SequenceNumber)
             .ToListAsync(ct);
 
+        var latestMarker = await dbContext.GrainCompactionMarkers
+            .IgnoreQueryFilters()
+            .Where(e => e.GrainKey == grainKey && e.UserId == userId)
+            .OrderByDescending(e => e.AtSequenceNumber)
+            .FirstOrDefaultAsync(ct);
+
         var messages = new List<InternalMessage>(entities.Count);
+
+        if (latestMarker is not null)
+        {
+            messages.Add(new InternalContentMessage
+            {
+                Role = InternalMessageRole.User,
+                Content = $"[Conversation compacted — prior history summarized below]\n\n{latestMarker.Summary}",
+                Origin = MessageOrigin.User,
+                TurnId = latestMarker.AtTurnId,
+            });
+        }
+
         foreach (var entity in entities)
         {
+            if (latestMarker is not null && entity.SequenceNumber <= latestMarker.AtSequenceNumber)
+                continue;
+
             var msg = JsonSerializer.Deserialize<InternalMessage>(entity.MessageJson, JsonOptions);
             if (msg is not null)
                 messages.Add(msg);
@@ -55,8 +76,8 @@ public sealed class GrainMessageStore : IGrainMessageStore
         var nextSeq = entities.Count > 0 ? entities[^1].SequenceNumber + 1 : 0;
 
         _logger.LogDebug(
-            "Loaded {Count} messages for grain {GrainKey}, nextSeq={NextSeq}",
-            messages.Count, grainKey, nextSeq);
+            "Loaded {Count} messages for grain {GrainKey}, nextSeq={NextSeq}, compactionAnchor={Anchor}",
+            messages.Count, grainKey, nextSeq, latestMarker?.AtSequenceNumber);
 
         return (messages, nextSeq);
     }
@@ -135,5 +156,42 @@ public sealed class GrainMessageStore : IGrainMessageStore
         _logger.LogDebug(
             "Rolled back {Count} messages from seq={FromSeq} for grain {GrainKey}",
             deleted, fromSequenceNumber, grainKey);
+    }
+
+    public async Task AppendCompactionMarkerAsync(
+        string grainKey, Guid userId, int atSequenceNumber, Guid atTurnId, string summary, CancellationToken ct = default)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
+
+        dbContext.GrainCompactionMarkers.Add(new GrainCompactionMarkerEntity
+        {
+            GrainKey = grainKey,
+            UserId = userId,
+            AtSequenceNumber = atSequenceNumber,
+            AtTurnId = atTurnId,
+            Summary = summary,
+        });
+
+        await dbContext.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Recorded compaction marker for grain {GrainKey} at seq={Seq}, summary length={Len}",
+            grainKey, atSequenceNumber, summary.Length);
+    }
+
+    public async Task<CompactionMarker?> GetLatestCompactionMarkerAsync(
+        string grainKey, Guid userId, CancellationToken ct = default)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct);
+
+        var entity = await dbContext.GrainCompactionMarkers
+            .IgnoreQueryFilters()
+            .Where(e => e.GrainKey == grainKey && e.UserId == userId)
+            .OrderByDescending(e => e.AtSequenceNumber)
+            .FirstOrDefaultAsync(ct);
+
+        return entity is null
+            ? null
+            : new CompactionMarker(entity.AtSequenceNumber, entity.AtTurnId, entity.Summary);
     }
 }

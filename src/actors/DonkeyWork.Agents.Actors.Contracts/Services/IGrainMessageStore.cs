@@ -26,4 +26,18 @@ public interface IGrainMessageStore
     /// </summary>
     Task RollbackFromAsync(
         string grainKey, Guid userId, int fromSequenceNumber, CancellationToken ct = default);
+
+    /// <summary>
+    /// Records that a compaction occurred for this grain, anchoring at the given sequence number
+    /// and turn. Subsequent loads will drop messages at or before the anchor and prepend a synthetic
+    /// user-role message carrying the summary.
+    /// </summary>
+    Task AppendCompactionMarkerAsync(
+        string grainKey, Guid userId, int atSequenceNumber, Guid atTurnId, string summary, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the most recent compaction marker for the grain, or null if none exists.
+    /// </summary>
+    Task<CompactionMarker?> GetLatestCompactionMarkerAsync(
+        string grainKey, Guid userId, CancellationToken ct = default);
 }
