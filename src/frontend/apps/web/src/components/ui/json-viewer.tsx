@@ -51,23 +51,23 @@ function JsonNode({ value, name, depth, openDepth }: JsonNodeProps) {
   const open = depth < openDepth
 
   if (value === null) {
-    return <PrimitiveRow name={name}><span className="text-pink-400">null</span></PrimitiveRow>
+    return <PrimitiveRow name={name}><span className="text-pink-700 dark:text-pink-400">null</span></PrimitiveRow>
   }
 
   if (typeof value === 'string') {
     return (
       <PrimitiveRow name={name}>
-        <span className="text-emerald-400 break-all">"{value}"</span>
+        <span className="text-emerald-700 dark:text-emerald-400 break-all">"{value}"</span>
       </PrimitiveRow>
     )
   }
 
   if (typeof value === 'number') {
-    return <PrimitiveRow name={name}><span className="text-amber-400">{value}</span></PrimitiveRow>
+    return <PrimitiveRow name={name}><span className="text-amber-700 dark:text-amber-400">{value}</span></PrimitiveRow>
   }
 
   if (typeof value === 'boolean') {
-    return <PrimitiveRow name={name}><span className="text-blue-400">{String(value)}</span></PrimitiveRow>
+    return <PrimitiveRow name={name}><span className="text-blue-700 dark:text-blue-400">{String(value)}</span></PrimitiveRow>
   }
 
   if (Array.isArray(value)) {
@@ -111,7 +111,7 @@ function PrimitiveRow({ name, children }: { name?: string; children: React.React
   return (
     <div className="flex items-baseline gap-1 pl-4">
       {name !== undefined && (
-        <span className="text-cyan-300 shrink-0">"{name}":</span>
+        <span className="text-cyan-700 dark:text-cyan-300 shrink-0">"{name}":</span>
       )}
       <span>{children}</span>
     </div>
@@ -155,7 +155,7 @@ function CollapsibleRow({
     return (
       <div className="flex items-baseline gap-1 pl-4">
         {name !== undefined && (
-          <span className="text-cyan-300 shrink-0">"{name}":</span>
+          <span className="text-cyan-700 dark:text-cyan-300 shrink-0">"{name}":</span>
         )}
         <span className="text-muted-foreground">{openBracket}{closeBracket}</span>
       </div>
@@ -171,7 +171,7 @@ function CollapsibleRow({
           ▶
         </span>
         {name !== undefined && (
-          <span className="text-cyan-300 shrink-0">"{name}":</span>
+          <span className="text-cyan-700 dark:text-cyan-300 shrink-0">"{name}":</span>
         )}
         <span className="text-muted-foreground">
           {openBracket} <span className="text-[10px]">{count}</span> {closeBracket}
