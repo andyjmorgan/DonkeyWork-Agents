@@ -1,10 +1,12 @@
 using System.Text.Json;
 using DonkeyWork.Agents.Actors.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
+using DonkeyWork.Agents.Actors.Contracts.Events;
 using DonkeyWork.Agents.Actors.Contracts.Grains;
 using DonkeyWork.Agents.Actors.Contracts.Models;
 using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Tools.Swarm;
@@ -18,13 +20,16 @@ public sealed class SwarmAgentSpawner
     };
 
     private readonly IAgentExecutionRepository _executionRepository;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<SwarmAgentSpawner> _logger;
 
     public SwarmAgentSpawner(
         IAgentExecutionRepository executionRepository,
+        IServiceProvider serviceProvider,
         ILogger<SwarmAgentSpawner> logger)
     {
         _executionRepository = executionRepository;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -90,6 +95,34 @@ public sealed class SwarmAgentSpawner
             : (TimeSpan?)null;
 
         var assignedName = await registry.RegisterAsync(agentKey, label, name, context.GrainKey, timeout);
+
+        // Surface the spawn to the chat UI so the parent's spawn_X tool_use
+        // gets a nested agent_group attached — without this event the
+        // frontend's tool_complete handler marks the spawn pill complete the
+        // moment SpawnAsync returns (~100ms), even though the agent is still
+        // running.
+        try
+        {
+            var publisher = _serviceProvider.GetService<IAgentEventPublisher>();
+            if (publisher is not null)
+            {
+                var spawnEvent = new StreamAgentSpawnEvent(
+                    context.GrainKey,
+                    agentKey,
+                    contract.AgentType)
+                {
+                    Label = label,
+                    Icon = contract.Icon,
+                    DisplayName = contract.DisplayName,
+                    TurnId = context.CurrentTurnId,
+                };
+                _ = publisher.PublishAsync(spawnEvent, context.ConversationId, ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to publish agent_spawn event for {AgentKey}", agentKey);
+        }
 
         var response = new
         {
