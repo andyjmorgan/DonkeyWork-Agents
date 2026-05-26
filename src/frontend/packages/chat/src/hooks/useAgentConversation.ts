@@ -318,22 +318,45 @@ export function useAgentConversation(initialConversationId?: string, options?: U
       const preview = (data.messagePreview as string) ?? "";
 
       setMessages((prev) => {
-        const updated = eventTurnId
-          ? prev.map((m) =>
-              m._turnId === eventTurnId && m.role === "user" ? { ...m, _pending: false } : m
-            )
-          : prev;
+        const newAssistant: ChatMessage = {
+          id: newId,
+          role: "assistant" as const,
+          content: "",
+          boxes: [],
+          _source: source,
+          _preview: preview,
+          _turnId: eventTurnId,
+        };
+
+        if (!eventTurnId) {
+          return [...prev, newAssistant];
+        }
+
+        // Find the user message being ack'd (queued or just-sent). When a turn
+        // starts, the queued message slips into chronological order — just
+        // before this new assistant response — and other still-pending queued
+        // messages stay at the bottom waiting their turn. Also clears _pending
+        // so the cancel-X disappears.
+        const ackIdx = prev.findIndex(
+          (m) => m._turnId === eventTurnId && m.role === "user"
+        );
+        if (ackIdx === -1) {
+          return [...prev, newAssistant];
+        }
+
+        const ackedMsg = { ...prev[ackIdx], _pending: false };
+        const rest = [...prev.slice(0, ackIdx), ...prev.slice(ackIdx + 1)];
+
+        // Insert just before the first still-pending queued message in `rest`
+        // (or at the end if none are pending).
+        const firstPendingIdx = rest.findIndex((m) => m._pending === true);
+        const insertAt = firstPendingIdx === -1 ? rest.length : firstPendingIdx;
+
         return [
-          ...updated,
-          {
-            id: newId,
-            role: "assistant" as const,
-            content: "",
-            boxes: [],
-            _source: source,
-            _preview: preview,
-            _turnId: eventTurnId,
-          },
+          ...rest.slice(0, insertAt),
+          ackedMsg,
+          newAssistant,
+          ...rest.slice(insertAt),
         ];
       });
       setIsProcessing(true);
