@@ -43,8 +43,6 @@ public static class DependencyInjection
             return registry;
         });
 
-        services.AddMemoryCache();
-        services.AddScoped<IA2aMcpToolService, A2aMcpToolService>();
         services.AddScoped<IMcpToolDiscoveryService, McpToolDiscoveryService>();
         services.AddScoped<IMcpToolExecutor, McpToolExecutor>();
         services.AddScoped<IMcpTraceRepository, McpTraceRepository>();

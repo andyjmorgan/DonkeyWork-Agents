@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using DonkeyWork.Agents.Actors.Core.Tools.AudioCollections;
-using DonkeyWork.Agents.Actors.Core.Tools.ProjectManagement;
 using DonkeyWork.Agents.Actors.Core.Tools.Scheduling;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 
@@ -12,14 +11,6 @@ internal static class ToolGroupMap
     {
         [Actors.Contracts.Models.ToolGroupNames.SwarmDelegate] = [typeof(SwarmDelegateSpawnTools)],
         [Actors.Contracts.Models.ToolGroupNames.SwarmManagement] = [typeof(SwarmAgentManagementTools)],
-        [Actors.Contracts.Models.ToolGroupNames.ProjectManagement] =
-        [
-            typeof(ProjectAgentTools),
-            typeof(MilestoneAgentTools),
-            typeof(TaskAgentTools),
-            typeof(NoteAgentTools),
-            typeof(ResearchAgentTools),
-        ],
         [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = [typeof(SwarmAgentMessagingTools)],
         [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = [typeof(SwarmSharedContextTools)],
         [Actors.Contracts.Models.ToolGroupNames.Scheduling] = [typeof(SchedulingAgentTools)],
@@ -34,7 +25,6 @@ internal static class ToolGroupMap
     {
         [Actors.Contracts.Models.ToolGroupNames.SwarmDelegate] = "Swarm Delegate",
         [Actors.Contracts.Models.ToolGroupNames.SwarmManagement] = "Swarm Management",
-        [Actors.Contracts.Models.ToolGroupNames.ProjectManagement] = "Project Management",
         [Actors.Contracts.Models.ToolGroupNames.Sandbox] = "Sandbox",
         [Actors.Contracts.Models.ToolGroupNames.SwarmMessaging] = "Swarm Messaging",
         [Actors.Contracts.Models.ToolGroupNames.SwarmContext] = "Swarm Context",

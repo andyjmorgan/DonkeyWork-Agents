@@ -5,7 +5,6 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
-using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Persistence.Entities.Tts;
 
 namespace DonkeyWork.Agents.Integration.Tests.Helpers;
@@ -95,53 +94,6 @@ public class TestDataSeeder
         _dbContext.OrchestrationVersions.Add(version);
         await _dbContext.SaveChangesAsync();
         return version;
-    }
-
-    #endregion
-
-    #region Project Seeding
-
-    public async Task<ProjectEntity> SeedProjectAsync(
-        Guid userId,
-        string name,
-        string? content = null,
-        ProjectStatus status = ProjectStatus.NotStarted)
-    {
-        var project = new ProjectEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Name = name,
-            Content = content ?? "Test project content",
-            Status = status
-        };
-
-        _dbContext.Projects.Add(project);
-        await _dbContext.SaveChangesAsync();
-        return project;
-    }
-
-    public async Task<MilestoneEntity> SeedMilestoneAsync(
-        Guid projectId,
-        Guid userId,
-        string name,
-        string? content = null,
-        MilestoneStatus status = MilestoneStatus.NotStarted)
-    {
-        var milestone = new MilestoneEntity
-        {
-            Id = Guid.NewGuid(),
-            ProjectId = projectId,
-            UserId = userId,
-            Name = name,
-            Content = content ?? "Test milestone content",
-            Status = status,
-            SortOrder = 0
-        };
-
-        _dbContext.Milestones.Add(milestone);
-        await _dbContext.SaveChangesAsync();
-        return milestone;
     }
 
     #endregion

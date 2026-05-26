@@ -58,8 +58,7 @@ src/frontend/
 │   │       │   ├── useAgentTestStream.ts
 │   │       │   ├── useTokenRefresh.ts
 │   │       │   ├── useOAuthFlow.ts
-│   │       │   ├── useNotifications.ts
-│   │       │   └── useWorkspaceNav.ts
+│   │       │   └── useNotifications.ts
 │   │       ├── lib/
 │   │       │   └── utils.ts             # cn() helper
 │   │       ├── store/
@@ -81,8 +80,7 @@ src/frontend/
 │   │       ├── auth.ts                  # Auth state
 │   │       ├── theme.ts                # Theme state
 │   │       └── active-conversations.ts
-│   ├── ui/                              # Shared UI components (@donkeywork/ui)
-│   └── workspace/                       # Workspace components (@donkeywork/workspace)
+│   └── ui/                              # Shared UI components (@donkeywork/ui)
 ```
 
 ---
@@ -114,15 +112,6 @@ The web app uses react-router-dom with these routes:
 | `/skills/:id` | Skill detail |
 | `/executions` | Execution history |
 | `/executions/:id` | Execution detail |
-| `/projects` | Project management |
-| `/projects/:id` | Project detail |
-| `/projects/:projectId/milestones/:milestoneId` | Milestone detail |
-| `/tasks` | Task list |
-| `/tasks/:id?` | Task editor |
-| `/notes` | Notes list |
-| `/notes/:id?` | Note editor |
-| `/research` | Research list |
-| `/research/:id?` | Research editor |
 | `/files` | File management |
 | `/sandbox-settings` | Sandbox settings |
 | `/profile` | User profile |

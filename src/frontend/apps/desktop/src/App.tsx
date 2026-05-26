@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { PlatformProvider } from '@donkeywork/platform'
 import { useThemeStore } from '@donkeywork/stores'
@@ -28,36 +28,6 @@ function AuthenticatedApp() {
     handleNavigate(page as Page)
   }, [handleNavigate])
 
-  // Keep a ref to currentPage so callbacks don't go stale
-  const currentPageRef = useRef(currentPage)
-  currentPageRef.current = currentPage
-
-  const handleNewItem = useCallback(() => {
-    const page = currentPageRef.current
-    if (page === 'notes' || page === 'note-editor') {
-      handleNavigate('note-editor', { isNew: true })
-    } else if (page === 'tasks' || page === 'task-editor') {
-      handleNavigate('task-editor', { isNew: true })
-    } else if (page === 'research' || page === 'research-editor') {
-      handleNavigate('research-editor', { isNew: true })
-    } else {
-      handleNavigate('chat')
-    }
-  }, [handleNavigate])
-
-  const handleCloseItem = useCallback(() => {
-    const page = currentPageRef.current
-    const backMap: Partial<Record<Page, Page>> = {
-      'note-editor': 'notes',
-      'task-editor': 'tasks',
-      'research-editor': 'research',
-      'project-detail': 'projects',
-      'milestone-detail': 'projects',
-    }
-    const target = backMap[page]
-    if (target) handleNavigate(target)
-  }, [handleNavigate])
-
   // Wire up platform navigation
   setDesktopNavigate(navigate)
 
@@ -68,26 +38,8 @@ function AuthenticatedApp() {
         case 'new_conversation':
           handleNavigate('chat')
           break
-        case 'new_item':
-          handleNewItem()
-          break
-        case 'close_item':
-          handleCloseItem()
-          break
         case 'go_chat':
           handleNavigate('chat')
-          break
-        case 'go_notes':
-          handleNavigate('notes')
-          break
-        case 'go_research':
-          handleNavigate('research')
-          break
-        case 'go_tasks':
-          handleNavigate('tasks')
-          break
-        case 'go_projects':
-          handleNavigate('projects')
           break
         case 'go_search':
           handleNavigate('conversations')
@@ -103,16 +55,7 @@ function AuthenticatedApp() {
     return () => {
       unlisten.then((fn) => fn())
     }
-  }, [handleNavigate, handleNewItem, handleCloseItem])
-
-  // Escape key navigates back from editor/detail pages
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleCloseItem()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [handleCloseItem])
+  }, [handleNavigate])
 
   return <DesktopLayout currentPage={currentPage} pageParams={pageParams} onNavigate={handleNavigate} />
 }

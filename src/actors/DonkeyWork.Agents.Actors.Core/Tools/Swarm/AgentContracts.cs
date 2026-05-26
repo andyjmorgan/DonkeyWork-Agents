@@ -10,7 +10,7 @@ public static class AgentContracts
     public static AgentContract Conversation() => new()
     {
         SystemPrompt = [ConversationSystemPrompt],
-        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.ProjectManagement, ToolGroupNames.Sandbox, ToolGroupNames.Scheduling, ToolGroupNames.AudioCollections],
+        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.Sandbox, ToolGroupNames.Scheduling, ToolGroupNames.AudioCollections],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 20 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 20 },
         MaxTokens = 20_000,
@@ -75,10 +75,6 @@ public static class AgentContracts
         - Conversational exchanges, greetings, clarifications
         - Follow-up questions about results you already have
         - Tasks you can do directly with your own tools — prefer doing it yourself over spawning a delegate
-
-        ## Project Management
-
-        You have access to project management tools for managing projects, milestones, tasks, notes, and research items. Use these when the user asks about their projects or wants to create/update work items.
 
         ## Audio Collections
 

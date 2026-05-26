@@ -26,7 +26,6 @@
         <ProjectReference Include="..\..\a2a\DonkeyWork.Agents.A2a.Contracts\DonkeyWork.Agents.A2a.Contracts.csproj" />
         <ProjectReference Include="..\..\mcp\DonkeyWork.Agents.Mcp.Contracts\DonkeyWork.Agents.Mcp.Contracts.csproj" />
         <ProjectReference Include="..\..\conversations\DonkeyWork.Agents.Conversations.Contracts\DonkeyWork.Agents.Conversations.Contracts.csproj" />
-        <ProjectReference Include="..\..\projects\DonkeyWork.Agents.Projects.Contracts\DonkeyWork.Agents.Projects.Contracts.csproj" />
         <ProjectReference Include="..\..\prompts\DonkeyWork.Agents.Prompts.Contracts\DonkeyWork.Agents.Prompts.Contracts.csproj" />
         <ProjectReference Include="..\..\agentdefinitions\DonkeyWork.Agents.AgentDefinitions.Contracts\DonkeyWork.Agents.AgentDefinitions.Contracts.csproj" />
         <ProjectReference Include="..\..\common\DonkeyWork.Agents.Persistence\DonkeyWork.Agents.Persistence.csproj" />

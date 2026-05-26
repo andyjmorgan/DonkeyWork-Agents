@@ -1,38 +1,24 @@
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace DonkeyWork.Agents.Mcp.Core.Services;
 
-/// <summary>
-/// Scoped service that discovers MCP tools with support for per-request filtering based on user context.
-/// </summary>
 public class McpToolDiscoveryService : IMcpToolDiscoveryService
 {
     private readonly ILogger<McpToolDiscoveryService> _logger;
     private readonly IMcpToolRegistry _toolRegistry;
     private readonly IIdentityContext _identityContext;
-    private readonly IA2aMcpToolService _a2aMcpToolService;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="McpToolDiscoveryService"/> class.
-    /// </summary>
-    /// <param name="logger">The logger instance.</param>
-    /// <param name="toolRegistry">The singleton tool registry.</param>
-    /// <param name="identityContext">The identity context for the current request.</param>
-    /// <param name="a2aMcpToolService">The A2A MCP tool service.</param>
     public McpToolDiscoveryService(
         ILogger<McpToolDiscoveryService> logger,
         IMcpToolRegistry toolRegistry,
-        IIdentityContext identityContext,
-        IA2aMcpToolService a2aMcpToolService)
+        IIdentityContext identityContext)
     {
         _logger = logger;
         _toolRegistry = toolRegistry;
         _identityContext = identityContext;
-        _a2aMcpToolService = a2aMcpToolService;
     }
 
     /// <inheritdoc />
@@ -47,12 +33,6 @@ public class McpToolDiscoveryService : IMcpToolDiscoveryService
             GetUserIdForLogging());
 
         return filteredTools;
-    }
-
-    /// <inheritdoc />
-    public Task<IReadOnlyList<Tool>> DiscoverDynamicToolsAsync(CancellationToken cancellationToken = default)
-    {
-        return _a2aMcpToolService.DiscoverToolsAsync(cancellationToken);
     }
 
     /// <inheritdoc />
@@ -79,28 +59,22 @@ public class McpToolDiscoveryService : IMcpToolDiscoveryService
 
     private IReadOnlyList<McpServerTool> FilterToolsForUser(IReadOnlyList<McpServerTool> tools)
     {
-        // If not authenticated, return all tools (anonymous access)
         if (!_identityContext.IsAuthenticated)
         {
             _logger.LogDebug("No authenticated user, returning all tools");
             return tools;
         }
 
-        // Future: Add permission-based filtering here
-        // For now, return all tools for authenticated users
         return tools;
     }
 
     private bool IsToolAccessibleToUser(McpServerTool tool)
     {
-        // If not authenticated, allow all tools (anonymous access)
         if (!_identityContext.IsAuthenticated)
         {
             return true;
         }
 
-        // Future: Add permission-based access check here
-        // For now, all authenticated users can access all tools
         return true;
     }
 
