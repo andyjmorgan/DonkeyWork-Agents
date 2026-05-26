@@ -13,8 +13,6 @@ using DonkeyWork.Agents.Mcp.Api;
 using DonkeyWork.Agents.Notifications.Core;
 using DonkeyWork.Agents.Persistence;
 using DonkeyWork.Agents.Persistence.Services;
-using DonkeyWork.Agents.Projects.Api;
-using DonkeyWork.Agents.Projects.Api.McpTools;
 using DonkeyWork.Agents.Identity.Api.McpTools;
 using DonkeyWork.Agents.Providers.Api;
 using DonkeyWork.Agents.Storage.Api;
@@ -80,10 +78,7 @@ builder.Services.AddCredentialsApi();
 
 builder.Services.AddIdentityApi(builder.Configuration);
 
-builder.Services.AddProjectsApi();
-
 builder.Services.AddMcpApi(
-    typeof(NotesTools).Assembly,
     typeof(IdentityTools).Assembly,
     typeof(DonkeyWork.Agents.Orchestrations.Api.McpTools.AudioTools).Assembly);
 

@@ -4,12 +4,10 @@ using DonkeyWork.Agents.Persistence.Entities.Conversations;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Mcp;
 using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
-using DonkeyWork.Agents.Persistence.Entities.Projects;
 using DonkeyWork.Agents.Persistence.Entities.Actors;
 using DonkeyWork.Agents.Persistence.Entities.AgentDefinitions;
 using DonkeyWork.Agents.Persistence.Entities.A2a;
 using DonkeyWork.Agents.Persistence.Entities.Prompts;
-using DonkeyWork.Agents.Persistence.Entities.Research;
 using DonkeyWork.Agents.Persistence.Entities.Scheduling;
 using DonkeyWork.Agents.Persistence.Entities.Tts;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
@@ -48,22 +46,6 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<OrchestrationExecutionEntity> OrchestrationExecutions => Set<OrchestrationExecutionEntity>();
     public DbSet<OrchestrationNodeExecutionEntity> OrchestrationNodeExecutions => Set<OrchestrationNodeExecutionEntity>();
     public DbSet<OrchestrationExecutionLogEntity> OrchestrationExecutionLogs => Set<OrchestrationExecutionLogEntity>();
-
-    // Projects module
-    public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
-    public DbSet<MilestoneEntity> Milestones => Set<MilestoneEntity>();
-    public DbSet<TaskItemEntity> TaskItems => Set<TaskItemEntity>();
-    public DbSet<NoteEntity> Notes => Set<NoteEntity>();
-    public DbSet<ProjectTagEntity> ProjectTags => Set<ProjectTagEntity>();
-    public DbSet<MilestoneTagEntity> MilestoneTags => Set<MilestoneTagEntity>();
-    public DbSet<TaskItemTagEntity> TaskItemTags => Set<TaskItemTagEntity>();
-    public DbSet<NoteTagEntity> NoteTags => Set<NoteTagEntity>();
-    public DbSet<ProjectFileReferenceEntity> ProjectFileReferences => Set<ProjectFileReferenceEntity>();
-    public DbSet<MilestoneFileReferenceEntity> MilestoneFileReferences => Set<MilestoneFileReferenceEntity>();
-
-    // Research module
-    public DbSet<ResearchEntity> Research => Set<ResearchEntity>();
-    public DbSet<ResearchTagEntity> ResearchTags => Set<ResearchTagEntity>();
 
     // Actors module (grain message persistence)
     public DbSet<GrainMessageEntity> GrainMessages => Set<GrainMessageEntity>();

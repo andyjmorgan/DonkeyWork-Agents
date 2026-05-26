@@ -45,11 +45,6 @@ public class A2aServerConfigurationConfiguration : IEntityTypeConfiguration<A2aS
             .IsRequired()
             .HasDefaultValue(false);
 
-        builder.Property(e => e.PublishToMcp)
-            .HasColumnName("publish_to_mcp")
-            .IsRequired()
-            .HasDefaultValue(false);
-
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();

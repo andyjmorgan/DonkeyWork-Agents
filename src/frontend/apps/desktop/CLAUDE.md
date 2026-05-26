@@ -25,8 +25,7 @@ src/
 ├── hooks/
 │   ├── useDesktopAuth.ts             # Keycloak auth (restore session, login, logout, refresh)
 │   ├── useAutoUpdater.ts             # Check + install updates from GitHub Releases
-│   ├── useNotificationHub.ts         # SignalR connection with native notifications
-│   └── useDesktopWorkspaceNav.ts     # Maps workspace nav to page state
+│   └── useNotificationHub.ts         # SignalR connection with native notifications
 ├── pages/
 │   ├── LoginPage.tsx                 # Provider login buttons (Google, GitHub, Microsoft)
 │   └── PlaceholderPage.tsx           # Stub for unimplemented pages
@@ -108,15 +107,6 @@ State-based navigation (no react-router). `App.tsx` manages `currentPage` and `p
 |------|-------------|
 | `chat` | Navi conversation interface |
 | `conversations` | Browse/search history |
-| `notes` | Notes list |
-| `note-editor` | Create/edit note |
-| `research` | Research items |
-| `research-editor` | Create/edit research |
-| `tasks` | Task list |
-| `task-editor` | Create/edit task |
-| `projects` | Project management |
-| `project-detail` | Project view |
-| `milestone-detail` | Milestone view |
 | `settings` | Placeholder |
 
 ### Keyboard Shortcuts
@@ -124,14 +114,8 @@ State-based navigation (no react-router). `App.tsx` manages `currentPage` and `p
 | Shortcut | Action |
 |----------|--------|
 | Cmd+1 | Chat (Navi) |
-| Cmd+2 | Notes |
-| Cmd+3 | Research |
-| Cmd+4 | Tasks |
-| Cmd+5 | Projects |
 | Cmd+Shift+F | History |
 | Cmd+Shift+N | New Conversation |
-| Cmd+N | New Item |
-| Cmd+W | Close Item |
 | Cmd+Shift+T | Toggle Theme |
 | Cmd+, | Settings |
 

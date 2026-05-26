@@ -1,38 +1,25 @@
 import { useState, useEffect } from 'react'
-import { Bubbles, MessageSquare, StickyNote, FlaskConical, CheckSquare, FolderKanban, Settings, Sun, Moon, Trash2 } from 'lucide-react'
+import { Bubbles, MessageSquare, Settings, Sun, Moon, Trash2 } from 'lucide-react'
 import { useThemeStore } from '@donkeywork/stores'
 import { conversations, type ConversationSummary } from '@donkeywork/api-client'
 import type { Page } from '../types'
 
-type SidebarPage = 'chat' | 'conversations' | 'notes' | 'research' | 'tasks' | 'projects' | 'settings'
-
-/** Maps sub-pages to the parent sidebar item that should be highlighted */
-const parentPageMap: Partial<Record<Page, SidebarPage>> = {
-  'note-editor': 'notes',
-  'task-editor': 'tasks',
-  'research-editor': 'research',
-  'project-detail': 'projects',
-  'milestone-detail': 'projects',
-}
+type SidebarPage = 'chat' | 'conversations' | 'settings'
 
 function getActiveSidebarPage(currentPage: Page): SidebarPage {
-  return parentPageMap[currentPage] ?? (currentPage as SidebarPage)
+  return currentPage as SidebarPage
 }
 
 interface NavItem {
   id: SidebarPage
   label: string
   icon: React.ComponentType<{ className?: string }>
-  section: 'main' | 'workspace' | 'system'
+  section: 'main' | 'system'
 }
 
 const navItems: NavItem[] = [
   { id: 'chat', label: 'Navi', icon: Bubbles, section: 'main' },
   { id: 'conversations', label: 'History', icon: MessageSquare, section: 'main' },
-  { id: 'notes', label: 'Notes', icon: StickyNote, section: 'workspace' },
-  { id: 'research', label: 'Research', icon: FlaskConical, section: 'workspace' },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare, section: 'workspace' },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, section: 'workspace' },
   { id: 'settings', label: 'Settings', icon: Settings, section: 'system' },
 ]
 
@@ -122,7 +109,6 @@ export function DesktopSidebar({ currentPage, onNavigate, onOpenConversation }: 
 
   const sections = {
     main: navItems.filter(i => i.section === 'main'),
-    workspace: navItems.filter(i => i.section === 'workspace'),
     system: navItems.filter(i => i.section === 'system'),
   }
 
@@ -142,17 +128,6 @@ export function DesktopSidebar({ currentPage, onNavigate, onOpenConversation }: 
             <NavButton key={item.id} item={item} isActive={activeSidebarPage === item.id} onClick={() => onNavigate(item.id)} />
           ))}
           <RecentConversations onOpenConversation={onOpenConversation} />
-        </div>
-
-        <div>
-          <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
-            Workspace
-          </div>
-          <div className="space-y-0.5 mt-1">
-            {sections.workspace.map(item => (
-              <NavButton key={item.id} item={item} isActive={activeSidebarPage === item.id} onClick={() => onNavigate(item.id)} />
-            ))}
-          </div>
         </div>
 
         <div>

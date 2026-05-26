@@ -6,7 +6,6 @@ using DonkeyWork.Agents.Orchestrations.Contracts.Nodes.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Models;
 using DonkeyWork.Agents.Mcp.Contracts.Models;
-using DonkeyWork.Agents.Projects.Contracts.Models;
 
 namespace DonkeyWork.Agents.Integration.Tests.Helpers;
 
@@ -69,38 +68,6 @@ public static class TestDataBuilder
         {
             Name = name ?? $"test-agent-{Guid.NewGuid().ToString("N")[..8]}",
             Description = description ?? "Test agent description"
-        };
-    }
-
-    #endregion
-
-    #region Project Builders
-
-    public static CreateProjectRequestV1 CreateProjectRequest(
-        string? name = null,
-        string? content = null,
-        ProjectStatus status = ProjectStatus.NotStarted)
-    {
-        return new CreateProjectRequestV1
-        {
-            Name = name ?? $"Test Project {Guid.NewGuid().ToString("N")[..8]}",
-            Content = content ?? "Test project content",
-            Status = status
-        };
-    }
-
-    public static UpdateProjectRequestV1 UpdateProjectRequest(
-        string? name = null,
-        string? content = null,
-        ProjectStatus status = ProjectStatus.InProgress,
-        string? completionNotes = null)
-    {
-        return new UpdateProjectRequestV1
-        {
-            Name = name ?? $"Updated Project {Guid.NewGuid().ToString("N")[..8]}",
-            Content = content ?? "Updated project content",
-            Status = status,
-            CompletionNotes = completionNotes ?? (status is ProjectStatus.Completed or ProjectStatus.Cancelled ? "Auto-generated completion notes for testing" : null)
         };
     }
 
@@ -205,108 +172,6 @@ public static class TestDataBuilder
             ReactFlowData = parsedReactFlowData,
             NodeConfigurations = JsonDocument.Parse(nodeConfigurationsJson).RootElement.Clone(),
             DirectEnabled = true
-        };
-    }
-
-    #endregion
-
-    #region Milestone Builders
-
-    public static CreateMilestoneRequestV1 CreateMilestoneRequest(
-        string? name = null,
-        string? content = null,
-        MilestoneStatus status = MilestoneStatus.NotStarted)
-    {
-        return new CreateMilestoneRequestV1
-        {
-            Name = name ?? $"Test Milestone {Guid.NewGuid().ToString("N")[..8]}",
-            Content = content ?? "Test milestone content",
-            Status = status
-        };
-    }
-
-    public static UpdateMilestoneRequestV1 UpdateMilestoneRequest(
-        string? name = null,
-        string? content = null,
-        MilestoneStatus status = MilestoneStatus.InProgress,
-        string? completionNotes = null)
-    {
-        return new UpdateMilestoneRequestV1
-        {
-            Name = name ?? $"Updated Milestone {Guid.NewGuid().ToString("N")[..8]}",
-            Content = content ?? "Updated milestone content",
-            Status = status,
-            CompletionNotes = completionNotes ?? (status is MilestoneStatus.Completed or MilestoneStatus.Cancelled ? "Auto-generated completion notes for testing" : null)
-        };
-    }
-
-    #endregion
-
-    #region TaskItem Builders
-
-    public static CreateTaskItemRequestV1 CreateTaskItemRequest(
-        string? title = null,
-        string? description = null,
-        TaskItemStatus status = TaskItemStatus.Pending,
-        TaskItemPriority priority = TaskItemPriority.Medium,
-        Guid? projectId = null,
-        Guid? milestoneId = null)
-    {
-        return new CreateTaskItemRequestV1
-        {
-            Title = title ?? $"Test Task {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Test task description",
-            Status = status,
-            Priority = priority,
-            ProjectId = projectId,
-            MilestoneId = milestoneId
-        };
-    }
-
-    public static UpdateTaskItemRequestV1 UpdateTaskItemRequest(
-        string? title = null,
-        string? description = null,
-        TaskItemStatus status = TaskItemStatus.InProgress,
-        TaskItemPriority priority = TaskItemPriority.High,
-        string? completionNotes = null)
-    {
-        return new UpdateTaskItemRequestV1
-        {
-            Title = title ?? $"Updated Task {Guid.NewGuid().ToString("N")[..8]}",
-            Description = description ?? "Updated task description",
-            Status = status,
-            Priority = priority,
-            CompletionNotes = completionNotes ?? (status is TaskItemStatus.Completed or TaskItemStatus.Cancelled ? "Auto-generated completion notes for testing" : null)
-        };
-    }
-
-    #endregion
-
-    #region Note Builders
-
-    public static CreateNoteRequestV1 CreateNoteRequest(
-        string? title = null,
-        string? content = null,
-        Guid? projectId = null,
-        Guid? milestoneId = null)
-    {
-        return new CreateNoteRequestV1
-        {
-            Title = title ?? $"Test Note {Guid.NewGuid().ToString("N")[..8]}",
-            Content = content ?? "Test note content",
-            ProjectId = projectId,
-            MilestoneId = milestoneId
-        };
-    }
-
-    public static UpdateNoteRequestV1 UpdateNoteRequest(
-        string? title = null,
-        string? content = null)
-    {
-        return new UpdateNoteRequestV1
-        {
-            Title = title ?? $"Updated Note {Guid.NewGuid().ToString("N")[..8]}",
-            Content = content ?? "Updated note content"
         };
     }
 

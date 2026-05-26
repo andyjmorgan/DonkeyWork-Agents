@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, ProjectsPage, ProjectDetailPage, TasksPage, NotesPage, NoteEditorPage, TaskEditorPage, MilestoneDetailPage, FilesPage, McpServersPage, A2aServersPage, ResearchPage, ResearchEditorPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, AudioCollectionsPage, AudioCollectionDetailPage, SchedulesPage, ScheduleDetailPage, AgentExecutionsPage, AgentExecutionDetailPage, McpTracesPage, McpTraceDetailPage } from '@/pages'
+import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, FilesPage, McpServersPage, A2aServersPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, AudioCollectionsPage, AudioCollectionDetailPage, SchedulesPage, ScheduleDetailPage, AgentExecutionsPage, AgentExecutionDetailPage, McpTracesPage, McpTraceDetailPage } from '@/pages'
 import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -96,18 +96,9 @@ export default function App() {
             <Route path="/agent-executions/:id" element={<AgentExecutionDetailPage />} />
             <Route path="/mcp-traces" element={<McpTracesPage />} />
             <Route path="/mcp-traces/:id" element={<McpTraceDetailPage />} />
-            <Route path="/workspace" element={<ProjectsPage />} />
-            <Route path="/workspace/:id" element={<ProjectDetailPage />} />
-            <Route path="/workspace/:projectId/milestones/:milestoneId" element={<MilestoneDetailPage />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/notes" element={<NotesPage />} />
-            <Route path="/notes/:noteId" element={<NoteEditorPage />} />
-            <Route path="/research" element={<ResearchPage />} />
-            <Route path="/research/:researchId" element={<ResearchEditorPage />} />
             <Route path="/files" element={<FilesPage />} />
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/skills/:name" element={<SkillDetailPage />} />
-            <Route path="/tasks/:taskId" element={<TaskEditorPage />} />
             <Route path="/api-keys" element={<ApiKeysPage />} />
             <Route path="/recordings" element={<Navigate to="/audio-collections" replace />} />
             <Route path="/audio-collections" element={<AudioCollectionsPage />} />

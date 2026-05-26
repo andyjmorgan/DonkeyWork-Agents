@@ -7,26 +7,8 @@
  * Types of real-time notifications.
  */
 export type NotificationType =
-  // Project notifications
-  | 'ProjectCreated'
-  | 'ProjectUpdated'
-  | 'ProjectDeleted'
-  // Milestone notifications
-  | 'MilestoneCreated'
-  | 'MilestoneUpdated'
-  | 'MilestoneDeleted'
-  // Task notifications
-  | 'TaskCreated'
-  | 'TaskUpdated'
-  | 'TaskDeleted'
-  // Note notifications
-  | 'NoteCreated'
-  | 'NoteUpdated'
-  | 'NoteDeleted'
-  // Conversation notifications
   | 'ConversationAgentStarted'
   | 'ConversationAgentCompleted'
-  // Audio recording notifications
   | 'AudioRecordingUpdated'
 
 /**
