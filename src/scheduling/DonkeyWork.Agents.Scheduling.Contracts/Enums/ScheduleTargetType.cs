@@ -6,6 +6,5 @@ namespace DonkeyWork.Agents.Scheduling.Contracts.Enums;
 public enum ScheduleTargetType
 {
     Navi,
-    CustomAgent,
-    Orchestration
+    CustomAgent
 }

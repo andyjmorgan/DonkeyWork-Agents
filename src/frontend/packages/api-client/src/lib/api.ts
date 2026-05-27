@@ -1,6 +1,5 @@
 import { fetchWithAuth as baseFetchWithAuth } from './fetchWithAuth'
 import { getPlatformConfig } from '@donkeywork/platform'
-import { useAuthStore } from '@donkeywork/stores'
 
 async function fetchWithAuth(url: string, options: RequestInit = {}, retryOnUnauthorized = true): Promise<Response> {
   const { apiBaseUrl } = getPlatformConfig()
@@ -211,178 +210,11 @@ export const credentials = {
   delete: (id: string) => api.delete(`/api/v1/credentials/${id}`),
 }
 
-// Orchestration types
-export interface Orchestration {
-  id: string
-  name: string
-  description: string
-  friendlyName?: string
-  currentVersionId?: string
-  createdAt: string
-}
-
-
-
-// ReactFlow types - using 'any' to maintain compatibility with ReactFlow library types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ReactFlowData = any
-
-export interface OrchestrationVersion {
-  id: string
-  orchestrationId: string
-  versionNumber: number
-  isDraft: boolean
-  inputSchema: JSONSchema
-  outputSchema?: JSONSchema
-  reactFlowData: ReactFlowData
-  nodeConfigurations: Record<string, Record<string, unknown>>
-  directEnabled: boolean
-  toolEnabled: boolean
-  mcpEnabled: boolean
-  naviEnabled: boolean
-  createdAt: string
-  publishedAt?: string
-}
-
 export interface JSONSchema {
   type: string
   properties?: Record<string, unknown>
   required?: string[]
   [key: string]: unknown
-}
-
-export interface CreateOrchestrationRequest {
-  name: string
-  description: string
-  friendlyName?: string
-}
-
-export interface SaveVersionRequest {
-  reactFlowData: ReactFlowData
-  nodeConfigurations: Record<string, Record<string, unknown>>
-  inputSchema: JSONSchema
-  outputSchema?: JSONSchema | null
-  credentialMappings: Array<{ nodeId: string; credentialId: string }>
-  directEnabled: boolean
-  toolEnabled: boolean
-  mcpEnabled: boolean
-  naviEnabled: boolean
-}
-
-export interface CreateOrchestrationResponse {
-  id: string
-  name: string
-  description: string
-  friendlyName?: string | null
-  versionId: string
-  createdAt: string
-}
-
-export const orchestrations = {
-  list: () => api.get<Orchestration[]>('/api/v1/orchestrations'),
-  create: (data: CreateOrchestrationRequest) => api.post<CreateOrchestrationResponse>('/api/v1/orchestrations', data),
-  get: (id: string) => api.get<Orchestration>(`/api/v1/orchestrations/${id}`),
-  update: (id: string, data: CreateOrchestrationRequest) => fetchWithAuth(`/api/v1/orchestrations/${id}`, { method: 'PUT', body: JSON.stringify(data) }).then(r => r.json() as Promise<Orchestration>),
-  delete: (id: string) => api.delete(`/api/v1/orchestrations/${id}`),
-
-  listVersions: (orchestrationId: string) => api.get<OrchestrationVersion[]>(`/api/v1/orchestrations/${orchestrationId}/versions`),
-  getVersion: (orchestrationId: string, versionId: string) => api.get<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions/${versionId}`),
-  saveVersion: (orchestrationId: string, data: SaveVersionRequest) => api.post<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions`, data),
-  publish: (orchestrationId: string) => api.post<OrchestrationVersion>(`/api/v1/orchestrations/${orchestrationId}/versions/publish`, {}),
-}
-
-// Execution types
-export interface ExecuteOrchestrationRequest {
-  input: unknown
-  versionId?: string
-}
-
-export interface ExecuteOrchestrationResponse {
-  executionId: string
-  status: 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
-  output?: unknown
-  error?: string
-}
-
-export interface ExecutionEvent {
-  type: string
-  executionId: string
-  timestamp: string
-  [key: string]: unknown
-}
-
-export interface OrchestrationExecution {
-  id: string
-  orchestrationId: string
-  versionId: string
-  status: 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'
-  input: unknown
-  output?: unknown
-  errorMessage?: string
-  startedAt: string
-  completedAt?: string
-  totalTokensUsed?: number
-}
-
-export interface ExecutionLog {
-  id: string
-  executionId: string
-  logLevel: string
-  message: string
-  details?: string
-  nodeId?: string
-  source: string
-  createdAt: string
-}
-
-export interface NodeExecution {
-  id: string
-  nodeId: string
-  nodeType: string
-  nodeName: string
-  actionType?: string
-  status: string
-  input?: string
-  output?: string
-  errorMessage?: string
-  startedAt: string
-  completedAt?: string
-  durationMs?: number
-  tokensUsed?: number
-  fullResponse?: string
-}
-
-// Execution API functions
-export const executions = {
-  execute: async (orchestrationId: string, input: unknown, versionId?: string) =>
-    api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/execute`, { input, versionId }),
-
-  test: async (orchestrationId: string, input: unknown, versionId?: string) =>
-    api.post<ExecuteOrchestrationResponse>(`/api/v1/orchestrations/${orchestrationId}/test`, { input, versionId }),
-
-  get: (executionId: string) => api.get<OrchestrationExecution>(`/api/v1/orchestrations/executions/${executionId}`),
-
-  list: (orchestrationId?: string, offset = 0, limit = 20) => {
-    const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
-    if (orchestrationId) params.append('orchestrationId', orchestrationId)
-    return api.get<{ executions: OrchestrationExecution[], totalCount: number }>(
-      `/api/v1/orchestrations/executions?${params}`
-    )
-  },
-
-  getLogs: (executionId: string, offset = 0, limit = 100) => {
-    const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
-    return api.get<{ logs: ExecutionLog[], totalCount: number }>(
-      `/api/v1/orchestrations/executions/${executionId}/logs?${params}`
-    )
-  },
-
-  getNodeExecutions: (executionId: string, offset = 0, limit = 100) => {
-    const params = new URLSearchParams({ offset: offset.toString(), limit: limit.toString() })
-    return api.get<{ nodeExecutions: NodeExecution[], totalCount: number }>(
-      `/api/v1/orchestrations/executions/${executionId}/nodes?${params}`
-    )
-  },
 }
 
 // OAuth types
@@ -537,98 +369,6 @@ export const availableCredentials = {
 }
 
 // Node Types - Schema API
-export type NodeControlType =
-  | 'Text'
-  | 'TextArea'
-  | 'TextAreaList'
-  | 'Number'
-  | 'Slider'
-  | 'Select'
-  | 'Toggle'
-  | 'Code'
-  | 'Json'
-  | 'KeyValueList'
-  | 'Credential'
-  | 'AudioCollection'
-
-export interface NodeFieldSchema {
-  name: string
-  label: string
-  description?: string
-  propertyType: string
-  controlType: NodeControlType
-  order: number
-  tab?: string
-  group?: string
-  required: boolean
-  supportsVariables: boolean
-  immutable?: boolean
-  placeholder?: string
-  default?: unknown
-  min?: number
-  max?: number
-  step?: number
-  options?: string[]
-  supportedBy?: string[]
-  reliesUpon?: {
-    fieldName: string
-    value: unknown
-    requiredWhenEnabled: boolean
-  }
-}
-
-export interface NodeTabSchema {
-  name: string
-  order: number
-  icon?: string
-}
-
-export interface NodeConfigSchema {
-  nodeType: string
-  tabs: NodeTabSchema[]
-  fields: NodeFieldSchema[]
-}
-
-export interface NodeTypeInfo {
-  type: string
-  displayName: string
-  description: string
-  friendlyName?: string
-  category: string
-  icon?: string
-  color?: string
-  hasInputHandle: boolean
-  hasOutputHandle: boolean
-  canDelete: boolean
-  configSchema: NodeConfigSchema
-  outputProperties?: string[]
-}
-
-export interface GetNodeTypesResponse {
-  nodeTypes: NodeTypeInfo[]
-}
-
-// Node Types API
-export const nodeTypes = {
-  list: async () => {
-    const response = await api.get<GetNodeTypesResponse>('/api/v1/orchestrations/node-types')
-    return response.nodeTypes
-  },
-  getSchema: async (nodeType: string) => {
-    const nodeTypesList = await nodeTypes.list()
-    const found = nodeTypesList.find(nt => nt.type.toLowerCase() === nodeType.toLowerCase())
-    return found?.configSchema
-  },
-}
-
-// Multimodal Chat Schema API
-export const multimodalChat = {
-  getSchema: async (provider: string): Promise<NodeConfigSchema> => {
-    const response = await api.get<{ schema: NodeConfigSchema }>(`/api/v1/multimodal-chat/schema?provider=${provider}`)
-    return response.schema
-  },
-}
-
 // Conversation Types
 export type MessageRole = 'User' | 'Assistant' | 'System'
 
@@ -644,17 +384,8 @@ export interface ImageContentPart {
   mediaType: string
 }
 
-export interface AudioContentPart {
-  type: 'audio'
-  recordingId: string
-  objectKey: string
-  mediaType: string
-  transcript?: string
-  name?: string
-}
-
 // Union type for all content parts
-export type ContentPart = TextContentPart | ImageContentPart | AudioContentPart
+export type ContentPart = TextContentPart | ImageContentPart
 
 // Image upload response
 export interface UploadImageResponse {
@@ -678,8 +409,6 @@ export interface ConversationMessage {
 
 export interface ConversationSummary {
   id: string
-  orchestrationId?: string | null
-  orchestrationName?: string | null
   title: string
   messageCount: number
   createdAt: string
@@ -688,8 +417,6 @@ export interface ConversationSummary {
 
 export interface ConversationDetails {
   id: string
-  orchestrationId?: string | null
-  orchestrationName?: string | null
   title: string
   messages: ConversationMessage[]
   createdAt: string
@@ -697,7 +424,6 @@ export interface ConversationDetails {
 }
 
 export interface CreateConversationRequest {
-  orchestrationId?: string | null
   title?: string
 }
 
@@ -1482,14 +1208,6 @@ export interface A2aServerReference {
   description?: string
 }
 
-export interface OrchestrationReference {
-  id: string
-  name: string
-  description?: string
-  toolName?: string
-  versionId?: string
-}
-
 export interface ToolOverride {
   source: string
   toolName: string
@@ -1541,7 +1259,6 @@ export interface AgentContractV1 {
   mcpServers?: McpServerReference[]
   subAgents?: SubAgentReference[]
   a2aServers?: A2aServerReference[]
-  orchestrations?: OrchestrationReference[]
   enableSandbox?: boolean
   modelId?: string
   prompts?: string[]
@@ -1638,170 +1355,10 @@ export const prompts = {
   delete: (id: string) => api.delete(`/api/v1/prompts/${id}`),
 }
 
-// TTS Types
-export type TtsRecordingStatus = 'Pending' | 'Generating' | 'Ready' | 'Failed'
-
-export interface TtsRecording {
-  id: string
-  name: string
-  description: string
-  friendlyName?: string
-  filePath: string
-  transcript: string
-  contentType: string
-  sizeBytes: number
-  voice?: string
-  model?: string
-  collectionId?: string
-  sequenceNumber?: number
-  chapterTitle?: string
-  status: TtsRecordingStatus
-  progress: number
-  errorMessage?: string
-  createdAt: string
-  playback?: TtsPlayback
-}
-
-export interface TtsPlayback {
-  positionSeconds: number
-  durationSeconds: number
-  completed: boolean
-  playbackSpeed: number
-  updatedAt: string
-}
-
-export interface TtsRecordingListResponse {
-  items: TtsRecording[]
-  totalCount: number
-}
-
-export interface TtsAudioUrlResponse {
-  url: string
-  expiresAt: string
-  contentType: string
-}
-
-export interface UpdatePlaybackRequest {
-  positionSeconds: number
-  durationSeconds: number
-  completed?: boolean
-  playbackSpeed?: number
-}
-
-// TTS API
-export const tts = {
-  listRecordings: (offset = 0, limit = 20, unfiled = false) =>
-    api.get<TtsRecordingListResponse>(
-      `/api/v1/tts/recordings?offset=${offset}&limit=${limit}${unfiled ? '&unfiled=true' : ''}`,
-    ),
-
-  getRecording: (id: string) =>
-    api.get<TtsRecording>(`/api/v1/tts/recordings/${id}`),
-
-  getAudioStreamUrl: (id: string): string => {
-    const token = useAuthStore.getState().accessToken
-    const base = `${getPlatformConfig().apiBaseUrl}/api/v1/tts/recordings/${id}/audio`
-    return token ? `${base}?access_token=${encodeURIComponent(token)}` : base
-  },
-
-  updatePlayback: (id: string, data: UpdatePlaybackRequest) =>
-    api.put<TtsPlayback>(`/api/v1/tts/recordings/${id}/playback`, data),
-
-  getPlayback: (id: string) =>
-    api.get<TtsPlayback>(`/api/v1/tts/recordings/${id}/playback`),
-
-  deleteRecording: (id: string) =>
-    api.delete(`/api/v1/tts/recordings/${id}`),
-
-  moveRecording: (id: string, data: MoveRecordingToCollectionRequest) =>
-    api.put<TtsRecording>(`/api/v1/tts/recordings/${id}/collection`, data),
-
-  startGeneration: (data: StartAudioGenerationRequest) =>
-    api.post<TtsRecording>(`/api/v1/tts/recordings/generate`, data),
-}
-
-// Audio Collections
-
-export interface AudioCollection {
-  id: string
-  name: string
-  description: string
-  coverImagePath?: string
-  defaultVoice?: string
-  defaultModel?: string
-  recordingCount: number
-  createdAt: string
-  updatedAt?: string
-}
-
-export interface AudioCollectionListResponse {
-  items: AudioCollection[]
-  totalCount: number
-}
-
-export interface CreateAudioCollectionRequest {
-  name: string
-  description?: string
-  coverImagePath?: string
-  defaultVoice?: string
-  defaultModel?: string
-}
-
-export interface UpdateAudioCollectionRequest {
-  name?: string
-  description?: string
-  coverImagePath?: string
-  defaultVoice?: string
-  defaultModel?: string
-}
-
-export interface MoveRecordingToCollectionRequest {
-  collectionId?: string | null
-  sequenceNumber?: number | null
-  chapterTitle?: string | null
-}
-
-export interface StartAudioGenerationRequest {
-  text: string
-  name: string
-  description?: string
-  model: string
-  voice: string
-  instructions?: string
-  collectionId?: string | null
-  sequenceNumber?: number | null
-  chapterTitle?: string | null
-  targetCharCount?: number
-  maxCharCount?: number
-  maxParallelism?: number
-  responseFormat?: string
-  speed?: number
-}
-
-export const audioCollections = {
-  list: (offset = 0, limit = 20) =>
-    api.get<AudioCollectionListResponse>(`/api/v1/audio-collections?offset=${offset}&limit=${limit}`),
-
-  get: (id: string) =>
-    api.get<AudioCollection>(`/api/v1/audio-collections/${id}`),
-
-  create: (data: CreateAudioCollectionRequest) =>
-    api.post<AudioCollection>(`/api/v1/audio-collections`, data),
-
-  update: (id: string, data: UpdateAudioCollectionRequest) =>
-    api.put<AudioCollection>(`/api/v1/audio-collections/${id}`, data),
-
-  delete: (id: string) =>
-    api.delete(`/api/v1/audio-collections/${id}`),
-
-  listRecordings: (id: string, offset = 0, limit = 50) =>
-    api.get<TtsRecordingListResponse>(`/api/v1/audio-collections/${id}/recordings?offset=${offset}&limit=${limit}`),
-}
-
 // Scheduling Types
 export type ScheduleMode = 'OneOff' | 'Recurring'
 export type ScheduleJobType = 'AgentInvocation' | 'Reminder' | 'Maintenance' | 'Cleanup' | 'Archival' | 'ReportGeneration' | 'WorkflowExecution'
-export type ScheduleTargetType = 'Navi' | 'CustomAgent' | 'Orchestration'
+export type ScheduleTargetType = 'Navi' | 'CustomAgent'
 export type ScheduleExecutionStatus = 'Running' | 'Succeeded' | 'Failed' | 'Cancelled'
 export type ScheduleTriggerSource = 'Cron' | 'OneOff' | 'Manual' | 'Webhook'
 
@@ -1839,7 +1396,6 @@ export interface ScheduledJobDetail {
   isEnabled: boolean
   targetType: ScheduleTargetType
   targetAgentDefinitionId?: string
-  targetOrchestrationId?: string
   targetName?: string
   quartzJobKey?: string
   quartzTriggerKey?: string
@@ -1874,7 +1430,6 @@ export interface CreateScheduleRequest {
   timeZoneId?: string
   targetType: ScheduleTargetType
   targetAgentDefinitionId?: string
-  targetOrchestrationId?: string
   userPrompt: string
   inputContext?: string
 }
@@ -1895,7 +1450,6 @@ export interface UpdateScheduleRequest {
   timeZoneId?: string
   targetType?: ScheduleTargetType
   targetAgentDefinitionId?: string
-  targetOrchestrationId?: string
   userPrompt?: string
   inputContext?: string
 }

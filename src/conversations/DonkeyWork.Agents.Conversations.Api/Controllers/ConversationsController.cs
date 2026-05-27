@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace DonkeyWork.Agents.Conversations.Api.Controllers;
 
 /// <summary>
-/// Manage conversations with orchestrations.
+/// Manage conversations.
 /// </summary>
 [ApiController]
 [ApiVersion(1.0)]
@@ -35,7 +35,7 @@ public class ConversationsController : ControllerBase
     /// <param name="request">The conversation details.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <response code="201">Returns the created conversation.</response>
-    /// <response code="400">Invalid request or orchestration not found.</response>
+    /// <response code="400">Invalid request.</response>
     [HttpPost]
     [ProducesResponseType<ConversationDetailsV1>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -48,13 +48,13 @@ public class ConversationsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Invalid operation when creating conversation for orchestration {OrchestrationId}", request.OrchestrationId);
+            _logger.LogWarning(ex, "Invalid operation when creating conversation");
             return BadRequest(new { error = ex.Message });
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Database error when creating conversation for orchestration {OrchestrationId}", request.OrchestrationId);
-            return BadRequest(new { error = "Failed to create conversation. Please verify the orchestration exists and try again." });
+            _logger.LogError(ex, "Database error when creating conversation");
+            return BadRequest(new { error = "Failed to create conversation. Please try again." });
         }
     }
 
@@ -82,14 +82,13 @@ public class ConversationsController : ControllerBase
     /// List all conversations for the current user (paginated, newest first).
     /// </summary>
     /// <param name="pagination">Pagination parameters.</param>
-    /// <param name="agentOnly">When true, only agent-only conversations. When false, only orchestration conversations. When null, all conversations.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <response code="200">Returns the list of conversations.</response>
     [HttpGet]
     [ProducesResponseType<PaginatedResponse<ConversationSummaryV1>>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> List([FromQuery] PaginationRequest pagination, [FromQuery] bool? agentOnly, CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var conversations = await _conversationService.ListAsync(pagination, agentOnly, cancellationToken);
+        var conversations = await _conversationService.ListAsync(pagination, cancellationToken);
         return Ok(conversations);
     }
 

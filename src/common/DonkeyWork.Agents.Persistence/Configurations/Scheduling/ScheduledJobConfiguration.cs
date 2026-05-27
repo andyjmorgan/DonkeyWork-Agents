@@ -70,9 +70,6 @@ public class ScheduledJobConfiguration : IEntityTypeConfiguration<ScheduledJobEn
         builder.Property(e => e.TargetAgentDefinitionId)
             .HasColumnName("target_agent_definition_id");
 
-        builder.Property(e => e.TargetOrchestrationId)
-            .HasColumnName("target_orchestration_id");
-
         builder.Property(e => e.QuartzJobKey)
             .HasColumnName("quartz_job_key")
             .HasMaxLength(500)

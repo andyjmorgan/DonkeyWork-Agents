@@ -5,7 +5,7 @@
 <h1 align="center">DonkeyWork Agents</h1>
 
 <p align="center">
-  A multi-agent orchestration platform with a visual workflow editor, real-time chat, secure code sandbox, and distributed execution runtime — built on .NET 10, React 19, and Microsoft Orleans.
+  A multi-agent platform with a visual agent builder, real-time chat, secure code sandbox, and distributed execution runtime — built on .NET 10, React 19, and Microsoft Orleans.
 </p>
 
 ---
@@ -16,7 +16,6 @@
 - [Architecture](#architecture)
 - [Navi — Conversational AI Interface](#navi--conversational-ai-interface)
 - [Agent Builder](#agent-builder)
-- [Orchestration Engine](#orchestration-engine)
 - [Built-in MCP Server](#built-in-mcp-server)
 - [External MCP Server Management](#external-mcp-server-management)
 - [A2A Protocol — Inter-Agent Communication](#a2a-protocol--inter-agent-communication)
@@ -37,9 +36,9 @@
 
 ## Overview
 
-DonkeyWork Agents is a full-stack platform for building, managing, and executing LLM-powered agents. It combines a visual drag-and-drop workflow editor, a real-time conversational interface, project management tooling, and an isolated code execution sandbox into a single cohesive system.
+DonkeyWork Agents is a full-stack platform for building, managing, and executing LLM-powered agents. It combines a visual agent builder, a real-time conversational interface, and an isolated code execution sandbox into a single cohesive system.
 
-Agents can call tools, spawn sub-agents, communicate with remote agents via the A2A protocol, execute code in secure Kata VM sandboxes, manage OAuth credentials, and orchestrate multi-step workflows — all coordinated through a distributed Orleans grain runtime with NATS JetStream streaming and PostgreSQL persistence.
+Agents can call tools, spawn sub-agents, communicate with remote agents via the A2A protocol, execute code in secure Kata VM sandboxes, and manage OAuth credentials — all coordinated through a distributed Orleans grain runtime with NATS JetStream streaming and PostgreSQL persistence.
 
 The platform ships as a web application, a native desktop app (macOS, Windows, Linux), and exposes its own MCP server for integration with external AI tools like Claude Code.
 
@@ -129,46 +128,11 @@ The agent builder is a visual configuration interface for defining agent behavio
 - **Tool groups** — assign sets of tools the agent can invoke (MCP tools, skills, built-in tools)
 - **Sub-agent references** — link other agents as callable sub-agents for hierarchical task delegation
 - **A2A server references** — connect to remote agents via the Agent-to-Agent protocol
-- **Orchestration references** — trigger orchestration workflows from within an agent conversation
 - **Context management** — configure conversation context window, token limits, and history trimming
 - **Sandbox enablement** — assign a sandbox pod for isolated code execution with credential mapping
 - **Agent metadata** — name, description, icon, and display settings
 
 Agents are stored as versioned definitions with full CRUD support. The visual editor uses ReactFlow v12 with custom node types (`AgentBaseNode`, `AgentModelNode`, `AgentSatelliteNode`) for an intuitive drag-and-drop experience.
-
-## Orchestration Engine
-
-The orchestration engine is a workflow execution system built on a directed acyclic graph (DAG) model. Workflows are designed visually using ReactFlow and executed server-side with real-time progress tracking.
-
-**Node types:**
-
-| Node | Purpose |
-|------|---------|
-| **Start** | Entry point — validates input against a JSON schema |
-| **End** | Exit point — returns output to the caller |
-| **Model** | LLM inference — sends a prompt to a configured provider and model |
-| **Multimodal Chat** | Interactive chat node with image/audio support |
-| **Text-to-Speech** | Anthropic TTS synthesis |
-| **Gemini TTS** | Google Gemini TTS synthesis |
-| **Store Audio** | Persists generated audio with metadata to S3 storage |
-| **Message Formatter** | Template-based message construction |
-| **HTTP Request** | REST API calls with configurable method, headers, and body |
-| **Sleep** | Timed delay between nodes |
-
-**Execution flow:**
-
-1. The `GraphAnalyzer` validates the DAG structure and computes execution order
-2. The `NodeExecutorRegistry` maps each node type to its executor implementation
-3. Nodes execute in topological order with an `ExecutionContext` carrying state between nodes
-4. Each node's output is template-mapped to downstream node inputs via explicit configuration — no implicit data scanning
-5. Execution events are streamed to the frontend for real-time progress visualization
-
-**Features:**
-
-- Version tracking with full history
-- Execution history with per-node timing and output inspection
-- Audio recording, synthesis, and playback within workflows
-- Nested orchestration references from agent conversations
 
 ## Built-in MCP Server
 
@@ -452,7 +416,6 @@ src/
 │   ├── Common.Contracts/               # Shared enums, base interfaces
 │   ├── Common.Sdk/                     # Internal utilities
 │   └── Notifications.{Core,Contracts}/ # SignalR notification system
-├── orchestrations/                     # Workflow definitions and DAG execution engine
 ├── conversations/                      # Multi-turn chat with message history
 ├── credentials/                        # OAuth tokens, API keys, sandbox credential mapping
 ├── identity/                           # Keycloak auth, IIdentityContext, API key auth
@@ -481,7 +444,6 @@ src/
 test/
 ├── actors/                             # Orleans grain unit tests
 ├── integration/                        # Testcontainers-based API integration tests
-├── orchestrations/                     # Orchestration engine tests
 ├── sandbox/                            # Sandbox executor and MCP server tests
 └── ...                                 # Per-module unit test projects
 ```

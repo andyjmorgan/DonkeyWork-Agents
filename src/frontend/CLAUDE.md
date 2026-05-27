@@ -5,7 +5,7 @@
 - **Framework**: React 19 + Vite + TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui + CSS Variables (HSL)
 - **State Management**: Zustand (with persist middleware)
-- **Workflow Editor**: ReactFlow (@xyflow/react v12)
+- **Agent Builder Canvas**: ReactFlow (@xyflow/react v12)
 - **Icons**: lucide-react
 - **Authentication**: Keycloak JWT (OAuth PKCE)
 - **API Client**: Auto-generated from backend OpenAPI spec (`@donkeywork/api-client`)
@@ -38,8 +38,6 @@ src/frontend/
 │   │       ├── index.css
 │   │       ├── components/
 │   │       │   ├── layout/              # AppLayout, Sidebar, Header, ThemeToggle
-│   │       │   ├── editor/              # Workflow editor (see editor/CLAUDE.md)
-│   │       │   ├── execution/           # TestPanel, StreamingOutput
 │   │       │   ├── credentials/         # Credential management
 │   │       │   ├── agent-builder/       # Agent builder UI
 │   │       │   ├── agent-chat/          # Chat interface
@@ -54,7 +52,6 @@ src/frontend/
 │   │       │   ├── icons/               # Custom icon components
 │   │       │   └── ui/                  # shadcn/ui components
 │   │       ├── hooks/
-│   │       │   ├── useExecutionStream.ts
 │   │       │   ├── useAgentTestStream.ts
 │   │       │   ├── useTokenRefresh.ts
 │   │       │   ├── useOAuthFlow.ts
@@ -62,7 +59,6 @@ src/frontend/
 │   │       ├── lib/
 │   │       │   └── utils.ts             # cn() helper
 │   │       ├── store/
-│   │       │   ├── editor.ts            # Editor state (nodes, edges, config)
 │   │       │   └── agentBuilder.ts      # Agent builder state
 │   │       ├── pages/                   # All route pages
 │   │       ├── platform/               # Web platform config
@@ -91,12 +87,10 @@ The web app uses react-router-dom with these routes:
 
 | Route | Page |
 |-------|------|
-| `/` | Redirect to `/orchestrations` |
+| `/` | Redirect to `/agent-chat` |
 | `/login` | Login page |
 | `/login/callback` | OAuth callback |
 | `/oauth/callback` | OAuth provider callback |
-| `/orchestrations` | Orchestration list |
-| `/orchestrations/:id` | Orchestration editor |
 | `/agent-definitions` | Agent definitions |
 | `/agent-builder/:id` | Agent builder |
 | `/agent-chat/:id?` | Agent chat interface |
@@ -110,8 +104,6 @@ The web app uses react-router-dom with these routes:
 | `/a2a-servers` | A2A server management |
 | `/skills` | Skills list |
 | `/skills/:id` | Skill detail |
-| `/executions` | Execution history |
-| `/executions/:id` | Execution detail |
 | `/files` | File management |
 | `/sandbox-settings` | Sandbox settings |
 | `/profile` | User profile |

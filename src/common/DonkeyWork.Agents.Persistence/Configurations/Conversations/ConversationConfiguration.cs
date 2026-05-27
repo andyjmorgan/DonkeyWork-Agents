@@ -20,9 +20,6 @@ public class ConversationConfiguration : IEntityTypeConfiguration<ConversationEn
             .HasColumnName("user_id")
             .IsRequired();
 
-        builder.Property(e => e.OrchestrationId)
-            .HasColumnName("orchestration_id");
-
         builder.Property(e => e.Title)
             .HasColumnName("title")
             .IsRequired()
@@ -39,19 +36,10 @@ public class ConversationConfiguration : IEntityTypeConfiguration<ConversationEn
         builder.HasIndex(e => e.UserId)
             .HasDatabaseName("ix_conversations_user_id");
 
-        builder.HasIndex(e => e.OrchestrationId)
-            .HasDatabaseName("ix_conversations_orchestration_id");
-
         builder.HasIndex(e => e.CreatedAt)
             .HasDatabaseName("ix_conversations_created_at");
 
         // Relationships
-        builder.HasOne(e => e.Orchestration)
-            .WithMany()
-            .HasForeignKey(e => e.OrchestrationId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.Cascade);
-
         builder.HasMany(e => e.Messages)
             .WithOne(m => m.Conversation)
             .HasForeignKey(m => m.ConversationId)

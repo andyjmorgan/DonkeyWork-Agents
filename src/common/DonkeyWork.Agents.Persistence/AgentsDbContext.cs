@@ -3,13 +3,11 @@ using DonkeyWork.Agents.Persistence.Entities;
 using DonkeyWork.Agents.Persistence.Entities.Conversations;
 using DonkeyWork.Agents.Persistence.Entities.Credentials;
 using DonkeyWork.Agents.Persistence.Entities.Mcp;
-using DonkeyWork.Agents.Persistence.Entities.Orchestrations;
 using DonkeyWork.Agents.Persistence.Entities.Actors;
 using DonkeyWork.Agents.Persistence.Entities.AgentDefinitions;
 using DonkeyWork.Agents.Persistence.Entities.A2a;
 using DonkeyWork.Agents.Persistence.Entities.Prompts;
 using DonkeyWork.Agents.Persistence.Entities.Scheduling;
-using DonkeyWork.Agents.Persistence.Entities.Tts;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,14 +36,6 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<OAuthStateEntity> OAuthStates => Set<OAuthStateEntity>();
     public DbSet<SandboxCredentialMappingEntity> SandboxCredentialMappings => Set<SandboxCredentialMappingEntity>();
     public DbSet<SandboxCustomVariableEntity> SandboxCustomVariables => Set<SandboxCustomVariableEntity>();
-
-    // Orchestrations module
-    public DbSet<OrchestrationEntity> Orchestrations => Set<OrchestrationEntity>();
-    public DbSet<OrchestrationVersionEntity> OrchestrationVersions => Set<OrchestrationVersionEntity>();
-    public DbSet<OrchestrationVersionCredentialMappingEntity> OrchestrationVersionCredentialMappings => Set<OrchestrationVersionCredentialMappingEntity>();
-    public DbSet<OrchestrationExecutionEntity> OrchestrationExecutions => Set<OrchestrationExecutionEntity>();
-    public DbSet<OrchestrationNodeExecutionEntity> OrchestrationNodeExecutions => Set<OrchestrationNodeExecutionEntity>();
-    public DbSet<OrchestrationExecutionLogEntity> OrchestrationExecutionLogs => Set<OrchestrationExecutionLogEntity>();
 
     // Actors module (grain message persistence)
     public DbSet<GrainMessageEntity> GrainMessages => Set<GrainMessageEntity>();
@@ -77,11 +67,6 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
 
     // Prompts module
     public DbSet<PromptEntity> Prompts => Set<PromptEntity>();
-
-    // TTS module
-    public DbSet<TtsRecordingEntity> TtsRecordings => Set<TtsRecordingEntity>();
-    public DbSet<TtsPlaybackEntity> TtsPlayback => Set<TtsPlaybackEntity>();
-    public DbSet<TtsAudioCollectionEntity> TtsAudioCollections => Set<TtsAudioCollectionEntity>();
 
     // Scheduling module
     public DbSet<ScheduledJobEntity> ScheduledJobs => Set<ScheduledJobEntity>();

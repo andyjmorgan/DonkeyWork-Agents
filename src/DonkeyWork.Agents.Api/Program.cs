@@ -1,7 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using Asp.Versioning;
 using DonkeyWork.Agents.Conversations.Api;
-using DonkeyWork.Agents.Orchestrations.Api;
 using DonkeyWork.Agents.Credentials.Api;
 using DonkeyWork.Agents.Credentials.Api.Interceptors;
 using DonkeyWork.Agents.Credentials.Api.Options;
@@ -24,13 +23,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
-using DonkeyWork.Agents.Orchestrations.Contracts;
-using DonkeyWork.Agents.Orchestrations.Contracts.Messages;
-using DonkeyWork.Agents.Orchestrations.Core.Handlers;
 using Scalar.AspNetCore;
 using Serilog;
-using Wolverine;
-using Wolverine.Nats;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(
@@ -72,15 +66,12 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddPersistence(builder.Configuration);
 
-builder.Services.AddOrchestrationsApi();
-
 builder.Services.AddCredentialsApi();
 
 builder.Services.AddIdentityApi(builder.Configuration);
 
 builder.Services.AddMcpApi(
-    typeof(IdentityTools).Assembly,
-    typeof(DonkeyWork.Agents.Orchestrations.Api.McpTools.AudioTools).Assembly);
+    typeof(IdentityTools).Assembly);
 
 builder.Services.AddA2aApi();
 
@@ -96,38 +87,6 @@ builder.Services.AddStorageApi(builder.Configuration);
 
 builder.Host.AddActorsApi(builder.Configuration);
 builder.Services.AddActorsServices(builder.Configuration);
-
-builder.Host.UseWolverine(opts =>
-{
-    var natsUrl = builder.Configuration["Nats:Url"] ?? "nats://localhost:4222";
-    var maxConcurrentExecutions = builder.Configuration.GetValue<int?>("Agents:MaxConcurrentExecutions") ?? 8;
-
-    opts.UseNats(natsUrl)
-        .AutoProvision()
-        .UseJetStream(_ => { })
-        .DefineWorkQueueStream(NatsSubjects.CommandStream, NatsSubjects.CommandSubject)
-        .DefineWorkQueueStream(NatsSubjects.AudioGenerationStream, NatsSubjects.AudioGenerationSubject);
-
-    opts.PublishMessage<ExecuteOrchestrationCommand>()
-        .ToNatsSubject(NatsSubjects.CommandSubject)
-        .UseJetStream(NatsSubjects.CommandStream);
-
-    opts.PublishMessage<GenerateAudioRecordingCommand>()
-        .ToNatsSubject(NatsSubjects.AudioGenerationSubject)
-        .UseJetStream(NatsSubjects.AudioGenerationStream);
-
-    opts.ListenToNatsSubject(NatsSubjects.CommandSubject)
-        .UseJetStream(NatsSubjects.CommandStream, NatsSubjects.CommandConsumer)
-        .MaximumParallelMessages(maxConcurrentExecutions);
-
-    opts.ListenToNatsSubject(NatsSubjects.AudioGenerationSubject)
-        .UseJetStream(NatsSubjects.AudioGenerationStream, NatsSubjects.AudioGenerationConsumer)
-        .MaximumParallelMessages(maxConcurrentExecutions);
-
-    opts.Discovery.IncludeAssembly(typeof(ExecuteOrchestrationHandler).Assembly);
-
-    opts.Policies.Failures.MaximumAttempts = 1;
-});
 
 builder.Services.AddSchedulingApi(builder.Configuration);
 

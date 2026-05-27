@@ -31,7 +31,6 @@ public class ConversationMetadataService : IConversationMetadataService
         {
             Id = conversationId,
             UserId = userId,
-            OrchestrationId = null,
             Title = title,
             CreatedAt = now,
             UpdatedAt = now,

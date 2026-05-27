@@ -26,8 +26,6 @@ public class ScheduledJobDetailV1
 
     public Guid? TargetAgentDefinitionId { get; set; }
 
-    public Guid? TargetOrchestrationId { get; set; }
-
     public string? TargetName { get; set; }
 
     public string? QuartzJobKey { get; set; }

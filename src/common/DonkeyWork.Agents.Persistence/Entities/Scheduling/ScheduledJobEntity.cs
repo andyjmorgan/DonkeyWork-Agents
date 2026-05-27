@@ -26,8 +26,6 @@ public class ScheduledJobEntity : BaseEntity
 
     public Guid? TargetAgentDefinitionId { get; set; }
 
-    public Guid? TargetOrchestrationId { get; set; }
-
     public string QuartzJobKey { get; set; } = string.Empty;
 
     public string QuartzTriggerKey { get; set; } = string.Empty;

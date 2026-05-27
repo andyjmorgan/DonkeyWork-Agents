@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Bot, Key, KeyRound, Lock, X, PlayCircle, List, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer, Volume2, Calendar, Cpu, Activity } from 'lucide-react'
+import { Bot, Key, KeyRound, Lock, X, Shield, Link as LinkIcon, Bubbles, File, Server, Globe, Plus, ChevronDown, MessageSquare, Zap, Brain, Plug, Hammer, Calendar, Cpu, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Button,
@@ -35,14 +35,12 @@ const navigationGroups: NavGroup[] = [
     icon: File,
     items: [
       { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
-      { name: 'Listen', href: '/audio-collections', icon: Volume2, iconColor: 'text-pink-500' },
     ],
   },
   {
     name: 'Build',
     icon: Bot,
     items: [
-      { name: 'Orchestrations', href: '/orchestrations', icon: List, iconColor: 'text-cyan-500' },
       { name: 'Agent Definitions', href: '/agent-definitions', icon: Brain, iconColor: 'text-blue-500' },
       { name: 'Schedules', href: '/schedules', icon: Calendar, iconColor: 'text-orange-500' },
     ],
@@ -51,7 +49,6 @@ const navigationGroups: NavGroup[] = [
     name: 'Traces',
     icon: Activity,
     items: [
-      { name: 'Orchestration Traces', href: '/executions', icon: PlayCircle, iconColor: 'text-violet-500' },
       { name: 'Agent Traces', href: '/agent-executions', icon: Cpu, iconColor: 'text-rose-500' },
       { name: 'MCP Traces', href: '/mcp-traces', icon: Server, iconColor: 'text-teal-500' },
     ],

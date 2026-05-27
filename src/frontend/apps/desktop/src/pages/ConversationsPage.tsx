@@ -110,12 +110,6 @@ export function ConversationsPage({ onOpenConversation, onNewChat }: Conversatio
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{conv.title}</div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {conv.orchestrationName && (
-                      <>
-                        <span>{conv.orchestrationName}</span>
-                        <span>·</span>
-                      </>
-                    )}
                     <span>{conv.messageCount} messages</span>
                     <span>·</span>
                     <span>{timeAgo(conv.updatedAt ?? conv.createdAt)}</span>

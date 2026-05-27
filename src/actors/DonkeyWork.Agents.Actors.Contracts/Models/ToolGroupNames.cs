@@ -8,5 +8,4 @@ public static class ToolGroupNames
     public const string SwarmMessaging = "swarm_messaging";
     public const string SwarmContext = "swarm_context";
     public const string Scheduling = "scheduling";
-    public const string AudioCollections = "audio_collections";
 }

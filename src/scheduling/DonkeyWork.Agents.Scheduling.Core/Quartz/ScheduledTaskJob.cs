@@ -164,7 +164,6 @@ public class ScheduledTaskJob : IJob
         {
             ScheduleTargetType.Navi => await ResolveNaviContractAsync(ct),
             ScheduleTargetType.CustomAgent => await ResolveCustomAgentContractAsync(schedule, ct),
-            ScheduleTargetType.Orchestration => throw new NotSupportedException("Orchestration targeting is not yet implemented for scheduled jobs."),
             _ => throw new ArgumentException($"Unknown target type: {schedule.TargetType}")
         };
     }
