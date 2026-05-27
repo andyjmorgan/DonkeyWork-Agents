@@ -68,12 +68,4 @@ export const agentNodeTypes: Record<string, AgentNodeTypeInfo> = {
     canDelete: true,
     targetHandle: 'agents',
   },
-  agentOrchestration: {
-    type: 'agentOrchestration',
-    displayName: 'Orchestration',
-    icon: 'workflow',
-    color: 'indigo',
-    canDelete: true,
-    targetHandle: 'tools',
-  },
 }

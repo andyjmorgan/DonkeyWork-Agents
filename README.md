@@ -5,7 +5,7 @@
 <h1 align="center">DonkeyWork Agents</h1>
 
 <p align="center">
-  A multi-agent orchestration platform with a visual workflow editor, real-time chat, secure code sandbox, and distributed execution runtime — built on .NET 10, React 19, and Microsoft Orleans.
+  A multi-agent platform with a visual agent builder, real-time chat, secure code sandbox, and distributed execution runtime — built on .NET 10, React 19, and Microsoft Orleans.
 </p>
 
 ---
@@ -16,7 +16,6 @@
 - [Architecture](#architecture)
 - [Navi — Conversational AI Interface](#navi--conversational-ai-interface)
 - [Agent Builder](#agent-builder)
-- [Orchestration Engine](#orchestration-engine)
 - [Built-in MCP Server](#built-in-mcp-server)
 - [External MCP Server Management](#external-mcp-server-management)
 - [A2A Protocol — Inter-Agent Communication](#a2a-protocol--inter-agent-communication)
@@ -24,7 +23,6 @@
 - [OAuth Token Manager & Credential Vault](#oauth-token-manager--credential-vault)
 - [Project Management](#project-management)
 - [Skills — Uploadable Code Tools](#skills--uploadable-code-tools)
-- [Desktop App](#desktop-app)
 - [Identity & Multi-Tenancy](#identity--multi-tenancy)
 - [Real-Time Notifications](#real-time-notifications)
 - [LLM Providers](#llm-providers)
@@ -37,11 +35,11 @@
 
 ## Overview
 
-DonkeyWork Agents is a full-stack platform for building, managing, and executing LLM-powered agents. It combines a visual drag-and-drop workflow editor, a real-time conversational interface, project management tooling, and an isolated code execution sandbox into a single cohesive system.
+DonkeyWork Agents is a full-stack platform for building, managing, and executing LLM-powered agents. It combines a visual agent builder, a real-time conversational interface, and an isolated code execution sandbox into a single cohesive system.
 
-Agents can call tools, spawn sub-agents, communicate with remote agents via the A2A protocol, execute code in secure Kata VM sandboxes, manage OAuth credentials, and orchestrate multi-step workflows — all coordinated through a distributed Orleans grain runtime with NATS JetStream streaming and PostgreSQL persistence.
+Agents can call tools, spawn sub-agents, communicate with remote agents via the A2A protocol, execute code in secure Kata VM sandboxes, and manage OAuth credentials — all coordinated through a distributed Orleans grain runtime with NATS JetStream streaming and PostgreSQL persistence.
 
-The platform ships as a web application, a native desktop app (macOS, Windows, Linux), and exposes its own MCP server for integration with external AI tools like Claude Code.
+The platform ships as a web application and exposes its own MCP server for integration with external AI tools like Claude Code.
 
 ## Architecture
 
@@ -49,7 +47,6 @@ The platform ships as a web application, a native desktop app (macOS, Windows, L
 graph TB
     subgraph Clients
         Web[Web App<br/>React 19 + Vite]
-        Desktop[Desktop App<br/>Tauri 2.10 + Rust]
         MCP[External MCP Clients<br/>Claude Code, etc.]
     end
 
@@ -80,7 +77,7 @@ graph TB
         Google[Google<br/>Gemini]
     end
 
-    Web & Desktop --> Controllers & SignalR
+    Web --> Controllers & SignalR
     MCP --> McpServer
     Controllers --> Orleans
     Orleans --> Middleware --> Anthropic & OpenAI & Google
@@ -129,46 +126,11 @@ The agent builder is a visual configuration interface for defining agent behavio
 - **Tool groups** — assign sets of tools the agent can invoke (MCP tools, skills, built-in tools)
 - **Sub-agent references** — link other agents as callable sub-agents for hierarchical task delegation
 - **A2A server references** — connect to remote agents via the Agent-to-Agent protocol
-- **Orchestration references** — trigger orchestration workflows from within an agent conversation
 - **Context management** — configure conversation context window, token limits, and history trimming
 - **Sandbox enablement** — assign a sandbox pod for isolated code execution with credential mapping
 - **Agent metadata** — name, description, icon, and display settings
 
 Agents are stored as versioned definitions with full CRUD support. The visual editor uses ReactFlow v12 with custom node types (`AgentBaseNode`, `AgentModelNode`, `AgentSatelliteNode`) for an intuitive drag-and-drop experience.
-
-## Orchestration Engine
-
-The orchestration engine is a workflow execution system built on a directed acyclic graph (DAG) model. Workflows are designed visually using ReactFlow and executed server-side with real-time progress tracking.
-
-**Node types:**
-
-| Node | Purpose |
-|------|---------|
-| **Start** | Entry point — validates input against a JSON schema |
-| **End** | Exit point — returns output to the caller |
-| **Model** | LLM inference — sends a prompt to a configured provider and model |
-| **Multimodal Chat** | Interactive chat node with image/audio support |
-| **Text-to-Speech** | Anthropic TTS synthesis |
-| **Gemini TTS** | Google Gemini TTS synthesis |
-| **Store Audio** | Persists generated audio with metadata to S3 storage |
-| **Message Formatter** | Template-based message construction |
-| **HTTP Request** | REST API calls with configurable method, headers, and body |
-| **Sleep** | Timed delay between nodes |
-
-**Execution flow:**
-
-1. The `GraphAnalyzer` validates the DAG structure and computes execution order
-2. The `NodeExecutorRegistry` maps each node type to its executor implementation
-3. Nodes execute in topological order with an `ExecutionContext` carrying state between nodes
-4. Each node's output is template-mapped to downstream node inputs via explicit configuration — no implicit data scanning
-5. Execution events are streamed to the frontend for real-time progress visualization
-
-**Features:**
-
-- Version tracking with full history
-- Execution history with per-node timing and output inspection
-- Audio recording, synthesis, and playback within workflows
-- Nested orchestration references from agent conversations
 
 ## Built-in MCP Server
 
@@ -352,24 +314,6 @@ Skills are file-based tool packages that can be uploaded and assigned to agents,
 
 Skills enable agents to reference and execute custom code packages without modifying the platform itself.
 
-## Desktop App
-
-A native cross-platform desktop application built with Tauri 2.10 (Rust backend) wrapping the React frontend.
-
-**Features:**
-
-- **OAuth PKCE authentication** — Rust-based localhost callback server for secure token exchange with Keycloak
-- **Token persistence** — `tauri-plugin-store` saves tokens to `auth.json` with automatic refresh every 60 seconds at 80% token lifetime
-- **Native notifications** — SignalR hub connection at `agents.donkeywork.dev/hubs/notifications` triggers OS-level notifications via `tauri-plugin-notification`
-- **Auto-update** — checks GitHub Releases on launch (+5 seconds) and every 4 hours for new versions
-- **System shortcuts** — `Cmd+1`–`Cmd+5` for page navigation, `Cmd+Shift+T` for theme toggle, `Cmd+Shift+N` for new conversation
-- **Single instance** — enforced via `tauri-plugin-single-instance`
-- **Dark mode default** — matches the web app's design system
-
-**Supported platforms:** macOS (DMG), Windows (MSI), Linux (AppImage)
-
-**Release pipeline:** triggered by `desktop-v*` git tags via `.github/workflows/desktop-release.yml`, builds and signs artifacts, creates a GitHub Release.
-
 ## Identity & Multi-Tenancy
 
 Authentication and authorization is handled by Keycloak with automatic per-user data isolation across the entire platform.
@@ -398,15 +342,10 @@ A SignalR-based notification system delivers real-time events from the server to
 - Orleans grain observers implement `IAgentResponseObserver` for streaming agent responses, tool calls, and execution updates
 - Events are emitted as `StreamEventBase` subtypes through the SignalR hub
 
-**Frontend (Web):**
+**Frontend:**
 
 - `NotificationListener` component manages the SignalR hub connection lifecycle
 - `useNotifications` hook handles event subscription and state updates
-
-**Frontend (Desktop):**
-
-- SignalR connection to `agents.donkeywork.dev/hubs/notifications`
-- Events bridged to native OS notifications via `tauri-plugin-notification`
 
 ## LLM Providers
 
@@ -428,8 +367,7 @@ The model pipeline processes requests through a middleware chain (Accumulator �
 |-------|-----------|
 | Backend | .NET 10, ASP.NET Core, Microsoft Orleans 10 |
 | Frontend | React 19, TypeScript, Vite 7, Tailwind CSS, shadcn/ui |
-| Desktop | Tauri 2.10, Rust |
-| Workflow Editor | ReactFlow v12 (@xyflow/react) |
+| Agent Builder Canvas | ReactFlow v12 (@xyflow/react) |
 | Database | PostgreSQL (pgvector + pgcrypto) |
 | Message Broker | NATS JetStream |
 | Object Storage | SeaweedFS (S3-compatible) |
@@ -452,7 +390,6 @@ src/
 │   ├── Common.Contracts/               # Shared enums, base interfaces
 │   ├── Common.Sdk/                     # Internal utilities
 │   └── Notifications.{Core,Contracts}/ # SignalR notification system
-├── orchestrations/                     # Workflow definitions and DAG execution engine
 ├── conversations/                      # Multi-turn chat with message history
 ├── credentials/                        # OAuth tokens, API keys, sandbox credential mapping
 ├── identity/                           # Keycloak auth, IIdentityContext, API key auth
@@ -468,10 +405,9 @@ src/
 │   ├── Orleans.Persistence.SeaweedFs/  # Custom Orleans grain storage provider
 │   └── Orleans.Streaming.Nats/         # Custom Orleans streaming provider
 ├── frontend/
-│   ├── apps/web/                       # React 19 web application (37+ pages)
-│   ├── apps/desktop/                   # Tauri 2.10 native desktop app
+│   ├── apps/web/                       # React 19 web application
 │   └── packages/                       # Shared packages (api-client, chat, editor,
-│                                       #   platform, stores, ui, workspace)
+│                                       #   platform, stores, ui)
 └── sandbox/
     ├── CodeSandbox.Manager/            # K8s pod orchestrator (port 8668)
     ├── CodeSandbox.Executor/           # Code runner in Kata VM pods
@@ -481,7 +417,6 @@ src/
 test/
 ├── actors/                             # Orleans grain unit tests
 ├── integration/                        # Testcontainers-based API integration tests
-├── orchestrations/                     # Orchestration engine tests
 ├── sandbox/                            # Sandbox executor and MCP server tests
 └── ...                                 # Per-module unit test projects
 ```
@@ -527,13 +462,6 @@ pnpm dev
 ```
 
 The web app starts on `http://localhost:5173`.
-
-### 4. (Optional) Desktop App
-
-```bash
-cd src/frontend/apps/desktop
-pnpm tauri dev
-```
 
 ## Build & Test
 
@@ -601,7 +529,6 @@ GitHub Actions workflows handle the full pipeline:
 | `docker-build.yml` | Push to `main` | Build and push API Docker image |
 | `executor-base.yml` | Manual / path changes | Build sandbox executor base image |
 | `pr-build-test.yml` | Pull requests | Backend build, frontend lint/test, integration tests |
-| `desktop-release.yml` | `desktop-v*` tags | Build, sign, and release desktop app (DMG/MSI/AppImage) |
 
 ## License
 

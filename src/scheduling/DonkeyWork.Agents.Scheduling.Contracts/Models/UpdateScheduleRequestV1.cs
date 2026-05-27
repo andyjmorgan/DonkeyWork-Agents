@@ -20,8 +20,6 @@ public class UpdateScheduleRequestV1
 
     public Guid? TargetAgentDefinitionId { get; set; }
 
-    public Guid? TargetOrchestrationId { get; set; }
-
     public string? UserPrompt { get; set; }
 
     public string? InputContext { get; set; }

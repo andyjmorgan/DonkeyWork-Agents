@@ -50,7 +50,6 @@ const jobTypeLabels: Record<ScheduleJobType, string> = {
 const targetTypeLabels: Record<ScheduleTargetType, string> = {
   Navi: 'Navi',
   CustomAgent: 'Custom Agent',
-  Orchestration: 'Orchestration',
 }
 
 function formatCron(cron: string): string {

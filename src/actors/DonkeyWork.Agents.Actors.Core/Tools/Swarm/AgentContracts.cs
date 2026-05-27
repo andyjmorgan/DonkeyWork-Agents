@@ -10,7 +10,7 @@ public static class AgentContracts
     public static AgentContract Conversation() => new()
     {
         SystemPrompt = [ConversationSystemPrompt],
-        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.Sandbox, ToolGroupNames.Scheduling, ToolGroupNames.AudioCollections],
+        ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.SwarmManagement, ToolGroupNames.Sandbox, ToolGroupNames.Scheduling],
         WebSearch = new WebSearchConfig { Enabled = true, MaxUses = 20 },
         WebFetch = new WebFetchConfig { Enabled = true, MaxUses = 20 },
         MaxTokens = 20_000,
@@ -75,10 +75,6 @@ public static class AgentContracts
         - Conversational exchanges, greetings, clarifications
         - Follow-up questions about results you already have
         - Tasks you can do directly with your own tools — prefer doing it yourself over spawning a delegate
-
-        ## Audio Collections
-
-        You have access to audio collection tools for browsing and organizing the user's library of AI-generated audio recordings. Collections are folders of recordings (think chapters of a podcast or daily news feed); recordings can also live unfiled. Use these tools to list/get/create/update/delete collections, list recordings (flat, scoped to a collection, or unfiled-only), and to move, rename, or delete individual recordings. Recording *creation* is driven by orchestrations — do not attempt to create recordings yourself.
 
         ## Agent Notifications
 

@@ -45,7 +45,6 @@ public class ScheduledJobRepository : IScheduledJobRepository
             IsSystem = false,
             TargetType = request.TargetType,
             TargetAgentDefinitionId = request.TargetAgentDefinitionId,
-            TargetOrchestrationId = request.TargetOrchestrationId,
             QuartzJobKey = quartzJobKey,
             QuartzTriggerKey = quartzTriggerKey,
             CreatorEmail = _identityContext.Email,
@@ -156,7 +155,6 @@ public class ScheduledJobRepository : IScheduledJobRepository
         if (request.TimeZoneId is not null) entity.TimeZoneId = request.TimeZoneId;
         if (request.TargetType.HasValue) entity.TargetType = request.TargetType.Value;
         if (request.TargetAgentDefinitionId.HasValue) entity.TargetAgentDefinitionId = request.TargetAgentDefinitionId;
-        if (request.TargetOrchestrationId.HasValue) entity.TargetOrchestrationId = request.TargetOrchestrationId;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
         if (entity.Payload is not null)
@@ -207,7 +205,6 @@ public class ScheduledJobRepository : IScheduledJobRepository
         IsEnabled = entity.IsEnabled,
         TargetType = entity.TargetType,
         TargetAgentDefinitionId = entity.TargetAgentDefinitionId,
-        TargetOrchestrationId = entity.TargetOrchestrationId,
         QuartzJobKey = entity.QuartzJobKey,
         QuartzTriggerKey = entity.QuartzTriggerKey,
         Payload = entity.Payload is null ? null : new ScheduledJobPayloadV1

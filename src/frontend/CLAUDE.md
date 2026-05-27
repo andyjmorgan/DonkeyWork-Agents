@@ -5,7 +5,7 @@
 - **Framework**: React 19 + Vite + TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui + CSS Variables (HSL)
 - **State Management**: Zustand (with persist middleware)
-- **Workflow Editor**: ReactFlow (@xyflow/react v12)
+- **Agent Builder Canvas**: ReactFlow (@xyflow/react v12)
 - **Icons**: lucide-react
 - **Authentication**: Keycloak JWT (OAuth PKCE)
 - **API Client**: Auto-generated from backend OpenAPI spec (`@donkeywork/api-client`)
@@ -38,8 +38,6 @@ src/frontend/
 │   │       ├── index.css
 │   │       ├── components/
 │   │       │   ├── layout/              # AppLayout, Sidebar, Header, ThemeToggle
-│   │       │   ├── editor/              # Workflow editor (see editor/CLAUDE.md)
-│   │       │   ├── execution/           # TestPanel, StreamingOutput
 │   │       │   ├── credentials/         # Credential management
 │   │       │   ├── agent-builder/       # Agent builder UI
 │   │       │   ├── agent-chat/          # Chat interface
@@ -54,7 +52,6 @@ src/frontend/
 │   │       │   ├── icons/               # Custom icon components
 │   │       │   └── ui/                  # shadcn/ui components
 │   │       ├── hooks/
-│   │       │   ├── useExecutionStream.ts
 │   │       │   ├── useAgentTestStream.ts
 │   │       │   ├── useTokenRefresh.ts
 │   │       │   ├── useOAuthFlow.ts
@@ -62,14 +59,12 @@ src/frontend/
 │   │       ├── lib/
 │   │       │   └── utils.ts             # cn() helper
 │   │       ├── store/
-│   │       │   ├── editor.ts            # Editor state (nodes, edges, config)
 │   │       │   └── agentBuilder.ts      # Agent builder state
 │   │       ├── pages/                   # All route pages
 │   │       ├── platform/               # Web platform config
 │   │       ├── schemas/                # JSON schemas
 │   │       ├── types/                  # TypeScript types
 │   │       └── test/                   # Test utilities
-│   └── desktop/                         # Tauri desktop app (see desktop/CLAUDE.md)
 ├── packages/
 │   ├── api-client/                      # Auto-generated API client (@donkeywork/api-client)
 │   ├── chat/                            # Chat components (@donkeywork/chat)
@@ -91,12 +86,10 @@ The web app uses react-router-dom with these routes:
 
 | Route | Page |
 |-------|------|
-| `/` | Redirect to `/orchestrations` |
+| `/` | Redirect to `/agent-chat` |
 | `/login` | Login page |
 | `/login/callback` | OAuth callback |
 | `/oauth/callback` | OAuth provider callback |
-| `/orchestrations` | Orchestration list |
-| `/orchestrations/:id` | Orchestration editor |
 | `/agent-definitions` | Agent definitions |
 | `/agent-builder/:id` | Agent builder |
 | `/agent-chat/:id?` | Agent chat interface |
@@ -110,8 +103,6 @@ The web app uses react-router-dom with these routes:
 | `/a2a-servers` | A2A server management |
 | `/skills` | Skills list |
 | `/skills/:id` | Skill detail |
-| `/executions` | Execution history |
-| `/executions/:id` | Execution detail |
 | `/files` | File management |
 | `/sandbox-settings` | Sandbox settings |
 | `/profile` | User profile |
@@ -247,11 +238,6 @@ pnpm dev              # Start dev server
 pnpm build            # Build for production
 pnpm lint             # Lint
 pnpm test:run         # Run tests
-
-# From src/frontend/apps/desktop/
-pnpm dev              # Start Vite dev server (port 5174)
-pnpm tauri dev        # Start Tauri native dev mode
-pnpm tauri build      # Build native app
 ```
 
 ---
@@ -262,4 +248,4 @@ pnpm tauri build      # Build native app
 - Keep components small and focused
 - Prefer composition over configuration
 - Shared stores, UI, and platform code live in `packages/`
-- App-specific code lives in `apps/web/` or `apps/desktop/`
+- App-specific code lives in `apps/web/`

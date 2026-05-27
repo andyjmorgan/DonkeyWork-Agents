@@ -28,10 +28,9 @@ public interface IConversationService
     /// Lists conversations for the current user (paginated, newest first).
     /// </summary>
     /// <param name="pagination">Pagination parameters.</param>
-    /// <param name="agentOnly">When true, only agent-only conversations (no orchestration). When false, only orchestration conversations. When null, all conversations.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Paginated list of conversation summaries.</returns>
-    Task<PaginatedResponse<ConversationSummaryV1>> ListAsync(PaginationRequest pagination, bool? agentOnly = null, CancellationToken cancellationToken = default);
+    Task<PaginatedResponse<ConversationSummaryV1>> ListAsync(PaginationRequest pagination, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates a conversation title.
@@ -60,7 +59,7 @@ public interface IConversationService
 
     /// <summary>
     /// Sends a message to a conversation (non-streaming).
-    /// Saves the user message, executes the orchestration, and saves the assistant response.
+    /// Saves the user message, runs the agent, and saves the assistant response.
     /// </summary>
     /// <param name="conversationId">The conversation ID.</param>
     /// <param name="request">The message request.</param>

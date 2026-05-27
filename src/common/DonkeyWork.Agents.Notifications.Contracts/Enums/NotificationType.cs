@@ -11,7 +11,4 @@ public enum NotificationType
     // Conversation agent notifications
     ConversationAgentStarted,
     ConversationAgentCompleted,
-
-    // Audio recording notifications
-    AudioRecordingUpdated,
 }

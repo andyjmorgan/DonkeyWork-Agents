@@ -36,36 +36,7 @@ public class ConversationService : IConversationService
     public async Task<ConversationDetailsV1> CreateAsync(CreateConversationRequestV1 request, CancellationToken cancellationToken = default)
     {
         var userId = _identityContext.UserId;
-        _logger.LogInformation("Creating conversation for user {UserId} with orchestration {OrchestrationId}", userId, request.OrchestrationId);
-
-        string? orchestrationName = null;
-
-        if (request.OrchestrationId.HasValue)
-        {
-            // Verify orchestration exists and belongs to user
-            var orchestration = await _dbContext.Orchestrations
-                .AsNoTracking()
-                .Include(o => o.CurrentVersion)
-                .FirstOrDefaultAsync(o => o.Id == request.OrchestrationId.Value, cancellationToken);
-
-            if (orchestration == null)
-            {
-                throw new InvalidOperationException($"Orchestration {request.OrchestrationId} not found");
-            }
-
-            // Verify orchestration has Chat interface
-            if (orchestration.CurrentVersion == null)
-            {
-                throw new InvalidOperationException($"Orchestration {request.OrchestrationId} has no published version");
-            }
-
-            if (!orchestration.CurrentVersion.NaviEnabled)
-            {
-                throw new InvalidOperationException($"Orchestration {request.OrchestrationId} does not support Chat interface");
-            }
-
-            orchestrationName = orchestration.Name;
-        }
+        _logger.LogInformation("Creating conversation for user {UserId}", userId);
 
         var conversationId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
@@ -76,7 +47,6 @@ public class ConversationService : IConversationService
         {
             Id = conversationId,
             UserId = userId,
-            OrchestrationId = request.OrchestrationId,
             Title = title,
             CreatedAt = now,
             UpdatedAt = now
@@ -90,8 +60,6 @@ public class ConversationService : IConversationService
         return new ConversationDetailsV1
         {
             Id = conversationId,
-            OrchestrationId = request.OrchestrationId,
-            OrchestrationName = orchestrationName,
             Title = title,
             Messages = [],
             CreatedAt = now,
@@ -103,7 +71,6 @@ public class ConversationService : IConversationService
     {
         var conversation = await _dbContext.Conversations
             .AsNoTracking()
-            .Include(c => c.Orchestration)
             .Include(c => c.Messages.OrderBy(m => m.CreatedAt))
             .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
 
@@ -115,24 +82,14 @@ public class ConversationService : IConversationService
         return MapToDetails(conversation);
     }
 
-    public async Task<PaginatedResponse<ConversationSummaryV1>> ListAsync(PaginationRequest pagination, bool? agentOnly = null, CancellationToken cancellationToken = default)
+    public async Task<PaginatedResponse<ConversationSummaryV1>> ListAsync(PaginationRequest pagination, CancellationToken cancellationToken = default)
     {
         var limit = Math.Min(pagination.Limit, 20); // Default page size 20
 
         var query = _dbContext.Conversations
             .AsNoTracking()
-            .Include(c => c.Orchestration)
             .Include(c => c.Messages)
             .AsQueryable();
-
-        if (agentOnly == true)
-        {
-            query = query.Where(c => c.OrchestrationId == null);
-        }
-        else if (agentOnly == false)
-        {
-            query = query.Where(c => c.OrchestrationId != null);
-        }
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -349,8 +306,6 @@ public class ConversationService : IConversationService
         return new ConversationSummaryV1
         {
             Id = conversation.Id,
-            OrchestrationId = conversation.OrchestrationId,
-            OrchestrationName = conversation.Orchestration?.Name,
             Title = conversation.Title,
             MessageCount = conversation.Messages.Count,
             CreatedAt = conversation.CreatedAt,
@@ -363,8 +318,6 @@ public class ConversationService : IConversationService
         return new ConversationDetailsV1
         {
             Id = conversation.Id,
-            OrchestrationId = conversation.OrchestrationId,
-            OrchestrationName = conversation.Orchestration?.Name,
             Title = conversation.Title,
             Messages = conversation.Messages.Select(MapMessage).ToList(),
             CreatedAt = conversation.CreatedAt,

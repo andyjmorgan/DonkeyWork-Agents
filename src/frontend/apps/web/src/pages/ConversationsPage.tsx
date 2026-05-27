@@ -211,12 +211,6 @@ export function ConversationsPage() {
                     />
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="text-sm font-medium truncate">{conv.title}</div>
-                      {conv.orchestrationName && (
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Orchestration: </span>
-                          <span>{conv.orchestrationName}</span>
-                        </div>
-                      )}
                       <div className="text-sm">
                         <span className="text-muted-foreground">Messages: </span>
                         <span>{conv.messageCount}</span>
@@ -272,7 +266,6 @@ export function ConversationsPage() {
                     />
                   </TableHead>
                   <TableHead>Title</TableHead>
-                  <TableHead>Orchestration</TableHead>
                   <TableHead>Messages</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Updated</TableHead>
@@ -296,9 +289,6 @@ export function ConversationsPage() {
                     </TableCell>
                     <TableCell className="font-medium max-w-[300px] truncate">
                       {conv.title}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {conv.orchestrationName || '-'}
                     </TableCell>
                     <TableCell>{conv.messageCount}</TableCell>
                     <TableCell className="text-muted-foreground">

@@ -35,7 +35,7 @@ public sealed class SchedulingAgentTools
         [Description("Job type: AgentInvocation, Reminder, ReportGeneration, etc.")] ScheduleJobType jobType = ScheduleJobType.AgentInvocation,
         [Description("Quartz 7-field cron expression for recurring schedules. Example: 0 0 8 ? * MON-FRI *")] string? cronExpression = null,
         [Description("UTC datetime for one-off schedules as bare ISO 8601 (e.g. 2026-04-03T21:00:00Z). Do NOT wrap in quotes.")] DateTimeOffset? runAtUtc = null,
-        [Description("Target type: Navi, CustomAgent, or Orchestration")] ScheduleTargetType targetType = ScheduleTargetType.Navi,
+        [Description("Target type: Navi or CustomAgent")] ScheduleTargetType targetType = ScheduleTargetType.Navi,
         [Description("Agent definition ID (GUID) when targeting a custom agent")] Guid? targetAgentDefinitionId = null,
         [Description("IANA timezone (e.g. Europe/Dublin). Defaults to Europe/Dublin.")] string? timezone = null,
         [Description("Optional description of what this schedule does")] string? description = null,

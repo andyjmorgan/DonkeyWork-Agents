@@ -7,7 +7,6 @@ public interface IConversationMetadataService
 {
     /// <summary>
     /// Ensures a conversation record exists in the database.
-    /// Creates one with OrchestrationId = null if it doesn't exist.
     /// </summary>
     Task EnsureExistsAsync(Guid conversationId, Guid userId, string title, CancellationToken ct = default);
 

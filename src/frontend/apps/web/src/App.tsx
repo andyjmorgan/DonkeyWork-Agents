@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { OrchestrationsPage, OrchestrationEditorPage, ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, ExecutionsPage, ExecutionDetailPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, FilesPage, McpServersPage, A2aServersPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, AudioCollectionsPage, AudioCollectionDetailPage, SchedulesPage, ScheduleDetailPage, AgentExecutionsPage, AgentExecutionDetailPage, McpTracesPage, McpTraceDetailPage } from '@/pages'
+import { ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, FilesPage, McpServersPage, A2aServersPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, SchedulesPage, ScheduleDetailPage, AgentExecutionsPage, AgentExecutionDetailPage, McpTracesPage, McpTraceDetailPage } from '@/pages'
 import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -78,20 +78,16 @@ export default function App() {
           <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
           {/* Editor pages - full screen, no layout wrapper */}
-          <Route path="/orchestrations/:id/edit" element={<AuthGuard><OrchestrationEditorPage /></AuthGuard>} />
           <Route path="/agent-definitions/:id/edit" element={<AuthGuard><AgentBuilderPage /></AuthGuard>} />
 
           {/* Regular pages with layout */}
           <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
             <Route path="/" element={<Navigate to="/agent-chat" replace />} />
-            <Route path="/orchestrations" element={<OrchestrationsPage />} />
             <Route path="/agent-definitions" element={<AgentDefinitionsPage />} />
             <Route path="/chat" element={<Navigate to="/agent-chat" replace />} />
             <Route path="/conversations" element={<ConversationsPage />} />
             <Route path="/agent-chat" element={<AgentChatPage />} />
             <Route path="/agent-chat/:conversationId" element={<AgentChatPage />} />
-            <Route path="/executions" element={<ExecutionsPage />} />
-            <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
             <Route path="/agent-executions" element={<AgentExecutionsPage />} />
             <Route path="/agent-executions/:id" element={<AgentExecutionDetailPage />} />
             <Route path="/mcp-traces" element={<McpTracesPage />} />
@@ -100,9 +96,6 @@ export default function App() {
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/skills/:name" element={<SkillDetailPage />} />
             <Route path="/api-keys" element={<ApiKeysPage />} />
-            <Route path="/recordings" element={<Navigate to="/audio-collections" replace />} />
-            <Route path="/audio-collections" element={<AudioCollectionsPage />} />
-            <Route path="/audio-collections/:id" element={<AudioCollectionDetailPage />} />
             <Route path="/schedules" element={<SchedulesPage />} />
             <Route path="/schedules/:id" element={<ScheduleDetailPage />} />
             <Route path="/credentials" element={<CredentialsPage />} />

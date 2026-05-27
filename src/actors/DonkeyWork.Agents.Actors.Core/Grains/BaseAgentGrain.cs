@@ -15,7 +15,6 @@ using DonkeyWork.Agents.Actors.Core.Providers.Responses;
 using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.A2a;
 using DonkeyWork.Agents.Actors.Core.Tools.Mcp;
-using DonkeyWork.Agents.Actors.Core.Tools.Orchestration;
 using DonkeyWork.Agents.Actors.Core.Tools.Sandbox;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
 using DonkeyWork.Agents.A2a.Contracts.Services;
@@ -23,7 +22,6 @@ using DonkeyWork.Agents.Credentials.Contracts.Enums;
 using DonkeyWork.Agents.Credentials.Contracts.Services;
 using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
-using DonkeyWork.Agents.Orchestrations.Contracts.Services;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
 using DonkeyWork.Agents.Providers.Contracts.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +53,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     protected bool ExplicitCancel;
     private protected McpToolProvider? McpToolProvider;
     private protected A2aToolProvider? A2aToolProvider;
-    private protected OrchestrationToolProvider? OrchestrationToolProvider;
     protected Type[]? EffectiveToolTypes;
     protected SandboxProvisioningHandle? SandboxHandle;
     protected int ContextWindowLimit;
@@ -189,25 +186,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         A2aToolProvider = new A2aToolProvider();
         await A2aToolProvider.InitializeAsync(configs, Logger, ct);
-    }
-
-    protected virtual async Task InitializeOrchestrationToolsAsync(AgentContract contract, CancellationToken ct)
-    {
-        if (OrchestrationToolProvider is not null || contract.Orchestrations is not { Length: > 0 })
-            return;
-
-        var orchestrationService = ServiceProvider.GetRequiredService<IOrchestrationService>();
-        var versionService = ServiceProvider.GetRequiredService<IOrchestrationVersionService>();
-
-        OrchestrationToolProvider = new OrchestrationToolProvider();
-        OrchestrationToolProvider.SetServiceProvider(ServiceProvider);
-        await OrchestrationToolProvider.InitializeAsync(
-            contract.Orchestrations,
-            IdentityContext.UserId,
-            orchestrationService,
-            versionService,
-            Logger,
-            ct);
     }
 
     protected virtual Task<string?> GetAgentCatalogPromptAsync(AgentContract contract, CancellationToken ct)
@@ -374,12 +352,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             return new ToolExecutionResult(result.Content, result.IsError);
         }
 
-        if (OrchestrationToolProvider?.HasTool(toolName) == true)
-        {
-            var result = await OrchestrationToolProvider.ExecuteAsync(toolName, arguments, ct);
-            return new ToolExecutionResult(result.Content, result.IsError);
-        }
-
         return new ToolExecutionResult($"Unknown tool: {toolName}", IsError: true);
     }
 
@@ -405,7 +377,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             case ModelMiddlewareMessage { ModelMessage: ModelResponseToolCall toolCall }:
                 Emit(new StreamToolUseEvent(key, toolCall.ToolName, toolCall.ToolUseId, toolCall.Input.GetRawText())
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolCall.ToolName) ?? McpToolProvider?.GetDisplayName(toolCall.ToolName) ?? A2aToolProvider?.GetDisplayName(toolCall.ToolName) ?? OrchestrationToolProvider?.GetDisplayName(toolCall.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolCall.ToolName) ?? McpToolProvider?.GetDisplayName(toolCall.ToolName) ?? A2aToolProvider?.GetDisplayName(toolCall.ToolName),
                 });
                 break;
 
@@ -474,13 +446,13 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                     key, toolResponse.ToolCallId, toolResponse.ToolName,
                     toolResponse.Response, toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName) ?? OrchestrationToolProvider?.GetDisplayName(toolResponse.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName),
                 });
                 Emit(new StreamToolCompleteEvent(
                     key, toolResponse.ToolCallId, toolResponse.ToolName,
                     toolResponse.Success, (long)toolResponse.Duration.TotalMilliseconds)
                 {
-                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName) ?? OrchestrationToolProvider?.GetDisplayName(toolResponse.ToolName),
+                    DisplayName = ToolRegistry.GetDisplayName(toolResponse.ToolName) ?? McpToolProvider?.GetDisplayName(toolResponse.ToolName) ?? A2aToolProvider?.GetDisplayName(toolResponse.ToolName),
                 });
                 break;
 
@@ -636,7 +608,6 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
 
         await InitializeMcpToolsAsync(contract, effectiveToolGroups, ct);
         await InitializeA2aToolsAsync(contract, effectiveToolGroups, ct);
-        await InitializeOrchestrationToolsAsync(contract, ct);
 
         var effectiveToolTypes = toolTypes;
 
@@ -722,10 +693,9 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         }
 
         var a2aTools = A2aToolProvider?.GetToolDefinitions() ?? [];
-        var orchestrationTools = OrchestrationToolProvider?.GetToolDefinitions() ?? [];
 
-        IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0 || a2aTools.Count > 0 || orchestrationTools.Count > 0
-            ? [.. (localTools ?? []), .. mcpTools, .. a2aTools, .. orchestrationTools]
+        IReadOnlyList<InternalToolDefinition>? tools = localTools is not null || mcpTools.Count > 0 || a2aTools.Count > 0
+            ? [.. (localTools ?? []), .. mcpTools, .. a2aTools]
             : null;
 
         var apiKey = await ApiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct);

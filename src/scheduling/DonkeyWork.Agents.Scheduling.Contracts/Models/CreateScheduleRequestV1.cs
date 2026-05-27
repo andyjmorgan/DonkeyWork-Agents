@@ -22,8 +22,6 @@ public class CreateScheduleRequestV1
 
     public Guid? TargetAgentDefinitionId { get; set; }
 
-    public Guid? TargetOrchestrationId { get; set; }
-
     public string UserPrompt { get; set; } = string.Empty;
 
     public string? InputContext { get; set; }
