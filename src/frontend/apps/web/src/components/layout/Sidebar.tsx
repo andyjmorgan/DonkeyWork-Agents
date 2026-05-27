@@ -31,13 +31,6 @@ interface NavGroup {
 
 const navigationGroups: NavGroup[] = [
   {
-    name: 'Workspace',
-    icon: File,
-    items: [
-      { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
-    ],
-  },
-  {
     name: 'Build',
     icon: Bot,
     items: [
@@ -57,6 +50,7 @@ const navigationGroups: NavGroup[] = [
     name: 'Integrations',
     icon: Plug,
     items: [
+      { name: 'Files', href: '/files', icon: File, iconColor: 'text-amber-500' },
       { name: 'MCP Servers', href: '/mcp-servers', icon: Server, iconColor: 'text-teal-500' },
       { name: 'A2A Servers', href: '/a2a-servers', icon: Globe, iconColor: 'text-teal-500' },
       { name: 'Skills', href: '/skills', icon: Zap, iconColor: 'text-violet-500' },
