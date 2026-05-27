@@ -23,7 +23,6 @@
 - [OAuth Token Manager & Credential Vault](#oauth-token-manager--credential-vault)
 - [Project Management](#project-management)
 - [Skills — Uploadable Code Tools](#skills--uploadable-code-tools)
-- [Desktop App](#desktop-app)
 - [Identity & Multi-Tenancy](#identity--multi-tenancy)
 - [Real-Time Notifications](#real-time-notifications)
 - [LLM Providers](#llm-providers)
@@ -40,7 +39,7 @@ DonkeyWork Agents is a full-stack platform for building, managing, and executing
 
 Agents can call tools, spawn sub-agents, communicate with remote agents via the A2A protocol, execute code in secure Kata VM sandboxes, and manage OAuth credentials — all coordinated through a distributed Orleans grain runtime with NATS JetStream streaming and PostgreSQL persistence.
 
-The platform ships as a web application, a native desktop app (macOS, Windows, Linux), and exposes its own MCP server for integration with external AI tools like Claude Code.
+The platform ships as a web application and exposes its own MCP server for integration with external AI tools like Claude Code.
 
 ## Architecture
 
@@ -48,7 +47,6 @@ The platform ships as a web application, a native desktop app (macOS, Windows, L
 graph TB
     subgraph Clients
         Web[Web App<br/>React 19 + Vite]
-        Desktop[Desktop App<br/>Tauri 2.10 + Rust]
         MCP[External MCP Clients<br/>Claude Code, etc.]
     end
 
@@ -79,7 +77,7 @@ graph TB
         Google[Google<br/>Gemini]
     end
 
-    Web & Desktop --> Controllers & SignalR
+    Web --> Controllers & SignalR
     MCP --> McpServer
     Controllers --> Orleans
     Orleans --> Middleware --> Anthropic & OpenAI & Google
@@ -316,24 +314,6 @@ Skills are file-based tool packages that can be uploaded and assigned to agents,
 
 Skills enable agents to reference and execute custom code packages without modifying the platform itself.
 
-## Desktop App
-
-A native cross-platform desktop application built with Tauri 2.10 (Rust backend) wrapping the React frontend.
-
-**Features:**
-
-- **OAuth PKCE authentication** — Rust-based localhost callback server for secure token exchange with Keycloak
-- **Token persistence** — `tauri-plugin-store` saves tokens to `auth.json` with automatic refresh every 60 seconds at 80% token lifetime
-- **Native notifications** — SignalR hub connection at `agents.donkeywork.dev/hubs/notifications` triggers OS-level notifications via `tauri-plugin-notification`
-- **Auto-update** — checks GitHub Releases on launch (+5 seconds) and every 4 hours for new versions
-- **System shortcuts** — `Cmd+1`–`Cmd+5` for page navigation, `Cmd+Shift+T` for theme toggle, `Cmd+Shift+N` for new conversation
-- **Single instance** — enforced via `tauri-plugin-single-instance`
-- **Dark mode default** — matches the web app's design system
-
-**Supported platforms:** macOS (DMG), Windows (MSI), Linux (AppImage)
-
-**Release pipeline:** triggered by `desktop-v*` git tags via `.github/workflows/desktop-release.yml`, builds and signs artifacts, creates a GitHub Release.
-
 ## Identity & Multi-Tenancy
 
 Authentication and authorization is handled by Keycloak with automatic per-user data isolation across the entire platform.
@@ -362,15 +342,10 @@ A SignalR-based notification system delivers real-time events from the server to
 - Orleans grain observers implement `IAgentResponseObserver` for streaming agent responses, tool calls, and execution updates
 - Events are emitted as `StreamEventBase` subtypes through the SignalR hub
 
-**Frontend (Web):**
+**Frontend:**
 
 - `NotificationListener` component manages the SignalR hub connection lifecycle
 - `useNotifications` hook handles event subscription and state updates
-
-**Frontend (Desktop):**
-
-- SignalR connection to `agents.donkeywork.dev/hubs/notifications`
-- Events bridged to native OS notifications via `tauri-plugin-notification`
 
 ## LLM Providers
 
@@ -392,8 +367,7 @@ The model pipeline processes requests through a middleware chain (Accumulator �
 |-------|-----------|
 | Backend | .NET 10, ASP.NET Core, Microsoft Orleans 10 |
 | Frontend | React 19, TypeScript, Vite 7, Tailwind CSS, shadcn/ui |
-| Desktop | Tauri 2.10, Rust |
-| Workflow Editor | ReactFlow v12 (@xyflow/react) |
+| Agent Builder Canvas | ReactFlow v12 (@xyflow/react) |
 | Database | PostgreSQL (pgvector + pgcrypto) |
 | Message Broker | NATS JetStream |
 | Object Storage | SeaweedFS (S3-compatible) |
@@ -431,10 +405,9 @@ src/
 │   ├── Orleans.Persistence.SeaweedFs/  # Custom Orleans grain storage provider
 │   └── Orleans.Streaming.Nats/         # Custom Orleans streaming provider
 ├── frontend/
-│   ├── apps/web/                       # React 19 web application (37+ pages)
-│   ├── apps/desktop/                   # Tauri 2.10 native desktop app
+│   ├── apps/web/                       # React 19 web application
 │   └── packages/                       # Shared packages (api-client, chat, editor,
-│                                       #   platform, stores, ui, workspace)
+│                                       #   platform, stores, ui)
 └── sandbox/
     ├── CodeSandbox.Manager/            # K8s pod orchestrator (port 8668)
     ├── CodeSandbox.Executor/           # Code runner in Kata VM pods
@@ -489,13 +462,6 @@ pnpm dev
 ```
 
 The web app starts on `http://localhost:5173`.
-
-### 4. (Optional) Desktop App
-
-```bash
-cd src/frontend/apps/desktop
-pnpm tauri dev
-```
 
 ## Build & Test
 
@@ -563,7 +529,6 @@ GitHub Actions workflows handle the full pipeline:
 | `docker-build.yml` | Push to `main` | Build and push API Docker image |
 | `executor-base.yml` | Manual / path changes | Build sandbox executor base image |
 | `pr-build-test.yml` | Pull requests | Backend build, frontend lint/test, integration tests |
-| `desktop-release.yml` | `desktop-v*` tags | Build, sign, and release desktop app (DMG/MSI/AppImage) |
 
 ## License
 

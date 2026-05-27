@@ -65,7 +65,6 @@ src/frontend/
 │   │       ├── schemas/                # JSON schemas
 │   │       ├── types/                  # TypeScript types
 │   │       └── test/                   # Test utilities
-│   └── desktop/                         # Tauri desktop app (see desktop/CLAUDE.md)
 ├── packages/
 │   ├── api-client/                      # Auto-generated API client (@donkeywork/api-client)
 │   ├── chat/                            # Chat components (@donkeywork/chat)
@@ -239,11 +238,6 @@ pnpm dev              # Start dev server
 pnpm build            # Build for production
 pnpm lint             # Lint
 pnpm test:run         # Run tests
-
-# From src/frontend/apps/desktop/
-pnpm dev              # Start Vite dev server (port 5174)
-pnpm tauri dev        # Start Tauri native dev mode
-pnpm tauri build      # Build native app
 ```
 
 ---
@@ -254,4 +248,4 @@ pnpm tauri build      # Build native app
 - Keep components small and focused
 - Prefer composition over configuration
 - Shared stores, UI, and platform code live in `packages/`
-- App-specific code lives in `apps/web/` or `apps/desktop/`
+- App-specific code lives in `apps/web/`
