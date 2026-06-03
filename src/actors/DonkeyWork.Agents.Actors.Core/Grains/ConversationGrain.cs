@@ -411,6 +411,17 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             {
                 Interlocked.Decrement(ref _pendingCount);
                 var msg = FormatMessage(queued);
+
+                // A queued user message folded into the active turn never starts its
+                // own turn, so the client gets no turn_start to clear the pending
+                // cancel-X on its bubble. Tell the client by its original turnId so it
+                // can ack the bubble and slot it chronologically before overwriting
+                // TurnId to the host turn for persistence.
+                if (queued is UserConversationMessage userQueued)
+                {
+                    Emit(new StreamMessageConsumedEvent(GrainContext.GrainKey, userQueued.TurnId) { TurnId = turnId });
+                }
+
                 msg.TurnId = turnId;
                 NextSequenceNumber = await MessageStore.AppendMessageAsync(
                     GrainContext.GrainKey, IdentityContext.UserId, msg, NextSequenceNumber, ct);
