@@ -23,6 +23,7 @@ import {
   makeAgentGroup,
   type AgentGroupEntry,
 } from "./agentBoxHelpers";
+import { slotAssistantOnTurnStart } from "./turnSlotting";
 
 export type SocketEvent = {
   id: number;
@@ -328,36 +329,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
           _turnId: eventTurnId,
         };
 
-        if (!eventTurnId) {
-          return [...prev, newAssistant];
-        }
-
-        // Find the user message being ack'd (queued or just-sent). When a turn
-        // starts, the queued message slips into chronological order — just
-        // before this new assistant response — and other still-pending queued
-        // messages stay at the bottom waiting their turn. Also clears _pending
-        // so the cancel-X disappears.
-        const ackIdx = prev.findIndex(
-          (m) => m._turnId === eventTurnId && m.role === "user"
-        );
-        if (ackIdx === -1) {
-          return [...prev, newAssistant];
-        }
-
-        const ackedMsg = { ...prev[ackIdx], _pending: false };
-        const rest = [...prev.slice(0, ackIdx), ...prev.slice(ackIdx + 1)];
-
-        // Insert just before the first still-pending queued message in `rest`
-        // (or at the end if none are pending).
-        const firstPendingIdx = rest.findIndex((m) => m._pending === true);
-        const insertAt = firstPendingIdx === -1 ? rest.length : firstPendingIdx;
-
-        return [
-          ...rest.slice(0, insertAt),
-          ackedMsg,
-          newAssistant,
-          ...rest.slice(insertAt),
-        ];
+        return slotAssistantOnTurnStart(prev, newAssistant, eventTurnId, source, preview);
       });
       setIsProcessing(true);
       return;
