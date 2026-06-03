@@ -58,6 +58,18 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
       );
     }
 
+    case "user_message": {
+      const clean = box.text.trim();
+      if (!clean) return null;
+      return (
+        <div className="flex justify-end my-1.5">
+          <div className="rounded-2xl rounded-br-md px-4 py-2 text-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/10 max-w-[80%] whitespace-pre-wrap break-words">
+            {clean}
+          </div>
+        </div>
+      );
+    }
+
     case "thinking":
       return (
         <details open className="my-2 rounded-lg border border-purple-500/15 bg-purple-500/5 overflow-hidden group">

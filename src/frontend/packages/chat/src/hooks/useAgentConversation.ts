@@ -23,7 +23,7 @@ import {
   makeAgentGroup,
   type AgentGroupEntry,
 } from "./agentBoxHelpers";
-import { slotAssistantOnTurnStart, slotConsumedMessage } from "./turnSlotting";
+import { slotAssistantOnTurnStart, inlineConsumedMessage } from "./turnSlotting";
 
 export type SocketEvent = {
   id: number;
@@ -341,7 +341,7 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         const hostAssistantId = eventTurnId
           ? turnIdToMessageIdRef.current.get(eventTurnId)
           : undefined;
-        setMessages((prev) => slotConsumedMessage(prev, consumedTurnId, hostAssistantId));
+        setMessages((prev) => inlineConsumedMessage(prev, consumedTurnId, hostAssistantId));
       }
       return;
     }
