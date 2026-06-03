@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ContentBox, CitationBox } from "@donkeywork/api-client";
 import { CitationChipRow } from "./CitationChip";
+import { CopyButton } from "./CopyButton";
 import { PulseDots } from "./PulseDots";
 import { useChatConfig } from "../context";
 import { BrainCircuit, Wrench, Globe, Check, CircleX, Clock, ExternalLink, Archive } from "lucide-react";
@@ -62,9 +63,14 @@ export function BoxRenderer({ box, isStreaming = false }: { box: ContentBox; isS
       const clean = box.text.trim();
       if (!clean) return null;
       return (
-        <div className="flex justify-end my-1.5">
-          <div className="rounded-2xl rounded-br-md px-4 py-2 text-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/10 max-w-[80%] whitespace-pre-wrap break-words">
-            {clean}
+        <div className="flex justify-end py-1.5">
+          <div className="max-w-[75%]">
+            <div className="rounded-2xl rounded-br-md px-4 py-2.5 text-sm bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/10">
+              <span className="whitespace-pre-wrap break-words">{clean}</span>
+            </div>
+            <div className="flex justify-end mt-1">
+              <CopyButton text={clean} />
+            </div>
           </div>
         </div>
       );

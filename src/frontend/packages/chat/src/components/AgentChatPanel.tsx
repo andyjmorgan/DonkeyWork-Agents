@@ -6,6 +6,7 @@ import { internalToChat } from "./MessageRenderer";
 import type { ChatMessage, ContentBox } from "@donkeywork/api-client";
 import type { InternalMessage, GetStateResponse } from "@donkeywork/api-client";
 import { BoxList } from "./BoxRenderer";
+import { CopyButton } from "./CopyButton";
 import { PulseDots } from "./PulseDots";
 import { AgentCardGrid, type AgentEntry } from "./AgentCardGrid";
 import { AgentDetailModal } from "./AgentDetailModal";
@@ -15,34 +16,13 @@ import { ExecutionSidePanel } from "./ExecutionSidePanel";
 import { SocketEventPanel } from "./SocketEventPanel";
 import { ExecutionDetailModal } from "./ExecutionDetailModal";
 import { extractAgentTree, countAll, countActive, type SidePanelAgent } from "./agentTreeUtils";
-import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Copy, Check, Container, History, Radio, Archive } from "lucide-react";
+import { Bubbles, RefreshCw, Send, Square, X, PanelRightOpen, Plug, Loader2, Container, History, Radio, Archive } from "lucide-react";
 
 function extractTextFromBoxes(boxes: ContentBox[]): string {
   return boxes
     .filter((box) => box.type === "text")
     .map((box) => (box as { text: string }).text)
     .join("\n\n");
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
-      aria-label="Copy message"
-      type="button"
-    >
-      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-    </button>
-  );
 }
 
 function MessageBubble({
