@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ChatMessage } from "@donkeywork/api-client";
-import { slotAssistantOnTurnStart } from "./turnSlotting";
+import { slotAssistantOnTurnStart, slotConsumedMessage } from "./turnSlotting";
 
 function userMsg(id: string, content: string, turnId?: string, pending?: boolean): ChatMessage {
   return { id, role: "user", content, boxes: [], _turnId: turnId, _pending: pending };
@@ -96,5 +96,50 @@ describe("slotAssistantOnTurnStart", () => {
     const prev = [assistantMsg("a-prev", "turn-1")];
     const result = slotAssistantOnTurnStart(prev, newAssistant("a2", "turn-2"), "turn-2", "user", "orphan");
     expect(result.map((m) => m.id)).toEqual(["a-prev", "a2"]);
+  });
+});
+
+describe("slotConsumedMessage", () => {
+  // Models a queued message drained into an active turn: it never gets a
+  // turn_start, so its bubble is stuck _pending at the bottom of the transcript.
+  it("clears _pending and slots the drained message before its host turn's assistant", () => {
+    const prev = [
+      userMsg("u-host", "lets repeat", "turn-host", false),
+      assistantMsg("a-host", "turn-host"),
+      userMsg("u1", "1", "turn-1", true),
+    ];
+    const result = slotConsumedMessage(prev, "turn-1", "a-host");
+    expect(result.map((m) => m.id)).toEqual(["u-host", "u1", "a-host"]);
+    expect(result.find((m) => m.id === "u1")?._pending).toBe(false);
+  });
+
+  it("keeps multiple consumed messages in order as each is acked", () => {
+    let msgs: ChatMessage[] = [
+      userMsg("u-host", "lets repeat", "turn-host", false),
+      assistantMsg("a-host", "turn-host"),
+      userMsg("u1", "1", "turn-1", true),
+      userMsg("u2", "2", "turn-2", true),
+    ];
+    msgs = slotConsumedMessage(msgs, "turn-1", "a-host");
+    msgs = slotConsumedMessage(msgs, "turn-2", "a-host");
+    expect(msgs.map((m) => m.id)).toEqual(["u-host", "u1", "u2", "a-host"]);
+    expect(msgs.find((m) => m.id === "u1")?._pending).toBe(false);
+    expect(msgs.find((m) => m.id === "u2")?._pending).toBe(false);
+  });
+
+  it("does not touch a message that is not yet queued (no match)", () => {
+    const prev = [userMsg("u-host", "lets repeat", "turn-host", false)];
+    const result = slotConsumedMessage(prev, "turn-missing", "a-host");
+    expect(result.map((m) => m.id)).toEqual(["u-host"]);
+  });
+
+  it("clears _pending even when the host assistant is unknown (appends at end)", () => {
+    const prev = [
+      assistantMsg("a-host", "turn-host"),
+      userMsg("u1", "1", "turn-1", true),
+    ];
+    const result = slotConsumedMessage(prev, "turn-1", undefined);
+    expect(result.find((m) => m.id === "u1")?._pending).toBe(false);
+    expect(result.map((m) => m.id)).toEqual(["a-host", "u1"]);
   });
 });

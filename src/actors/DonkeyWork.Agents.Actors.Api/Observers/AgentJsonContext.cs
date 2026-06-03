@@ -29,6 +29,7 @@ namespace DonkeyWork.Agents.Actors.Api.Observers;
 [JsonSerializable(typeof(StreamRetryEvent))]
 [JsonSerializable(typeof(StreamTurnStartEvent))]
 [JsonSerializable(typeof(StreamTurnEndEvent))]
+[JsonSerializable(typeof(StreamMessageConsumedEvent))]
 [JsonSerializable(typeof(StreamQueueStatusEvent))]
 [JsonSerializable(typeof(StreamCancelledEvent))]
 [JsonSerializable(typeof(StreamMcpServerStatusEvent))]

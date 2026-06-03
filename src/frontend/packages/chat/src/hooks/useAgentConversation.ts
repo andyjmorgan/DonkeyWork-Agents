@@ -23,7 +23,7 @@ import {
   makeAgentGroup,
   type AgentGroupEntry,
 } from "./agentBoxHelpers";
-import { slotAssistantOnTurnStart } from "./turnSlotting";
+import { slotAssistantOnTurnStart, slotConsumedMessage } from "./turnSlotting";
 
 export type SocketEvent = {
   id: number;
@@ -332,6 +332,17 @@ export function useAgentConversation(initialConversationId?: string, options?: U
         return slotAssistantOnTurnStart(prev, newAssistant, eventTurnId, source, preview);
       });
       setIsProcessing(true);
+      return;
+    }
+
+    if (eventType === "message_consumed") {
+      const consumedTurnId = (data.consumedTurnId as string) ?? "";
+      if (consumedTurnId) {
+        const hostAssistantId = eventTurnId
+          ? turnIdToMessageIdRef.current.get(eventTurnId)
+          : undefined;
+        setMessages((prev) => slotConsumedMessage(prev, consumedTurnId, hostAssistantId));
+      }
       return;
     }
 
