@@ -8,7 +8,7 @@ namespace DonkeyWork.Agents.Actors.Core.Middleware;
 
 internal sealed class ToolMiddleware : IModelMiddleware
 {
-    private const int MaxIterations = 25;
+    private const int MaxIterations = 200;
     private const int MaxToolResultCharacters = 20_000;
     private readonly ILogger<ToolMiddleware> _logger;
 
