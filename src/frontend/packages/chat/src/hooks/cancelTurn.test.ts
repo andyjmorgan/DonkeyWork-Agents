@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ChatMessage } from "@donkeywork/api-client";
+import { slotAssistantOnTurnStart } from "./turnSlotting";
 
 function userMsg(id: string, turnId?: string, pending?: boolean): ChatMessage {
   return { id, role: "user", content: `msg-${id}`, boxes: [], _turnId: turnId, _pending: pending };
@@ -10,13 +11,8 @@ function assistantMsg(id: string, turnId?: string): ChatMessage {
 }
 
 function applyTurnStart(messages: ChatMessage[], eventTurnId: string, newAssistantId: string): ChatMessage[] {
-  const updated = messages.map((m) =>
-    m._turnId === eventTurnId && m.role === "user" ? { ...m, _pending: false } : m
-  );
-  return [
-    ...updated,
-    { id: newAssistantId, role: "assistant" as const, content: "", boxes: [], _turnId: eventTurnId },
-  ];
+  const newAssistant: ChatMessage = { id: newAssistantId, role: "assistant", content: "", boxes: [], _turnId: eventTurnId };
+  return slotAssistantOnTurnStart(messages, newAssistant, eventTurnId, "user", "");
 }
 
 function applyTurnIdStamp(messages: ChatMessage[], userMsgId: string, turnId: string): ChatMessage[] {
