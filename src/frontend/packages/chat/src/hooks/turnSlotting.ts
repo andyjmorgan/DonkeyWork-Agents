@@ -58,14 +58,18 @@ export function slotAssistantOnTurnStart(
 }
 
 /**
- * Acknowledges a queued user message that was drained into an active turn rather
- * than starting its own. Such a message never receives a `turn_start`, so its
- * bubble is left `_pending` (showing a stuck cancel-X) and stranded at the bottom
- * of the transcript. Clears `_pending` and slots the bubble just before the host
- * turn's assistant message — the turn it was folded into — so it reads
- * chronologically rather than piling up below later responses.
+ * Folds a queued user message that was drained into an active turn into that
+ * turn's assistant message as an inline `user_message` box, removing the separate
+ * top-level bubble. Such a message never starts its own turn (so it has no
+ * turn_start to clear its pending cancel-X) and the whole turn renders as a single
+ * assistant message whose rounds are boxes — so the only way to interleave the
+ * message "between responses" is to append it as a box at the consumption point,
+ * which is the current end of the assistant's box stream.
+ *
+ * Falls back to clearing `_pending` in place when the host assistant message isn't
+ * found yet (e.g. an early race), so the bubble at least loses its stuck X.
  */
-export function slotConsumedMessage(
+export function inlineConsumedMessage(
   messages: ChatMessage[],
   consumedTurnId: string,
   hostAssistantId: string | undefined
@@ -77,13 +81,18 @@ export function slotConsumedMessage(
     return messages;
   }
 
-  const ackedMsg: ChatMessage = { ...messages[idx], _pending: false };
-  const rest = [...messages.slice(0, idx), ...messages.slice(idx + 1)];
-
   const hostIdx = hostAssistantId
-    ? rest.findIndex((m) => m.id === hostAssistantId)
+    ? messages.findIndex((m) => m.id === hostAssistantId)
     : -1;
-  const insertAt = hostIdx === -1 ? rest.length : hostIdx;
+  if (hostIdx === -1) {
+    return messages.map((m, i) => (i === idx ? { ...m, _pending: false } : m));
+  }
 
-  return [...rest.slice(0, insertAt), ackedMsg, ...rest.slice(insertAt)];
+  const text = messages[idx].content;
+  const withoutBubble = messages.filter((_, i) => i !== idx);
+  return withoutBubble.map((m) =>
+    m.id === hostAssistantId
+      ? { ...m, boxes: [...m.boxes, { type: "user_message" as const, text }] }
+      : m
+  );
 }

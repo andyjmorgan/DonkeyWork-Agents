@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ChatMessage } from "@donkeywork/api-client";
-import { slotAssistantOnTurnStart, slotConsumedMessage } from "./turnSlotting";
+import { slotAssistantOnTurnStart, inlineConsumedMessage } from "./turnSlotting";
 
 function userMsg(id: string, content: string, turnId?: string, pending?: boolean): ChatMessage {
   return { id, role: "user", content, boxes: [], _turnId: turnId, _pending: pending };
@@ -99,47 +99,55 @@ describe("slotAssistantOnTurnStart", () => {
   });
 });
 
-describe("slotConsumedMessage", () => {
+describe("inlineConsumedMessage", () => {
+  function assistantWithBoxes(id: string, turnId: string, boxes: ChatMessage["boxes"]): ChatMessage {
+    return { id, role: "assistant", content: "", boxes, _turnId: turnId };
+  }
+
   // Models a queued message drained into an active turn: it never gets a
-  // turn_start, so its bubble is stuck _pending at the bottom of the transcript.
-  it("clears _pending and slots the drained message before its host turn's assistant", () => {
+  // turn_start, so it must fold into the turn's assistant boxes at the
+  // consumption point (current end of the box stream) rather than stay a bubble.
+  it("removes the bubble and appends a user_message box at the host turn's box stream", () => {
+    const host = assistantWithBoxes("a-host", "turn-host", [
+      { type: "text", text: "Round 1 sleeping" },
+      { type: "tool_use", toolName: "bash", toolUseId: "t1" },
+    ]);
     const prev = [
       userMsg("u-host", "lets repeat", "turn-host", false),
-      assistantMsg("a-host", "turn-host"),
+      host,
       userMsg("u1", "1", "turn-1", true),
     ];
-    const result = slotConsumedMessage(prev, "turn-1", "a-host");
-    expect(result.map((m) => m.id)).toEqual(["u-host", "u1", "a-host"]);
-    expect(result.find((m) => m.id === "u1")?._pending).toBe(false);
+    const result = inlineConsumedMessage(prev, "turn-1", "a-host");
+    expect(result.map((m) => m.id)).toEqual(["u-host", "a-host"]);
+    const boxes = result.find((m) => m.id === "a-host")!.boxes;
+    expect(boxes[boxes.length - 1]).toEqual({ type: "user_message", text: "1" });
   });
 
-  it("keeps multiple consumed messages in order as each is acked", () => {
+  it("appends multiple consumed messages in order at the consumption point", () => {
     let msgs: ChatMessage[] = [
-      userMsg("u-host", "lets repeat", "turn-host", false),
-      assistantMsg("a-host", "turn-host"),
+      assistantWithBoxes("a-host", "turn-host", [{ type: "tool_use", toolName: "bash", toolUseId: "t1" }]),
       userMsg("u1", "1", "turn-1", true),
       userMsg("u2", "2", "turn-2", true),
     ];
-    msgs = slotConsumedMessage(msgs, "turn-1", "a-host");
-    msgs = slotConsumedMessage(msgs, "turn-2", "a-host");
-    expect(msgs.map((m) => m.id)).toEqual(["u-host", "u1", "u2", "a-host"]);
-    expect(msgs.find((m) => m.id === "u1")?._pending).toBe(false);
-    expect(msgs.find((m) => m.id === "u2")?._pending).toBe(false);
+    msgs = inlineConsumedMessage(msgs, "turn-1", "a-host");
+    msgs = inlineConsumedMessage(msgs, "turn-2", "a-host");
+    expect(msgs.map((m) => m.id)).toEqual(["a-host"]);
+    expect(msgs[0].boxes.filter((b) => b.type === "user_message")).toEqual([
+      { type: "user_message", text: "1" },
+      { type: "user_message", text: "2" },
+    ]);
   });
 
   it("does not touch a message that is not yet queued (no match)", () => {
-    const prev = [userMsg("u-host", "lets repeat", "turn-host", false)];
-    const result = slotConsumedMessage(prev, "turn-missing", "a-host");
-    expect(result.map((m) => m.id)).toEqual(["u-host"]);
+    const prev = [assistantWithBoxes("a-host", "turn-host", [])];
+    const result = inlineConsumedMessage(prev, "turn-missing", "a-host");
+    expect(result).toEqual(prev);
   });
 
-  it("clears _pending even when the host assistant is unknown (appends at end)", () => {
-    const prev = [
-      assistantMsg("a-host", "turn-host"),
-      userMsg("u1", "1", "turn-1", true),
-    ];
-    const result = slotConsumedMessage(prev, "turn-1", undefined);
+  it("falls back to clearing _pending in place when the host assistant is unknown", () => {
+    const prev = [userMsg("u1", "1", "turn-1", true)];
+    const result = inlineConsumedMessage(prev, "turn-1", undefined);
+    expect(result.map((m) => m.id)).toEqual(["u1"]);
     expect(result.find((m) => m.id === "u1")?._pending).toBe(false);
-    expect(result.map((m) => m.id)).toEqual(["a-host", "u1"]);
   });
 });

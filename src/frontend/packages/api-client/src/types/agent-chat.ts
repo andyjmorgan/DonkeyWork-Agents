@@ -2,6 +2,7 @@
 
 export type TextBox = { type: "text"; text: string };
 export type ThinkingBox = { type: "thinking"; text: string };
+export type UserMessageBox = { type: "user_message"; text: string };
 export type WebSearchResult = { title: string; url: string };
 export type CitationBox = { type: "citation"; title: string; url: string; citedText: string };
 export type AgentCompleteReason = "completed" | "cancelled" | "failed" | "idle";
@@ -36,6 +37,7 @@ export type AgentGroupBox = {
 export type ContentBox =
   | TextBox
   | ThinkingBox
+  | UserMessageBox
   | CitationBox
   | ToolUseBox
   | UsageBox
