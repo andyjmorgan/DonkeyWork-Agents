@@ -21,13 +21,16 @@ public class ModelsController : ControllerBase
 {
     private readonly IModelCatalogService _modelCatalogService;
     private readonly IModelConfigSchemaService _modelConfigSchemaService;
+    private readonly ICustomModelService _customModelService;
 
     public ModelsController(
         IModelCatalogService modelCatalogService,
-        IModelConfigSchemaService modelConfigSchemaService)
+        IModelConfigSchemaService modelConfigSchemaService,
+        ICustomModelService customModelService)
     {
         _modelCatalogService = modelCatalogService;
         _modelConfigSchemaService = modelConfigSchemaService;
+        _customModelService = customModelService;
     }
 
     /// <summary>
@@ -39,11 +42,26 @@ public class ModelsController : ControllerBase
     [HttpGet]
     [ProducesResponseType<GetModelsResponseV1>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult GetModels()
+    public async Task<IActionResult> GetModels(CancellationToken cancellationToken)
     {
-        var models = _modelCatalogService.GetAllModels();
+        var customModels = await _customModelService.GetAllAsync(cancellationToken);
+        var models = _modelCatalogService.GetAllModels().Concat(customModels.Select(ToDefinition)).ToList();
         return Ok(new GetModelsResponseV1 { Models = models });
     }
+
+    private static ModelDefinition ToDefinition(CustomModelV1 model) => new()
+    {
+        Id = model.CatalogId,
+        Name = model.Name,
+        Provider = Common.Contracts.Enums.LlmProvider.Unknown,
+        Mode = Contracts.Enums.ModelMode.Chat,
+        MaxInputTokens = model.MaxInputTokens,
+        MaxOutputTokens = model.MaxOutputTokens,
+        InputCostPerMillionTokens = 0,
+        OutputCostPerMillionTokens = 0,
+        Supports = new ModelSupports { FunctionCalling = model.SupportsTools, ToolChoice = model.SupportsTools, Streaming = true },
+        ClientTypes = [Contracts.Enums.ProviderClientType.MultimodalInput]
+    };
 
     /// <summary>
     /// Gets a specific model by its ID.

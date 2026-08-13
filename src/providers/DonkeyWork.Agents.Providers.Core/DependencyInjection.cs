@@ -1,6 +1,8 @@
 using DonkeyWork.Agents.Providers.Core.Middleware;
 using DonkeyWork.Agents.Providers.Core.Providers;
 using Microsoft.Extensions.DependencyInjection;
+using DonkeyWork.Agents.Providers.Contracts.Services;
+using DonkeyWork.Agents.Providers.Core.Services;
 
 namespace DonkeyWork.Agents.Providers.Core;
 
@@ -16,6 +18,8 @@ public static class DependencyInjection
     {
         // AI Client Factory (routes to OpenAI, Anthropic, Google providers)
         services.AddSingleton<IAiClientFactory, AiClientFactory>();
+        services.AddScoped<ICustomModelService, CustomModelService>();
+        services.AddHttpClient(nameof(CustomModelService), client => client.Timeout = TimeSpan.FromSeconds(30));
 
         // Internal middleware (transient - resolved by pipeline)
         services.AddTransient<BaseExceptionMiddleware>();

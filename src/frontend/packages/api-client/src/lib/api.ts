@@ -64,7 +64,7 @@ export interface GetApiKeyResponse {
 export interface ModelDefinition {
   id: string
   name: string
-  provider: 'OpenAi' | 'Anthropic' | 'Google' | 'Azure'
+  provider: 'Unknown' | 'OpenAI' | 'OpenAi' | 'Anthropic' | 'Google' | 'Azure'
   mode: string
   max_input_tokens: number
   max_output_tokens: number
@@ -159,6 +159,58 @@ export const models = {
     const response = await api.get<GetConfigSchemasResponse>('/api/v1/models/config-schemas')
     return response.schemas
   },
+}
+
+export type CustomModelWireFormat = 'AnthropicMessages' | 'OpenAIResponses'
+
+export interface CustomModel {
+  id: string
+  catalogId: string
+  name: string
+  endpoint: string
+  wireFormat: CustomModelWireFormat
+  modelName: string
+  hasApiKey: boolean
+  maxInputTokens: number
+  maxOutputTokens: number
+  supportsTools: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface SaveCustomModelRequest {
+  name: string
+  endpoint: string
+  wireFormat: CustomModelWireFormat
+  modelName: string
+  apiKey?: string
+  clearApiKey?: boolean
+  maxInputTokens: number
+  maxOutputTokens: number
+  supportsTools: boolean
+}
+
+export interface TestCustomModelRequest {
+  id?: string
+  endpoint?: string
+  wireFormat?: CustomModelWireFormat
+  modelName?: string
+  apiKey?: string
+  clearApiKey?: boolean
+}
+
+export interface TestCustomModelResponse {
+  success: boolean
+  message: string
+  durationMs: number
+}
+
+export const customModels = {
+  list: () => api.get<CustomModel[]>('/api/v1/custom-models'),
+  create: (data: SaveCustomModelRequest) => api.post<CustomModel>('/api/v1/custom-models', data),
+  update: (id: string, data: SaveCustomModelRequest) => api.put<CustomModel>(`/api/v1/custom-models/${id}`, data),
+  delete: (id: string) => api.delete(`/api/v1/custom-models/${id}`),
+  test: (data: TestCustomModelRequest) => api.post<TestCustomModelResponse>('/api/v1/custom-models/test', data),
 }
 
 // Credential types

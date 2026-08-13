@@ -68,7 +68,8 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
         IPromptService promptService,
         IConversationContractHydrator contractHydrator,
         IModelCatalogService modelCatalogService,
-        IAgentExecutionRepository executionRepository)
+        IAgentExecutionRepository executionRepository,
+        ICustomModelService customModelService)
         : base(
             logger,
             grainContext,
@@ -83,7 +84,8 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
             messageStore,
             promptService,
             modelCatalogService,
-            executionRepository)
+            executionRepository,
+            customModelService)
     {
         _contractRegistry = contractRegistry;
         _contractHydrator = contractHydrator;

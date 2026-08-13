@@ -24,6 +24,8 @@ using DonkeyWork.Agents.Identity.Contracts.Services;
 using DonkeyWork.Agents.Mcp.Contracts.Services;
 using DonkeyWork.Agents.Prompts.Contracts.Services;
 using DonkeyWork.Agents.Providers.Contracts.Services;
+using DonkeyWork.Agents.Providers.Contracts.Enums;
+using DonkeyWork.Agents.Providers.Contracts.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -45,6 +47,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
     protected readonly IPromptService PromptService;
     protected readonly IModelCatalogService ModelCatalogService;
     protected readonly IAgentExecutionRepository ExecutionRepository;
+    protected readonly ICustomModelService CustomModelService;
 
     protected List<InternalMessage> Messages = [];
     protected int NextSequenceNumber;
@@ -76,7 +79,8 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         IGrainMessageStore messageStore,
         IPromptService promptService,
         IModelCatalogService modelCatalogService,
-        IAgentExecutionRepository executionRepository)
+        IAgentExecutionRepository executionRepository,
+        ICustomModelService customModelService)
     {
         Logger = logger;
         GrainContext = grainContext;
@@ -92,6 +96,7 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         PromptService = promptService;
         ModelCatalogService = modelCatalogService;
         ExecutionRepository = executionRepository;
+        CustomModelService = customModelService;
     }
 
     #region Virtual Methods — Contract-Driven Defaults
@@ -596,8 +601,16 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
         var modelId = contract.ModelId ?? AnthropicOptions.DefaultModelId;
 
         var modelDefinition = ModelCatalogService.GetModelById(modelId);
-        ContextWindowLimit = modelDefinition?.MaxInputTokens ?? 0;
-        MaxOutputTokens = modelDefinition?.MaxOutputTokens ?? 0;
+        ResolvedCustomModel? customModel = null;
+        const string customModelPrefix = "custom:";
+        if (modelId.StartsWith(customModelPrefix, StringComparison.OrdinalIgnoreCase)
+            && Guid.TryParse(modelId[customModelPrefix.Length..], out var customModelId))
+        {
+            customModel = await CustomModelService.ResolveAsync(customModelId, ct)
+                ?? throw new InvalidOperationException("The selected custom model no longer exists.");
+        }
+        ContextWindowLimit = customModel?.MaxInputTokens ?? modelDefinition?.MaxInputTokens ?? 0;
+        MaxOutputTokens = customModel?.MaxOutputTokens ?? modelDefinition?.MaxOutputTokens ?? 0;
 
         GrainContext.McpServers = GetMcpServerReferences(contract);
         GrainContext.A2aServers = GetA2aServerReferences(contract);
@@ -698,9 +711,14 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             ? [.. (localTools ?? []), .. mcpTools, .. a2aTools]
             : null;
 
-        var apiKey = await ApiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct);
+        if (customModel is { SupportsTools: false })
+            tools = null;
 
-        if (string.IsNullOrEmpty(apiKey))
+        var apiKey = customModel is null
+            ? await ApiKeyService.GetApiKeyValueAsync(ExternalApiKeyProvider.Anthropic, ct)
+            : customModel.ApiKey;
+
+        if (customModel is null && string.IsNullOrEmpty(apiKey))
             throw new InvalidOperationException("No Anthropic API key configured. Add one in Settings > API Keys.");
 
         var promptParts = new List<string>();
@@ -760,7 +778,11 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
             ProviderOptions = new ProviderOptions
             {
                 ApiKey = apiKey,
-                ModelId = modelId,
+                ModelId = customModel?.ModelName ?? modelId,
+                Endpoint = customModel?.Endpoint,
+                ProviderType = customModel?.WireFormat == CustomModelWireFormat.OpenAIResponses
+                    ? ProviderType.OpenAIResponses
+                    : ProviderType.Anthropic,
                 MaxTokens = contract.MaxTokens,
                 ThinkingBudgetTokens = contract.ReasoningEffort is null
                     ? (contract.ThinkingBudgetTokens > 0 ? contract.ThinkingBudgetTokens : null)

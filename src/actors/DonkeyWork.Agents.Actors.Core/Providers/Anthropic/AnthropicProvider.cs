@@ -13,12 +13,14 @@ internal sealed class AnthropicProvider : IAiProvider
 {
     private readonly ILogger<AnthropicProvider> _logger;
     private readonly HttpClient _httpClient;
+    private readonly string? _baseUrl;
 
-    public AnthropicProvider(ILogger<AnthropicProvider> logger, IHttpClientFactory httpClientFactory)
+    public AnthropicProvider(ILogger<AnthropicProvider> logger, IHttpClientFactory httpClientFactory, string? endpoint = null)
     {
         _logger = logger;
         _httpClient = httpClientFactory.CreateClient(nameof(AnthropicProvider));
         _httpClient.Timeout = TimeSpan.FromMinutes(10);
+        _baseUrl = NormalizeBaseUrl(endpoint);
     }
 
     public IAsyncEnumerable<ModelResponseBase> StreamCompletionAsync(
@@ -31,7 +33,12 @@ internal sealed class AnthropicProvider : IAiProvider
         var betaHeader = "interleaved-thinking-2025-05-14,web-fetch-2025-09-10,compact-2026-01-12,context-management-2025-06-27";
         var ctx = options.ContextManagement;
         _httpClient.DefaultRequestHeaders.Add("anthropic-beta", betaHeader);
-        var client = new AnthropicClient { ApiKey = options.ApiKey, HttpClient = _httpClient };
+        var client = new AnthropicClient
+        {
+            ApiKey = options.ApiKey ?? string.Empty,
+            HttpClient = _httpClient,
+            BaseUrl = _baseUrl
+        };
         var messageParams = MapMessages(messages);
         var mappedTools = AnthropicToolMapper.MapTools(tools, options);
 
@@ -94,6 +101,15 @@ internal sealed class AnthropicProvider : IAiProvider
         return options.Stream
             ? StreamCore(client, parameters, ct)
             : CompleteCore(client, parameters, ct);
+    }
+
+    private static string? NormalizeBaseUrl(string? endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)) return null;
+        var value = endpoint.TrimEnd('/');
+        return value.EndsWith("/v1/messages", StringComparison.OrdinalIgnoreCase)
+            ? value[..^"/v1/messages".Length]
+            : value;
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using DonkeyWork.Agents.Actors.Core.Providers.Anthropic;
+using DonkeyWork.Agents.Actors.Core.Providers.OpenAi;
 using Microsoft.Extensions.Logging;
 
 namespace DonkeyWork.Agents.Actors.Core.Providers;
@@ -14,10 +15,12 @@ internal sealed class AiProviderFactory : IAiProviderFactory
         _httpClientFactory = httpClientFactory;
     }
 
-    public IAiProvider Create(ProviderType providerType) => providerType switch
+    public IAiProvider Create(ProviderType providerType, string? endpoint = null) => providerType switch
     {
         ProviderType.Anthropic => new AnthropicProvider(
-            _loggerFactory.CreateLogger<AnthropicProvider>(), _httpClientFactory),
+            _loggerFactory.CreateLogger<AnthropicProvider>(), _httpClientFactory, endpoint),
+        ProviderType.OpenAIResponses => new OpenAiResponsesProvider(
+            _loggerFactory.CreateLogger<OpenAiResponsesProvider>(), _httpClientFactory, endpoint),
         _ => throw new ArgumentOutOfRangeException(nameof(providerType), providerType, "Unsupported provider type")
     };
 }

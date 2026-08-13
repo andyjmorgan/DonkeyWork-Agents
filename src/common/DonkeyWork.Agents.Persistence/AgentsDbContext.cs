@@ -8,6 +8,7 @@ using DonkeyWork.Agents.Persistence.Entities.AgentDefinitions;
 using DonkeyWork.Agents.Persistence.Entities.A2a;
 using DonkeyWork.Agents.Persistence.Entities.Prompts;
 using DonkeyWork.Agents.Persistence.Entities.Scheduling;
+using DonkeyWork.Agents.Persistence.Entities.Providers;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,6 +73,9 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<ScheduledJobEntity> ScheduledJobs => Set<ScheduledJobEntity>();
     public DbSet<ScheduledJobPayloadEntity> ScheduledJobPayloads => Set<ScheduledJobPayloadEntity>();
     public DbSet<ScheduledJobExecutionEntity> ScheduledJobExecutions => Set<ScheduledJobExecutionEntity>();
+
+    // Providers module
+    public DbSet<CustomModelEntity> CustomModels => Set<CustomModelEntity>();
 
     // Data Protection keys (system-level, no user scoping)
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
