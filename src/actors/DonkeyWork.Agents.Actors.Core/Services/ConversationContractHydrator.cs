@@ -13,17 +13,20 @@ public sealed class ConversationContractHydrator : IConversationContractHydrator
     private readonly IMcpServerConfigurationService _mcpServerConfigService;
     private readonly IA2aServerConfigurationService _a2aServerConfigService;
     private readonly IAgentDefinitionService _agentDefinitionService;
+    private readonly INaviSettingsService _naviSettingsService;
     private readonly ILogger<ConversationContractHydrator> _logger;
 
     public ConversationContractHydrator(
         IMcpServerConfigurationService mcpServerConfigService,
         IA2aServerConfigurationService a2aServerConfigService,
         IAgentDefinitionService agentDefinitionService,
+        INaviSettingsService naviSettingsService,
         ILogger<ConversationContractHydrator> logger)
     {
         _mcpServerConfigService = mcpServerConfigService;
         _a2aServerConfigService = a2aServerConfigService;
         _agentDefinitionService = agentDefinitionService;
+        _naviSettingsService = naviSettingsService;
         _logger = logger;
     }
 
@@ -32,6 +35,9 @@ public sealed class ConversationContractHydrator : IConversationContractHydrator
         var mcpServers = await DiscoverMcpServersAsync(ct);
         var a2aServers = await DiscoverA2aServersAsync(ct);
         var subAgents = await DiscoverSubAgentsAsync(ct);
+        var modelId = baseContract.AgentType == AgentTypes.Conversation
+            ? (await _naviSettingsService.GetAsync(ct)).ModelId
+            : baseContract.ModelId;
 
         var enableSandbox = mcpServers.Length > 0
             || baseContract.ToolGroups.Contains(ToolGroupNames.Sandbox, StringComparer.OrdinalIgnoreCase);
@@ -56,7 +62,7 @@ public sealed class ConversationContractHydrator : IConversationContractHydrator
             TimeoutSeconds = baseContract.TimeoutSeconds,
             EnableSandbox = enableSandbox,
             SandboxPodName = baseContract.SandboxPodName,
-            ModelId = baseContract.ModelId,
+            ModelId = modelId,
             Prompts = baseContract.Prompts,
             ReasoningEffort = baseContract.ReasoningEffort,
             ToolConfiguration = baseContract.ToolConfiguration,

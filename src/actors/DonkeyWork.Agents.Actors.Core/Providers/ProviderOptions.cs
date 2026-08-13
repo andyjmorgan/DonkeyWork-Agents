@@ -19,6 +19,7 @@ internal record ProviderOptions
     public string? ApiKey { get; init; }
     public required string ModelId { get; init; }
     public string? Endpoint { get; init; }
+    public bool IsCustomEndpoint { get; init; }
     public ProviderType ProviderType { get; init; } = ProviderType.Anthropic;
     public long MaxTokens { get; init; } = 20_000;
     public int? ThinkingBudgetTokens { get; init; }

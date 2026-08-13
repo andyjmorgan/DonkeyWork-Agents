@@ -42,6 +42,7 @@ public class AgentsDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<GrainMessageEntity> GrainMessages => Set<GrainMessageEntity>();
     public DbSet<GrainCompactionMarkerEntity> GrainCompactionMarkers => Set<GrainCompactionMarkerEntity>();
     public DbSet<AgentExecutionEntity> AgentExecutions => Set<AgentExecutionEntity>();
+    public DbSet<NaviSettingsEntity> NaviSettings => Set<NaviSettingsEntity>();
 
     // Conversations module
     public DbSet<ConversationEntity> Conversations => Set<ConversationEntity>();
