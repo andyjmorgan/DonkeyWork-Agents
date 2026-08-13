@@ -32,7 +32,8 @@ internal sealed class AnthropicProvider : IAiProvider
     {
         var betaHeader = "interleaved-thinking-2025-05-14,web-fetch-2025-09-10,compact-2026-01-12,context-management-2025-06-27";
         var ctx = options.ContextManagement;
-        _httpClient.DefaultRequestHeaders.Add("anthropic-beta", betaHeader);
+        if (!options.IsCustomEndpoint)
+            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("anthropic-beta", betaHeader);
         var client = new AnthropicClient
         {
             ApiKey = options.ApiKey ?? string.Empty,

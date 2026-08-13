@@ -105,6 +105,7 @@ Navi is the primary chat interface for interacting with agents. It provides a mu
 **Capabilities:**
 
 - Real-time message streaming via SignalR with Orleans grain observers
+- Per-user model selection from Navi's header, including custom Anthropic Messages and OpenAI Responses endpoints
 - Multi-turn conversation history persisted to PostgreSQL
 - Image upload and multimodal processing
 - Audio content generation and playback

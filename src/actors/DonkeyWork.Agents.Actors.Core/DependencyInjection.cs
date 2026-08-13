@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<GrainContext>();
         services.AddSingleton<SwarmAgentSpawner>();
         services.AddScoped<IConversationContractHydrator, ConversationContractHydrator>();
+        services.AddScoped<INaviSettingsService, NaviSettingsService>();
 
         return services;
     }

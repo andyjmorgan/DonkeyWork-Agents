@@ -780,22 +780,25 @@ public abstract class BaseAgentGrain : Grain, IToolExecutor
                 ApiKey = apiKey,
                 ModelId = customModel?.ModelName ?? modelId,
                 Endpoint = customModel?.Endpoint,
+                IsCustomEndpoint = customModel is not null,
                 ProviderType = customModel?.WireFormat == CustomModelWireFormat.OpenAIResponses
                     ? ProviderType.OpenAIResponses
                     : ProviderType.Anthropic,
-                MaxTokens = contract.MaxTokens,
-                ThinkingBudgetTokens = contract.ReasoningEffort is null
+                MaxTokens = customModel is null
+                    ? contract.MaxTokens
+                    : Math.Min(contract.MaxTokens, customModel.MaxOutputTokens),
+                ThinkingBudgetTokens = customModel is null && contract.ReasoningEffort is null
                     ? (contract.ThinkingBudgetTokens > 0 ? contract.ThinkingBudgetTokens : null)
                     : null,
-                ReasoningEffort = contract.ReasoningEffort,
+                ReasoningEffort = customModel is null ? contract.ReasoningEffort : null,
                 WebSearch = new WebSearchOptions
                 {
-                    Enabled = contract.WebSearch.Enabled,
+                    Enabled = customModel is null && contract.WebSearch.Enabled,
                     MaxUses = contract.WebSearch.MaxUses > 0 ? contract.WebSearch.MaxUses : null,
                 },
                 WebFetch = new WebFetchOptions
                 {
-                    Enabled = contract.WebFetch.Enabled,
+                    Enabled = customModel is null && contract.WebFetch.Enabled,
                     MaxUses = contract.WebFetch.MaxUses > 0 ? contract.WebFetch.MaxUses : null,
                 },
                 ContextManagement = new ContextManagementOptions

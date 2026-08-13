@@ -20,7 +20,7 @@ public static class AgentContracts
         Lifecycle = AgentLifecycle.Linger,
         LingerSeconds = 1800,
         PersistMessages = true,
-        ModelId = "claude-sonnet-4-6",
+        ModelId = NaviDefaults.ModelId,
         DisplayName = "Navi",
         Icon = "bubbles",
         ReasoningEffort = ReasoningEffort.High,
@@ -45,7 +45,7 @@ public static class AgentContracts
         Lifecycle = AgentLifecycle.Linger,
         LingerSeconds = 600,
         TimeoutSeconds = 300,
-        ModelId = "claude-sonnet-4-6",
+        ModelId = NaviDefaults.ModelId,
         DisplayName = "Navi",
         Icon = "bot",
     };

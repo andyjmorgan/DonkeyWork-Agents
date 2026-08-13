@@ -1,6 +1,7 @@
 using Xunit;
 using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using DonkeyWork.Agents.Actors.Contracts.Models;
+using DonkeyWork.Agents.Actors.Contracts.Services;
 using DonkeyWork.Agents.Actors.Core.Services;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Models;
 using DonkeyWork.Agents.AgentDefinitions.Contracts.Services;
@@ -18,6 +19,7 @@ public class ConversationContractHydratorTests
     private readonly Mock<IMcpServerConfigurationService> _mcpService = new();
     private readonly Mock<IA2aServerConfigurationService> _a2aService = new();
     private readonly Mock<IAgentDefinitionService> _agentDefService = new();
+    private readonly Mock<INaviSettingsService> _naviSettingsService = new();
     private readonly ConversationContractHydrator _hydrator;
 
     private static readonly AgentContract BaseContract = new()
@@ -26,6 +28,7 @@ public class ConversationContractHydratorTests
         ToolGroups = [ToolGroupNames.SwarmDelegate, ToolGroupNames.Sandbox],
         MaxTokens = 20_000,
         DisplayName = "Navi",
+        AgentType = AgentTypes.Conversation,
     };
 
     public ConversationContractHydratorTests()
@@ -35,7 +38,11 @@ public class ConversationContractHydratorTests
             _mcpService.Object,
             _a2aService.Object,
             _agentDefService.Object,
+            _naviSettingsService.Object,
             logger.Object);
+
+        _naviSettingsService.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NaviSettingsV1 { ModelId = NaviDefaults.ModelId });
     }
 
     #region HydrateAsync Tests
@@ -51,9 +58,41 @@ public class ConversationContractHydratorTests
         Assert.Equal(BaseContract.ToolGroups, result.ToolGroups);
         Assert.Equal(BaseContract.MaxTokens, result.MaxTokens);
         Assert.Equal(BaseContract.DisplayName, result.DisplayName);
+        Assert.Equal(NaviDefaults.ModelId, result.ModelId);
         Assert.Empty(result.McpServers);
         Assert.Empty(result.A2aServers);
         Assert.Empty(result.SubAgents);
+    }
+
+    [Fact]
+    public async Task HydrateAsync_WithNaviModelOverride_UsesConfiguredModel()
+    {
+        SetupEmptyDiscovery();
+        var modelId = $"custom:{Guid.NewGuid():D}";
+        _naviSettingsService.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NaviSettingsV1 { ModelId = modelId });
+
+        var result = await _hydrator.HydrateAsync(BaseContract);
+
+        Assert.Equal(modelId, result.ModelId);
+    }
+
+    [Fact]
+    public async Task HydrateAsync_WithNonConversationContract_PreservesContractModel()
+    {
+        SetupEmptyDiscovery();
+        _naviSettingsService.Setup(s => s.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NaviSettingsV1 { ModelId = $"custom:{Guid.NewGuid():D}" });
+        var contract = new AgentContract
+        {
+            AgentType = "scheduled",
+            ModelId = "scheduled-model",
+        };
+
+        var result = await _hydrator.HydrateAsync(contract);
+
+        Assert.Equal("scheduled-model", result.ModelId);
+        _naviSettingsService.Verify(s => s.GetAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

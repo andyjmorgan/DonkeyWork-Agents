@@ -1,8 +1,17 @@
 import { useRef, useEffect, useState, useMemo, useCallback, type FormEvent } from "react";
 import { useActiveConversationsStore } from "@donkeywork/stores";
-import { Button, ScrollArea } from '@donkeywork/ui'
+import {
+  Button,
+  ScrollArea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@donkeywork/ui'
 import { useAgentConversation } from "../hooks/useAgentConversation";
 import { internalToChat } from "./MessageRenderer";
+import { models, naviSettings, type ModelDefinition } from "@donkeywork/api-client";
 import type { ChatMessage, ContentBox } from "@donkeywork/api-client";
 import type { InternalMessage, GetStateResponse } from "@donkeywork/api-client";
 import { BoxList } from "./BoxRenderer";
@@ -208,6 +217,60 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
   const [executionPanelOpen, setExecutionPanelOpen] = useState(false);
   const [socketPanelOpen, setSocketPanelOpen] = useState(false);
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<ModelDefinition[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const [modelLoading, setModelLoading] = useState(true);
+  const [modelSaving, setModelSaving] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([models.list(), naviSettings.get()])
+      .then(([catalog, settings]) => {
+        if (!active) return;
+        setAvailableModels(catalog.filter((model) =>
+          model.mode === "Chat" && (model.provider === "Anthropic" || model.provider === "Unknown")
+        ));
+        setSelectedModelId(settings.modelId);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (active) setModelLoading(false);
+      });
+
+    return () => { active = false; };
+  }, []);
+
+  const groupedModels = useMemo(() => availableModels.reduce<Record<string, ModelDefinition[]>>(
+    (groups, model) => {
+      const provider = model.provider === "Unknown" ? "Custom" : model.provider;
+      (groups[provider] ??= []).push(model);
+      return groups;
+    },
+    {},
+  ), [availableModels]);
+
+  const handleModelChange = useCallback(async (modelId: string) => {
+    if (modelId === selectedModelId) return;
+
+    const previousModelId = selectedModelId;
+    setSelectedModelId(modelId);
+    setModelSaving(true);
+    setModelError(null);
+
+    try {
+      const settings = await naviSettings.update(modelId);
+      setSelectedModelId(settings.modelId);
+      resetConversation();
+    } catch (error) {
+      console.error(error);
+      setSelectedModelId(previousModelId);
+      setModelError("Couldn't switch Navi's model. Try again.");
+    } finally {
+      setModelSaving(false);
+    }
+  }, [resetConversation, selectedModelId]);
 
   const mcpConnectedCount = mcpServerStatuses.filter((s) => s.success).length;
   const mcpHasFailures = mcpServerStatuses.some((s) => !s.success);
@@ -299,6 +362,36 @@ export function AgentChatPanel({ conversationId: initialConversationId, onConver
               <Bubbles className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-lg font-semibold text-foreground">Navi</h1>
+            <Select
+              value={selectedModelId}
+              onValueChange={handleModelChange}
+              disabled={modelLoading || modelSaving || isProcessing}
+            >
+              <SelectTrigger
+                className="h-8 w-[110px] sm:w-[150px] md:w-[220px] text-xs"
+                aria-label="Navi model"
+                title={isProcessing ? "Finish or stop the current response before changing models" : "Choose Navi's model"}
+              >
+                {modelSaving
+                  ? <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Switching…</span>
+                  : <SelectValue placeholder={modelLoading ? "Loading models…" : "Select model"} />}
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(groupedModels)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([provider, providerModels]) => (
+                    <div key={provider}>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{provider}</div>
+                      {[...providerModels]
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((model) => (
+                          <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
+                        ))}
+                    </div>
+                  ))}
+              </SelectContent>
+            </Select>
+            {modelError && <span className="hidden lg:inline text-xs text-red-400">{modelError}</span>}
             {isConnected && (
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

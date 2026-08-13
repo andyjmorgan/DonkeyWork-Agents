@@ -76,6 +76,10 @@ export interface GetModelsResponse {
   models: ModelDefinition[]
 }
 
+export interface NaviSettings {
+  modelId: string
+}
+
 // Model config schema types
 export type FieldControlType =
   | 'Slider'
@@ -158,6 +162,18 @@ export const models = {
   getAllConfigSchemas: async () => {
     const response = await api.get<GetConfigSchemasResponse>('/api/v1/models/config-schemas')
     return response.schemas
+  },
+}
+
+export const naviSettings = {
+  get: () => api.get<NaviSettings>('/api/v1/navi/settings'),
+  update: async (modelId: string) => {
+    const response = await fetchWithAuth('/api/v1/navi/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ modelId }),
+    })
+    if (!response.ok) throw new Error(`Failed to update Navi model (${response.status})`)
+    return response.json() as Promise<NaviSettings>
   },
 }
 
