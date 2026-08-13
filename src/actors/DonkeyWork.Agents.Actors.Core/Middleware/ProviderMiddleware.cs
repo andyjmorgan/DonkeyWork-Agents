@@ -28,7 +28,9 @@ internal sealed class ProviderMiddleware : IModelMiddleware
         ModelMiddlewareContext context,
         Func<ModelMiddlewareContext, IAsyncEnumerable<BaseMiddlewareMessage>> next)
     {
-        var provider = _providerFactory.Create(ProviderType.Anthropic);
+        var provider = _providerFactory.Create(
+            context.ProviderOptions?.ProviderType ?? ProviderType.Anthropic,
+            context.ProviderOptions?.Endpoint);
 
         var systemPrompt = context.SystemPrompt;
         if (string.IsNullOrEmpty(systemPrompt))

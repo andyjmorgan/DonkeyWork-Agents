@@ -19,7 +19,7 @@ export const AgentModelNode = memo(({ id, selected }: NodeProps) => {
   const modelId = (config?.modelId as string) || ''
   const selectedModel = allModels.find((m) => m.id === modelId)
   const modelName = selectedModel?.name || (modelId ? modelId : 'No model selected')
-  const providerName = selectedModel?.provider || ''
+  const providerName = selectedModel?.provider === 'Unknown' ? 'Custom' : selectedModel?.provider || ''
 
   return (
     <AgentBaseNode id={id} selected={selected} borderColor="border-blue-500" canDelete={false}>

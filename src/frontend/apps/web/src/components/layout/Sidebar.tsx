@@ -35,6 +35,7 @@ const navigationGroups: NavGroup[] = [
     icon: Bot,
     items: [
       { name: 'Agent Definitions', href: '/agent-definitions', icon: Brain, iconColor: 'text-blue-500' },
+      { name: 'Custom Models', href: '/custom-models', icon: Cpu, iconColor: 'text-cyan-500' },
       { name: 'Schedules', href: '/schedules', icon: Calendar, iconColor: 'text-orange-500' },
     ],
   },

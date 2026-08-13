@@ -55,8 +55,9 @@ export function ModelProperties({ nodeId }: ModelPropertiesProps) {
   // Group models by provider
   const grouped = allModels.reduce(
     (acc, m) => {
-      if (!acc[m.provider]) acc[m.provider] = []
-      acc[m.provider].push(m)
+      const provider = m.provider === 'Unknown' ? 'Custom' : m.provider
+      if (!acc[provider]) acc[provider] = []
+      acc[provider].push(m)
       return acc
     },
     {} as Record<string, ModelDefinition[]>

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
-import { ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, FilesPage, McpServersPage, A2aServersPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, SchedulesPage, ScheduleDetailPage, AgentExecutionsPage, AgentExecutionDetailPage, McpTracesPage, McpTraceDetailPage } from '@/pages'
+import { ApiKeysPage, CredentialsPage, OAuthClientsPage, ConnectedAccountsPage, LoginPage, LoginCallbackPage, NotFoundPage, ProfilePage, OAuthCallbackPage, FilesPage, McpServersPage, A2aServersPage, AgentChatPage, ConversationsPage, SkillsPage, SkillDetailPage, SandboxSettingsPage, AgentDefinitionsPage, AgentBuilderPage, PromptsPage, SchedulesPage, ScheduleDetailPage, AgentExecutionsPage, AgentExecutionDetailPage, McpTracesPage, McpTraceDetailPage, CustomModelsPage } from '@/pages'
 import { useAuthStore } from '@donkeywork/stores'
 import { useTokenRefresh } from '@/hooks/useTokenRefresh'
 import { Toaster } from '@/components/ui/toaster'
@@ -96,6 +96,7 @@ export default function App() {
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/skills/:name" element={<SkillDetailPage />} />
             <Route path="/api-keys" element={<ApiKeysPage />} />
+            <Route path="/custom-models" element={<CustomModelsPage />} />
             <Route path="/schedules" element={<SchedulesPage />} />
             <Route path="/schedules/:id" element={<ScheduleDetailPage />} />
             <Route path="/credentials" element={<CredentialsPage />} />

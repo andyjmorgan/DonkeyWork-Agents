@@ -41,7 +41,8 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         IGrainMessageStore messageStore,
         IPromptService promptService,
         IModelCatalogService modelCatalogService,
-        IAgentExecutionRepository executionRepository)
+        IAgentExecutionRepository executionRepository,
+        ICustomModelService customModelService)
         : base(
             logger,
             grainContext,
@@ -56,7 +57,8 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             messageStore,
             promptService,
             modelCatalogService,
-            executionRepository)
+            executionRepository,
+            customModelService)
     {
     }
 
