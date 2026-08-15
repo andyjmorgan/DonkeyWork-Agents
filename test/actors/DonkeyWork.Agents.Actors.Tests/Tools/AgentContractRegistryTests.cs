@@ -1,5 +1,6 @@
 using DonkeyWork.Agents.Actors.Core.Tools;
 using DonkeyWork.Agents.Actors.Core.Tools.Swarm;
+using DonkeyWork.Agents.Actors.Contracts.Contracts;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -79,6 +80,14 @@ public class AgentContractRegistryTests
     #region GetContract Tests
 
     [Fact]
+    public void AgentContract_DefaultTimeoutIsSixtyMinutes()
+    {
+        var contract = new AgentContract();
+
+        Assert.Equal(3600, contract.TimeoutSeconds);
+    }
+
+    [Fact]
     public void GetContract_WithExisting_ReturnsDescriptor()
     {
         // Arrange
@@ -119,6 +128,20 @@ public class AgentContractRegistryTests
         Assert.NotNull(descriptor);
         var contract = descriptor.Contract;
         Assert.Contains("swarm_management", contract.ToolGroups);
+    }
+
+    [Fact]
+    public void GetContract_DelegateContract_HasThirtyMinuteTimeout()
+    {
+        // Arrange
+        var registry = new AgentContractRegistry(_logger.Object, typeof(AgentContracts).Assembly);
+
+        // Act
+        var descriptor = registry.GetContract("delegate");
+
+        // Assert
+        Assert.NotNull(descriptor);
+        Assert.Equal(1800, descriptor.Contract.TimeoutSeconds);
     }
 
     #endregion

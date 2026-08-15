@@ -138,7 +138,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
         await MessageStore.AppendMessageAsync(
             GrainContext.GrainKey, IdentityContext.UserId, userMsg, NextSequenceNumber++);
 
-        var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
+        var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 3600;
         Cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
 
         AgentResult result = AgentResult.Empty;
@@ -250,7 +250,7 @@ public sealed class AgentGrain : BaseAgentGrain, IAgentGrain
             messages.Add(msg);
         }
 
-        var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
+        var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 3600;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
 
         AgentResult resumeResult;

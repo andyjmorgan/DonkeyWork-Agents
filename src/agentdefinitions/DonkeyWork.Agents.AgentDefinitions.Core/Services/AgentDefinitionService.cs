@@ -51,7 +51,7 @@ public class AgentDefinitionService : IAgentDefinitionService
                 "lifecycle": "Task",
                 "stream": true,
                 "maxTokens": 4096,
-                "timeoutSeconds": 300
+                "timeoutSeconds": 3600
             }
             """);
 

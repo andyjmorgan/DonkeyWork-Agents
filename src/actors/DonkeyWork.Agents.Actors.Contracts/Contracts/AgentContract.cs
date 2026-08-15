@@ -17,7 +17,7 @@ public sealed class AgentContract
     [Id(9)] public int LingerSeconds { get; init; } = 1800;
     [Id(10)] public string AgentType { get; init; } = "";
     [Id(11)] public string KeyPrefix { get; init; } = "";
-    [Id(12)] public int TimeoutSeconds { get; init; } = 1200;
+    [Id(12)] public int TimeoutSeconds { get; init; } = 3600;
     [Id(13)] public McpServerReference[] McpServers { get; init; } = [];
     [Id(14)] public bool EnableSandbox { get; init; }
     [Id(15)] public string? SandboxPodName { get; init; }
