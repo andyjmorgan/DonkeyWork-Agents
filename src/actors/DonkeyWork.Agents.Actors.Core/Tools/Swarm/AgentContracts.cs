@@ -44,7 +44,7 @@ public static class AgentContracts
         KeyPrefix = AgentKeys.DelegatePrefix,
         Lifecycle = AgentLifecycle.Linger,
         LingerSeconds = 600,
-        TimeoutSeconds = 300,
+        TimeoutSeconds = 1800,
         ModelId = NaviDefaults.ModelId,
         DisplayName = "Navi",
         Icon = "bot",

@@ -107,7 +107,7 @@ function createInitialState() {
     isSystem: false,
     lifecycle: 'Task' as const,
     lingerSeconds: 60,
-    timeoutSeconds: 300,
+    timeoutSeconds: 3600,
     persistMessages: false,
     connectToNavi: false,
     allowDelegation: false,
@@ -481,7 +481,7 @@ export const useAgentBuilderStore = create<AgentBuilderState>((set, get) => ({
     const agentSettings = {
       lifecycle: (contract.lifecycle as 'Task' | 'Linger') || 'Task',
       lingerSeconds: (contract.lingerSeconds as number) || 60,
-      timeoutSeconds: (contract.timeoutSeconds as number) || 300,
+      timeoutSeconds: (contract.timeoutSeconds as number) || 3600,
       persistMessages: (contract.persistMessages as boolean) ?? false,
       connectToNavi: (details.connectToNavi as boolean) ?? false,
       allowDelegation: (contract.allowDelegation as boolean) ?? false,

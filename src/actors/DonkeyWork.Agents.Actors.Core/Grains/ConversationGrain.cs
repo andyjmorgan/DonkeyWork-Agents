@@ -321,7 +321,7 @@ public sealed class ConversationGrain : BaseAgentGrain, IConversationGrain
                 if (ExecutionId != Guid.Empty)
                     await ExecutionRepository.UpdateStatusAsync(ExecutionId, IdentityContext.UserId, "Running");
 
-                var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 1200;
+                var timeoutSeconds = contract.TimeoutSeconds > 0 ? contract.TimeoutSeconds : 3600;
                 DelayDeactivation(TimeSpan.FromSeconds(timeoutSeconds + 60));
                 _currentTurnCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                 _currentTurnId = turnId;
